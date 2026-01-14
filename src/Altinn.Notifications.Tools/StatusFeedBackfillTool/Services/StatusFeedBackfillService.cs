@@ -12,20 +12,18 @@ namespace StatusFeedBackfillTool.Services;
 /// </summary>
 public class StatusFeedBackfillService(
     OrderRepository orderRepository,
-    IOptions<BackfillSettings> settings,
-    bool skipInteractivePrompts = false)
+    IOptions<BackfillSettings> settings)
 {
     private readonly OrderRepository _orderRepository = orderRepository;
     private readonly BackfillSettings _settings = settings.Value;
-    private readonly bool _skipInteractivePrompts = skipInteractivePrompts;
 
-    public async Task Run(CancellationToken cancellationToken)
+    public async Task Run()
     {
         var stopwatch = Stopwatch.StartNew();
 
         Console.WriteLine("=== BACKFILL MODE ===\n");
 
-        var ordersToProcess = await LoadOrdersFromFile(cancellationToken);
+        var ordersToProcess = await LoadOrdersFromFile();
 
         if (ordersToProcess.Count == 0)
         {
@@ -40,25 +38,22 @@ public class StatusFeedBackfillService(
 
         bool isDryRun = _settings.DryRun;
 
-        if (!_skipInteractivePrompts)
+        Console.Write($"Run in DRY RUN mode? (y/n, default: {(_settings.DryRun ? "y" : "n")}): ");
+        var input = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(input))
         {
-            Console.Write($"Run in DRY RUN mode? (y/n, default: {(_settings.DryRun ? "y" : "n")}): ");
-            var input = Console.ReadLine()?.Trim().ToLowerInvariant();
-            if (!string.IsNullOrEmpty(input))
-            {
-                isDryRun = input == "y" || input == "yes";
-            }
+            isDryRun = input == "y" || input == "yes";
         }
 
         Console.WriteLine($"Dry Run: {isDryRun}\n");
 
-        var (totalProcessed, totalInserted, totalErrors) = await ProcessOrders(ordersToProcess, isDryRun, cancellationToken);
+        var (totalProcessed, totalInserted, totalErrors) = await ProcessOrders(ordersToProcess, isDryRun);
 
         stopwatch.Stop();
         LogBackfillSummary(totalProcessed, totalInserted, totalErrors, isDryRun, stopwatch.Elapsed);
     }
 
-    private async Task<List<Guid>> LoadOrdersFromFile(CancellationToken cancellationToken)
+    private async Task<List<Guid>> LoadOrdersFromFile()
     {
         if (!File.Exists(_settings.OrderIdsFilePath))
         {
@@ -66,12 +61,12 @@ public class StatusFeedBackfillService(
             return [];
         }
 
-        var json = await File.ReadAllTextAsync(_settings.OrderIdsFilePath, cancellationToken);
+        var json = await File.ReadAllTextAsync(_settings.OrderIdsFilePath);
         var orders = JsonSerializer.Deserialize<List<Guid>>(json);
         return orders ?? [];
     }
 
-    private async Task<(int totalProcessed, int totalInserted, int totalErrors)> ProcessOrders(List<Guid> allOrders, bool isDryRun, CancellationToken cancellationToken)
+    private async Task<(int totalProcessed, int totalInserted, int totalErrors)> ProcessOrders(List<Guid> allOrders, bool isDryRun)
     {
         int totalProcessed = 0;
         int totalInserted = 0;
@@ -81,12 +76,6 @@ public class StatusFeedBackfillService(
 
         foreach (var orderId in allOrders)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                Console.WriteLine("WARNING: Cancellation requested. Stopping processing.");
-                break;
-            }
-
             currentOrder++;
 
             if (currentOrder % 10 == 0 || currentOrder == 1)

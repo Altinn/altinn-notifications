@@ -42,7 +42,7 @@ public class OrderDiscoveryService
         _settings = settings.Value;
     }
 
-    public async Task Run(CancellationToken cancellationToken)
+    public async Task Run()
     {
         var stopwatch = Stopwatch.StartNew();
 
@@ -54,9 +54,9 @@ public class OrderDiscoveryService
         Console.WriteLine($"  Order Status Filter: {_settings.OrderProcessingStatusFilter?.ToString() ?? "None (all statuses)"}");
         Console.WriteLine();
 
-        var affectedOrders = await DiscoverAffectedOrders(cancellationToken);
+        var affectedOrders = await DiscoverAffectedOrders();
 
-        await SaveOrdersToFile(affectedOrders, cancellationToken);
+        await SaveOrdersToFile(affectedOrders);
 
         stopwatch.Stop();
 
@@ -74,40 +74,40 @@ public class OrderDiscoveryService
         Console.WriteLine($"Total elapsed time: {stopwatch.Elapsed:hh\\:mm\\:ss}");
     }
 
-    private async Task<List<Guid>> DiscoverAffectedOrders(CancellationToken cancellationToken)
+    private async Task<List<Guid>> DiscoverAffectedOrders()
     {
-        DateTime minProcessedDate = await GetMinProcessedDate(cancellationToken);
+        DateTime minProcessedDate = await GetMinProcessedDate();
         Console.WriteLine($"  Min Processed Date: {minProcessedDate:yyyy-MM-dd HH:mm:ss}");
         Console.WriteLine("Discovering affected orders...");
 
-        return await GetAllAffectedOrders(minProcessedDate, cancellationToken);
+        return await GetAllAffectedOrders(minProcessedDate);
     }
 
-    private async Task SaveOrdersToFile(List<Guid> orders, CancellationToken cancellationToken)
+    private async Task SaveOrdersToFile(List<Guid> orders)
     {
         var json = JsonSerializer.Serialize(orders, _jsonOptions);
-        await File.WriteAllTextAsync(_settings.OrderIdsFilePath, json, cancellationToken);
+        await File.WriteAllTextAsync(_settings.OrderIdsFilePath, json);
     }
 
-    private async Task<DateTime> GetMinProcessedDate(CancellationToken cancellationToken)
+    private async Task<DateTime> GetMinProcessedDate()
     {
         if (_settings.MinProcessedDateTimeFilter.HasValue)
         {
             return _settings.MinProcessedDateTimeFilter.Value;
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var connection = await _dataSource.OpenConnectionAsync();
         await using var command = new NpgsqlCommand(_getOldestStatusFeedDateSql, connection);
 
-        var result = await command.ExecuteScalarAsync(cancellationToken);
+        var result = await command.ExecuteScalarAsync();
         return (DateTime)result!;
     }
 
-    private async Task<List<Guid>> GetAllAffectedOrders(DateTime minProcessedDate, CancellationToken cancellationToken)
+    private async Task<List<Guid>> GetAllAffectedOrders(DateTime minProcessedDate)
     {
         var orders = new List<Guid>();
 
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var connection = await _dataSource.OpenConnectionAsync();
         await using var command = new NpgsqlCommand(_getAffectedOrdersSql, connection);
 
         command.Parameters.AddWithValue("minProcessedDate", NpgsqlDbType.TimestampTz, minProcessedDate);
@@ -119,8 +119,8 @@ public class OrderDiscoveryService
 
         command.Parameters.AddWithValue("maxOrders", NpgsqlDbType.Integer, _settings.MaxOrders);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
         {
             orders.Add(reader.GetGuid(0));
         }

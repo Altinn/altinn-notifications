@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
@@ -67,7 +66,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         // Act
-        await (Task)method!.Invoke(service, [orderIds, CancellationToken.None])!;
+        await (Task)method!.Invoke(service, [orderIds])!;
 
         // Assert
         Assert.True(File.Exists(_testFilePath));
@@ -105,7 +104,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order should NOT be found (already has status feed)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -134,7 +133,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order SHOULD be found (missing status feed)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -167,7 +166,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order should NOT be found (already has status feed)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -196,7 +195,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order SHOULD be found (missing status feed)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -226,7 +225,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order should NOT be found (not a final status)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -253,7 +252,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order should NOT be found (not a final status)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -295,7 +294,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -328,7 +327,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Only SendConditionNotMet should be found
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -362,7 +361,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
-        await service.Run(CancellationToken.None);
+        await service.Run();
 
         // Assert - Order should be found (Completed without status feed)
         var json = await File.ReadAllTextAsync(_testFilePath);
@@ -373,34 +372,94 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public void DiscoverySettings_UsesMinProcessedDateTimeFilterWhenProvided()
+    public async Task DiscoverOrders_WithNoCreatorFilter_FindsAllCreators()
     {
-        // Arrange
-        var expectedDate = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        var settings = new DiscoverySettings
-        {
-            MinProcessedDateTimeFilter = expectedDate
-        };
+        // Arrange - Create order without creator filter
+        var (orderId, _) = await TestDataUtil.CreateEmailOrder("no-creator-filter");
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
-        // Assert
-        Assert.Equal(expectedDate, settings.MinProcessedDateTimeFilter);
+        var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
+        var settings = Options.Create(new DiscoverySettings
+        {
+            OrderIdsFilePath = _testFilePath,
+            CreatorNameFilter = null, // No creator filter
+            MaxOrders = 100
+        });
+
+        var service = new OrderDiscoveryService(dataSource, settings);
+
+        // Act
+        await service.Run();
+
+        // Assert - Order should be found (no creator restriction)
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
+
+        Assert.NotNull(discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
     }
 
     [Fact]
-    public void OrderIdsFilePath_WorksWithDifferentPathSeparators()
+    public async Task DiscoverOrders_WithMinProcessedDateTimeFilter_UsesProvidedDate()
     {
-        // Arrange & Act - Use Path.Combine to ensure cross-platform compatibility
-        var customPath = Path.Combine("data", "orders", "affected.json");
-        var settings = new DiscoverySettings
-        {
-            OrderIdsFilePath = customPath
-        };
+        // Arrange - Create completed order without status feed
+        var (orderId, _) = await TestDataUtil.CreateEmailOrder("min-date-filter");
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
-        // Assert - Path.Combine will use the correct separator for the OS
-        Assert.Equal(customPath, settings.OrderIdsFilePath);
-        
-        // Verify the path is valid for the current OS
-        Assert.DoesNotContain("\\", customPath.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty));
-        Assert.DoesNotContain("/", customPath.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty));
+        // Set MinProcessedDateTimeFilter to a date in the past to ensure order is found
+        var minDate = DateTime.UtcNow.AddDays(-1);
+
+        var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
+        var settings = Options.Create(new DiscoverySettings
+        {
+            OrderIdsFilePath = _testFilePath,
+            CreatorNameFilter = "ttd",
+            MinProcessedDateTimeFilter = minDate,
+            MaxOrders = 100
+        });
+
+        var service = new OrderDiscoveryService(dataSource, settings);
+
+        // Act
+        await service.Run();
+
+        // Assert - Order should be found (processed after provided min date)
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
+
+        Assert.NotNull(discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
+    }
+
+    [Fact]
+    public async Task DiscoverOrders_WithStatusFilterAndMinDate_FindsMatchingOrders()
+    {
+        // Arrange - Create SendConditionNotMet order without status feed
+        var orderId = await TestDataUtil.CreateSmsOrder("status-and-date-filter");
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.SendConditionNotMet);
+
+        var minDate = DateTime.UtcNow.AddDays(-1);
+
+        var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
+        var settings = Options.Create(new DiscoverySettings
+        {
+            OrderIdsFilePath = _testFilePath,
+            CreatorNameFilter = "ttd",
+            MinProcessedDateTimeFilter = minDate,
+            OrderProcessingStatusFilter = OrderProcessingStatus.SendConditionNotMet,
+            MaxOrders = 100
+        });
+
+        var service = new OrderDiscoveryService(dataSource, settings);
+
+        // Act
+        await service.Run();
+
+        // Assert - Order should be found (matches status filter and date)
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
+
+        Assert.NotNull(discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
     }
 }

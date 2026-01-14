@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Npgsql;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StatusFeedBackfillTool.Services;
 
@@ -13,6 +14,7 @@ namespace StatusFeedBackfillTool.Services;
 /// Service for generating and cleaning up test data for manual testing.
 /// Creates diverse test scenarios to verify the backfill tool's discovery and insertion logic.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class TestDataService(
     IOrderRepository orderRepository,
     IEmailNotificationRepository emailRepository,
@@ -55,31 +57,31 @@ public class TestDataService(
     /// <summary>
     /// Cleanup all test data created by this tool (identified by sender reference prefix)
     /// </summary>
-    public async Task CleanupTestData(CancellationToken cancellationToken)
+    public async Task CleanupTestData()
     {
         Console.WriteLine("\nCleaning up test data...\n");
 
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
-        
+        await using var connection = await _dataSource.OpenConnectionAsync();
+
         // Delete in correct order due to foreign keys
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = @"
-                DELETE FROM notifications.statusfeed 
+                DELETE FROM notifications.statusfeed
                 WHERE orderid IN (
-                    SELECT _id FROM notifications.orders 
+                    SELECT _id FROM notifications.orders
                     WHERE sendersreference LIKE @prefix
                 )";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
-            var deletedStatusFeed = await command.ExecuteNonQueryAsync(cancellationToken);
+            var deletedStatusFeed = await command.ExecuteNonQueryAsync();
             Console.WriteLine($"Deleted {deletedStatusFeed} status feed entries");
         }
-        
+
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
-            var deletedOrders = await command.ExecuteNonQueryAsync(cancellationToken);
+            var deletedOrders = await command.ExecuteNonQueryAsync();
             Console.WriteLine($"Deleted {deletedOrders} test orders");
         }
 

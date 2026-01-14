@@ -7,8 +7,6 @@ using StatusFeedBackfillTool.Configuration;
 using StatusFeedBackfillTool.Services;
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: ExcludeFromCodeCoverage]
-
 var builder = Host.CreateApplicationBuilder(args);
 
 // Add configuration with user secrets support
@@ -80,12 +78,12 @@ using (var scope = host.Services.CreateScope())
         if (choice == "1")
         {
             var discoveryService = scope.ServiceProvider.GetRequiredService<OrderDiscoveryService>();
-            await discoveryService.Run(CancellationToken.None);
+            await discoveryService.Run();
         }
         else if (choice == "2")
         {
             var backfillService = scope.ServiceProvider.GetRequiredService<StatusFeedBackfillService>();
-            await backfillService.Run(CancellationToken.None);
+            await backfillService.Run();
         }
         else if (choice == "3")
         {
@@ -95,13 +93,13 @@ using (var scope = host.Services.CreateScope())
         else if (choice == "4")
         {
             var testDataService = scope.ServiceProvider.GetRequiredService<TestDataService>();
-            
+
             Console.Write("\nWARNING: This will delete all test orders with sender reference prefix 'backfill-tool-test-'. Continue? (y/n): ");
             var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
-            
+
             if (confirm == "y" || confirm == "yes")
             {
-                await testDataService.CleanupTestData(CancellationToken.None);
+                await testDataService.CleanupTestData();
             }
             else
             {
@@ -125,3 +123,10 @@ using (var scope = host.Services.CreateScope())
 }
 
 return 0;
+
+// Exclude the compiler-generated Program class from code coverage
+[ExcludeFromCodeCoverage]
+internal partial class Program
+{
+    protected Program() { }
+}
