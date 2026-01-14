@@ -300,9 +300,49 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Run_InteractivePrompt_UserTypesY_OverridesDryRunToTrue()
+    {
+        // Arrange - Test the "y" branch (first part of OR condition)
+        var orderId = await TestDataUtil.CreateSmsOrder("interactive-y");
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
+
+        var orderIds = new List<Guid> { orderId };
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+
+        var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
+        var settings = Options.Create(new BackfillSettings
+        {
+            OrderIdsFilePath = _testFilePath,
+            DryRun = false // Default to false
+        });
+
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
+
+        // Simulate user typing "y" and pressing Enter
+        var originalIn = Console.In;
+        try
+        {
+            using var stringReader = new StringReader("y");
+            Console.SetIn(stringReader);
+
+            // Act
+            await service.Run();
+
+            // Assert - User typed "y", so DryRun should be true (no insertion)
+            await Task.Delay(100);
+            int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
+            Assert.Equal(0, count); // Dry run = no insertion
+        }
+        finally
+        {
+            Console.SetIn(originalIn);
+        }
+    }
+
+    [Fact]
     public async Task Run_InteractivePrompt_UserTypesYes_OverridesDryRunToTrue()
     {
-        // Arrange - Test the "y"/"yes" branch
+        // Arrange - Test the "yes" branch (second part of OR condition)
         var orderId = await TestDataUtil.CreateSmsOrder("interactive-yes");
         await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
