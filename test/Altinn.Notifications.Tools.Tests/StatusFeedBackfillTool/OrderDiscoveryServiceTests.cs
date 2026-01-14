@@ -81,6 +81,27 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SaveOrdersToFile_InvalidPath_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var orderIds = new List<Guid> { Guid.NewGuid() };
+        var settings = Options.Create(new DiscoverySettings
+        {
+            OrderIdsFilePath = "/invalid/path/orders.json",
+            MaxOrders = 100
+        });
+        var service = new OrderDiscoveryService(null!, settings);
+        var method = typeof(OrderDiscoveryService).GetMethod(
+            "SaveOrdersToFile",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await (Task)method!.Invoke(service, [orderIds])!);
+        Assert.Contains("/invalid/path/orders.json", ex.Message);
+    }
+
+    [Fact]
     public async Task DiscoverOrders_CompletedWithStatusFeed_NotFound()
     {
         // Arrange - Create Completed order WITH status feed entry (automatic via UpdateSendStatus)

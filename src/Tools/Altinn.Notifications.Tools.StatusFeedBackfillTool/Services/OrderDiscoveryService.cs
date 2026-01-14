@@ -80,8 +80,16 @@ public class OrderDiscoveryService(
 
     private async Task SaveOrdersToFile(List<Guid> orders)
     {
-        var json = JsonSerializer.Serialize(orders, _jsonOptions);
-        await File.WriteAllTextAsync(_settings.OrderIdsFilePath, json);
+        try
+        {
+            var json = JsonSerializer.Serialize(orders, _jsonOptions);
+            await File.WriteAllTextAsync(_settings.OrderIdsFilePath, json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: Failed to write orders to file {_settings.OrderIdsFilePath}: {ex.Message}");
+            throw new InvalidOperationException($"Failed to write orders to file {_settings.OrderIdsFilePath}", ex);
+        }
     }
 
     private async Task<DateTime> GetMinProcessedDate()

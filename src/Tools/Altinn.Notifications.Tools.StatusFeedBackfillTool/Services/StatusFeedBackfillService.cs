@@ -62,9 +62,17 @@ public class StatusFeedBackfillService(
             return [];
         }
 
-        var json = await File.ReadAllTextAsync(_settings.OrderIdsFilePath);
-        var orders = JsonSerializer.Deserialize<List<Guid>>(json);
-        return orders ?? [];
+        try
+        {
+            var json = await File.ReadAllTextAsync(_settings.OrderIdsFilePath);
+            var orders = JsonSerializer.Deserialize<List<Guid>>(json);
+            return orders ?? [];
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: Failed to load orders from file {_settings.OrderIdsFilePath}: {ex.Message}");
+            return [];
+        }
     }
 
     private async Task<(int totalProcessed, int totalInserted, int totalErrors)> ProcessOrders(List<Guid> allOrders, bool isDryRun)

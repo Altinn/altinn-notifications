@@ -455,4 +455,74 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             Console.SetIn(originalIn);
         }
     }
+
+    [Fact]
+    public async Task LoadOrdersFromFile_InvalidPath_ReturnsEmptyListAndLogsError()
+    {
+        // Arrange
+        var settings = Options.Create(new BackfillSettings
+        {
+            OrderIdsFilePath = "/invalid/path/orders.json",
+            DryRun = true
+        });
+        var service = new StatusFeedBackfillService(null!, settings);
+        var method = typeof(StatusFeedBackfillService).GetMethod(
+            "LoadOrdersFromFile",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        Console.SetOut(sw);
+        try
+        {
+            // Act
+            var result = await (Task<List<Guid>>)method!.Invoke(service, null)!;
+
+            // Assert
+            Assert.Empty(result);
+            Assert.Contains("ERROR: File not found: /invalid/path/orders.json", sw.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public async Task LoadOrdersFromFile_ExceptionDuringReadOrDeserialize_LogsGenericError()
+    {
+        // Arrange: Use a file path that exists but contains invalid JSON to trigger deserialization exception
+        var tempFilePath = Path.Combine(Path.GetTempPath(), $"invalid-json-{Guid.NewGuid()}.json");
+        await File.WriteAllTextAsync(tempFilePath, "not-a-json-list");
+        var settings = Options.Create(new BackfillSettings
+        {
+            OrderIdsFilePath = tempFilePath,
+            DryRun = true
+        });
+        var service = new StatusFeedBackfillService(null!, settings);
+        var method = typeof(StatusFeedBackfillService).GetMethod(
+            "LoadOrdersFromFile",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        Console.SetOut(sw);
+        try
+        {
+            // Act
+            var result = await (Task<List<Guid>>)method!.Invoke(service, null)!;
+
+            // Assert
+            Assert.Empty(result);
+            Assert.Contains($"ERROR: Failed to load orders from file {tempFilePath}", sw.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            if (File.Exists(tempFilePath))
+            {
+                File.Delete(tempFilePath);
+            }
+        }
+    }
 }
