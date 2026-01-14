@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 
 /// <summary>
 /// Configuration settings for the status feed backfill service.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public class BackfillSettings
 {
     /// <summary>
