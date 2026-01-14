@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using StatusFeedBackfillTool.Configuration;
 using StatusFeedBackfillTool.Services;
-using System.Diagnostics.CodeAnalysis;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -123,10 +122,3 @@ using (var scope = host.Services.CreateScope())
 }
 
 return 0;
-
-// Exclude the compiler-generated Program class from code coverage
-[ExcludeFromCodeCoverage]
-internal partial class Program
-{
-    protected Program() { }
-}
