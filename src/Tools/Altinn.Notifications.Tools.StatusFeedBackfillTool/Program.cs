@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services.Interfaces;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -49,10 +50,11 @@ builder.Services.AddSingleton<Altinn.Notifications.Persistence.Repository.EmailN
 builder.Services.AddSingleton<Altinn.Notifications.Core.Persistence.IEmailNotificationRepository>(sp => 
     sp.GetRequiredService<Altinn.Notifications.Persistence.Repository.EmailNotificationRepository>());
 
-// Register services
-builder.Services.AddSingleton<OrderDiscoveryService>();
-builder.Services.AddSingleton<StatusFeedBackfillService>();
-builder.Services.AddSingleton<TestDataService>();
+
+// Register services with interfaces for testability
+builder.Services.AddSingleton<IOrderDiscoveryService, OrderDiscoveryService>();
+builder.Services.AddSingleton<IStatusFeedBackfillService, StatusFeedBackfillService>();
+builder.Services.AddSingleton<ITestDataService, TestDataService>();
 
 var host = builder.Build();
 
@@ -61,57 +63,9 @@ using (var scope = host.Services.CreateScope())
 {
     try
     {
-        Console.WriteLine("Starting Status Feed Backfill Tool\n");
-
-        // Interactive mode selection
-        Console.WriteLine("Select operation mode:");
-        Console.WriteLine("  1. Discover - Find affected orders and save to file");
-        Console.WriteLine("  2. Backfill - Process orders from file and insert status feed entries");
-        Console.WriteLine("  3. Generate Test Data - Create test orders for manual testing");
-        Console.WriteLine("  4. Cleanup Test Data - Remove all test orders");
-        Console.WriteLine("  5. Exit");
-        Console.Write("\nEnter choice (1-5): ");
-
-        var choice = Console.ReadLine()?.Trim();
-
-        if (choice == "1")
-        {
-            var discoveryService = scope.ServiceProvider.GetRequiredService<OrderDiscoveryService>();
-            await discoveryService.Run();
-        }
-        else if (choice == "2")
-        {
-            var backfillService = scope.ServiceProvider.GetRequiredService<StatusFeedBackfillService>();
-            await backfillService.Run();
-        }
-        else if (choice == "3")
-        {
-            var testDataService = scope.ServiceProvider.GetRequiredService<TestDataService>();
-            await testDataService.GenerateTestData();
-        }
-        else if (choice == "4")
-        {
-            var testDataService = scope.ServiceProvider.GetRequiredService<TestDataService>();
-
-            Console.Write("\nWARNING: This will delete all test orders with sender reference prefix 'backfill-tool-test-'. Continue? (y/n): ");
-            var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
-
-            if (confirm == "y" || confirm == "yes")
-            {
-                await testDataService.CleanupTestData();
-            }
-            else
-            {
-                Console.WriteLine("Cleanup cancelled.");
-            }
-        }
-        else
-        {
-            Console.WriteLine("Exiting...");
-            return 0;
-        }
-
-        Console.WriteLine("\nStatus Feed Backfill Tool completed successfully");
+        var menuService = new ConsoleMenuService(scope.ServiceProvider);
+        int result = await menuService.RunMenuAsync();
+        return result;
     }
     catch (Exception ex)
     {
@@ -121,4 +75,3 @@ using (var scope = host.Services.CreateScope())
     }
 }
 
-return 0;

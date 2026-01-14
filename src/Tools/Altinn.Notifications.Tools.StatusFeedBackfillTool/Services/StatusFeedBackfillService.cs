@@ -3,6 +3,7 @@ using System.Text.Json;
 using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Options;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services.Interfaces;
 
 namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
@@ -12,7 +13,7 @@ namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 /// </summary>
 public class StatusFeedBackfillService(
     OrderRepository orderRepository,
-    IOptions<BackfillSettings> settings)
+    IOptions<BackfillSettings> settings) : IStatusFeedBackfillService
 {
     private readonly OrderRepository _orderRepository = orderRepository;
     private readonly BackfillSettings _settings = settings.Value;

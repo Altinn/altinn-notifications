@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services.Interfaces;
 using Npgsql;
 using System.Diagnostics.CodeAnalysis;
 
@@ -18,7 +19,7 @@ namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 public class TestDataService(
     IOrderRepository orderRepository,
     IEmailNotificationRepository emailRepository,
-    NpgsqlDataSource dataSource)
+    NpgsqlDataSource dataSource) : ITestDataService
 {
     private const string _testDataPrefix = "backfill-tool-test-";
     private readonly IOrderRepository _orderRepository = orderRepository;

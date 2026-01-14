@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services.Interfaces;
 
 namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
@@ -11,10 +12,12 @@ namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 /// Service responsible for discovering orders that are missing status feed entries.
 /// Can discover orders using filters or validate a manually provided list.
 /// </summary>
-public class OrderDiscoveryService
+public class OrderDiscoveryService(
+    NpgsqlDataSource dataSource,
+    IOptions<DiscoverySettings> settings) : IOrderDiscoveryService
 {
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly DiscoverySettings _settings;
+    private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly DiscoverySettings _settings = settings.Value;
 
     private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -33,14 +36,6 @@ public class OrderDiscoveryService
                 WHERE SF.ORDERID = O._ID
             )
         LIMIT @maxOrders";
-
-    public OrderDiscoveryService(
-        NpgsqlDataSource dataSource,
-        IOptions<DiscoverySettings> settings)
-    {
-        _dataSource = dataSource;
-        _settings = settings.Value;
-    }
 
     public async Task Run()
     {
