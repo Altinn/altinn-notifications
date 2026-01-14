@@ -54,7 +54,7 @@ public class EmailNotificationOrdersController : ControllerBase
     [SwaggerResponse(400, "The request was invalid.", typeof(ValidationProblemDetails))]
     [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
     [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
-    [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
+    [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
