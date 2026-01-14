@@ -5,6 +5,7 @@ This guide explains how to manually test the Status Feed Backfill Tool using gen
 ## Overview
 
 The tool includes test data generation that creates diverse test scenarios to verify the backfill tool's discovery and insertion logic:
+
 - **2 SendConditionNotMet** orders WITHOUT status feed (SHOULD be found by tool)
 - **1 SendConditionNotMet** order WITH status feed (should NOT be found - already has entry)
 - **2 Processing** orders WITHOUT status feed (should NOT be found - not in final state)
@@ -22,7 +23,7 @@ The tool includes test data generation that creates diverse test scenarios to ve
 Navigate to the tool directory and run it:
 
 ```bash
-cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
+cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
 dotnet run
 ```
 
@@ -60,6 +61,7 @@ ORDER BY
 ```
 
 **Expected results:**
+
 - Orders with `processedstatus = 'SendConditionNotMet'` or `'Completed'` and `statusfeed_id IS NULL` → **Should be found by tool**
 - Orders with `statusfeed_id IS NOT NULL` → **Should NOT be found (already have entries)**
 - Orders with `processedstatus = 'Processing'` → **Should NOT be found (not final state)**
@@ -85,6 +87,7 @@ cat affected-orders.json
 ```
 
 **Verify:**
+
 - The file contains exactly **4 order IDs** (the ones without status feed)
 - The file does NOT contain the 6 orders that already have entries or are in Processing state
 
@@ -145,7 +148,8 @@ ORDER BY
 	O.CREATED DESC;
 ```
 
-**Expected:** 
+**Expected:**
+
 - **8 orders** with `statusfeed_id IS NOT NULL` (4 of them backfilled)
 - **2 Processing orders** with `statusfeed_id IS NULL` (not backfilled - not in final state)
 
@@ -169,10 +173,11 @@ This will delete all test orders and status feed entries created by this tool (i
 ## Useful SQL Queries
 
 ### Manually delete test data (if cleanup fails)
+
 ```sql
-DELETE FROM notifications.statusfeed 
+DELETE FROM notifications.statusfeed
 WHERE orderid IN (
-    SELECT _id FROM notifications.orders 
+    SELECT _id FROM notifications.orders
     WHERE sendersreference LIKE 'backfill-tool-test-%'
 );
 DELETE FROM notifications.orders WHERE sendersreference LIKE 'backfill-tool-test-%';
@@ -183,9 +188,11 @@ DELETE FROM notifications.orders WHERE sendersreference LIKE 'backfill-tool-test
 ## Troubleshooting
 
 **No orders found in database:**
+
 - Verify you ran option 3 (Generate Test Data) successfully
 - Check the tool output for any errors
 
 **Tool finds wrong orders:**
+
 - Verify the SQL query shows the expected mix of orders with/without status feed
 - Check the tool's discovery logic matches the expected criteria

@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
-using StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 
-namespace StatusFeedBackfillTool.Services;
+namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
 /// <summary>
 /// Service responsible for discovering orders that are missing status feed entries.

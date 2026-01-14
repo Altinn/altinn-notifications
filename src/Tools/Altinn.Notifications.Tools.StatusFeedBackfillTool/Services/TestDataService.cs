@@ -8,7 +8,7 @@ using Altinn.Notifications.Core.Persistence;
 using Npgsql;
 using System.Diagnostics.CodeAnalysis;
 
-namespace StatusFeedBackfillTool.Services;
+namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
 /// <summary>
 /// Service for generating and cleaning up test data for manual testing.

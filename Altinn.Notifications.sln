@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Integr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbTools", "src\DbTools\DbTools.csproj", "{72A62A0A-8E24-488C-9093-5D204C1FF900}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StatusFeedBackfillTool", "src\Altinn.Notifications.Tools\StatusFeedBackfillTool\StatusFeedBackfillTool.csproj", "{47178504-F329-428C-9CE2-005D41EE8500}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.StatusFeedBackfillTool", "src\Tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj", "{47178504-F329-428C-9CE2-005D41EE8500}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.Tests", "test\Altinn.Notifications.Tools.Tests\Altinn.Notifications.Tools.Tests.csproj", "{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}"
 EndProject

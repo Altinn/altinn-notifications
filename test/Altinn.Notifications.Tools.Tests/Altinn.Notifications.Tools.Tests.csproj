@@ -24,7 +24,7 @@
     <ProjectReference Include="..\..\src\Altinn.Notifications\Altinn.Notifications.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
-    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools\StatusFeedBackfillTool\StatusFeedBackfillTool.csproj" />
+    <ProjectReference Include="..\..\src\Tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </ItemGroup>
 
   <ItemGroup>

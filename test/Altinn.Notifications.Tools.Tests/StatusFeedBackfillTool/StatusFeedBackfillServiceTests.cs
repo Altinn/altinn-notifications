@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 using Altinn.Notifications.Tools.Tests.Utils;
 using Microsoft.Extensions.Options;
-using StatusFeedBackfillTool.Configuration;
-using StatusFeedBackfillTool.Services;
 using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;

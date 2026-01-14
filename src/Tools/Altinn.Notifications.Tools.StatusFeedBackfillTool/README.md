@@ -7,7 +7,7 @@ Tool for backfilling missing status feed entries in the notifications database.
 Run the tool and select the operation mode interactively:
 
 ```bash
-cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
+cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
 dotnet run
 ```
 
@@ -34,7 +34,7 @@ Find affected orders and save to a file for review.
 
 **Run:**
 ```bash
-cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
+cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
 dotnet run
 # Choose option 1
 ```
@@ -81,7 +81,7 @@ dotnet run
 
 ```bash
 # Navigate to the tool directory
-cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
+cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
 
 # 1. Configure discovery filters in appsettings.json
 # Edit: MinProcessedDateTimeFilter = "2024-12-01T00:00:00Z", CreatorNameFilter = "digdir"

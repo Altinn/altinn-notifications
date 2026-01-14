@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Enums;
 
-namespace StatusFeedBackfillTool.Configuration;
+namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 
 /// <summary>
 /// Configuration settings for the order discovery service.

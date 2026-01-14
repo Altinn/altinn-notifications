@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Text.Json;
 using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Options;
-using StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 
-namespace StatusFeedBackfillTool.Services;
+namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
 /// <summary>
 /// Service responsible for backfilling missing status feed entries for orders.

@@ -3,8 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
-using StatusFeedBackfillTool.Configuration;
-using StatusFeedBackfillTool.Services;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
+using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
