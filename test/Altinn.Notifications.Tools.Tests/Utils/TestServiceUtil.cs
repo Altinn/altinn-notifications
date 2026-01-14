@@ -32,20 +32,6 @@ public static class TestServiceUtil
         return _serviceProvider!.GetRequiredService<T>();
     }
 
-    /// <summary>
-    /// Dispose shared resources
-    /// </summary>
-    public static void Dispose()
-    {
-        lock (_lock)
-        {
-            _sharedDataSource?.Dispose();
-            _sharedDataSource = null;
-            _serviceProvider = null;
-            _databaseInitialized = false;
-        }
-    }
-
     private static void EnsureServicesInitialized()
     {
         lock (_lock)

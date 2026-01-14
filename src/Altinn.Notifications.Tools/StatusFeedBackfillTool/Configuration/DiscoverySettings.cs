@@ -27,10 +27,10 @@ public class DiscoverySettings
     public string? CreatorNameFilter { get; set; }
 
     /// <summary>
-    /// Optional: Only discover orders processed after this date.
+    /// Optional: Only discover orders processed after this timestamp (date and time).
     /// If null, uses the oldest status feed entry date.
     /// </summary>
-    public DateTime? MinProcessedDateFilter { get; set; }
+    public DateTime? MinProcessedDateTimeFilter { get; set; }
 
     /// <summary>
     /// Optional: Filter by specific order processing status.

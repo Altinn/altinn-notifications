@@ -38,15 +38,24 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddSingleton(sp =>
 {
     var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+    dataSourceBuilder.EnableDynamicJson();
     return dataSourceBuilder.Build();
 });
 
 // Register repositories
 builder.Services.AddSingleton<Altinn.Notifications.Persistence.Repository.OrderRepository>();
+builder.Services.AddSingleton<Altinn.Notifications.Core.Persistence.IOrderRepository>(sp => 
+    sp.GetRequiredService<Altinn.Notifications.Persistence.Repository.OrderRepository>());
+
+// Register repositories for test data service
+builder.Services.AddSingleton<Altinn.Notifications.Persistence.Repository.EmailNotificationRepository>();
+builder.Services.AddSingleton<Altinn.Notifications.Core.Persistence.IEmailNotificationRepository>(sp => 
+    sp.GetRequiredService<Altinn.Notifications.Persistence.Repository.EmailNotificationRepository>());
 
 // Register services
 builder.Services.AddSingleton<OrderDiscoveryService>();
 builder.Services.AddSingleton<StatusFeedBackfillService>();
+builder.Services.AddSingleton<TestDataService>();
 
 var host = builder.Build();
 
@@ -61,8 +70,10 @@ using (var scope = host.Services.CreateScope())
         Console.WriteLine("Select operation mode:");
         Console.WriteLine("  1. Discover - Find affected orders and save to file");
         Console.WriteLine("  2. Backfill - Process orders from file and insert status feed entries");
-        Console.WriteLine("  3. Exit");
-        Console.Write("\nEnter choice (1-3): ");
+        Console.WriteLine("  3. Generate Test Data - Create test orders for manual testing");
+        Console.WriteLine("  4. Cleanup Test Data - Remove all test orders");
+        Console.WriteLine("  5. Exit");
+        Console.Write("\nEnter choice (1-5): ");
 
         var choice = Console.ReadLine()?.Trim();
 
@@ -75,6 +86,27 @@ using (var scope = host.Services.CreateScope())
         {
             var backfillService = scope.ServiceProvider.GetRequiredService<StatusFeedBackfillService>();
             await backfillService.Run(CancellationToken.None);
+        }
+        else if (choice == "3")
+        {
+            var testDataService = scope.ServiceProvider.GetRequiredService<TestDataService>();
+            await testDataService.GenerateTestData();
+        }
+        else if (choice == "4")
+        {
+            var testDataService = scope.ServiceProvider.GetRequiredService<TestDataService>();
+            
+            Console.Write("\nWARNING: This will delete all test orders with sender reference prefix 'backfill-tool-test-'. Continue? (y/n): ");
+            var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+            
+            if (confirm == "y" || confirm == "yes")
+            {
+                await testDataService.CleanupTestData(CancellationToken.None);
+            }
+            else
+            {
+                Console.WriteLine("Cleanup cancelled.");
+            }
         }
         else
         {

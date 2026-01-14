@@ -56,7 +56,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(orderRepo, settings);
+        var service = new StatusFeedBackfillService(orderRepo, settings, skipInteractivePrompts: true);
 
         // Act & Assert - Should complete without throwing exception
         // Service writes "No orders found in file" to console and returns gracefully
@@ -91,7 +91,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings, skipInteractivePrompts: true);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -128,7 +128,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = false
         });
 
-        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings, skipInteractivePrompts: true);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -158,7 +158,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(orderRepo, settings);
+        var service = new StatusFeedBackfillService(orderRepo, settings, skipInteractivePrompts: true);
 
         // Act & Assert - Should complete without throwing exception
         // Service writes "ERROR: File not found" to console and returns gracefully without crashing
@@ -188,7 +188,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = false
         });
 
-        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings, skipInteractivePrompts: true);
 
         // Act
         await service.Run(CancellationToken.None);

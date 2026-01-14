@@ -108,12 +108,8 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run(CancellationToken.None);
 
         // Assert - Order should NOT be found (already has status feed)
-        var discoveredOrders = new List<Guid>();
-        if (File.Exists(_testFilePath))
-        {
-            var json = await File.ReadAllTextAsync(_testFilePath);
-            discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
-        }
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
     }
@@ -174,12 +170,8 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run(CancellationToken.None);
 
         // Assert - Order should NOT be found (already has status feed)
-        var discoveredOrders = new List<Guid>();
-        if (File.Exists(_testFilePath))
-        {
-            var json = await File.ReadAllTextAsync(_testFilePath);
-            discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
-        }
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
     }
@@ -237,12 +229,8 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run(CancellationToken.None);
 
         // Assert - Order should NOT be found (not a final status)
-        var discoveredOrders = new List<Guid>();
-        if (File.Exists(_testFilePath))
-        {
-            var json = await File.ReadAllTextAsync(_testFilePath);
-            discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
-        }
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
     }
@@ -268,12 +256,8 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run(CancellationToken.None);
 
         // Assert - Order should NOT be found (not a final status)
-        var discoveredOrders = new List<Guid>();
-        if (File.Exists(_testFilePath))
-        {
-            var json = await File.ReadAllTextAsync(_testFilePath);
-            discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
-        }
+        var json = await File.ReadAllTextAsync(_testFilePath);
+        var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
     }
@@ -389,17 +373,17 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public void DiscoverySettings_UsesMinProcessedDateFilterWhenProvided()
+    public void DiscoverySettings_UsesMinProcessedDateTimeFilterWhenProvided()
     {
         // Arrange
         var expectedDate = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         var settings = new DiscoverySettings
         {
-            MinProcessedDateFilter = expectedDate
+            MinProcessedDateTimeFilter = expectedDate
         };
 
         // Assert
-        Assert.Equal(expectedDate, settings.MinProcessedDateFilter);
+        Assert.Equal(expectedDate, settings.MinProcessedDateTimeFilter);
     }
 
     [Fact]

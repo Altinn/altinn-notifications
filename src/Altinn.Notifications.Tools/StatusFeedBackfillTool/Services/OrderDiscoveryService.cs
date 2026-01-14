@@ -56,16 +56,17 @@ public class OrderDiscoveryService
 
         var affectedOrders = await DiscoverAffectedOrders(cancellationToken);
 
+        await SaveOrdersToFile(affectedOrders, cancellationToken);
+
         stopwatch.Stop();
 
         if (affectedOrders.Count == 0)
         {
             Console.WriteLine("No affected orders found.");
+            Console.WriteLine($"Empty file created: {_settings.OrderIdsFilePath}");
             Console.WriteLine($"Total elapsed time: {stopwatch.Elapsed:hh\\:mm\\:ss}");
             return;
         }
-
-        await SaveOrdersToFile(affectedOrders, cancellationToken);
 
         Console.WriteLine($"Found {affectedOrders.Count} affected orders");
         Console.WriteLine($"Affected orders saved to: {_settings.OrderIdsFilePath}");
@@ -90,9 +91,9 @@ public class OrderDiscoveryService
 
     private async Task<DateTime> GetMinProcessedDate(CancellationToken cancellationToken)
     {
-        if (_settings.MinProcessedDateFilter.HasValue)
+        if (_settings.MinProcessedDateTimeFilter.HasValue)
         {
-            return _settings.MinProcessedDateFilter.Value;
+            return _settings.MinProcessedDateTimeFilter.Value;
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);

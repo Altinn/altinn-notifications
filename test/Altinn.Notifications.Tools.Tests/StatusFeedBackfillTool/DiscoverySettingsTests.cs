@@ -17,7 +17,7 @@ public class DiscoverySettingsTests
         Assert.Equal("affected-orders.json", settings.OrderIdsFilePath);
         Assert.Equal(100, settings.MaxOrders);
         Assert.Null(settings.CreatorNameFilter);
-        Assert.Null(settings.MinProcessedDateFilter);
+        Assert.Null(settings.MinProcessedDateTimeFilter);
         Assert.Null(settings.OrderProcessingStatusFilter);
     }
 
@@ -30,7 +30,7 @@ public class DiscoverySettingsTests
             OrderIdsFilePath = "custom-orders.json",
             MaxOrders = 50,
             CreatorNameFilter = "test-creator",
-            MinProcessedDateFilter = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            MinProcessedDateTimeFilter = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             OrderProcessingStatusFilter = OrderProcessingStatus.Completed
         };
 
@@ -38,7 +38,7 @@ public class DiscoverySettingsTests
         Assert.Equal("custom-orders.json", settings.OrderIdsFilePath);
         Assert.Equal(50, settings.MaxOrders);
         Assert.Equal("test-creator", settings.CreatorNameFilter);
-        Assert.Equal(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), settings.MinProcessedDateFilter);
+        Assert.Equal(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), settings.MinProcessedDateTimeFilter);
         Assert.Equal(OrderProcessingStatus.Completed, settings.OrderProcessingStatusFilter);
     }
 }

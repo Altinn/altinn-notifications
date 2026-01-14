@@ -20,10 +20,8 @@ public static class TestDataUtil
     /// <summary>
     /// Creates a simple email order with a notification using repository
     /// </summary>
-    public static async Task<(Guid OrderId, Guid EmailId)> CreateEmailOrder(string? sendersReference = null)
+    public static async Task<(Guid OrderId, Guid EmailId)> CreateEmailOrder(string sendersReference)
     {
-        sendersReference ??= Guid.NewGuid().ToString();
-
         var order = new NotificationOrder
         {
             SendersReference = sendersReference,
@@ -89,10 +87,8 @@ public static class TestDataUtil
     /// <summary>
     /// Creates a simple SMS order using repository
     /// </summary>
-    public static async Task<Guid> CreateSmsOrder(string? sendersReference = null)
+    public static async Task<Guid> CreateSmsOrder(string sendersReference)
     {
-        sendersReference ??= Guid.NewGuid().ToString();
-
         var order = new NotificationOrder
         {
             SendersReference = sendersReference,
@@ -163,15 +159,6 @@ public static class TestDataUtil
         command.Parameters.AddWithValue("orderId", orderId);
         
         await command.ExecuteNonQueryAsync();
-    }
-
-    /// <summary>
-    /// Updates email notification result using repository (may trigger automatic statusfeed creation)
-    /// </summary>
-    public static async Task UpdateEmailNotificationResult(Guid emailId, EmailNotificationResultType resultType)
-    {
-        var emailRepo = TestServiceUtil.GetService<IEmailNotificationRepository>();
-        await emailRepo.UpdateSendStatus(emailId, resultType);
     }
 
     /// <summary>

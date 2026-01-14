@@ -16,9 +16,11 @@ dotnet run
 Select operation mode:
   1. Discover - Find affected orders and save to file
   2. Backfill - Process orders from file and insert status feed entries
-  3. Exit
+  3. Generate Test Data - Create test orders for manual testing
+  4. Cleanup Test Data - Remove all test orders
+  5. Exit
 
-Enter choice (1-3):
+Enter choice (1-5):
 ```
 
 ## Two-Step Workflow
@@ -46,7 +48,7 @@ dotnet run
 {
   "DiscoverySettings": {
     "CreatorNameFilter": "ttd",
-    "MinProcessedDateFilter": "2025-06-01",
+    "MinProcessedDateTimeFilter": "2024-12-01T00:00:00Z",
     "OrderProcessingStatusFilter": "Completed"
   }
 }
@@ -58,14 +60,19 @@ Process the discovered orders and insert missing status feed entries.
 
 **Before running:**
 - Review `affected-orders.json`
-- Set `DryRun` to `true` for testing, `false` for actual backfill
+- Optionally configure `DryRun` default in `appsettings.json`
 
 **Run:**
 ```bash
-cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
 dotnet run
 # Choose option 2
+# When prompted "Run in DRY RUN mode?", enter y for testing or n for actual insertion
 ```
+
+**Interactive Dry Run Prompt:**
+- The tool prompts you to run in dry run mode
+- Default is taken from `appsettings.json` (`BackfillSettings.DryRun`)
+- Press Enter to use the default, or type `y`/`n` to override
 
 **DryRun = true**: Simulates processing without database changes  
 **DryRun = false**: Actually inserts missing status feed entries
@@ -77,7 +84,7 @@ dotnet run
 cd src/Altinn.Notifications.Tools/StatusFeedBackfillTool
 
 # 1. Configure discovery filters in appsettings.json
-# Edit: MinProcessedDateFilter = "2025-06-01", CreatorNameFilter = "digdir"
+# Edit: MinProcessedDateTimeFilter = "2024-12-01T00:00:00Z", CreatorNameFilter = "digdir"
 
 # 2. Discover affected orders
 dotnet run
@@ -89,15 +96,15 @@ cat affected-orders.json | jq '. | length'  # Check count
 cat affected-orders.json | head -20         # Preview first orders
 
 # 4. Test with dry run
-# Edit appsettings.json: DryRun = true
 dotnet run
 # Choose option 2 (Backfill)
+# When prompted "Run in DRY RUN mode?", press Enter or type 'y'
 # Output: Shows what would be inserted (no database changes)
 
 # 5. Run actual backfill
-# Edit appsettings.json: DryRun = false
 dotnet run
 # Choose option 2 (Backfill)
+# When prompted "Run in DRY RUN mode?", type 'n'
 # Output: Inserts missing status feed entries
 ```
 
@@ -126,16 +133,16 @@ You can manually edit this file to:
 |---------|------|-------------|
 | `OrderIdsFilePath` | string | Path to JSON file for storing discovered order IDs (default: "affected-orders.json") |
 | `MaxOrders` | int | Maximum number of orders to retrieve from discovery query (default: 100) |
-| `CreatorNameFilter` | string | Filter by creator, e.g., "digdir" |
-| `MinProcessedDateFilter` | DateTime | Only discover orders processed after this date |
-| `OrderProcessingStatusFilter` | enum | Filter by final status: either `Completed` or `SendConditionNotMet`. Processing and other non-final statuses are automatically excluded |
+| `CreatorNameFilter` | string\|null | Filter by creator, e.g., "digdir", or null for all creators |
+| `MinProcessedDateTimeFilter` | DateTime\|null | Only discover orders processed after this timestamp (ISO 8601 format, e.g., "2024-12-01T14:30:00Z"), or null to use oldest status feed entry date |
+| `OrderProcessingStatusFilter` | enum\|null | Filter by final status: "Completed" or "SendConditionNotMet", or null for all final statuses. Processing and other non-final statuses are automatically excluded |
 
 ### BackfillSettings
 
 | Setting | Type | Description |
 |---------|------|-------------|
 | `OrderIdsFilePath` | string | Path to JSON file for reading order IDs to process (default: "affected-orders.json") |
-| `DryRun` | bool | If true, simulates without database changes (default: true) |
+| `DryRun` | bool | Default dry run mode. Can be overridden interactively when running backfill (default: true) |
 
 ## Database Connection
 

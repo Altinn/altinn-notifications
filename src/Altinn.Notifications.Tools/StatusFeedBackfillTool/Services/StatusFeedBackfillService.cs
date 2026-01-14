@@ -10,29 +10,20 @@ namespace StatusFeedBackfillTool.Services;
 /// Service responsible for backfilling missing status feed entries for orders.
 /// Reads order IDs from a file and inserts missing status feed entries.
 /// </summary>
-public class StatusFeedBackfillService
+public class StatusFeedBackfillService(
+    OrderRepository orderRepository,
+    IOptions<BackfillSettings> settings,
+    bool skipInteractivePrompts = false)
 {
-    private readonly OrderRepository _orderRepository;
-    private readonly BackfillSettings _settings;
-
-    public StatusFeedBackfillService(
-        OrderRepository orderRepository,
-        IOptions<BackfillSettings> settings)
-    {
-        _orderRepository = orderRepository;
-        _settings = settings.Value;
-    }
+    private readonly OrderRepository _orderRepository = orderRepository;
+    private readonly BackfillSettings _settings = settings.Value;
+    private readonly bool _skipInteractivePrompts = skipInteractivePrompts;
 
     public async Task Run(CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
         Console.WriteLine("=== BACKFILL MODE ===\n");
-        Console.WriteLine("Tool Settings:");
-        Console.WriteLine($"  Mode: Backfill");
-        Console.WriteLine($"  Order IDs File: {_settings.OrderIdsFilePath}");
-        Console.WriteLine($"  Dry Run: {_settings.DryRun}");
-        Console.WriteLine();
 
         var ordersToProcess = await LoadOrdersFromFile(cancellationToken);
 
@@ -44,12 +35,27 @@ public class StatusFeedBackfillService
             return;
         }
 
-        Console.WriteLine($"Loaded {ordersToProcess.Count} orders from file\n");
+        Console.WriteLine($"Loaded {ordersToProcess.Count} orders from file");
+        Console.WriteLine($"Order IDs File: {_settings.OrderIdsFilePath}\n");
 
-        var (totalProcessed, totalInserted, totalErrors) = await ProcessOrders(ordersToProcess, cancellationToken);
+        bool isDryRun = _settings.DryRun;
+
+        if (!_skipInteractivePrompts)
+        {
+            Console.Write($"Run in DRY RUN mode? (y/n, default: {(_settings.DryRun ? "y" : "n")}): ");
+            var input = Console.ReadLine()?.Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(input))
+            {
+                isDryRun = input == "y" || input == "yes";
+            }
+        }
+
+        Console.WriteLine($"Dry Run: {isDryRun}\n");
+
+        var (totalProcessed, totalInserted, totalErrors) = await ProcessOrders(ordersToProcess, isDryRun, cancellationToken);
 
         stopwatch.Stop();
-        LogBackfillSummary(totalProcessed, totalInserted, totalErrors, stopwatch.Elapsed);
+        LogBackfillSummary(totalProcessed, totalInserted, totalErrors, isDryRun, stopwatch.Elapsed);
     }
 
     private async Task<List<Guid>> LoadOrdersFromFile(CancellationToken cancellationToken)
@@ -65,7 +71,7 @@ public class StatusFeedBackfillService
         return orders ?? [];
     }
 
-    private async Task<(int totalProcessed, int totalInserted, int totalErrors)> ProcessOrders(List<Guid> allOrders, CancellationToken cancellationToken)
+    private async Task<(int totalProcessed, int totalInserted, int totalErrors)> ProcessOrders(List<Guid> allOrders, bool isDryRun, CancellationToken cancellationToken)
     {
         int totalProcessed = 0;
         int totalInserted = 0;
@@ -90,7 +96,7 @@ public class StatusFeedBackfillService
 
             try
             {
-                if (_settings.DryRun)
+                if (isDryRun)
                 {
                     // In dry run mode, just count what would be inserted
                     totalInserted++;
@@ -113,9 +119,9 @@ public class StatusFeedBackfillService
         return (totalProcessed, totalInserted, totalErrors);
     }
 
-    private void LogBackfillSummary(int totalProcessed, int totalInserted, int totalErrors, TimeSpan elapsed)
+    private static void LogBackfillSummary(int totalProcessed, int totalInserted, int totalErrors, bool isDryRun, TimeSpan elapsed)
     {
-        var action = _settings.DryRun ? "Would Be Inserted" : "Inserted";
+        var action = isDryRun ? "Would Be Inserted" : "Inserted";
 
         Console.WriteLine("\n========================================");
         Console.WriteLine("Backfill Summary");
@@ -125,7 +131,7 @@ public class StatusFeedBackfillService
         Console.WriteLine($"Total Errors: {totalErrors}");
         Console.WriteLine($"Total elapsed time: {elapsed:hh\\:mm\\:ss}");
 
-        if (_settings.DryRun)
+        if (isDryRun)
         {
             Console.WriteLine("\nWARNING: DRY RUN MODE - No changes were committed to the database");
         }
