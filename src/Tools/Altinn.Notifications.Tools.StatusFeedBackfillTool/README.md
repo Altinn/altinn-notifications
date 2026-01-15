@@ -74,8 +74,9 @@ dotnet run
 - Default is taken from `appsettings.json` (`BackfillSettings.DryRun`)
 - Press Enter to use the default, or type `y`/`n` to override
 
-**DryRun = true**: Simulates processing without database changes  
-**DryRun = false**: Actually inserts missing status feed entries
+
+**DryRun = true**: Simulates processing without database changes. "Would Be Inserted" is an upper bound; actual inserts may be lower due to errors during real execution.
+**DryRun = false**: Actually inserts missing status feed entries.
 
 ## Complete Workflow Example
 
@@ -100,6 +101,7 @@ dotnet run
 # Choose option 2 (Backfill)
 # When prompted "Run in DRY RUN mode?", press Enter or type 'y'
 # Output: Shows what would be inserted (no database changes)
+# NOTE: In dry run mode, "Would Be Inserted" is an upper bound; actual inserts may be lower due to errors during real execution.
 
 # 5. Run actual backfill
 dotnet run

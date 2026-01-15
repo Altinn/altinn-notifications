@@ -119,7 +119,7 @@ public class StatusFeedBackfillService(
 
     private static void LogBackfillSummary(int totalProcessed, int totalInserted, int totalErrors, bool isDryRun, TimeSpan elapsed)
     {
-        var action = isDryRun ? "Would Be Inserted" : "Inserted";
+        var action = isDryRun ? "Would Be Inserted (Upper Bound)" : "Inserted";
 
         Console.WriteLine("\n========================================");
         Console.WriteLine("Backfill Summary");
@@ -132,6 +132,7 @@ public class StatusFeedBackfillService(
         if (isDryRun)
         {
             Console.WriteLine("\nWARNING: DRY RUN MODE - No changes were committed to the database");
+            Console.WriteLine("NOTE: 'Would Be Inserted' is an upper bound; actual inserts may be lower due to errors during real execution.");
         }
     }
 }
