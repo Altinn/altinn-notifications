@@ -18,7 +18,6 @@ namespace Altinn.Notifications.Tools.Tests.Utils;
 public static class TestServiceUtil
 {
     private static readonly Lock _lock = new();
-    private static NpgsqlDataSource? _sharedDataSource;
     private static IServiceProvider? _serviceProvider;
     private static bool _databaseInitialized = false;
 
@@ -69,8 +68,8 @@ public static class TestServiceUtil
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
             dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
             dataSourceBuilder.EnableDynamicJson();
-            _sharedDataSource = dataSourceBuilder.Build();
-            services.AddSingleton(_sharedDataSource);
+            var sharedDataSource = dataSourceBuilder.Build();
+            services.AddSingleton(sharedDataSource);
 
             // Register repositories
             services.AddSingleton<IOrderRepository, OrderRepository>();

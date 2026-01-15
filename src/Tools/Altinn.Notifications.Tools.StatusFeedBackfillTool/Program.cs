@@ -27,15 +27,15 @@ builder.Services.Configure<BackfillSettings>(
     builder.Configuration.GetSection("BackfillSettings"));
 
 // Register NpgsqlDataSource
-var connectionString = builder.Configuration["PostgreSQLSettings:ConnectionString"];
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
-}
-
 builder.Services.AddSingleton(sp =>
 {
-    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+    var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PostgreSqlSettings>>().Value;
+    if (string.IsNullOrWhiteSpace(settings.ConnectionString))
+    {
+        throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
+    }
+
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(settings.ConnectionString);
     dataSourceBuilder.EnableDynamicJson();
     return dataSourceBuilder.Build();
 });

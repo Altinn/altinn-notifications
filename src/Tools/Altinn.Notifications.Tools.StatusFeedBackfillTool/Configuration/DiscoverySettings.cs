@@ -25,7 +25,7 @@ public class DiscoverySettings
     public string? CreatorNameFilter { get; set; }
 
     /// <summary>
-    /// Optional: Only discover orders processed after this timestamp (date and time).
+    /// Optional: Only discover orders processed after this timestamp (UTC).
     /// If null, uses the oldest status feed entry date.
     /// </summary>
     public DateTime? MinProcessedDateTimeFilter { get; set; }

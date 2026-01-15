@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Core.Persistence;
 using Microsoft.Extensions.Options;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services.Interfaces;
@@ -12,10 +12,10 @@ namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 /// Reads order IDs from a file and inserts missing status feed entries.
 /// </summary>
 public class StatusFeedBackfillService(
-    OrderRepository orderRepository,
+    IOrderRepository orderRepository,
     IOptions<BackfillSettings> settings) : IStatusFeedBackfillService
 {
-    private readonly OrderRepository _orderRepository = orderRepository;
+    private readonly IOrderRepository _orderRepository = orderRepository;
     private readonly BackfillSettings _settings = settings.Value;
 
     public async Task Run()
@@ -110,7 +110,7 @@ public class StatusFeedBackfillService(
             catch (Exception ex)
             {
                 totalErrors++;
-                Console.WriteLine($"ERROR processing order {orderId}: {ex.Message}");
+                Console.WriteLine($"ERROR processing order {orderId}: {ex}");
             }
         }
 

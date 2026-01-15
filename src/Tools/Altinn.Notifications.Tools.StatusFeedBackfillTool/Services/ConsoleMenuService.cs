@@ -24,17 +24,17 @@ namespace Altinn.Notifications.Tools.StatusFeedBackfillTool.Services
 
             if (choice == "1")
             {
-                var discoveryService = _serviceProvider.GetRequiredService<Services.Interfaces.IOrderDiscoveryService>();
+                var discoveryService = _serviceProvider.GetRequiredService<IOrderDiscoveryService>();
                 await discoveryService.Run();
             }
             else if (choice == "2")
             {
-                var backfillService = _serviceProvider.GetRequiredService<Services.Interfaces.IStatusFeedBackfillService>();
+                var backfillService = _serviceProvider.GetRequiredService<IStatusFeedBackfillService>();
                 await backfillService.Run();
             }
             else if (choice == "3")
             {
-                var testDataService = _serviceProvider.GetRequiredService<Services.Interfaces.ITestDataService>();
+                var testDataService = _serviceProvider.GetRequiredService<ITestDataService>();
                 await testDataService.GenerateTestData();
             }
             else if (choice == "4")

@@ -53,7 +53,7 @@ public static class TestDataUtil
                     ]
                 }
             ],
-            Id = Guid.NewGuid() // Override ID after creation
+            Id = Guid.NewGuid()
         };
 
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
@@ -76,7 +76,7 @@ public static class TestDataUtil
                 ToAddress = addressPoint!.EmailAddress
             },
             SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow),
-            Id = Guid.NewGuid() // Override ID
+            Id = Guid.NewGuid()
         };
 
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(7));
@@ -118,11 +118,11 @@ public static class TestDataUtil
                     ]
                 }
             ],
-            Id = Guid.NewGuid() // Override ID after creation
+            Id = Guid.NewGuid()
         };
 
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
-        
+
         // Create order using repository (ensures proper transaction handling)
         await orderRepo.Create(order);
         

@@ -12,6 +12,7 @@ dotnet run
 ```
 
 **Interactive Menu:**
+
 ```
 Select operation mode:
   1. Discover - Find affected orders and save to file
@@ -30,9 +31,11 @@ Enter choice (1-5):
 Find affected orders and save to a file for review.
 
 **Before running:**
+
 - Configure filters in `appsettings.json` (see Configuration section below)
 
 **Run:**
+
 ```bash
 cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
 dotnet run
@@ -44,6 +47,7 @@ dotnet run
 #### Discovery Options
 
 **Configure Filters** (recommended for large-scale backfill)
+
 ```json
 {
   "DiscoverySettings": {
@@ -59,10 +63,12 @@ dotnet run
 Process the discovered orders and insert missing status feed entries.
 
 **Before running:**
+
 - Review `affected-orders.json`
 - Optionally configure `DryRun` default in `appsettings.json`
 
 **Run:**
+
 ```bash
 dotnet run
 # Choose option 2
@@ -70,10 +76,10 @@ dotnet run
 ```
 
 **Interactive Dry Run Prompt:**
+
 - The tool prompts you to run in dry run mode
 - Default is taken from `appsettings.json` (`BackfillSettings.DryRun`)
 - Press Enter to use the default, or type `y`/`n` to override
-
 
 **DryRun = true**: Simulates processing without database changes. "Would Be Inserted" is an upper bound; actual inserts may be lower due to errors during real execution.
 **DryRun = false**: Actually inserts missing status feed entries.
@@ -123,6 +129,7 @@ The `affected-orders.json` file is a simple JSON array of GUIDs:
 ```
 
 You can manually edit this file to:
+
 - Remove specific orders you don't want to backfill
 - Add additional order IDs
 - Split into multiple files for batched processing
@@ -131,20 +138,20 @@ You can manually edit this file to:
 
 ### DiscoverySettings
 
-| Setting | Type | Description |
-|---------|------|-------------|
-| `OrderIdsFilePath` | string | Path to JSON file for storing discovered order IDs (default: "affected-orders.json") |
-| `MaxOrders` | int | Maximum number of orders to retrieve from discovery query (default: 100) |
-| `CreatorNameFilter` | string\|null | Filter by creator, e.g., "digdir", or null for all creators |
-| `MinProcessedDateTimeFilter` | DateTime\|null | Only discover orders processed after this timestamp (ISO 8601 format, e.g., "2024-12-01T14:30:00Z"), or null to use oldest status feed entry date |
-| `OrderProcessingStatusFilter` | enum\|null | Filter by final status: "Completed" or "SendConditionNotMet", or null for all final statuses. Processing and other non-final statuses are automatically excluded |
+| Setting                       | Type           | Description                                                                                                                                                      |
+| ----------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OrderIdsFilePath`            | string         | Path to JSON file for storing discovered order IDs (default: "affected-orders.json")                                                                             |
+| `MaxOrders`                   | int            | Maximum number of orders to retrieve from discovery query (default: 100)                                                                                         |
+| `CreatorNameFilter`           | string\|null   | Filter by creator, e.g., "digdir", or null for all creators                                                                                                      |
+| `MinProcessedDateTimeFilter`  | DateTime\|null | Only discover orders processed after this timestamp (ISO 8601 format, e.g., "2024-12-01T14:30:00Z"), or null to use oldest status feed entry date                |
+| `OrderProcessingStatusFilter` | enum\|null     | Filter by final status: "Completed" or "SendConditionNotMet", or null for all final statuses. Processing and other non-final statuses are automatically excluded |
 
 ### BackfillSettings
 
-| Setting | Type | Description |
-|---------|------|-------------|
-| `OrderIdsFilePath` | string | Path to JSON file for reading order IDs to process (default: "affected-orders.json") |
-| `DryRun` | bool | Default dry run mode. Can be overridden interactively when running backfill (default: true) |
+| Setting            | Type   | Description                                                                                 |
+| ------------------ | ------ | ------------------------------------------------------------------------------------------- |
+| `OrderIdsFilePath` | string | Path to JSON file for reading order IDs to process (default: "affected-orders.json")        |
+| `DryRun`           | bool   | Default dry run mode. Can be overridden interactively when running backfill (default: true) |
 
 ## Database Connection
 
