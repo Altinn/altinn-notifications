@@ -155,12 +155,36 @@ You can manually edit this file to:
 
 ## Database Connection
 
-Update `PostgreSQLSettings.ConnectionString` with your database credentials:
+### Local Development
+
+The default `appsettings.json` is configured for local development. Update the connection string if needed:
 
 ```json
 {
   "PostgreSQLSettings": {
-    "ConnectionString": "Host=localhost;Port=5432;Username=platform_notifications;Password=your_password;Database=notificationsdb"
+    "ConnectionString": "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
+    "NotificationsDbPwd": "Password"
   }
 }
 ```
+
+### Targeting Other Environments
+
+To target test, staging, or production environments, use [.NET user secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) to avoid committing credentials:
+
+```bash
+# Navigate to the tool directory
+cd src/Tools/Altinn.Notifications.Tools.StatusFeedBackfillTool
+
+# Set connection string for target environment
+dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "Host=your-host;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb"
+dotnet user-secrets set "PostgreSQLSettings:NotificationsDbPwd" "your-actual-password"
+
+# Verify configuration
+dotnet user-secrets list
+
+# Run the tool (user secrets automatically override appsettings.json)
+dotnet run
+```
+
+User secrets are stored locally and never committed to source control, keeping environment credentials secure.
