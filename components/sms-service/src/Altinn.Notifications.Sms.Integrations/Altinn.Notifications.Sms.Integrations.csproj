@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="2.12.0" />
+    <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
     <PackageReference Include="LinkMobilityNE.PSWin.Client" Version="1.3.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.1" />
   </ItemGroup>
