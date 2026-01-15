@@ -15,6 +15,7 @@ DECLARE
 BEGIN
   start_date = MAKE_DATE(year_input, month_input, day_input);
 
+  RETURN QUERY
   select 
     -- referanser og korrelering
     sms._id as sms_id --unik pr nummer/"funksjonell sms"

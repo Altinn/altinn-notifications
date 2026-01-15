@@ -43,7 +43,7 @@
         /// <summary>
         /// Gets or sets the gateway reference returned by the SMS provider.
         /// </summary>
-        public string GatewayReference { get; set; }
+        public string GatewayReference { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the rate category or tariff used for the SMS.
