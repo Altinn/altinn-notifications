@@ -53,4 +53,24 @@ public class MetricsRepositoryTests : IAsyncLifetime
         Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
         Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
     }
+
+    [Fact]
+    public async Task GetDailySmsMetrics()
+    {
+        // Arrange
+        var orgName = $"test-{Guid.NewGuid():N}";
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName);
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        var result = await sut.GetDailySmsMetrics(DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year);
+
+        // Assert
+        var metrics = result.Metrics.FirstOrDefault();
+        Assert.NotNull(metrics);
+    }
 }
