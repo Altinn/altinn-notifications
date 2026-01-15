@@ -86,5 +86,6 @@ public static class TestServiceUtil
         // Use the same migration approach as IntegrationTests
         var app = WebApplication.CreateBuilder().Build();
         app.SetUpPostgreSql(true, config);
+        app.DisposeAsync().AsTask().Wait();
     }
 }

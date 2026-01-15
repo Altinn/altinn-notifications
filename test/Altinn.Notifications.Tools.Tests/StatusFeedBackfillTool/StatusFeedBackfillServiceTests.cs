@@ -463,9 +463,6 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = true
         });
         var service = new StatusFeedBackfillService(null!, settings);
-        var method = typeof(StatusFeedBackfillService).GetMethod(
-            "LoadOrdersFromFile",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         using var sw = new StringWriter();
         var originalOut = Console.Out;
@@ -473,7 +470,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         try
         {
             // Act
-            var result = await (Task<List<Guid>>)method!.Invoke(service, null)!;
+            var result = await service.LoadOrdersFromFile();
 
             // Assert
             Assert.Empty(result);
@@ -497,9 +494,6 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             DryRun = true
         });
         var service = new StatusFeedBackfillService(null!, settings);
-        var method = typeof(StatusFeedBackfillService).GetMethod(
-            "LoadOrdersFromFile",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         using var sw = new StringWriter();
         var originalOut = Console.Out;
@@ -507,7 +501,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         try
         {
             // Act
-            var result = await (Task<List<Guid>>)method!.Invoke(service, null)!;
+            var result = await service.LoadOrdersFromFile();
 
             // Assert
             Assert.Empty(result);

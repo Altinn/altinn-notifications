@@ -54,7 +54,7 @@ public class StatusFeedBackfillService(
         LogBackfillSummary(totalProcessed, totalInserted, totalErrors, isDryRun, stopwatch.Elapsed);
     }
 
-    private async Task<List<Guid>> LoadOrdersFromFile()
+    internal async Task<List<Guid>> LoadOrdersFromFile()
     {
         if (!File.Exists(_settings.OrderIdsFilePath))
         {

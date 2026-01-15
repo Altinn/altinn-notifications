@@ -13,7 +13,7 @@ dotnet run
 
 **Interactive Menu:**
 
-```
+```text
 Select operation mode:
   1. Discover - Find affected orders and save to file
   2. Backfill - Process orders from file and insert status feed entries
