@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
-    ROWS 1000
+    ROWS 100000
 
 AS $BODY$
 DECLARE
