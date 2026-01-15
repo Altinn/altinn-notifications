@@ -151,7 +151,7 @@ You can manually edit this file to:
 | Setting            | Type   | Description                                                                                 |
 | ------------------ | ------ | ------------------------------------------------------------------------------------------- |
 | `OrderIdsFilePath` | string | Path to JSON file for reading order IDs to process (default: "affected-orders.json")        |
-| `DryRun`           | bool   | Default dry run mode. Can be overridden interactively when running backfill (default: true) |
+| `DryRun`           | bool   | Default dry run mode. It can be overridden interactively when running backfill (default: true) |
 
 ## Database Connection
 
