@@ -35,7 +35,9 @@ builder.Services.AddSingleton(sp =>
         throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
     }
 
-    var dataSourceBuilder = new NpgsqlDataSourceBuilder(settings.ConnectionString);
+    var connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+    
     dataSourceBuilder.EnableDynamicJson();
     return dataSourceBuilder.Build();
 });
