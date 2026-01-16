@@ -56,5 +56,25 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.True(actual.Metrics.First(m => m.Org == "ttd").SmsNotificationsCreated >= 1);
             Assert.True(actual.Metrics.First(m => m.Org == "ttd").EmailNotificationsCreated >= 1);
         }
+
+        [Fact]
+        public async Task GetDailySmsMetrics_TwoOrdersPlacedForTTD()
+        {
+            // Arrange
+            MetricsService service = (MetricsService)ServiceUtil
+                .GetServices(new List<Type>() { typeof(IMetricsService) })
+                .First(i => i.GetType() == typeof(MetricsService));
+
+            (NotificationOrder smsOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(requestedSendTime: DateTime.UtcNow.AddDays(-3));
+
+            _orderIdsToDelete.Add(smsOrder.Id);
+
+            // Act
+            var actual = await service.GetDailySmsMetrics();
+
+            // Assert
+            Assert.NotEmpty(actual.Metrics);
+            Assert.Equal("ttd", actual.Metrics.First().CreatorName);
+        }
     }
 }

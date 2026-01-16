@@ -3,7 +3,6 @@ using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
-using System.Linq.Expressions;
 
 namespace Altinn.Notifications.Controllers
 {
@@ -52,7 +51,7 @@ namespace Altinn.Notifications.Controllers
         [Consumes("application/json")]
         [Produces("application/octet-stream")]
         [ServiceFilter(typeof(MetricsApiKeyFilter))]
-        public async Task<ActionResult> Trigger_SmsDailyMetrics()
+        public async Task<ActionResult> GetSmsDailyMetrics()
         {
             var data = await _metricsService.GetDailySmsMetrics();
 
