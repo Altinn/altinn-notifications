@@ -70,7 +70,13 @@ public class MetricsRepositoryTests : IAsyncLifetime
         var result = await sut.GetDailySmsMetrics(DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year);
 
         // Assert
+        Assert.Equal(2, result.Metrics.Count);
         var metrics = result.Metrics.FirstOrDefault();
         Assert.NotNull(metrics);
+
+        Assert.NotNull(metrics.Rate);
+        Assert.Equal("innland", metrics.Rate);
+        Assert.Equal("+479", metrics.MobilenumberPrefix);
+        Assert.Equal(orgName, metrics.CreatorName);
     }
 }

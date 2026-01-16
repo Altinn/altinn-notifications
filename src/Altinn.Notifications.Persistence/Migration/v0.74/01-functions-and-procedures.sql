@@ -1214,7 +1214,7 @@ CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(sms_id bigint, shipmentId uuid, sendersReference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
+    RETURNS TABLE(sms_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -1230,14 +1230,14 @@ BEGIN
   select 
     -- referanser og korrelering
     sms._id as sms_id --unik pr nummer/"funksjonell sms"
-,   sms.alternateid as shipmentId --unik pr varsel/p�minnelse (men lik ved samme varsel/p�minnelse til flere mottakere, f.eks til org der personer med tilgang til ressursen har egendefinert kontaktinformasjon)
-,   orders.notificationorder ->> 'SendersReference' as SendersReference --avsenders referanse (ikke n�dvendigvis unik)    
+,   sms.alternateid as shipmentid --unik pr varsel/p�minnelse (men lik ved samme varsel/p�minnelse til flere mottakere, f.eks til org der personer med tilgang til ressursen har egendefinert kontaktinformasjon)
+,   orders.notificationorder ->> 'SendersReference' as senders_reference --avsenders referanse (ikke n�dvendigvis unik)    
 ,   orders.requestedsendtime --�nsket sendetidspunkt (for � avgj�re n�r det er riktig � evt. fakturere. Kan avvike noe fra faktisk sendetidspunkt, s� se i kombinasjon med status/gateway-ref)
 ,   orders.creatorname -- bestillers maksinporten-id (den reelle tjenesteeieren kan skjules ved aggregering, f.eks correspondence)     
-,   orders.notificationorder ->> 'ResourceId' as ResourceId --ressurs-id, kan i kombinasjon med creator gi reell tjenesteeier eller granulering tilsvarende service-code mv.
+,   orders.notificationorder ->> 'ResourceId' as resourceid --ressurs-id, kan i kombinasjon med creator gi reell tjenesteeier eller granulering tilsvarende service-code mv.
 
      -- operat�r-status
-,   sms.result as result -- status p� utsendingen (feil, men med GW-ref kan bety at meldingen er fors�kt sendt/taksert, men har av ulike �rsaker ikke n�dd frem til brukeren)
+,   sms.result::text as result -- status p� utsendingen (feil, men med GW-ref kan bety at meldingen er fors�kt sendt/taksert, men har av ulike �rsaker ikke n�dd frem til brukeren)
 ,   sms.gatewayreference -- referanse hos Link Mobiilty (en ref betyr sannsynligvis at LinkMobility fakturerer for denne - men ikke n�dvendigvis)    
 
      -- takstering (prisgruppe + oppsplitting hos operat�ren)

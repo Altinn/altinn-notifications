@@ -151,3 +151,36 @@ public class TriggerController : ControllerBase
         return Ok();
     }
 }
+
+/// <summary>
+/// Controller for all statistics trigger operations
+/// </summary>
+[ApiController]
+[Route("notifications/api/v1/trigger/statistics")]
+[ApiExplorerSettings(IgnoreApi = true)]
+public class StatisticTriggerController : ControllerBase
+{
+    private readonly ISmsMetricsService _smsMetricService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TriggerController"/> class.
+    /// </summary>
+    public StatisticTriggerController(
+        ISmsMetricsService smsMetricsService)
+    {
+        _smsMetricService = smsMetricsService;
+    }
+
+    /// <summary>
+    /// Endpoint for triggering generation of daily SMS metrics
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+    [HttpPost]
+    [Route("sms")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_SmsDailyMetrics()
+    {
+        await _smsMetricService.GetDailySmsMetrics();
+        return Ok();
+    }
+}
