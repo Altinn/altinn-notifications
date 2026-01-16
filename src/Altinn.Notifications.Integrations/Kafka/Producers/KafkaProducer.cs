@@ -394,7 +394,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             })
             .SetStatisticsHandler((_, json) =>
             {
-                _logger.LogDebug("// KafkaProducer // Stats: {StatsJson}", json);
+                _logger.LogTrace("// KafkaProducer // Stats: {StatsJson}", json);
             })
             .BuildWithInstrumentation();
     }
