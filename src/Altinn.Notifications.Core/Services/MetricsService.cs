@@ -63,7 +63,7 @@ namespace Altinn.Notifications.Core.Services
 
         private async Task<(Stream ParquetStream, string FileHash, long FileSize)> GenerateParquetFileStream(DailySmsMetrics metrics)
         {
-            _logger.LogInformation("Generating daily summary parquet file with {count} records", metrics.Metrics.Count);
+            _logger.LogInformation("Generating daily summary parquet file with {Count} records", metrics.Metrics.Count);
 
             var parquetData = metrics.Metrics;
 
@@ -72,8 +72,7 @@ namespace Altinn.Notifications.Core.Services
             await ParquetSerializer.SerializeAsync(parquetData, memoryStream);
             memoryStream.Position = 0;
 
-            using var md5 = MD5.Create();
-            var hash = Convert.ToBase64String(md5.ComputeHash(memoryStream.ToArray()));
+            var hash = Convert.ToBase64String(MD5.HashData(memoryStream.ToArray()));
             memoryStream.Position = 0;
 
             _logger.LogInformation("Successfully generated daily summary parquet file stream");

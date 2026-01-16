@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         public Task<MonthlyNotificationMetrics> GetMonthlyMetrics(int month, int year);
 
         /// <summary>
-        /// Retrieves the daily metrics for the day specified
+        /// Retrieves the daily metrics 
         /// </summary>
         public Task<DailySmsMetrics> GetDailySmsMetrics();
 

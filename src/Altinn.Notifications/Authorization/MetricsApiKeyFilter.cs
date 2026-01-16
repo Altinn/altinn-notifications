@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Primitives;
 
@@ -56,8 +58,7 @@ namespace Altinn.Notifications.Authorization
             if (!SecureEquals(providedApiKey, configuredApiKey))
             {
                 _logger.LogWarning("Metrics endpoint accessed with invalid API key from IP: {ClientIp}", GetClientIpAddress(context.HttpContext));
-                context.Result = new UnauthorizedObjectResult(new { error = "Invalid API key" });
-                return;
+                context.Result = new UnauthorizedObjectResult(new { error = "Invalid API key" });              
             }
         }
 
@@ -82,18 +83,9 @@ namespace Altinn.Notifications.Authorization
         /// </summary>
         private static bool SecureEquals(string a, string b)
         {
-            if (a.Length != b.Length)
-            {
-                return false;
-            }
-
-            var result = 0;
-            for (int i = 0; i < a.Length; i++)
-            {
-                result |= a[i] ^ b[i];
-            }
-
-            return result == 0;
+            var abytes = Encoding.UTF8.GetBytes(a);
+            var bbytes = Encoding.UTF8.GetBytes(b);
+            return CryptographicOperations.FixedTimeEquals(abytes, bbytes);
         }
     }
 }

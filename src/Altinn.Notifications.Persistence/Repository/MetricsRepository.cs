@@ -103,6 +103,5 @@ namespace Altinn.Notifications.Persistence.Repository
 
             return metrics;
         }
-
     }
 }

@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Core.Models.Metrics
         public string FileName { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the hash of the file content (e.g. SHA-256) used for integrity checks.
+        /// Gets or sets the hash of the file content (e.g. MD5) used for integrity checks.
         /// </summary>
         public string FileHash { get; set; } = string.Empty;
 

@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
+using System.Linq.Expressions;
 
 namespace Altinn.Notifications.Controllers
 {
@@ -57,11 +58,19 @@ namespace Altinn.Notifications.Controllers
 
             var response = await _metricsService.GetParquetFile(data);
 
-            Response.Headers["X-File-Hash"] = response.FileHash;
-            Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
-            Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
-            Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
-            Response.Headers["X-Environment"] = response.Environment;
+            try
+            {
+                Response.Headers["X-File-Hash"] = response.FileHash;
+                Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
+                Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
+                Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
+                Response.Headers["X-Environment"] = response.Environment;
+            }
+            catch
+            {
+                await response.FileStream.DisposeAsync();
+                throw;
+            }
 
             return File(response.FileStream, "application/octet-stream", response.FileName);
         }        
