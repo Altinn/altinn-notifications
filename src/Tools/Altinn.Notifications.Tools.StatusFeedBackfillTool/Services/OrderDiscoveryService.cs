@@ -96,9 +96,13 @@ public class OrderDiscoveryService(
     {
         if (_settings.MinProcessedDateTimeFilter.HasValue)
         {
-            // Ensure the DateTime is in UTC for PostgreSQL compatibility
             var filterDate = _settings.MinProcessedDateTimeFilter.Value;
-            return filterDate.Kind == DateTimeKind.Utc ? filterDate : filterDate.ToUniversalTime();
+            return filterDate.Kind switch
+            {
+                DateTimeKind.Utc => filterDate,
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(filterDate, DateTimeKind.Utc),
+                _ => filterDate.ToUniversalTime()
+            };
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();
