@@ -1,7 +1,9 @@
-﻿using Altinn.Notifications.Core.Models.Metrics;
+﻿using Altinn.Notifications.Authorization;
+using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
+using System.Linq.Expressions;
 
 namespace Altinn.Notifications.Controllers
 {
@@ -40,5 +42,37 @@ namespace Altinn.Notifications.Controllers
             MonthlyNotificationMetrics metrics = await _metricsService.GetMonthlyMetrics(month, year);
             return View("Index", metrics);
         }
+
+        /// <summary>
+        /// Endpoint for triggering generation of daily SMS metrics
+        /// </summary>
+        /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+        [HttpPost]
+        [Route("sms")]
+        [Consumes("application/json")]
+        [Produces("application/octet-stream")]
+        [ServiceFilter(typeof(MetricsApiKeyFilter))]
+        public async Task<ActionResult> Trigger_SmsDailyMetrics()
+        {
+            var data = await _metricsService.GetDailySmsMetrics();
+
+            var response = await _metricsService.GetParquetFile(data);
+
+            try
+            {
+                Response.Headers["X-File-Hash"] = response.FileHash;
+                Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
+                Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
+                Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
+                Response.Headers["X-Environment"] = response.Environment;
+            }
+            catch
+            {
+                await response.FileStream.DisposeAsync();
+                throw;
+            }
+
+            return File(response.FileStream, "application/octet-stream", response.FileName);
+        }        
     }
 }
