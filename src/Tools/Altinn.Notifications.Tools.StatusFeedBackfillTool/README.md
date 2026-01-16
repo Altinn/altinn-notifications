@@ -143,7 +143,7 @@ You can manually edit this file to:
 | `OrderIdsFilePath`            | string         | Path to JSON file for storing discovered order IDs (default: "affected-orders.json")                                                                             |
 | `MaxOrders`                   | int            | Maximum number of orders to retrieve from discovery query (default: 100)                                                                                         |
 | `CreatorNameFilter`           | string\|null   | Filter by creator, e.g., "digdir", or null for all creators                                                                                                      |
-| `MinProcessedDateTimeFilter`  | DateTime\|null | Only discover orders processed after this timestamp (ISO 8601 format, e.g., "2024-12-01T14:30:00Z"), or null to use oldest status feed entry date                |
+| `MinProcessedDateTimeFilter`  | DateTime\|null | Only discover orders processed after this timestamp in UTC (ISO 8601 format with Z suffix, e.g., "2024-12-01T14:30:00Z"), or null to use oldest status feed entry date |
 | `OrderProcessingStatusFilter` | enum\|null     | Filter by final status: "Completed" or "SendConditionNotMet", or null for all final statuses. Processing and other non-final statuses are automatically excluded |
 
 ### BackfillSettings
