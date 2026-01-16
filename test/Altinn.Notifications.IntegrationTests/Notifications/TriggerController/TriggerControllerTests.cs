@@ -159,6 +159,31 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         smsPublishTaskQueueMock.Verify(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Trigger_SmsStatistics_SmsMetricsServiceCalled()
+    {
+        // Arrange
+        Mock<ISmsMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailySmsMetrics())
+            .ReturnsAsync(new Altinn.Notifications.Core.Models.Metrics.DailySmsMetrics());
+
+        var smsPublishTaskQueueMock = CreateIdleSmsQueueMock();
+
+        var client = GetTestClient(
+            smsMetricsService: serviceMock.Object);
+
+        string url = _basePath + "/statistics/sms";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        serviceMock.Verify(e => e.GetDailySmsMetrics(), Times.Once);
+    }
+
     private static Mock<ISmsPublishTaskQueue> CreateIdleSmsQueueMock()
     {
         var anytimeTaskCompletionSource = new TaskCompletionSource();
@@ -197,7 +222,8 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         ISmsNotificationService? smsNotificationService = null,
         IOrderProcessingService? orderProcessingService = null,
         IEmailNotificationService? emailNotificationService = null,
-        INotificationScheduleService? notificationScheduleService = null)
+        INotificationScheduleService? notificationScheduleService = null,
+        ISmsMetricsService? smsMetricsService = null)
     {
         smsPublishTaskQueue ??= CreateIdleSmsQueueMock().Object;
         emailPublishTaskQueue ??= CreateIdleEmailQueueMock().Object;
@@ -206,6 +232,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         orderProcessingService ??= new Mock<IOrderProcessingService>().Object;
         emailNotificationService ??= new Mock<IEmailNotificationService>().Object;
         notificationScheduleService ??= new Mock<INotificationScheduleService>().Object;
+        smsMetricsService ??= new Mock<ISmsMetricsService>().Object;
 
         return _factory.WithWebHostBuilder(builder =>
         {
@@ -220,6 +247,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
                 services.AddSingleton(orderProcessingService);
                 services.AddSingleton(emailNotificationService);
                 services.AddSingleton(notificationScheduleService);
+                services.AddSingleton(smsMetricsService);
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();
