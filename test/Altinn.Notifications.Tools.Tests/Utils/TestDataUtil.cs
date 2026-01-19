@@ -17,6 +17,8 @@ namespace Altinn.Notifications.Tools.Tests.Utils;
 /// </summary>
 public static class TestDataUtil
 {
+    private const string _testDataPrefix = "tools-test-";
+
     /// <summary>
     /// Creates a simple email order with a notification using repository
     /// </summary>
@@ -24,7 +26,7 @@ public static class TestDataUtil
     {
         var order = new NotificationOrder
         {
-            SendersReference = sendersReference,
+            SendersReference = _testDataPrefix + sendersReference,
             Templates =
             [
                 new EmailTemplate()
@@ -91,7 +93,7 @@ public static class TestDataUtil
     {
         var order = new NotificationOrder
         {
-            SendersReference = sendersReference,
+            SendersReference = _testDataPrefix + sendersReference,
             Templates =
             [
                 new SmsTemplate()
@@ -182,23 +184,30 @@ public static class TestDataUtil
     }
 
     /// <summary>
-    /// Deletes all test data created with "ttd" creator
+    /// Deletes all test data created by this test utility (identified by sender reference prefix)
     /// </summary>
     public static async Task CleanupTestData()
     {
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         await using var connection = await dataSource.OpenConnectionAsync();
-        
+
         // Delete in correct order due to foreign keys
         await using (var command = connection.CreateCommand())
         {
-            command.CommandText = "DELETE FROM notifications.statusfeed WHERE creatorname = 'ttd'";
+            command.CommandText = @"
+                DELETE FROM notifications.statusfeed
+                WHERE orderid IN (
+                    SELECT _id FROM notifications.orders
+                    WHERE sendersreference LIKE @prefix
+                )";
+            command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
             await command.ExecuteNonQueryAsync();
         }
-        
+
         await using (var command = connection.CreateCommand())
         {
-            command.CommandText = "DELETE FROM notifications.orders WHERE creatorname = 'ttd'";
+            command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix";
+            command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
             await command.ExecuteNonQueryAsync();
         }
     }
