@@ -3,6 +3,7 @@ using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports.Configuration;
 
 [ExcludeFromCodeCoverage]
 internal static class ConfigurationUtil
@@ -22,6 +23,7 @@ internal static class ConfigurationUtil
         ConfigureDatabase(builder);
         ConfigureKafka(builder);
         ConfigureEventGrid(builder);
+        ConfigureProcessingSettings(builder);
         RegisterRepositoriesAndServices(builder);
     }
 
@@ -74,6 +76,12 @@ internal static class ConfigurationUtil
             client.BaseAddress = new Uri(cfg.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+    }
+
+    internal static void ConfigureProcessingSettings(HostApplicationBuilder builder)
+    {
+        builder.Services.Configure<ProcessingSettings>(
+            builder.Configuration.GetSection("ProcessingSettings"));
     }
 
     internal static void RegisterRepositoriesAndServices(HostApplicationBuilder builder)

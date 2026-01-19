@@ -26,8 +26,15 @@ internal static class EventGridUtil
         }
     }
 
+    /// <summary>
+    /// Only process notifications that are still in Succeeded state can be finalized by setting Delivered or Failed.
+    /// </summary>
+    /// <param name="dataSource"></param>
+    /// <param name="result"></param>
+    /// <returns>true if the notification has not reached a final state, false if the notification is already finalized</returns>
     internal static async Task<bool> ShouldProcessNotificationAsync(NpgsqlDataSource dataSource, dynamic result)
     {
+        // Check if the notification is still in Succeeded state
         var isInSucceededState = await PostgresUtil.IsEmailNotificationInSucceededState(dataSource, result.OperationId);
         if (!isInSucceededState)
         {

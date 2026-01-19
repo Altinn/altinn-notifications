@@ -1,11 +1,15 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Tools.RetryDeadDeliveryReports;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports.Configuration;
 using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Npgsql;
-using System.Diagnostics.CodeAnalysis;
 
 [assembly: ExcludeFromCodeCoverage]
 
@@ -23,16 +27,14 @@ static async Task ProcessDeadDeliveryReportsAsync(IHost host)
     var repository = scope.ServiceProvider.GetRequiredService<IDeadDeliveryReportRepository>();
     var eventGridClient = scope.ServiceProvider.GetRequiredService<IEventGridClient>();
     var dataSource = scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
+    var processingSettings = scope.ServiceProvider.GetRequiredService<IOptions<ProcessingSettings>>().Value;
 
     try
     {
-        const int fromId = 20000;
-        const int toId = 50000;
-
         var operationResults = await Util.GetAndMapDeadDeliveryReports(
             repository,
-            fromId,
-            toId,
+            processingSettings.FromId,
+            processingSettings.ToId,
             DeliveryReportChannel.AzureCommunicationServices,
             CancellationToken.None);
 

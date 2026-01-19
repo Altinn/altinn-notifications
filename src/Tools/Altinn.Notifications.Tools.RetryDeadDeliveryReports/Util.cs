@@ -22,6 +22,15 @@ public static class Util
         }
     }
 
+    /// <summary>
+    /// Retrieves dead delivery reports from the repository, maps them to EmailSendOperationResult objects, and returns the list.
+    /// </summary>
+    /// <param name="repository"></param>
+    /// <param name="fromId">Inclusive fromId, starting position</param>
+    /// <param name="toId">Exclusive toId, ending position</param>
+    /// <param name="channel">The delivery report channel to filter</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     internal static async Task<List<EmailSendOperationResult>> GetAndMapDeadDeliveryReports(
         IDeadDeliveryReportRepository repository,
         long fromId,
