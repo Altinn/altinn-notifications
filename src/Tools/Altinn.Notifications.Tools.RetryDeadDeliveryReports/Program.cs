@@ -1,12 +1,11 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
-
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using System.Diagnostics.CodeAnalysis;
-using Tools;
-using Tools.EventGrid;
 
 [assembly: ExcludeFromCodeCoverage]
 

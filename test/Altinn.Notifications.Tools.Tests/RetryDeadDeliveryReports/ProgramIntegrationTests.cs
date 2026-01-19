@@ -1,13 +1,18 @@
-﻿using Altinn.Notifications.Integrations.Configuration;
+﻿using System;
+using System.Collections.Generic;
+
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
-using Tools.EventGrid;
+using Xunit;
 
-namespace ToolsTests;
+namespace Altinn.Notifications.Tools.Tests.RetryDeadDeliveryReports;
 
 public class ProgramIntegrationTests
 {
@@ -20,10 +25,10 @@ public class ProgramIntegrationTests
         // Set up minimal configuration
         var inMemorySettings = new Dictionary<string, string>
         {
-            {"PostgreSQLSettings:ConnectionString", "Host=localhost;Database=test;Username=test;Password=test"},
-            {"EventGrid:BaseUrl", "https://test.eventgrid.azure.net/api/events"},
-            {"EventGrid:AccessKey", "test-key"},
-            {"KafkaSettings:BrokerAddress", "localhost:9092"}
+            { "PostgreSQLSettings:ConnectionString", "Host=localhost;Database=test;Username=test;Password=test" },
+            { "EventGrid:BaseUrl", "https://test.eventgrid.azure.net/api/events" },
+            { "EventGrid:AccessKey", "test-key" },
+            { "KafkaSettings:BrokerAddress", "localhost:9092" }
         };
 
         builder.Configuration.AddInMemoryCollection(inMemorySettings!);
@@ -87,9 +92,9 @@ public class ProgramIntegrationTests
 
         var inMemorySettings = new Dictionary<string, string>
         {
-            {"PostgreSQLSettings:ConnectionString", "Host=localhost;Database=test"},
-            {"EventGrid:BaseUrl", ""}, // Empty BaseUrl
-            {"EventGrid:AccessKey", "test-key"}
+            { "PostgreSQLSettings:ConnectionString", "Host=localhost;Database=test" },
+            { "EventGrid:BaseUrl", string.Empty }, // Empty BaseUrl
+            { "EventGrid:AccessKey", "test-key" } 
         };
 
         builder.Configuration.AddInMemoryCollection(inMemorySettings!);

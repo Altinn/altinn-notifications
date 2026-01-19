@@ -1,10 +1,8 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
-using Npgsql;
-using Tools.Kafka;
 
-namespace Tools;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports;
 
 public static class Util
 {
@@ -28,7 +26,7 @@ public static class Util
         IDeadDeliveryReportRepository repository,
         long fromId,
         long toId,
-        Altinn.Notifications.Core.Enums.DeliveryReportChannel channel,
+        Core.Enums.DeliveryReportChannel channel,
         CancellationToken cancellationToken)
     {
         var reports = await repository.GetAllAsync(fromId, toId, RetryExceededReason, channel, cancellationToken);
@@ -41,40 +39,6 @@ public static class Util
             .ToList();
 
         return operationResults;
-    }
-
-    internal static async Task<int> ProduceMessagesToKafka(
-        ICommonProducer producer,
-        string? topic,
-        List<EmailSendOperationResult> operationResults)
-    {
-        var successCount = 0;
-        var failureCount = 0;
-
-        if (string.IsNullOrEmpty(topic))
-        {
-            Console.WriteLine("Kafka topic is not configured.");
-            return successCount;
-        }
-
-        foreach (var sendOperationResult in operationResults)
-        {
-            var result = await producer.ProduceAsync(topic, sendOperationResult.Serialize());
-            
-            if (result)
-            {
-                successCount++;
-                Console.WriteLine($"✓ Message produced to topic {topic} for notification {sendOperationResult.NotificationId}");
-            }
-            else
-            {
-                failureCount++;
-                Console.WriteLine($"✗ Failed to produce message to topic {topic} for notification {sendOperationResult.NotificationId}");
-            }
-        }
-
-        Console.WriteLine($"\nSummary: {successCount} succeeded, {failureCount} failed out of {operationResults.Count} total");
-        return successCount;
     }
 
     /// <summary>

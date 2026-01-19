@@ -2,16 +2,16 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 using System.Diagnostics.CodeAnalysis;
-using Tools.EventGrid;
-using Tools.Kafka;
 
-namespace Tools;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports;
 
 [ExcludeFromCodeCoverage]
 internal static class ConfigurationUtil
@@ -79,6 +79,5 @@ internal static class ConfigurationUtil
     internal static void RegisterRepositoriesAndServices(HostApplicationBuilder builder)
     {
         builder.Services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
-        builder.Services.AddSingleton<ICommonProducer, CommonProducer>();
     }
 }

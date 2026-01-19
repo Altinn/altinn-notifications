@@ -1,21 +1,14 @@
-using Microsoft.Extensions.Options;
 using System.Net;
-using Tools;
-using Tools.EventGrid;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace ToolsTests;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 
-class FakeHandler : HttpMessageHandler
-{
-    private readonly HttpResponseMessage _response;
+using Microsoft.Extensions.Options;
+using Xunit;
 
-    public FakeHandler(HttpResponseMessage response) => _response = response;
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(_response);
-    }
-}
+namespace Altinn.Notifications.Tools.Tests.RetryDeadDeliveryReports;
 
 public class EventGridClientTests
 {
@@ -55,5 +48,17 @@ public class EventGridClientTests
 
         Assert.False(success);
         Assert.Equal("bad", body);
+    }
+
+    private class FakeHandler : HttpMessageHandler
+    {
+        private readonly HttpResponseMessage _response;
+
+        public FakeHandler(HttpResponseMessage response) => _response = response;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_response);
+        }
     }
 }

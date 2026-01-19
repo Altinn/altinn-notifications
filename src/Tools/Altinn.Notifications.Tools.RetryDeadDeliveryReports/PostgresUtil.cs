@@ -1,7 +1,7 @@
 ﻿using Npgsql;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Tools;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports;
 
 [ExcludeFromCodeCoverage]
 internal static class PostgresUtil

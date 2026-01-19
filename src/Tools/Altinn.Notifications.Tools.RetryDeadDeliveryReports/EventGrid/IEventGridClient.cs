@@ -1,4 +1,4 @@
-namespace Tools.EventGrid;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 
 /// <summary>
 /// Interface for Event Grid client operations.

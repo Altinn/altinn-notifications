@@ -1,12 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Tools.RetryDeadDeliveryReports;
 using Moq;
-using Tools;
-using Tools.Kafka;
+using Xunit;
 
-namespace ToolsTests;
+namespace Altinn.Notifications.Tools.Tests.RetryDeadDeliveryReports;
 
 public class UtilTests
 {
@@ -258,151 +262,14 @@ public class UtilTests
             cts.Token);
 
         // Assert
-        mockRepo.Verify(r => r.GetAllAsync(
-            50,
-            150,
-            Util.RetryExceededReason,
-            DeliveryReportChannel.LinkMobility,
-            cts.Token), Times.Once);
-    }    
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_ReturnsZero_WhenTopicIsNull()
-    {
-        // Arrange
-        var mockProducer = new Mock<ICommonProducer>();
-        var results = new List<EmailSendOperationResult>
-        {
-            new EmailSendOperationResult
-            {
-                NotificationId = Guid.NewGuid(),
-                OperationId = "op-1"
-            }
-        };
-
-        // Act
-        var count = await Util.ProduceMessagesToKafka(mockProducer.Object, null, results);
-
-        // Assert
-        Assert.Equal(0, count);
-        mockProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_ReturnsZero_WhenTopicIsEmpty()
-    {
-        // Arrange
-        var mockProducer = new Mock<ICommonProducer>();
-        var results = new List<EmailSendOperationResult>
-        {
-            new EmailSendOperationResult
-            {
-                NotificationId = Guid.NewGuid(),
-                OperationId = "op-1"
-            }
-        };
-
-        // Act
-        var count = await Util.ProduceMessagesToKafka(mockProducer.Object, string.Empty, results);
-
-        // Assert
-        Assert.Equal(0, count);
-        mockProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_ReturnsZero_WhenNoResults()
-    {
-        // Arrange
-        var mockProducer = new Mock<ICommonProducer>();
-        var results = new List<EmailSendOperationResult>();
-
-        // Act
-        var count = await Util.ProduceMessagesToKafka(mockProducer.Object, "test-topic", results);
-
-        // Assert
-        Assert.Equal(0, count);
-        mockProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_ReturnsCorrectCount_WhenAllSucceed()
-    {
-        // Arrange
-        var mockProducer = new Mock<ICommonProducer>();
-        mockProducer.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(true);
-
-        var results = new List<EmailSendOperationResult>
-        {
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-1" },
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-2" },
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-3" }
-        };
-
-        // Act
-        var count = await Util.ProduceMessagesToKafka(mockProducer.Object, "test-topic", results);
-
-        // Assert
-        Assert.Equal(3, count);
-        mockProducer.Verify(p => p.ProduceAsync("test-topic", It.IsAny<string>()), Times.Exactly(3));
-    }
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_ReturnsPartialCount_WhenSomeFail()
-    {
-        // Arrange
-        var mockProducer = new Mock<ICommonProducer>();
-        var callCount = 0;
-        mockProducer.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(() => ++callCount != 2); // Second call fails
-
-        var results = new List<EmailSendOperationResult>
-        {
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-1" },
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-2" },
-            new EmailSendOperationResult { NotificationId = Guid.NewGuid(), OperationId = "op-3" }
-        };
-
-        // Act
-        var count = await Util.ProduceMessagesToKafka(mockProducer.Object, "test-topic", results);
-
-        // Assert
-        Assert.Equal(2, count); // 1st and 3rd succeed, 2nd fails
-        mockProducer.Verify(p => p.ProduceAsync("test-topic", It.IsAny<string>()), Times.Exactly(3));
-    }
-
-    [Fact]
-    public async Task ProduceMessagesToKafka_SerializesMessages_Correctly()
-    {
-        // Arrange
-        var capturedMessages = new List<string>();
-        var mockProducer = new Mock<ICommonProducer>();
-        mockProducer.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((topic, message) => capturedMessages.Add(message))
-            .ReturnsAsync(true);
-
-        var notificationId = Guid.NewGuid();
-        var results = new List<EmailSendOperationResult>
-        {
-            new EmailSendOperationResult
-            {
-                NotificationId = notificationId,
-                OperationId = "op-123",
-                SendResult = EmailNotificationResultType.Succeeded
-            }
-        };
-
-        // Act
-        await Util.ProduceMessagesToKafka(mockProducer.Object, "test-topic", results);
-
-        // Assert
-        Assert.Single(capturedMessages);
-        var deserializedResult = EmailSendOperationResult.Deserialize(capturedMessages[0]);
-        Assert.NotNull(deserializedResult);
-        Assert.Equal(notificationId, deserializedResult.NotificationId);
-        Assert.Equal("op-123", deserializedResult.OperationId);
-        Assert.Equal(EmailNotificationResultType.Succeeded, deserializedResult.SendResult);
+        mockRepo.Verify(
+            r => r.GetAllAsync(
+                50,
+                150,
+                Util.RetryExceededReason,
+                DeliveryReportChannel.LinkMobility,
+                cts.Token),
+            Times.Once);
     }    
 
     [Fact]

@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
+
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
-namespace Tools.EventGrid;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 
 /// <summary>
 /// Configuration settings for Event Grid client.

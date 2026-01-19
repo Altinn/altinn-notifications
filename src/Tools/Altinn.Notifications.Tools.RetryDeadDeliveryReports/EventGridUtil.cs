@@ -1,10 +1,9 @@
-﻿using Azure.Messaging.EventGrid;
+﻿using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
+using Azure.Messaging.EventGrid;
 
 using Npgsql;
 
-using Tools.EventGrid;
-
-namespace Tools;
+namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports;
 
 internal static class EventGridUtil
 {
