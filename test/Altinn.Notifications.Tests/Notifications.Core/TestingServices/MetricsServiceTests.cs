@@ -94,7 +94,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithStreamHashAndSizeAndEnvironment()
+        public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithdEnvironmentUnkown()
         {
             // Arrange
             var metrics = new DailySmsMetrics
@@ -105,7 +105,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Metrics = new List<SmsRow>() // empty list is fine for serialization
             };
 
-            _hostEnvironmentMock.SetupGet(h => h.EnvironmentName).Returns(static () => null);
+            // Use string.Empty instead of null to avoid CS8603
+            _ = _hostEnvironmentMock.SetupGet(h => h.EnvironmentName).Returns(string.Empty);
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
