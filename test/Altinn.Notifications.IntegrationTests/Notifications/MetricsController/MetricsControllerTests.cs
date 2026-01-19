@@ -6,6 +6,7 @@ using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
@@ -77,6 +78,72 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         var client = GetTestClient(
             metricsService: serviceMock.Object);
+
+        string url = _basePath + "/sms";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSmsDailyMetrics_WithInvalidApiKey_RetunrsUnauthorized()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailySmsMetrics())
+            .ReturnsAsync(new DailySmsMetrics());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+            .ReturnsAsync(new MetricsSummary());
+
+        var client = GetTestClient(
+            metricsService: serviceMock.Object);
+
+        string url = _basePath + "/sms";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "invalid-api-key");
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSmsDailyMetrics_NoConfiguredApiKey_ReturnsUnauthorized()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailySmsMetrics())
+            .ReturnsAsync(new DailySmsMetrics());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+            .ReturnsAsync(new MetricsSummary());
+
+        // Create client overriding configuration to remove the configured API key
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                // override MetricsApiKey to empty (treat as not configured)
+                var overrides = new Dictionary<string, string?>
+                {
+                    ["MetricsApiKey"] = string.Empty
+                };
+                config.AddInMemoryCollection(overrides!);
+            });
+
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton(serviceMock.Object);
+                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+            });
+        }).CreateClient();
 
         string url = _basePath + "/sms";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);

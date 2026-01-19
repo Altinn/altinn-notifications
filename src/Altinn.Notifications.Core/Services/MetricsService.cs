@@ -63,7 +63,7 @@ namespace Altinn.Notifications.Core.Services
 
         private async Task<(Stream ParquetStream, string FileHash, long FileSize)> GenerateParquetFileStream(DailySmsMetrics metrics)
         {
-            _logger.LogInformation("Generating daily summary parquet file with {Count} records", metrics.Metrics.Count);
+            _logger.LogInformation("Generating daily summary parquet file.");
 
             var parquetData = metrics.Metrics;
 
