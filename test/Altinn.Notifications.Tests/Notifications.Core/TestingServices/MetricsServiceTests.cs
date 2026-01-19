@@ -92,5 +92,46 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Assert.Equal(expectedHash, summary.FileHash);
             }
         }
+
+        [Fact]
+        public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithStreamHashAndSizeAndEnvironment()
+        {
+            // Arrange
+            var metrics = new DailySmsMetrics
+            {
+                Year = 2026,
+                Month = 1,
+                Day = 15,
+                Metrics = new List<SmsRow>() // empty list is fine for serialization
+            };
+
+            _hostEnvironmentMock.SetupGet(h => h.EnvironmentName).Returns(static () => null);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+
+            // Act
+            MetricsSummary summary = await service.GetParquetFile(metrics);
+
+            // Assert - basic invariants
+            Assert.NotNull(summary);
+            Assert.NotNull(summary.FileStream);
+            Assert.False(string.IsNullOrWhiteSpace(summary.FileName));
+            Assert.Equal("Unknown", summary.Environment);
+            Assert.Equal(metrics.Metrics.Count, summary.TotalFileTransferCount);
+            Assert.NotEqual(DateTimeOffset.MinValue, summary.GeneratedAt);
+
+            // Read the returned stream to compute expected hash/size
+            await using (summary.FileStream)
+            {
+                using var ms = new MemoryStream();
+                await summary.FileStream.CopyToAsync(ms);
+                byte[] bytes = ms.ToArray();
+
+                string expectedHash = Convert.ToBase64String(MD5.HashData(bytes));
+                long expectedSize = bytes.Length;
+
+                Assert.Equal(expectedSize, summary.FileSizeBytes);
+                Assert.Equal(expectedHash, summary.FileHash);
+            }
+        }
     }
 }
