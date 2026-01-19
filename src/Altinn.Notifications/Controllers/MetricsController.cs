@@ -48,7 +48,6 @@ namespace Altinn.Notifications.Controllers
         /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
         [HttpPost]
         [Route("sms")]
-        [Consumes("application/json")]
         [Produces("application/octet-stream")]
         [ServiceFilter(typeof(MetricsApiKeyFilter))]
         public async Task<ActionResult> GetSmsDailyMetrics()

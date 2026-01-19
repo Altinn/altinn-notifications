@@ -66,7 +66,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task GetSmsDailyMetrics_WithoutValidApiKey_RetunrsUnauthorized()
+    public async Task GetSmsDailyMetrics_WithoutValidApiKey_ReturnsUnauthorized()
     {
         // Arrange
         Mock<IMetricsService> serviceMock = new();
@@ -90,7 +90,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task GetSmsDailyMetrics_WithInvalidApiKey_RetunrsUnauthorized()
+    public async Task GetSmsDailyMetrics_WithInvalidApiKey_ReturnsUnauthorized()
     {
         // Arrange
         Mock<IMetricsService> serviceMock = new();
