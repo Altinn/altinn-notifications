@@ -1,5 +1,5 @@
 ﻿using System.Net;
-
+using System.Text;
 using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -27,7 +27,45 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task GetSmsDailyMetrics_RetunrsOk()
+    public async Task GetSmsDailyMetrics_ReturnsOk()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailySmsMetrics())
+            .ReturnsAsync(new DailySmsMetrics());
+
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("test"));
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+            .ReturnsAsync(new MetricsSummary
+            {
+                Environment = "Development",
+                GeneratedAt = DateTimeOffset.UtcNow,
+                FileName = "smsmetrics",
+                FileStream = stream,
+                FileSizeBytes = stream.Length,
+                TotalFileTransferCount = 1,
+                FileHash = "dummyhash"
+            });
+
+        var client = GetTestClient(
+            metricsService: serviceMock.Object);
+
+        string url = _basePath + "/sms";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "valid-api-key");
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        serviceMock.Verify(e => e.GetDailySmsMetrics(), Times.Once);
+        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSmsDailyMetrics_WithoutValidApiKey_RetunrsUnauthorized()
     {
         // Arrange
         Mock<IMetricsService> serviceMock = new();
@@ -47,9 +85,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.Verify(e => e.GetDailySmsMetrics(), Times.Once);
-        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()), Times.Once);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     private HttpClient GetTestClient(
