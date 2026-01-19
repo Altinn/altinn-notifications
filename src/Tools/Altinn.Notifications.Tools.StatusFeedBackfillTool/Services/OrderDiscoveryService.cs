@@ -35,6 +35,7 @@ public class OrderDiscoveryService(
                 FROM NOTIFICATIONS.STATUSFEED SF
                 WHERE SF.ORDERID = O._ID
             )
+        ORDER BY O.PROCESSED, O.CREATED
         LIMIT @maxOrders";
 
     public async Task Run()
