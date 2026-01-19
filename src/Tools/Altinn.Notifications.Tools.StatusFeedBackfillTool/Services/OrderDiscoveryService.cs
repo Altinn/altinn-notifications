@@ -121,7 +121,10 @@ public class OrderDiscoveryService(
         await using var command = new NpgsqlCommand(_getAffectedOrdersSql, connection);
 
         command.Parameters.AddWithValue("minProcessedDate", NpgsqlDbType.TimestampTz, minProcessedDate);
-        command.Parameters.AddWithValue("creatorFilter", NpgsqlDbType.Text, (object?)_settings.CreatorNameFilter ?? DBNull.Value);
+        object creatorFilter = string.IsNullOrWhiteSpace(_settings.CreatorNameFilter)
+            ? DBNull.Value
+            : _settings.CreatorNameFilter;
+        command.Parameters.AddWithValue("creatorFilter", NpgsqlDbType.Text, creatorFilter);
 
         command.Parameters.AddWithValue("statusFilter", NpgsqlDbType.Text, _settings.OrderProcessingStatusFilter.HasValue
             ? _settings.OrderProcessingStatusFilter.Value.ToString()
