@@ -87,6 +87,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("API key required", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

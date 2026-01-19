@@ -76,6 +76,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.False(string.IsNullOrWhiteSpace(summary.FileName));
             Assert.Equal("UnitTest", summary.Environment);
             Assert.Equal(metrics.Metrics.Count, summary.TotalFileTransferCount);
+            Assert.NotEqual(DateTimeOffset.MinValue, summary.GeneratedAt);
 
             // Read the returned stream to compute expected hash/size
             await using (summary.FileStream)

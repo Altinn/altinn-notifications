@@ -76,7 +76,7 @@ public class MetricsApiKeyFilterTests
         var logger = Mock.Of<ILogger<MetricsApiKeyFilter>>();
         var filter = new MetricsApiKeyFilter(config, logger);
 
-        var headers = new HeaderDictionary { ["X-API-Key"] = StringValues.Empty };
+        var headers = new HeaderDictionary { ["X-API-Key"] = " " };
         var context = CreateAuthorizationContext("/notifications/api/v1/metrics/sms", headers);
 
         // Act
@@ -85,7 +85,7 @@ public class MetricsApiKeyFilterTests
         // Assert
         var result = Assert.IsType<UnauthorizedObjectResult>(context.Result);
         var errorValue = result.Value?.GetType().GetProperty("error")?.GetValue(result.Value)?.ToString();
-        Assert.Equal("API key required for Metrics endpoints", errorValue);
+        Assert.Equal("API key cannot be empty", errorValue);
     }
 
     [Fact]
