@@ -155,8 +155,8 @@ public static class PostgreUtil
 
         if (requestedSendTime.HasValue)
         {
-            order.RequestedSendTime = requestedSendTime;
-            smsNotification.RequestedSendTime = requestedSendTime;
+            order.RequestedSendTime = requestedSendTime.Value;
+            smsNotification.RequestedSendTime = requestedSendTime.Value;
         }
 
         /*
