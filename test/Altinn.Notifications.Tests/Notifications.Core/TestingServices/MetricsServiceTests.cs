@@ -94,7 +94,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithdEnvironmentUnkown()
+        public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithEnvironmentUnknown()
         {
             // Arrange
             var metrics = new DailySmsMetrics

@@ -46,8 +46,8 @@ namespace Altinn.Notifications.Core.Services
         {
             var (parquetStream, fileHash, fileSize) = await GenerateParquetFileStream(metrics);
 
-            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_sms_notifications_{_hostEnvironment.EnvironmentName}.parquet";
             var env = string.IsNullOrEmpty(_hostEnvironment.EnvironmentName) ? "Unknown" : _hostEnvironment.EnvironmentName;
+            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_sms_notifications_{env}.parquet";
 
             var response = new MetricsSummary
             {

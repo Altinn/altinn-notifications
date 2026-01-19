@@ -63,6 +63,8 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         serviceMock.Verify(e => e.GetDailySmsMetrics(), Times.Once);
         serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()), Times.Once);
+
+        stream.Dispose();
     }
 
     [Fact]
