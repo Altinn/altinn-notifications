@@ -63,8 +63,7 @@ Or run from the solution root:
 - Retrieve dead delivery reports from the database within the specified ID range
 - Transform them into event grid messages
 - Post the messages to the configured webhook endpoint
-   - Log the processing results to the console
-
+  - Log the processing results to the console
 ### Monitoring
 
 The tool outputs progress and error information to the console. Monitor the output to ensure:
