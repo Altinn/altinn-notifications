@@ -56,16 +56,26 @@ namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool
             var menuService = new ConsoleMenuService(serviceProvider);
 
             var input = new System.IO.StringReader("1\n");
-            Console.SetIn(input);
             var output = new System.IO.StringWriter();
-            Console.SetOut(output);
+            var originalIn = Console.In;
+            var originalOut = Console.Out;
+            try
+            {
+                Console.SetIn(input);
+                Console.SetOut(output);
 
-            // Act
-            int result = await menuService.RunMenuAsync();
+                // Act
+                int result = await menuService.RunMenuAsync();
 
-            // Assert
-            Assert.Equal(0, result);
-            discoveryServiceMock.Verify(s => s.Run(), Times.Once);
+                // Assert
+                Assert.Equal(0, result);
+                discoveryServiceMock.Verify(s => s.Run(), Times.Once);
+            }
+            finally
+            {
+                Console.SetIn(originalIn);
+                Console.SetOut(originalOut);
+            }
         }
 
         [Fact]
