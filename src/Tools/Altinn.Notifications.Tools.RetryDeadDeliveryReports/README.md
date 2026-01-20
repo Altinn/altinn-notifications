@@ -26,6 +26,8 @@ cd src/Tools/Altinn.Notifications.Tools.RetryDeadDeliveryReports
 ```
 
 2. Initialize user secrets (if not already done):
+```bash
+dotnet user-secrets init
 ```
 
 3. Set the required secrets:
