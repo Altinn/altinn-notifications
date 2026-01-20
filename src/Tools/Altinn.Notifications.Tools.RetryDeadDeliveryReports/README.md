@@ -25,6 +25,18 @@ To protect sensitive information, use .NET User Secrets to store database connec
 cd src/Tools/Altinn.Notifications.Tools.RetryDeadDeliveryReports
 ```
 
+2. Initialize user secrets (if not already done):
+```bash	
+dotnet user-secrets init
+```
+
+3. Set the required secrets:
+```bash
+dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "<Your_Connection_String>"
+dotnet user-secrets set "EventGrid:BaseUrl" "<Your_Webhook_Endpoint>"
+dotnet user-secrets set "EventGrid:AccessKey" "<Your_Access_Key>"
+```
+
 ### Processing Settings
 
 The tool processes dead delivery reports within a specified ID range. Configure these values in `appsettings.json`:
@@ -64,6 +76,7 @@ Or run from the solution root:
 - Transform them into event grid messages
 - Post the messages to the configured webhook endpoint
   - Log the processing results to the console
+
 ### Monitoring
 
 The tool outputs progress and error information to the console. Monitor the output to ensure:
