@@ -21,25 +21,6 @@ var host = builder.Build();
 
 await ProcessDeadDeliveryReportsAsync(host);
 
-static async Task ProcessDeadDeliveryReportsAsync(IHost host)
-{
-    using var scope = host.Services.CreateScope();
-    var repository = scope.ServiceProvider.GetRequiredService<IDeadDeliveryReportRepository>();
-    var eventGridClient = scope.ServiceProvider.GetRequiredService<IEventGridClient>();
-    var dataSource = scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-    var processingSettings = scope.ServiceProvider.GetRequiredService<IOptions<ProcessingSettings>>().Value;
-
-    try
-    {
-        var operationResults = await Util.GetAndMapDeadDeliveryReports(
-            repository,
-            processingSettings.FromId,
-            processingSettings.ToId,
-            DeliveryReportChannel.AzureCommunicationServices,
-            CancellationToken.None);
-
-        await EventGridUtil.ProcessAndPostEventsAsync(operationResults, dataSource, eventGridClient);
-    }
 static async Task<int> ProcessDeadDeliveryReportsAsync(IHost host)
 {
     using var scope = host.Services.CreateScope();
@@ -66,5 +47,4 @@ static async Task<int> ProcessDeadDeliveryReportsAsync(IHost host)
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
         return 1;
     }
-}
 }
