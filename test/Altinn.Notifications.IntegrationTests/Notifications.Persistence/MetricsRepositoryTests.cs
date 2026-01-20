@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;

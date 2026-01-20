@@ -23,7 +23,7 @@
         /// <summary>
         /// Gets or sets the requested send time for the SMS.
         /// </summary>
-        public string RequestedSendtime { get; set; }
+        public string RequestedSendtime { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the creator (originating service) name for the SMS.
