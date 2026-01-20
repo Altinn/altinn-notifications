@@ -83,9 +83,9 @@ namespace Altinn.Notifications.Persistence.Repository
                     SmsRow smsRow = new()
                     {
                         SmsId = reader.GetValue<long>("sms_id"),
-                        ShipmentId = reader.GetValue<Guid>("shipmentid"),
+                        ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
                         SendersReference = reader.GetValue<string>("senders_reference"),
-                        RequestedSendtime = reader.GetValue<DateTime>("requestedsendtime"),
+                        RequestedSendtime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
                         CreatorName = reader.GetValue<string>("creatorname"),
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),

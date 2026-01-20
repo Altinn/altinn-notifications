@@ -13,7 +13,7 @@
         /// <summary>
         /// Gets or sets the shipment identifier this SMS belongs to.
         /// </summary>
-        public Guid ShipmentId { get; set; }
+        public string ShipmentId { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the sender's reference associated with the shipment.
@@ -23,7 +23,7 @@
         /// <summary>
         /// Gets or sets the requested send time for the SMS.
         /// </summary>
-        public DateTime RequestedSendtime { get; set; }
+        public string RequestedSendtime { get; set; }
 
         /// <summary>
         /// Gets or sets the creator (originating service) name for the SMS.
