@@ -184,7 +184,7 @@ public static class TestDataUtil
     }
 
     /// <summary>
-    /// Deletes all test data created by this test utility (identified by sender reference prefix)
+    /// Deletes all test data created by this test utility (identified by sender reference prefix and creator)
     /// </summary>
     public static async Task CleanupTestData()
     {
@@ -199,15 +199,18 @@ public static class TestDataUtil
                 WHERE orderid IN (
                     SELECT _id FROM notifications.orders
                     WHERE sendersreference LIKE @prefix
+                        AND creatorname = @creator
                 )";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
+            command.Parameters.AddWithValue("creator", "ttd");
             await command.ExecuteNonQueryAsync();
         }
 
         await using (var command = connection.CreateCommand())
         {
-            command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix";
+            command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix AND creatorname = @creator";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
+            command.Parameters.AddWithValue("creator", "ttd");
             await command.ExecuteNonQueryAsync();
         }
     }
