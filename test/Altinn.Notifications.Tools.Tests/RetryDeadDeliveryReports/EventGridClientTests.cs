@@ -19,7 +19,7 @@ public class EventGridClientTests
         {
             Content = new StringContent("ok")
         };
-        var handler = new FakeHandler(response);
+        using var handler = new FakeHandler(response);
         var http = new HttpClient(handler);
         var settings = Options.Create(new EventGridSettings { BaseUrl = "https://example.com/events", AccessKey = "key" });
 
@@ -38,7 +38,7 @@ public class EventGridClientTests
         {
             Content = new StringContent("bad")
         };
-        var handler = new FakeHandler(response);
+        using var handler = new FakeHandler(response);
         var http = new HttpClient(handler);
         var settings = Options.Create(new EventGridSettings { BaseUrl = "https://example.com/events", AccessKey = "key" });
 
