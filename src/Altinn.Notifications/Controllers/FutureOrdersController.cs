@@ -6,9 +6,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Validators.Extensions;
-
-using FluentValidation;
+using Altinn.Notifications.Validators;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,17 +26,17 @@ namespace Altinn.Notifications.Controllers;
 public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
-    private readonly IValidator<NotificationOrderChainRequestExt> _validator;
+    private readonly IDateTimeService _dateTimeService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     public FutureOrdersController(
-        IOrderRequestService orderRequestService, 
-        IValidator<NotificationOrderChainRequestExt> validator)
+        IOrderRequestService orderRequestService,
+        IDateTimeService dateTimeService)
     {
-        _validator = validator;
         _orderRequestService = orderRequestService;
+        _dateTimeService = dateTimeService;
     }
 
     /// <summary>
@@ -56,19 +54,16 @@ public class FutureOrdersController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(NotificationOrderChainResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(400, "The notification order is invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(422, "Missing contact information for one or more recipients", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest, CancellationToken cancellationToken = default)
     {
         try
         {
-            var validationResult = _validator.Validate(notificationOrderRequest);
-            if (!validationResult.IsValid)
-            {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
-            }
+            // Validate using the new ValidationErrorBuilder pattern
+            // This will throw a validation exception with proper error codes if validation fails
+            NotificationOrderChainValidationHelper.ValidateOrderChainRequest(notificationOrderRequest, _dateTimeService.UtcNow());
 
             string? creator = HttpContext.GetOrg();
             if (creator == null)
