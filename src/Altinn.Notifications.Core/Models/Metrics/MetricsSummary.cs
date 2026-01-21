@@ -1,48 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Altinn.Notifications.Core.Models.Metrics
+﻿namespace Altinn.Notifications.Core.Models.Metrics
 {
     /// <summary>
     /// Summary information for a generated metrics file.
     /// </summary>
-    public class MetricsSummary
+    public record MetricsSummary
     {
         /// <summary>
         /// Gets or sets the stream containing the metrics file content.
         /// The caller is responsible for the lifecycle of the stream.
         /// </summary>
-        public Stream FileStream { get; set; } = null!;
+        public Stream FileStream { get; init; } = null!;
 
         /// <summary>
         /// Gets or sets the file name of the metrics file.
         /// </summary>
-        public string FileName { get; set; } = string.Empty;
+        public string FileName { get; init; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the hash of the file content (e.g. MD5) used for integrity checks.
         /// </summary>
-        public string FileHash { get; set; } = string.Empty;
+        public string FileHash { get; init; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the file size in bytes.
         /// </summary>
-        public long FileSizeBytes { get; set; }
+        public long FileSizeBytes { get; init; }
 
         /// <summary>
         /// Gets or sets the total number of file transfers represented in the file.
         /// </summary>
-        public int TotalFileTransferCount { get; set; }
+        public int TotalFileTransferCount { get; init; }
 
         /// <summary>
         /// Gets or sets the time when the metrics file was generated.
         /// </summary>
-        public DateTimeOffset GeneratedAt { get; set; }
+        public DateTimeOffset GeneratedAt { get; init; }
 
         /// <summary>
         /// Gets or sets the environment name where the metrics were generated.
         /// </summary>
-        public string Environment { get; set; } = string.Empty;
+        public string Environment { get; init; } = string.Empty;
     }
 }

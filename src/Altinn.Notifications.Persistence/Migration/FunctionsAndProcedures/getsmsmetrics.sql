@@ -11,9 +11,9 @@ CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
 
 AS $BODY$
 DECLARE
-  start_date DATE;
+  start_date TIMESTAMPTZ;
 BEGIN
-  start_date = MAKE_DATE(year_input, month_input, day_input);
+  start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
   select 
