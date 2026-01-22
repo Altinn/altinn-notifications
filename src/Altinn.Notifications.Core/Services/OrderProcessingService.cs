@@ -252,7 +252,7 @@ public class OrderProcessingService : IOrderProcessingService
             {
                 if (checkResult)
                 {
-                    _logger.LogDebug(
+                    _logger.LogTrace(
                         "// OrderProcessingService // IsSendConditionMet // Condition check yield true for order '{OrderId}' at endpoint '{Endpoint}'.",
                         order.Id,
                         order.ConditionEndpoint);
