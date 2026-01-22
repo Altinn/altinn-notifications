@@ -1242,10 +1242,10 @@ BEGIN
 
      -- takstering (prisgruppe + oppsplitting hos operat�ren)
 ,   CASE 
-    WHEN sms.mobilenumber IS NULL THEN 'n/a'
-    WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland' 
-    ELSE 'utland' 
-END as rate  -- alle nummer som ikke er norske, er definert i takstgruppe utland.   
+        WHEN sms.mobilenumber IS NULL OR sms.mobilenumber = '' THEN 'n/a'
+        WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland' 
+        ELSE 'utland' 
+    END as rate  -- alle nummer som ikke er norske, er definert i takstgruppe utland.   
 ,   left(sms.mobilenumber, 4) as mobilenumber_prefix --midelritdig felt for � verifisere takst-feltet    
 ,   sms.smscount as altinn_sms_count -- intern tellelogikk for � bryte opp meldinger over 160 tegn
 ,   length(sms.customizedbody) as altinn_sms_custom_body_length --antall tegn i meldingen (for meldinger der det er benyttet n�kkelord)
