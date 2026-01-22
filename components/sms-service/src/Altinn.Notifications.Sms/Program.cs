@@ -52,7 +52,11 @@ if (smsDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c => 
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Altinn Notifications SMS API V1");
+        c.RoutePrefix = string.Empty;
+    });
 }
 
 Configure();

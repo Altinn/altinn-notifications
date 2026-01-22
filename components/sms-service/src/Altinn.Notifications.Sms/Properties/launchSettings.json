@@ -11,8 +11,9 @@
   "profiles": {
     "Altinn.Notifications.Sms": {
       "commandName": "Project",
+      "launchBrowser": true,
       "dotnetRunMessages": true,
-      "launchUrl": "notifications/sms/swagger",
+      "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5092",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
