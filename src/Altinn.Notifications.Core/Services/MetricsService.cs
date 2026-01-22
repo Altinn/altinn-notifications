@@ -73,7 +73,7 @@ namespace Altinn.Notifications.Core.Services
             await ParquetSerializer.SerializeAsync(parquetData, memoryStream);
             memoryStream.Position = 0;
 
-            var hash = Convert.ToBase64String(MD5.HashData(memoryStream.ToArray()));
+            var hash = Convert.ToBase64String(MD5.HashData(memoryStream));
             memoryStream.Position = 0;
 
             _logger.LogInformation("Successfully generated daily summary parquet file stream");

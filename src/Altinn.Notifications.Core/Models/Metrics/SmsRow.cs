@@ -63,7 +63,7 @@
         /// <summary>
         /// Gets or sets the length of the Altinn SMS body in characters, if available.
         /// </summary>
-        public int? AltinnSmsBodyLength { get; init; }
+        public int AltinnSmsBodyLength { get; init; }
 
         /// <summary>
         /// Gets or sets the length of any customized SMS body in characters.

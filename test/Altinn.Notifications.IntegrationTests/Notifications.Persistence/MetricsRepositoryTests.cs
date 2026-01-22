@@ -75,7 +75,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(metrics.Rate);
         Assert.Equal("innland", metrics.Rate);
-        Assert.Equal("+479", metrics.MobilenumberPrefix);
+        Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
     }
 }

@@ -91,10 +91,10 @@ namespace Altinn.Notifications.Persistence.Repository
                         Result = reader.GetValue<string>("result"),
                         GatewayReference = reader.GetValue<string>("gatewayreference"),
                         Rate = reader.GetValue<string>("rate"),
-                        MobilenumberPrefix = reader.GetValue<string>("mobilenumber_prefix"),
-                        AltinnSmsCount = reader.GetValue<int>("altinn_sms_count"),
-                        AltinnSmsBodyLength = reader.GetValue<int?>("altinn_sms_body_length"),
-                        AltinnSmsCustomBodyLength = reader.GetValue<int>("altinn_sms_custom_body_length")
+                        MobileNumberPrefix = reader.GetValue<string>("mobilenumber_prefix"),
+                        AltinnSmsCount = reader.GetValue<int?>("altinn_sms_count") ?? 0,
+                        AltinnSmsBodyLength = reader.GetValue<int?>("altinn_sms_body_length") ?? 0,
+                        AltinnSmsCustomBodyLength = reader.GetValue<int?>("altinn_sms_custom_body_length") ?? 0
                     };
 
                     metrics.Metrics.Add(smsRow);

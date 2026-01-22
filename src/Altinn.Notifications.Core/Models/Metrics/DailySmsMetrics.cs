@@ -21,7 +21,7 @@ public record DailySmsMetrics
     public int Year { get; init; }
 
     /// <summary>
-    /// A list of metrics per organization
+    /// A list of metrics for each individual SMS notification
     /// </summary>
     public List<SmsRow> Metrics { get; init; } = [];
 }
