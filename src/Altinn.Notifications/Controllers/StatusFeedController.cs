@@ -5,9 +5,8 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Status;
-using Altinn.Notifications.Validators.Extensions;
+using Altinn.Notifications.Validators;
 
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -22,9 +21,8 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class StatusFeedController(IStatusFeedService statusFeedService, IValidator<GetStatusFeedRequestExt> validator) : ControllerBase
+public class StatusFeedController(IStatusFeedService statusFeedService) : ControllerBase
 {
-    private readonly IValidator<GetStatusFeedRequestExt> _validator = validator;
 
     /// <summary>
     /// Retrieve an array of order status change history.
@@ -35,17 +33,14 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
+    [SwaggerResponse(400, "The request is invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery] GetStatusFeedRequestExt statusFeedRequest)
     {
         try
         {
-            var validationResult = _validator.Validate(statusFeedRequest);
-            if (!validationResult.IsValid)
-            {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
-            }
+            // Validate using the new ValidationErrorBuilder pattern
+            StatusFeedValidationHelper.ValidateStatusFeedRequest(statusFeedRequest);
 
             string? creatorName = HttpContext.GetOrg();
             if (string.IsNullOrWhiteSpace(creatorName))

@@ -109,6 +109,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Handle validation exceptions and convert them to proper HTTP responses
+app.UseValidationExceptionHandler();
+
 app.UseAuthorization();
 
 app.MapControllers();
