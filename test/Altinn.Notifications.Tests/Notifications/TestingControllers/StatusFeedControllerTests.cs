@@ -11,7 +11,6 @@ using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models.Status;
-using Altinn.Notifications.Validators;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,14 +22,13 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
     public class StatusFeedControllerTests
     {
         private readonly Mock<IStatusFeedService> _statusFeedService;
-        private readonly GetStatusFeedRequestValidator _validator = new();
         private readonly StatusFeedController _sut;
 
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            
-            _sut = new StatusFeedController(_statusFeedService.Object, _validator)
+
+            _sut = new StatusFeedController(_statusFeedService.Object)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -46,7 +44,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WithNoOrgSetInHttpContext_ReturnsForbidden()
         {
             // Arrange
-            var controller = new StatusFeedController(_statusFeedService.Object, _validator)
+            var controller = new StatusFeedController(_statusFeedService.Object)
             {
                 ControllerContext =
                 {

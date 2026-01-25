@@ -23,7 +23,6 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class StatusFeedController(IStatusFeedService statusFeedService) : ControllerBase
 {
-
     /// <summary>
     /// Retrieve an array of order status change history.
     /// </summary>
