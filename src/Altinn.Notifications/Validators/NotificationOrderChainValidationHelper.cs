@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Validators;
 
 /// <summary>
 /// Provides validation methods for notification order chain requests using ValidationErrorBuilder.
-/// Throws <see cref="ValidationErrorBuilder.ProblemInstanceException"/> when validation fails.
+/// Throws <see cref="ProblemInstanceException"/> when validation fails.
 /// </summary>
 public static class NotificationOrderChainValidationHelper
 {
@@ -25,10 +25,10 @@ public static class NotificationOrderChainValidationHelper
     /// </summary>
     /// <param name="request">The notification order chain request to validate.</param>
     /// <param name="utcNow">The current UTC time for time-based validations.</param>
-    /// <exception cref="ValidationErrorBuilder.ProblemInstanceException">Thrown when validation fails.</exception>
+    /// <exception cref="ProblemInstanceException">Thrown when validation fails.</exception>
     public static void ValidateOrderChainRequest(NotificationOrderChainRequestExt request, DateTime utcNow)
     {
-        var errors = ValidationErrorBuilder.New();
+        var errors = default(ValidationErrorBuilder);
 
         ValidateIdempotencyId(request.IdempotencyId, errors);
         ValidateSendTime(request.RequestedSendTime, utcNow, errors, "RequestedSendTime");
@@ -43,7 +43,10 @@ public static class NotificationOrderChainValidationHelper
             }
         }
 
-        errors.ThrowIfErrors();
+        if (errors.TryBuild(out var problemInstance))
+        {
+            throw new ProblemInstanceException(problemInstance);
+        }
     }
 
     /// <summary>

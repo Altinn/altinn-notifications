@@ -32,16 +32,16 @@ public class ValidationExceptionMiddleware
         {
             await _next(context);
         }
-        catch (AltinnProblemDetailsException ex)
+        catch (ProblemInstanceException ex)
         {
             _logger.LogInformation(ex, "Validation error occurred for request {Path}", context.Request.Path);
             await HandleValidationExceptionAsync(context, ex);
         }
     }
 
-    private static async Task HandleValidationExceptionAsync(HttpContext context, AltinnProblemDetailsException exception)
+    private static async Task HandleValidationExceptionAsync(HttpContext context, ProblemInstanceException exception)
     {
-        var problemDetails = exception.ToProblemDetails();
+        var problemDetails = exception.Problem.ToProblemDetails();
 
         context.Response.StatusCode = problemDetails.Status ?? (int)HttpStatusCode.BadRequest;
         context.Response.ContentType = "application/problem+json";
