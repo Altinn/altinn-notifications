@@ -17,34 +17,33 @@ BEGIN
 
   RETURN QUERY
   select 
-    -- referanser og korrelering
-    sms._id as sms_id --unik pr nummer/"funksjonell sms"
-,   sms.alternateid as shipmentid --unik pr varsel/påminnelse (men lik ved samme varsel/påminnelse til flere mottakere, f.eks til org der personer med tilgang til ressursen har egendefinert kontaktinformasjon)
-,   orders.notificationorder ->> 'SendersReference' as senders_reference --avsenders referanse (ikke nødvendigvis unik)    
-,   orders.requestedsendtime --ønsket sendetidspunkt (for å avgjøre når det er riktig å evt. fakturere. Kan avvike noe fra faktisk sendetidspunkt, så se i kombinasjon med status/gateway-ref)
-,   orders.creatorname -- bestillers maksinporten-id (den reelle tjenesteeieren kan skjules ved aggregering, f.eks correspondence)     
-,   orders.notificationorder ->> 'ResourceId' as resourceid --ressurs-id, kan i kombinasjon med creator gi reell tjenesteeier eller granulering tilsvarende service-code mv.
+    -- references and correlation
+    sms._id as sms_id --unique per number/"functional SMS"
+,   sms.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
+,   orders.notificationorder ->> 'SendersReference' as senders_reference --senders reference (not necessarily unique)
+,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
+,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
+,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
 
-     -- operatør-status
-,   sms.result::text as result -- status på utsendingen (feil, men med GW-ref kan bety at meldingen er forsøkt sendt/taksert, men har av ulike årsaker ikke nådd frem til brukeren)
-,   sms.gatewayreference -- referanse hos Link Mobiilty (en ref betyr sannsynligvis at LinkMobility fakturerer for denne - men ikke nødvendigvis)    
+     -- operator status
+,   sms.result::text as result -- status of the delivery (error, but with a GW reference may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
+,   sms.gatewayreference -- reference at Link Mobility (a reference likely means that Link Mobility bills for this — but not necessarily)
 
-     -- takstering (prisgruppe + oppsplitting hos operatøren)
+     -- tariffing (price group + message splitting by the operator)
 ,   CASE 
         WHEN sms.mobilenumber IS NULL OR sms.mobilenumber = '' THEN 'n/a'
         WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland' 
         ELSE 'utland' 
-    END as rate  -- alle nummer som ikke er norske, er definert i takstgruppe utland.   
-,   left(sms.mobilenumber, 4) as mobilenumber_prefix --midelritdig felt for å verifisere takst-feltet    
-,   sms.smscount as altinn_sms_count -- intern tellelogikk for å bryte opp meldinger over 160 tegn
-,   length(sms.customizedbody) as altinn_sms_custom_body_length --antall tegn i meldingen (for meldinger der det er benyttet nøkkelord)
-,   length(sms_text.body) as altinn_sms_body_length --antall tegn i tekst mottatt fra bestiller    
+    END as rate  -- all numbers that are not Norwegian are defined in the international rate group.  
+,   left(sms.mobilenumber, 4) as mobilenumber_prefix --temporary field to verify the rate field
+,   sms.smscount as altinn_sms_count -- internal counting logic to split messages over 160 characters
+,   length(sms.customizedbody) as altinn_sms_custom_body_length --number of characters in the text (for messages with keywords)
+,   length(sms_text.body) as altinn_sms_body_length --number of characters in the text received from the  
      
 --,  sms.*, sms_text.*, orders.*, order_chain.*
 from notifications.smsnotifications as sms
          inner join notifications.orders orders on orders._id = sms._orderid
          left join notifications.smstexts sms_text on orders._id = sms_text._orderid
-    --inner join notifications.orderschain order_chain on orders.alternateid = (order_chain.orderchain ->> 'OrderId')::uuid  
 		WHERE orders.requestedsendtime >= start_date
 			AND orders.requestedsendtime < start_date + INTERVAL '1 day';
    

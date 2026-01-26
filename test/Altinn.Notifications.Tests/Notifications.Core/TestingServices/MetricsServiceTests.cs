@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Persistence;
@@ -40,17 +41,17 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             _metricsRepositoryMock
-                .Setup(r => r.GetDailySmsMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()))
+                .Setup(r => r.GetDailySmsMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected);
 
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            DailySmsMetrics actual = await service.GetDailySmsMetrics();
+            DailySmsMetrics actual = await service.GetDailySmsMetrics(CancellationToken.None);
 
             // Assert
             Assert.Same(expected, actual);
-            _metricsRepositoryMock.Verify(r => r.GetDailySmsMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+            _metricsRepositoryMock.Verify(r => r.GetDailySmsMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -68,7 +69,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            MetricsSummary summary = await service.GetParquetFile(metrics);
+            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
 
             // Assert - basic invariants
             Assert.NotNull(summary);
@@ -110,7 +111,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            MetricsSummary summary = await service.GetParquetFile(metrics);
+            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
 
             // Assert - basic invariants
             Assert.NotNull(summary);

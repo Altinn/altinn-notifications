@@ -70,7 +70,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete.Add(smsOrder.Id);
 
             // Act
-            var actual = await service.GetDailySmsMetrics();
+            var actual = await service.GetDailySmsMetrics(CancellationToken.None);
 
             // Assert
             Assert.NotEmpty(actual.Metrics);

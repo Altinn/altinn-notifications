@@ -50,25 +50,18 @@ namespace Altinn.Notifications.Controllers
         [Route("sms")]
         [Produces("application/octet-stream")]
         [ServiceFilter(typeof(MetricsApiKeyFilter))]
-        public async Task<ActionResult> GetSmsDailyMetrics()
+        public async Task<ActionResult> GetSmsDailyMetrics(CancellationToken cancellationToken)
         {
-            var data = await _metricsService.GetDailySmsMetrics();
+            var data = await _metricsService.GetDailySmsMetrics(cancellationToken);
 
-            var response = await _metricsService.GetParquetFile(data);
+            var response = await _metricsService.GetParquetFile(data, cancellationToken);
+            HttpContext.Response.RegisterForDispose(response.FileStream);
 
-            try
-            {
-                Response.Headers["X-File-Hash"] = response.FileHash;
-                Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
-                Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
-                Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
-                Response.Headers["X-Environment"] = response.Environment;
-            }
-            catch
-            {
-                await response.FileStream.DisposeAsync();
-                throw;
-            }
+            Response.Headers["X-File-Hash"] = response.FileHash;
+            Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
+            Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
+            Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
+            Response.Headers["X-Environment"] = response.Environment;
 
             return File(response.FileStream, "application/octet-stream", response.FileName);
         }        

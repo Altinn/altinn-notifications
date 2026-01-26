@@ -62,7 +62,7 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
-        public async Task<DailySmsMetrics> GetDailySmsMetrics(int day, int month, int year)
+        public async Task<DailySmsMetrics> GetDailySmsMetrics(int day, int month, int year, CancellationToken cancellationToken)
         {
             DailySmsMetrics metrics = new()
             {
@@ -84,12 +84,12 @@ namespace Altinn.Notifications.Persistence.Repository
                     {
                         SmsId = reader.GetValue<long>("sms_id"),
                         ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
-                        SendersReference = reader.GetValue<string>("senders_reference"),
-                        RequestedSendtime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
+                        SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
+                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
                         CreatorName = reader.GetValue<string>("creatorname"),
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),
-                        GatewayReference = reader.GetValue<string>("gatewayreference"),
+                        GatewayReference = reader.GetValue<string?>("gatewayreference") ?? string.Empty,
                         Rate = reader.GetValue<string>("rate"),
                         MobileNumberPrefix = reader.GetValue<string>("mobilenumber_prefix"),
                         AltinnSmsCount = reader.GetValue<int?>("altinn_sms_count") ?? 0,

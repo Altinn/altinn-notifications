@@ -33,11 +33,11 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IMetricsService> serviceMock = new();
         serviceMock
-            .Setup(e => e.GetDailySmsMetrics())
+            .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DailySmsMetrics());
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes("test"));
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary
             {
                 Environment = "Development",
@@ -61,10 +61,15 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.Verify(e => e.GetDailySmsMetrics(), Times.Once);
-        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()), Times.Once);
+        Assert.Equal("application/octet-stream", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("dummyhash", response.Headers.GetValues("X-File-Hash").FirstOrDefault());
+        Assert.Equal("4", response.Headers.GetValues("X-File-Size").FirstOrDefault());
+        Assert.Equal("1", response.Headers.GetValues("X-Total-FileTransfer-Count").FirstOrDefault());
+        Assert.NotNull(response.Headers.GetValues("X-Generated-At").FirstOrDefault());
+        Assert.Equal("Development", response.Headers.GetValues("X-Environment").FirstOrDefault());
 
-        stream.Dispose();
+        serviceMock.Verify(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()), Times.Once);
+        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -73,9 +78,9 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IMetricsService> serviceMock = new();
         serviceMock
-            .Setup(e => e.GetDailySmsMetrics())
+            .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         var client = GetTestClient(
@@ -98,9 +103,9 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IMetricsService> serviceMock = new();
         serviceMock
-            .Setup(e => e.GetDailySmsMetrics())
+            .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         var client = GetTestClient(
@@ -123,9 +128,9 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IMetricsService> serviceMock = new();
         serviceMock
-            .Setup(e => e.GetDailySmsMetrics())
+            .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>()))
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         // Create client overriding configuration to remove the configured API key

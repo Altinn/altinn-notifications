@@ -66,7 +66,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailySmsMetrics(DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year);
+        var result = await sut.GetDailySmsMetrics(DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, result.Metrics.Count);

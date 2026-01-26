@@ -15,6 +15,6 @@ namespace Altinn.Notifications.Core.Persistence
         /// <summary>
         /// Get the daily SMS metrics for a given day, month and year
         /// </summary>
-        Task<DailySmsMetrics> GetDailySmsMetrics(int day, int month, int year);
+        Task<DailySmsMetrics> GetDailySmsMetrics(int day, int month, int year, CancellationToken cancellationToken);
     }
 }
