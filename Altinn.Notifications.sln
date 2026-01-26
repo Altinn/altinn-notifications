@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31912.275
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11312.151 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications", "src\Altinn.Notifications\Altinn.Notifications.csproj", "{A791EC3D-DC08-416D-9522-C4BE4540084F}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.StatusFeedBackfillTool", "src\Tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj", "{47178504-F329-428C-9CE2-005D41EE8500}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.Tests", "test\Altinn.Notifications.Tools.Tests\Altinn.Notifications.Tools.Tests.csproj", "{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.RetryDeadDeliveryReports", "src\Tools\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj", "{B601292D-DFEA-35B4-B545-B60951D89154}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,10 @@ Global
 		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B601292D-DFEA-35B4-B545-B60951D89154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B601292D-DFEA-35B4-B545-B60951D89154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B601292D-DFEA-35B4-B545-B60951D89154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B601292D-DFEA-35B4-B545-B60951D89154}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
