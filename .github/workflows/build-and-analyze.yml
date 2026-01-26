@@ -18,7 +18,7 @@ jobs:
       checks: write
     services:
       postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
-        image: postgres:16@sha256:056b54f00419b49289227ab12d09df508543883f407fe9935a2cec430ef8aa8d
+        image: postgres:17@sha256:7352e0c4d62bbac8aa69d95e40220a60967c4a19f9c4f65b4d118175f7ce9e3b
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -32,7 +32,7 @@ jobs:
           - 5432:5432
     steps:
       - name: Setup .NET
-        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           dotnet-version: |
             10.0.x
