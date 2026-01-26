@@ -76,9 +76,9 @@ namespace Altinn.Notifications.Persistence.Repository
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, day);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, month);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, year);
-            await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+            await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
             {
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync(cancellationToken))
                 {
                     SmsRow smsRow = new()
                     {
