@@ -21,7 +21,7 @@ public class OrderDiscoveryService(
 
     private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    private const string _getOldestStatusFeedDateSql = "SELECT COALESCE(MIN(created), '1900-01-01'::TIMESTAMPTZ) FROM notifications.statusfeed";
+    private const string _getOldestStatusFeedDateSql = "SELECT COALESCE(MIN(created), NOW() - INTERVAL '90 days') FROM notifications.statusfeed";
 
     private const string _getAffectedOrdersSql = @"
         SELECT O.ALTERNATEID
