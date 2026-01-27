@@ -119,6 +119,7 @@ public class OrderDiscoveryService(
 
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var command = new NpgsqlCommand(_getAffectedOrdersSql, connection);
+        command.CommandTimeout = 600; // 10 minutes
 
         command.Parameters.AddWithValue("minProcessedDate", NpgsqlDbType.TimestampTz, minProcessedDate);
         object creatorFilter = string.IsNullOrWhiteSpace(_settings.CreatorNameFilter)
