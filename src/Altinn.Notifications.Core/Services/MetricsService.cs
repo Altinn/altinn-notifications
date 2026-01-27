@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Core.Services
         private readonly IMetricsRepository _metricsRepository;
         private readonly ILogger<MetricsService> _logger;
         private readonly IHostEnvironment _hostEnvironment;
-        private const int DaysOffsetForSmsMetrics = 3;
+        private const int DaysOffsetForSmsMetrics = 1; // Fetch yesterdays metrics
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsService"/> class.

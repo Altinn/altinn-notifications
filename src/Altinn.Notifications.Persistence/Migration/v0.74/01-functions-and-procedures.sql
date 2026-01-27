@@ -1255,8 +1255,11 @@ BEGIN
 from notifications.smsnotifications as sms
          inner join notifications.orders orders on orders._id = sms._orderid
          left join notifications.smstexts sms_text on orders._id = sms_text._orderid
-		WHERE orders.requestedsendtime >= start_date
-			AND orders.requestedsendtime < start_date + INTERVAL '1 day';
+         WHERE sms.resulttime >= start_date
+			AND sms.resulttime < start_date + INTERVAL '1 day'
+            AND sms.result NOT IN ('New',
+                           'Sending',
+                           'Accepted');
    
 END;
 $BODY$;
