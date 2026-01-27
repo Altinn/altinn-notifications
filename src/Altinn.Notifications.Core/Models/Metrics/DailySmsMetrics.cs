@@ -23,5 +23,5 @@ public record DailySmsMetrics
     /// <summary>
     /// A list of metrics for each individual SMS notification
     /// </summary>
-    public List<SmsRow> Metrics { get; init; } = [];
+    public List<DailySmsMetricsRecord> Metrics { get; init; } = [];
 }

@@ -37,7 +37,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Year = DateTime.UtcNow.Year,
                 Month = DateTime.UtcNow.Month,
                 Day = DateTime.UtcNow.Day,
-                Metrics = new List<SmsRow>()
+                Metrics = new List<DailySmsMetricsRecord>()
             };
 
             _metricsRepositoryMock
@@ -63,7 +63,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Year = 2026,
                 Month = 1,
                 Day = 15,
-                Metrics = new List<SmsRow>() // empty list is fine for serialization
+                Metrics = new List<DailySmsMetricsRecord>() // empty list is fine for serialization
             };
 
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
@@ -103,7 +103,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Year = 2026,
                 Month = 1,
                 Day = 15,
-                Metrics = new List<SmsRow>() // empty list is fine for serialization
+                Metrics = new List<DailySmsMetricsRecord>() // empty list is fine for serialization
             };
 
             // Use string.Empty instead of null to avoid CS8603

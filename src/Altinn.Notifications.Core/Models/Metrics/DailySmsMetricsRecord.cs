@@ -3,7 +3,7 @@
     /// <summary>
     /// Record describing the notification metrics for a single sms
     /// </summary>
-    public record SmsRow
+    public record DailySmsMetricsRecord
     {
         /// <summary>
         /// Gets or sets the unique identifier for the SMS.

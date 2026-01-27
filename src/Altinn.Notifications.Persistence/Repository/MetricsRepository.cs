@@ -80,7 +80,7 @@ namespace Altinn.Notifications.Persistence.Repository
             {
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    SmsRow smsRow = new()
+                    DailySmsMetricsRecord smsRow = new()
                     {
                         SmsId = reader.GetValue<long>("sms_id"),
                         ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
