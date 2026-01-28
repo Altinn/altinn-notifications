@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -65,7 +66,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .GetServices(new List<Type>() { typeof(IMetricsService) })
                 .First(i => i.GetType() == typeof(MetricsService));
 
-            (NotificationOrder smsOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(requestedSendTime: DateTime.UtcNow.AddDays(-1));
+            (NotificationOrder smsOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(resultType: SmsNotificationResultType.Delivered, requestedSendTime: DateTime.UtcNow.AddDays(-1));
 
             _orderIdsToDelete.Add(smsOrder.Id);
 

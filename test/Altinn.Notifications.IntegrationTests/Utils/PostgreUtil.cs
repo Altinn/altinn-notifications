@@ -150,7 +150,7 @@ public static class PostgreUtil
 
         if (resultType.HasValue)
         {
-            smsNotification.SendResult = new NotificationResult<SmsNotificationResultType>(resultType.Value, DateTime.UtcNow);
+            smsNotification.SendResult = new NotificationResult<SmsNotificationResultType>(resultType.Value, DateTime.UtcNow.AddDays(-1));
         }
 
         if (requestedSendTime.HasValue)
@@ -192,10 +192,10 @@ public static class PostgreUtil
         // Get test data for base order with one notification
         (NotificationOrder order, SmsNotification smsNotificationFirst) = TestdataUtil.GetOrderAndSmsNotification();
         order.Creator = new Core.Models.Creator(orgName);
-        var timeStamp = DateTime.UtcNow;
+        var timeStamp = DateTime.UtcNow.AddDays(-1);
         order.RequestedSendTime = timeStamp;
         smsNotificationFirst.RequestedSendTime = timeStamp;
-        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
+        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Delivered, timeStamp);
         smsNotificationFirst.OrderId = order.Id;
 
         var smsNotificationSecond = new SmsNotification()
@@ -207,7 +207,7 @@ public static class PostgreUtil
             {
                 MobileNumber = smsNotificationFirst.Recipient.MobileNumber,
             },
-            SendResult = new(SmsNotificationResultType.Sending, timeStamp)
+            SendResult = new(SmsNotificationResultType.Delivered, timeStamp)
         };
 
         var emailNotificationFirst = new EmailNotification()
@@ -231,7 +231,7 @@ public static class PostgreUtil
             {
                 ToAddress = "noreply@altinn.no"
             },
-            SendResult = new(EmailNotificationResultType.Sending, timeStamp)
+            SendResult = new(EmailNotificationResultType.Sending, timeStamp),
         };
         
         // Set up repositories
@@ -250,8 +250,8 @@ public static class PostgreUtil
         await emailRepo.UpdateSendStatus(emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
         await emailRepo.UpdateSendStatus(emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
 
-        await smsRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Accepted);
-        await smsRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Accepted);
+        await smsRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Delivered);
+        await smsRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Delivered);
 
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
