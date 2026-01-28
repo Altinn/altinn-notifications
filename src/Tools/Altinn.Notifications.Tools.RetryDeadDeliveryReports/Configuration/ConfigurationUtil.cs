@@ -44,7 +44,7 @@ internal static class ConfigurationUtil
 
         if (string.IsNullOrWhiteSpace(connectionString) || string.IsNullOrWhiteSpace(notificationsDbPwd))
         {
-            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
+            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString and PostgreSQLSettings:NotificationsDbPwd must both be configured");
         }
         
         var credentials = string.Format(connectionString, notificationsDbPwd);
