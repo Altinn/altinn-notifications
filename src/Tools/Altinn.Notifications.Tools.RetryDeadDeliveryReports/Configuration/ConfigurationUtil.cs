@@ -40,14 +40,23 @@ internal static class ConfigurationUtil
             builder.Configuration.GetSection("PostgreSQLSettings"));
 
         var connectionString = builder.Configuration["PostgreSQLSettings:ConnectionString"];
-        if (string.IsNullOrWhiteSpace(connectionString))
+        var notificationsDbPwd = builder.Configuration["PostgreSQLSettings:NotificationsDbPwd"];
+
+        if (string.IsNullOrWhiteSpace(connectionString) || string.IsNullOrWhiteSpace(notificationsDbPwd))
         {
-            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
+            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString and PostgreSQLSettings:NotificationsDbPwd must both be configured");
+        }
+        
+        if (!connectionString.Contains("{0}"))
+        {
+            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString must contain a {0} placeholder for password interpolation");
         }
 
-        builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
+        var credentials = string.Format(connectionString, notificationsDbPwd);
+
+        builder.Services.AddSingleton(sp =>
         {
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(credentials);
             return dataSourceBuilder.Build();
         });
     }
