@@ -61,12 +61,14 @@ public class MetricsRepositoryTests : IAsyncLifetime
         MetricsRepository sut = (MetricsRepository)ServiceUtil
             .GetServices([typeof(IMetricsRepository)])
             .First(i => i.GetType() == typeof(MetricsRepository));
+        
+        var date = DateTime.UtcNow;
 
-        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName);
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date.AddDays(-1));
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailySmsMetrics(DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year, CancellationToken.None);
+        var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, result.Metrics.Count);

@@ -187,12 +187,12 @@ public static class PostgreUtil
         return (order, smsNotification);
     }
 
-    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications(string orgName)
+    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications(string orgName, DateTime? timestamp = null)
     {
         // Get test data for base order with one notification
         (NotificationOrder order, SmsNotification smsNotificationFirst) = TestdataUtil.GetOrderAndSmsNotification();
         order.Creator = new Core.Models.Creator(orgName);
-        var timeStamp = DateTime.UtcNow.AddDays(-1);
+        var timeStamp = timestamp ?? DateTime.UtcNow;
         order.RequestedSendTime = timeStamp;
         smsNotificationFirst.RequestedSendTime = timeStamp;
         smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
