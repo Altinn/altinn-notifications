@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 
 namespace Altinn.Notifications.Core.Persistence;
 
@@ -15,6 +16,20 @@ public interface IDeadDeliveryReportRepository
     /// <param name="cancellationToken">A token used to cancel the asynchronous operation</param>
     /// <returns>A dead delivery report object <see cref="DeadDeliveryReport"/></returns>
     Task<DeadDeliveryReport> GetAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asynchronously retrieves all dead delivery reports from the data source.
+    /// </summary>
+    /// <param name="fromId">inclusive starting position for the report retrieval</param>
+    /// <param name="toId">exclusive ending position for the report retrieval</param>
+    /// <param name="reason">Filter based on reason code</param>
+    /// <param name="channel">Type of delivery report email/sms</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation. The default value is <see
+    /// cref="CancellationToken.None"/>.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of <see
+    /// cref="DeadDeliveryReport"/> objects representing all dead delivery reports. If no reports are found, the list
+    /// will be empty.</returns>
+    Task<List<DeadDeliveryReport>> GetAllAsync(long fromId, long toId, string reason, DeliveryReportChannel channel, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Saves a dead delivery report to the repository.
