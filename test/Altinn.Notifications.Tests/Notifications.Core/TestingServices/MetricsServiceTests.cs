@@ -102,7 +102,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             {
                 Year = 2026,
                 Month = 1,
-                Day = 15,
+                Day = 28,
                 Metrics = new List<DailySmsMetricsRecord>() // empty list is fine for serialization
             };
 
