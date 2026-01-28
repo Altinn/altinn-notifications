@@ -40,14 +40,18 @@ internal static class ConfigurationUtil
             builder.Configuration.GetSection("PostgreSQLSettings"));
 
         var connectionString = builder.Configuration["PostgreSQLSettings:ConnectionString"];
+        var notificationsDbPwd = builder.Configuration["PostgreSQLSettings:NotificationsDbPwd"];
+
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is not configured");
         }
+        
+        var credentials = string.Format(connectionString, notificationsDbPwd);
 
         builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
         {
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(credentials);
             return dataSourceBuilder.Build();
         });
     }

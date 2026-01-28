@@ -32,10 +32,13 @@ dotnet user-secrets init
 
 3. Set the required secrets:
 ```bash
-dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "<Your_Connection_String>"
+dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "Host=your-host;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb"
+dotnet user-secrets set "PostgreSqlSettings:NotificationsDbPwd" "<Your_Database_Password>"
 dotnet user-secrets set "EventGrid:BaseUrl" "<Your_Webhook_Endpoint>"
 dotnet user-secrets set "EventGrid:AccessKey" "<Your_Access_Key>"
 ```
+
+The password is interpolated into the connection string at runtime.
 
 ### Processing Settings
 
