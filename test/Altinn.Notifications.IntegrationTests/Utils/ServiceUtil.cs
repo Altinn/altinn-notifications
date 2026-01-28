@@ -9,7 +9,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -69,7 +70,7 @@ public static class ServiceUtil
             .AddJsonFile($"appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
             .AddEnvironmentVariables();
-
+        
         var config = builder.Build();
 
         WebApplication.CreateBuilder()
@@ -78,6 +79,12 @@ public static class ServiceUtil
 
         IServiceCollection services = new ServiceCollection();
 
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
+        {
+            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
+            ApplicationName = "Altinn.Notifications.IntegrationTests",
+            ContentRootPath = Directory.GetCurrentDirectory()
+        });
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddLogging();
 
@@ -118,5 +125,16 @@ public static class ServiceUtil
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
         services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = string.Empty;
+
+        public string ApplicationName { get; set; } = string.Empty;
+
+        public string ContentRootPath { get; set; } = string.Empty;
+
+        public IFileProvider ContentRootFileProvider { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     }
 }
