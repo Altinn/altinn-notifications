@@ -195,7 +195,7 @@ public static class PostgreUtil
         var timeStamp = DateTime.UtcNow.AddDays(-1);
         order.RequestedSendTime = timeStamp;
         smsNotificationFirst.RequestedSendTime = timeStamp;
-        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Delivered, timeStamp);
+        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
         smsNotificationFirst.OrderId = order.Id;
 
         var smsNotificationSecond = new SmsNotification()
@@ -207,7 +207,7 @@ public static class PostgreUtil
             {
                 MobileNumber = smsNotificationFirst.Recipient.MobileNumber,
             },
-            SendResult = new(SmsNotificationResultType.Delivered, timeStamp)
+            SendResult = new(SmsNotificationResultType.Sending, timeStamp)
         };
 
         var emailNotificationFirst = new EmailNotification()
