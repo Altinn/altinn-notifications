@@ -47,6 +47,11 @@ internal static class ConfigurationUtil
             throw new InvalidOperationException("PostgreSQLSettings:ConnectionString and PostgreSQLSettings:NotificationsDbPwd must both be configured");
         }
         
+        if (!connectionString.Contains("{0}"))
+        {
+            throw new InvalidOperationException("PostgreSQLSettings:ConnectionString must contain a {0} placeholder for password interpolation");
+        }
+
         var credentials = string.Format(connectionString, notificationsDbPwd);
 
         builder.Services.AddSingleton(sp =>
