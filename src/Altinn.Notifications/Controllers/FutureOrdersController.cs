@@ -89,6 +89,12 @@ public class FutureOrdersController : ControllerBase
 
             return Created(result.Value!.OrderChainId.GetSelfLinkFromOrderChainId(), result.Value.MapToNotificationOrderChainResponseExt());
         }
+        catch (ProblemInstanceException ex)
+        {
+            var problemDetails = ex.Problem.ToProblemDetails();
+            problemDetails.Title = "One or more validation errors occurred.";  
+            return StatusCode(problemDetails.Status ?? 400, problemDetails);
+        }
         catch (OperationCanceledException)
         {
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();

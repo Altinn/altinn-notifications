@@ -14,16 +14,19 @@ public static class StatusFeedValidationHelper
     /// Validates a <see cref="GetStatusFeedRequestExt"/> request and throws if validation fails.
     /// </summary>
     /// <param name="request">The status feed request to validate.</param>
-    /// <exception cref="AltinnProblemDetailsException">Thrown when validation fails.</exception>
+    /// <exception cref="ProblemInstanceException">Thrown when validation fails.</exception>
     public static void ValidateStatusFeedRequest(GetStatusFeedRequestExt request)
     {
-        var errors = ValidationErrorBuilder.New();
+        var errors = default(ValidationErrorBuilder);
 
         if (request.Seq < 0)
         {
             errors.Add(ValidationErrors.SequenceNumber_Invalid, "Seq");
         }
 
-        errors.ThrowIfErrors();
+        if (errors.TryBuild(out var problemInstance))
+        {
+            throw new ProblemInstanceException(problemInstance);
+        }
     }
 }

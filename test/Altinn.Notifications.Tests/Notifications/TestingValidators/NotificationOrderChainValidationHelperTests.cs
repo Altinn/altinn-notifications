@@ -39,7 +39,7 @@ public class NotificationOrderChainValidationHelperTests
         request.IdempotencyId = string.Empty;
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.IdempotencyId_Required);
@@ -53,7 +53,7 @@ public class NotificationOrderChainValidationHelperTests
         request.IdempotencyId = null!;
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.IdempotencyId_Required);
@@ -67,7 +67,7 @@ public class NotificationOrderChainValidationHelperTests
         request.RequestedSendTime = new DateTime(2024, 1, 20, 12, 0, 0, DateTimeKind.Unspecified);
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.SendTime_TimezoneRequired);
@@ -81,7 +81,7 @@ public class NotificationOrderChainValidationHelperTests
         request.RequestedSendTime = _testUtcNow.AddDays(-1);
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.SendTime_MustBeFuture);
@@ -95,7 +95,7 @@ public class NotificationOrderChainValidationHelperTests
         request.ConditionEndpoint = new Uri("ftp://invalid.example.com"); // Invalid scheme
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.ConditionEndpoint_InvalidScheme);
@@ -109,7 +109,7 @@ public class NotificationOrderChainValidationHelperTests
         request.Recipient = null!;
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.Recipient_CannotBeNull);
@@ -135,7 +135,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.Recipient_MustHaveExactlyOne);
@@ -156,7 +156,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.EmailAddress_Invalid);
@@ -177,7 +177,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.PhoneNumber_Invalid);
@@ -199,7 +199,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.NationalIdentityNumber_Invalid);
@@ -221,7 +221,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.OrganizationNumber_Invalid);
@@ -244,7 +244,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.EmailSubject_Required);
@@ -267,7 +267,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.SmsBody_Required);
@@ -289,7 +289,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.Reminder_TimingMutuallyExclusive);
@@ -310,7 +310,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.Reminder_TimingMutuallyExclusive);
@@ -331,7 +331,7 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.ReminderDelayDays_Invalid);
@@ -349,12 +349,13 @@ public class NotificationOrderChainValidationHelperTests
                 NationalIdentityNumber = "12345678901",
                 ChannelSchema = NotificationChannelExt.EmailAndSms,
                 SmsSettings = CreateValidSmsSettings()
+
                 // EmailSettings is null
             }
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         AssertContainsErrorCode(exception, ValidationErrors.ChannelSchema_EmailSettings_RequiredForDualChannel);
@@ -372,18 +373,19 @@ public class NotificationOrderChainValidationHelperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<AltinnProblemDetailsException>(
+        var exception = Assert.Throws<ProblemInstanceException>(
             () => NotificationOrderChainValidationHelper.ValidateOrderChainRequest(request, _testUtcNow));
 
         // Should have multiple errors
-        var problemDetails = exception.ToProblemDetails();
+        var problemDetails = exception.Problem.ToProblemDetails();
         Assert.NotNull(problemDetails);
     }
 
-    private static void AssertContainsErrorCode(AltinnProblemDetailsException exception, ValidationErrorDescriptor expectedError)
+    private static void AssertContainsErrorCode(ProblemInstanceException exception, ValidationErrorDescriptor expectedError)
     {
-        var problemDetails = exception.ToProblemDetails();
+        var problemDetails = exception.Problem.ToProblemDetails();
         Assert.NotNull(problemDetails);
+
         // The error code should be present in the problem details
         // The exact assertion depends on the structure of AltinnProblemDetails
     }
