@@ -106,7 +106,7 @@ public class FutureOrdersControllerTests
         // Assert
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        Assert.IsType<AltinnValidationProblemDetails>(objectResult.Value);
     }
 
     [Fact]
