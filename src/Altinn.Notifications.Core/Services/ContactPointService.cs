@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -323,19 +324,26 @@ public class ContactPointService(
             return [];
         }
 
-        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
-
-        contactPoints.ForEach(contactPoint =>
+        try
         {
-            contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+            List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
 
-            if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+            contactPoints.ForEach(contactPoint =>
             {
-                contactPoint.MobileNumber = string.Empty;
-            }
-        });
+                contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
 
-        return contactPoints;
+                if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+                {
+                    contactPoint.MobileNumber = string.Empty;
+                }
+            });
+
+            return contactPoints;
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException("ProfileClient", "GetUserContactPoints", ex);
+        }
     }
 
     /// <summary>
@@ -364,59 +372,84 @@ public class ContactPointService(
             return [];
         }
 
-        List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
-        contactPoints.ForEach(contactPoint =>
+        try
         {
-            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
-        });
-
-        var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
-        {
-            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
-
-            if (allUserContactPoints.Count > 0)
+            List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
+            contactPoints.ForEach(contactPoint =>
             {
-                var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
+                contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
+            });
 
-                foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
+            var sanitizedResourceId = GetSanitizedResourceId(resourceId);
+            if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
+            {
+                List<OrganizationContactPoints> allUserContactPoints;
+                
+                try
                 {
-                    var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
-                    if (existingContactPoint == null)
+                    allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+                }
+                catch (Exception ex) when (ex is not PlatformDependencyException)
+                {
+                    throw new PlatformDependencyException("ProfileClient", "GetUserRegisteredContactPoints", ex);
+                }
+
+                if (allUserContactPoints.Count > 0)
+                {
+                    List<OrganizationContactPoints> authorizedUserContactPoints;
+                    
+                    try
                     {
-                        contactPoints.Add(authorizedUserContactPoint);
+                        authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
+                        throw new PlatformDependencyException("AuthorizationService", "AuthorizeUserContactPointsForResource", ex);
+                    }
+
+                    foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
+                    {
+                        var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                        if (existingContactPoint == null)
+                        {
+                            contactPoints.Add(authorizedUserContactPoint);
+                        }
+                        else
+                        {
+                            existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
+                        }
                     }
                 }
             }
+
+            contactPoints.ForEach(contactPoint =>
+            {
+                // Keep only unique and valid mobile numbers.
+                contactPoint.MobileNumberList = [..
+                    contactPoint.MobileNumberList
+                    .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+                // Keep only unique email addresses.
+                contactPoint.EmailList = [..
+                    contactPoint.EmailList
+                    .Where(e => !string.IsNullOrWhiteSpace(e))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+                // Keep only unique and valid mobile numbers.
+                contactPoint.UserContactPoints = [..
+                    NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
+                    .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
+                    .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
+                    ];
+            });
+
+            return contactPoints;
         }
-
-        contactPoints.ForEach(contactPoint =>
+        catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            // Keep only unique and valid mobile numbers.
-            contactPoint.MobileNumberList = [..
-                contactPoint.MobileNumberList
-                .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)];
-
-            // Keep only unique email addresses.
-            contactPoint.EmailList = [..
-                contactPoint.EmailList
-                .Where(e => !string.IsNullOrWhiteSpace(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)];
-
-            // Keep only unique and valid mobile numbers.
-            contactPoint.UserContactPoints = [..
-                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
-                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
-                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
-                ];
-        });
-
-        return contactPoints;
+            throw new PlatformDependencyException("ProfileClient", "GetOrganizationContactPoints", ex);
+        }
     }
 
     /// <summary>
