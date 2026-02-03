@@ -1,11 +1,16 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -114,14 +119,40 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     public async Task RunTask_ProcessOrderRetryThrowsException_ConfirmRetryBehavior()
     {
         // Arrange
-        var mockOrderProcessingService = new Mock<IOrderProcessingService>();
-        mockOrderProcessingService
+        var orderRepository = ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .OfType<IOrderRepository>()
+            .First();
+
+        var mockEmailProcessingService = new Mock<IEmailOrderProcessingService>();
+        var mockSmsProcessingService = new Mock<ISmsOrderProcessingService>();
+        var mockPreferredChannelProcessingService = new Mock<IPreferredChannelProcessingService>();
+        var mockEmailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
+        var mockConditionClient = new Mock<IConditionClient>();
+        var mockKafkaProducer = new Mock<IKafkaProducer>();
+        var mockOrderProcessingLogger = new Mock<ILogger<OrderProcessingService>>();
+        var mockConsumerLogger = new Mock<ILogger<PastDueOrdersRetryConsumer>>();
+
+        // Configure mocks to throw exception when processing retry
+        mockEmailProcessingService
             .Setup(x => x.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .ThrowsAsync(new TaskCanceledException("Simulated processing failure"));
+            .ThrowsAsync(new PlatformDependencyException("Profile", "Test", new TaskCanceledException()));
 
-        var mockLogger = new Mock<ILogger<PastDueOrdersRetryConsumer>>();
+        var orderProcessingService = new OrderProcessingService(
+            orderRepository,
+            mockEmailProcessingService.Object,
+            mockSmsProcessingService.Object,
+            mockPreferredChannelProcessingService.Object,
+            mockEmailAndSmsProcessingService.Object,
+            mockConditionClient.Object,
+            mockKafkaProducer.Object,
+            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
+            {
+                PastDueOrdersTopicName = "past-due-orders"
+            }),
+            mockOrderProcessingLogger.Object);
 
-        using var consumerRetryService = CreateRetryConsumerService(mockLogger, mockOrderProcessingService);
+        using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, mockConsumerLogger);
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
@@ -133,55 +164,48 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert - Wait for the consumer to attempt processing
-        var processedOrderCount = 0L;
-        var processingOrderCount = 0L;
+        var registeredOrderCount = 0L;
 
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
+                registeredOrderCount = await SelectRegisteredOrderCount(persistedOrder.Id);
+                
                 // Check if the mock was called
                 try
                 {
-                    mockOrderProcessingService.Verify(
+                    mockEmailProcessingService.Verify(
                         x => x.ProcessOrderRetry(It.Is<NotificationOrder>(o => o.Id == persistedOrder.Id)),
                         Times.AtLeastOnce());
-                    
-                    processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-                    processingOrderCount = await SelectProcessingOrderCount(persistedOrder.Id);
-                    
-                    return true; // Processing attempt completed
+                    return registeredOrderCount == 1;
                 }
                 catch (MockException)
                 {
-                    return false; // Mock not called yet, keep waiting
+                    return false;
                 }
             },
             TimeSpan.FromSeconds(10));
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
-        // Verify the service was called
-        mockOrderProcessingService.Verify(
+        // Verify the mock was called
+        mockEmailProcessingService.Verify(
             x => x.ProcessOrderRetry(It.Is<NotificationOrder>(o => o.Id == persistedOrder.Id)),
             Times.AtLeastOnce());
 
-        // Verify that the exception was logged when the TaskCanceledException is caught PastDueOrdersRetryConsumer
-        mockLogger.Verify(
+        // Verify that OrderProcessingService logged the PlatformDependencyException
+        mockOrderProcessingLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Exception when retrying past due order with id") 
-                                       && v.ToString()!.Contains(persistedOrder.Id.ToString())),
-                It.Is<Exception>(ex => ex is TaskCanceledException),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Platform dependency")),
+                It.Is<Exception>(ex => ex is PlatformDependencyException),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce(),
-            "Expected logger to log TaskCanceledException on line 68 when ProcessOrderRetry throws exception");
+            "Expected OrderProcessingService to log PlatformDependencyException");
 
-        // Order should not be marked as Processed since the service threw an exception
-        Assert.Equal(0, processedOrderCount);
-        
-        // Order should remain in Processing state
-        Assert.Equal(1, processingOrderCount);
+        // Order should be set back to Registered status
+        Assert.Equal(1, registeredOrderCount);
     }
 
     public async void Dispose()
@@ -221,6 +245,12 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
+    private static async Task<long> SelectRegisteredOrderCount(Guid orderId)
+    {
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Registered' and alternateid='{orderId}'";
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
+    }
+
     private static async Task UpdateProcessingStatus(Guid orderId, OrderProcessingStatus orderProcessingStatus)
     {
         string sql = $"UPDATE notifications.orders SET processedstatus = '{orderProcessingStatus}' WHERE alternateid='{orderId}'";
@@ -228,18 +258,20 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     }
 
     private PastDueOrdersRetryConsumer CreateRetryConsumerService(
-        Mock<ILogger<PastDueOrdersRetryConsumer>> mockLogger,
-        Mock<IOrderProcessingService>? mockOrderProcessingService = null)
+        IOrderProcessingService? ops = null,
+        Mock<ILogger<PastDueOrdersRetryConsumer>>? mockLogger = null)
     {
         var dateTimeService = ServiceUtil
             .GetServices([typeof(IDateTimeService)])
             .OfType<IDateTimeService>()
             .First();
 
-        var orderProcessingService = mockOrderProcessingService?.Object 
+        var orderProcessingService = ops 
             ?? ServiceUtil.GetServices([typeof(IOrderProcessingService)])
                          .OfType<IOrderProcessingService>()
                          .First();
+
+        var logger = mockLogger?.Object ?? NullLogger<PastDueOrdersRetryConsumer>.Instance;
 
         return new PastDueOrdersRetryConsumer(
             orderProcessingService,
@@ -257,6 +289,6 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                     TopicList = [_retryTopicName]
                 }
             }),
-            mockLogger.Object);
+            logger);
     }
 }
