@@ -402,7 +402,7 @@ public class ContactPointService(
                     {
                         authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not PlatformDependencyException)
                     {
                         throw new PlatformDependencyException("AuthorizationService", "AuthorizeUserContactPointsForResource", ex);
                     }
