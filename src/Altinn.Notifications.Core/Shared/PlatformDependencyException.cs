@@ -25,7 +25,7 @@ public class PlatformDependencyException : Exception
     /// Initializes a new instance of the <see cref="PlatformDependencyException"/> class.
     /// </summary>
     /// <param name="dependencyName">The name of the dependency that failed</param>
-    /// <param name="operation">The operation that was being performed when the faileure occurred</param>
+    /// <param name="operation">The operation that was being performed when the failure occurred</param>
     /// <param name="innerException">The original exception that was thrown</param>
     public PlatformDependencyException(string dependencyName, string operation, Exception innerException)
         : base($"Platform dependency '{dependencyName}' failed during '{operation}': {innerException.Message}", innerException)
