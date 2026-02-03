@@ -1,9 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Altinn.Notifications.Core.Shared;
 
 /// <summary>
 /// Exception thrown when a platform dependency (ProfileClient, AuthorizationService, etc.) fails.
 /// Wraps all failure types including HTTP errors, network failures, timeouts, and cancellations.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class PlatformDependencyException : Exception
 {
     /// <summary>
