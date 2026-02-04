@@ -72,23 +72,12 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
     }
 
     /// <summary>
-    /// Organizes recipients into channel-specific collections by separating their contact points by type.
+    /// De-duplicates and organizes recipients into SMS and email lists, filtering contact points for each channel.
     /// </summary>
-    /// <param name="recipients">An enumerable collection of recipients, each potentially containing both email and SMS address points.</param>
-    /// <returns>A tuple containing two lists: 
-    /// <para>SmsRecipients: Recipients with only SMS address points</para>
-    /// <para>EmailRecipients: Recipients with only email address points</para>
-    /// </returns>
+    /// <param name="recipients">The recipients to process.</param>
+    /// <returns>A tuple with (<c>SmsRecipients</c>, <c>EmailRecipients</c>) lists. Each list contains all unique recipients with contact points filtered for the channel.</returns>
     /// <remarks>
-    /// For each recipient in the input collection:
-    /// <list type="bullet">
-    /// <item>Creates a new Recipient instance for SMS if SMS contact points exist</item>
-    /// <item>Creates a new Recipient instance for email if email contact points exist</item>
-    /// <item>Preserves recipient identity using NationalIdentityNumber or OrganizationNumber as dictionary keys</item>
-    /// <item>Copies core properties (IsReserved, NationalIdentityNumber, OrganizationNumber) to each new instance</item>
-    /// <item>Filters AddressInfo to include only the relevant address type in each new instance</item>
-    /// </list>
-    /// Recipients without either email or SMS contact points are effectively filtered out of the results.
+    /// All unique recipients appear in both lists. A recipient's <see cref="Recipient.AddressInfo"/> will be empty if they have no contact points for that channel. The last entry wins in case of duplicates.
     /// </remarks>
     private static (List<Recipient> SmsRecipients, List<Recipient> EmailRecipients) OrganizeRecipientsByChannel(IEnumerable<Recipient> recipients)
     {
@@ -99,29 +88,21 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
         {
             string recipientIdentifier = recipient.OrganizationNumber ?? recipient.NationalIdentityNumber!;
 
-            var smsAddressInfo = recipient.AddressInfo.Where(a => a.AddressType == AddressType.Sms).ToList();
-            if (smsAddressInfo.Count > 0)
+            smsRecipients[recipientIdentifier] = new Recipient
             {
-                smsRecipients[recipientIdentifier] = new Recipient
-                {
-                    AddressInfo = smsAddressInfo,
-                    IsReserved = recipient.IsReserved,
-                    OrganizationNumber = recipient.OrganizationNumber,
-                    NationalIdentityNumber = recipient.NationalIdentityNumber
-                };
-            }
+                IsReserved = recipient.IsReserved,
+                OrganizationNumber = recipient.OrganizationNumber,
+                NationalIdentityNumber = recipient.NationalIdentityNumber,
+                AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Sms)]
+            };
 
-            var emailAddressInfo = recipient.AddressInfo.Where(a => a.AddressType == AddressType.Email).ToList();
-            if (emailAddressInfo.Count > 0)
+            emailRecipients[recipientIdentifier] = new Recipient
             {
-                emailRecipients[recipientIdentifier] = new Recipient
-                {
-                    AddressInfo = emailAddressInfo,
-                    IsReserved = recipient.IsReserved,
-                    OrganizationNumber = recipient.OrganizationNumber,
-                    NationalIdentityNumber = recipient.NationalIdentityNumber
-                };
-            }
+                IsReserved = recipient.IsReserved,
+                OrganizationNumber = recipient.OrganizationNumber,
+                NationalIdentityNumber = recipient.NationalIdentityNumber,
+                AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Email)]
+            };
         }
 
         return ([.. smsRecipients.Values], [.. emailRecipients.Values]);
