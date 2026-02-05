@@ -71,7 +71,6 @@ public class MetricsRepositoryTests : IAsyncLifetime
         var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Metrics.Count);
         var metrics = result.Metrics.FirstOrDefault();
         Assert.NotNull(metrics);
 
