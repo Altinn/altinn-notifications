@@ -86,7 +86,21 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
 
         foreach (var recipient in recipients)
         {
-            string recipientIdentifier = recipient.OrganizationNumber ?? recipient.NationalIdentityNumber!;
+            var recipientIdentifier = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
+            {
+                recipientIdentifier = recipient.OrganizationNumber;
+            }
+            else if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
+            {
+                recipientIdentifier = recipient.NationalIdentityNumber;
+            }
+
+            if (string.IsNullOrEmpty(recipientIdentifier))
+            {
+                throw new ArgumentException("Recipient must have either OrganizationNumber or NationalIdentityNumber.");
+            }
 
             smsRecipients[recipientIdentifier] = new Recipient
             {
