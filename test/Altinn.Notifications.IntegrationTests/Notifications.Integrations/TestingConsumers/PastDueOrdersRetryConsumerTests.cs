@@ -113,7 +113,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
     /// <summary>
     /// When IOrderProcessingService.ProcessOrderRetry throws an exception,
-    /// we confirm that the service exception is caught and logged, and the order remains unprocessed.
+    /// we confirm that the service exception is caught and logged, and the order is set back to status "Registered".
     /// </summary>
     [Fact]
     public async Task RunTask_ProcessOrderRetryThrowsException_ConfirmRetryBehavior()
@@ -204,7 +204,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
             Times.AtLeastOnce(),
             "Expected OrderProcessingService to log PlatformDependencyException");
 
-        // Order should be set back to Registered status
+        // Verify that the order status was set back to "Registered"
         Assert.Equal(1, registeredOrderCount);
     }
 
