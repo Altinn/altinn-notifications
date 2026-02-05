@@ -50,7 +50,10 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
         List<Recipient> recipients = order.Recipients;
         List<Recipient> recipientsWithoutContactPoint = [.. recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))];
 
-        await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, order.ResourceId);
+        if (recipientsWithoutContactPoint.Count > 0)
+        {
+            await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, order.ResourceId);
+        }
 
         var (smsRecipients, emailRecipients) = OrganizeRecipientsByChannel(recipients);
 
