@@ -163,11 +163,10 @@ public class EmailAndSmsOrderProcessingServiceTests
     {
         // Arrange
         var order = GetTestNotificationOrderForSinglePerson("28217843679");
-        order.Recipients[0].AddressInfo = [new EmailAddressPoint("recipient@altinn.xyz"), new SmsAddressPoint("+4799999999")];
 
+        var contactPointServiceMock = new Mock<IContactPointService>();
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
-        var contactPointServiceMock = new Mock<IContactPointService>();
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
