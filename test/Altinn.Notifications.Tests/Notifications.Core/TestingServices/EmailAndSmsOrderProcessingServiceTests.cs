@@ -189,7 +189,7 @@ public class EmailAndSmsOrderProcessingServiceTests
             Times.Once);
 
         smsProcessingServiceMock.Verify(
-            e => e.ProcessOrderWithoutAddressLookup(
+            e => e.ProcessOrderRetryWithoutAddressLookup(
                 It.Is<NotificationOrder>(o => o == order),
                 It.Is<List<Recipient>>(recipients =>
                     recipients.Count == 1 &&
@@ -198,7 +198,7 @@ public class EmailAndSmsOrderProcessingServiceTests
             Times.Once);
 
         emailProcessingServiceMock.Verify(
-            e => e.ProcessOrderWithoutAddressLookup(
+            e => e.ProcessOrderRetryWithoutAddressLookup(
                 It.Is<NotificationOrder>(o => o == order),
                 It.Is<List<Recipient>>(recipients =>
                     recipients.Count == 1 &&
