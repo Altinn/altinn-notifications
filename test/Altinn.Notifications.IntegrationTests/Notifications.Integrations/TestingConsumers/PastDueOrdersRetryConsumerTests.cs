@@ -239,12 +239,6 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
-    private static async Task<long> SelectProcessingOrderCount(Guid orderId)
-    {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processing' and alternateid='{orderId}'";
-        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
-    }
-
     private static async Task<long> SelectRegisteredOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Registered' and alternateid='{orderId}'";

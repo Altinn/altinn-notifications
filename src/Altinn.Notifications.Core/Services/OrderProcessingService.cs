@@ -169,8 +169,6 @@ public class OrderProcessingService : IOrderProcessingService
            e.Operation,
            order!.Id,
            e.IsTransient);
-
-            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
         }
     }
 
