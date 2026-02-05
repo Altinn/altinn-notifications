@@ -13,12 +13,12 @@
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
     <PackageReference Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageReference Include="Azure.Identity" Version="1.17.1" />
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.6.0" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
   </ItemGroup>
 
