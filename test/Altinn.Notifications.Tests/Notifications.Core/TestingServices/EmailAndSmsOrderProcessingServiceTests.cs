@@ -210,7 +210,6 @@ public class EmailAndSmsOrderProcessingServiceTests
                 NationalIdentityNumber = nationalIdentityNumber
             }
         ];
-        order.Templates.Add(new SmsTemplate() { Body = "This is a test SMS body" });
         return order;
     }
 
