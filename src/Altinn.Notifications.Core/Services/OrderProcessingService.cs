@@ -8,7 +8,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -155,6 +155,26 @@ public class OrderProcessingService : IOrderProcessingService
 
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
+    {
+        try
+        {
+            await ProcessOrderRetryInternal(order);
+        }
+        catch (PlatformDependencyException e)
+        {
+            _logger.LogError(
+           e,
+           "Platform dependency '{DependencyName}' failed during '{Operation}' when retrying past due order {OrderId}. IsTransient: {IsTransient}",
+           e.DependencyName,
+           e.Operation,
+           order!.Id,
+           e.IsTransient);
+
+            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+        }
+    }
+
+    private async Task ProcessOrderRetryInternal(NotificationOrder order)
     {
         var isOrderCompleted = false;
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);

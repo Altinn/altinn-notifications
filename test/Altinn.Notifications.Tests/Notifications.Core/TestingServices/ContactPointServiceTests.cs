@@ -9,15 +9,51 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Shared;
 
 using Moq;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 {
     public class ContactPointServiceTests
     {
+        [Fact]
+        public async Task AddEmailContactPoints_WhenProfileClientThrowsTransientException_ShouldThrowPlatformDependencyException()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            var recipientsToEnrich = new List<Recipient>
+    {
+        new() { NationalIdentityNumber = nationalId }
+    };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ThrowsAsync(new TaskCanceledException("Simulated timeout"));
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+                async () => await service.AddEmailContactPoints(recipientsToEnrich, null));
+
+            Assert.Equal("ProfileClient", exception.DependencyName);
+            Assert.Equal("GetUserContactPoints", exception.Operation);
+            Assert.IsType<TaskCanceledException>(exception.InnerException);
+            Assert.True(exception.IsTransient);
+
+            profileClientMock.Verify(
+                e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))),
+                Times.Once);
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
         [Fact]
         public async Task AddSmsContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithMobileNumber()
         {
