@@ -23,11 +23,15 @@ public class EmailAndSmsOrderProcessingServiceTests
     {
         // Arrange
         var order = GetTestNotificationOrderForSinglePerson(null);
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(e => e.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
 
         var service = new EmailAndSmsOrderProcessingService(
             new Mock<IEmailOrderProcessingService>().Object,
             new Mock<ISmsOrderProcessingService>().Object,
-            new Mock<IContactPointService>().Object);
+            contactPointServiceMock.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => service.ProcessOrderAsync(order));
@@ -46,7 +50,8 @@ public class EmailAndSmsOrderProcessingServiceTests
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint("+4799999999"));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint("recipient@altinn.xyz"));
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
@@ -171,7 +176,8 @@ public class EmailAndSmsOrderProcessingServiceTests
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint("+4799999999"));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint("recipient@altinn.xyz"));
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
