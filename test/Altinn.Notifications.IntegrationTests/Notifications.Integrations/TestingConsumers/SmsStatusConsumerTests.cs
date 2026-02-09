@@ -27,7 +27,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
-    private List<Guid> _ordersToDelete = [];
+    private readonly List<Guid> _ordersToDelete = [];
 
     [Fact]
     public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
@@ -254,7 +254,6 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Cleanup
         _ordersToDelete.Add(order.Id);
-        
     }
 
     [Theory]

@@ -17,13 +17,13 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
     private readonly string _creatorName = "ttd";
-    private readonly List<Guid> _orderdsToDelete = [];
+    private readonly List<Guid> _ordersToDelete = [];
 
     public async Task DisposeAsync()
     {
         await PostgreUtil.DeleteStatusFeedByCreatorName(_creatorName);
 
-        foreach (var orderId in _orderdsToDelete)
+        foreach (var orderId in _ordersToDelete)
         {
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
@@ -192,7 +192,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         Assert.Equal(1, statusFeedCount);
 
         // Cleanup
-        _orderdsToDelete.Add(orderAlternateId);
+        _ordersToDelete.Add(orderAlternateId);
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
