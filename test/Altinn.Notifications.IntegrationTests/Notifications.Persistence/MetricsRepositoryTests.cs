@@ -25,6 +25,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         foreach (var id in _orderIdsToDelete)
         {
             await PostgreUtil.DeleteOrderFromDb(id);
+            await PostgreUtil.DeleteStatusFeedByCreatorName(id.ToString());
         }
     }
 
@@ -51,6 +52,9 @@ public class MetricsRepositoryTests : IAsyncLifetime
         Assert.Equal(1, metrics.OrdersCreated);
         Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
         Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
+
+        // Cleanup
+        await PostgreUtil.DeleteStatusFeedByCreatorName(orgName);
     }
 
     [Fact]
@@ -79,5 +83,8 @@ public class MetricsRepositoryTests : IAsyncLifetime
         Assert.Equal("innland", metrics.Rate);
         Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
+
+        // Cleanup
+        await PostgreUtil.DeleteStatusFeedByCreatorName(orgName);
     }
 }
