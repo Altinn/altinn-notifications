@@ -295,6 +295,12 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static async Task DeleteStatusFeedByCreatorName(string creatorName)
+    {
+        string deleteSql = @"DELETE from notifications.statusfeed s where s.creatorname = @creatorName";
+        await RunSql(deleteSql, new NpgsqlParameter("@creatorName", creatorName));
+    }
+
     public static async Task UpdateResultAndExpiryTimeNotification<T>(T notification, string timeInterval)
         where T : class
     {

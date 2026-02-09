@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class PastDueOrdersRetryConsumerTests : IDisposable
+public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
 {
     private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -103,13 +103,6 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Assert.Equal("Processed", processedstatus);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
@@ -138,5 +131,15 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         string sql = $"UPDATE notifications.orders SET processedstatus = '{orderProcessingStatus}' WHERE alternateid='{orderId}'";
         await PostgreUtil.RunSql(sql);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        return Dispose(disposing: true);
     }
 }

@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class PastDueOrdersConsumerTests : IDisposable
+public class PastDueOrdersConsumerTests : IAsyncLifetime
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -180,13 +180,6 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Contains(statusFeedEntry.Recipients, x => x.Status == expectedStatus);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
@@ -221,5 +214,15 @@ public class PastDueOrdersConsumerTests : IDisposable
         }
 
         return JsonSerializer.Deserialize<OrderStatus>(json, JsonSerializerOptionsProvider.Options);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        return Dispose(true);
     }
 }

@@ -17,11 +17,16 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
     private readonly string _creatorName = "ttd";
+    private readonly List<Guid> _orderdsToDelete = [];
 
     public async Task DisposeAsync()
     {
-        string deleteSql = $@"DELETE from notifications.statusfeed s where s.creatorname = '{_creatorName}'";
-        await PostgreUtil.RunSql(deleteSql);
+        await PostgreUtil.DeleteStatusFeedByCreatorName(_creatorName);
+
+        foreach (var orderId in _orderdsToDelete)
+        {
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
     }
 
     public Task InitializeAsync()
@@ -186,7 +191,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
         Assert.Equal(1, statusFeedCount);
 
-        // Note: Cleanup is handled by DisposeAsync which deletes all status feed entries with creatorname = 'ttd'
+        // Cleanup
+        _orderdsToDelete.Add(orderAlternateId);
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)

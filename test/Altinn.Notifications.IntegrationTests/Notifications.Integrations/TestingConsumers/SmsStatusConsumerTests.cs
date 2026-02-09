@@ -27,6 +27,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
+    private List<Guid> _ordersToDelete = [];
 
     [Fact]
     public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
@@ -250,6 +251,10 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(1, statusFeedCount);
+
+        // Cleanup
+        _ordersToDelete.Add(order.Id);
+        
     }
 
     [Theory]
@@ -399,6 +404,12 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     {
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+
+        foreach (var orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
+
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
     }

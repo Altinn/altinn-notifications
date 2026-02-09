@@ -32,6 +32,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private List<Guid> _ordersToDelete = [];
 
     public PostTests(IntegrationTestWebApplicationFactory<SmsNotificationOrdersController> factory)
     {
@@ -104,6 +105,12 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
         NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
+
+        // Cleanup
+        if (orderIdObjectExt.OrderId.HasValue)
+        {
+            _ordersToDelete.Add(orderIdObjectExt.OrderId.Value);
+        }
     }
 
     public async void Dispose()
@@ -116,6 +123,11 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
     protected virtual async Task Dispose(bool disposing)
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+
+        foreach (Guid orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
     }
 
     private HttpClient GetTestClient()
