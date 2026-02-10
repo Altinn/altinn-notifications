@@ -234,23 +234,6 @@ public class ContactPointService(
             });
     }
 
-    private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
-    Recipient recipient,
-    List<TPreferred> preferredList,
-    List<TFallback> fallbackList,
-    Func<TPreferred, IAddressPoint> preferredSelector,
-    Func<TFallback, IAddressPoint> fallbackSelector)
-    {
-        if (preferredList.Count > 0)
-        {
-            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
-        }
-        else
-        {
-            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
-        }
-    }
-
     private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
         Recipient recipient,
         TPreferred preferredContact,
@@ -265,6 +248,23 @@ public class ContactPointService(
         else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
         {
             recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
+        }
+    }
+
+    private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
+    Recipient recipient,
+    List<TPreferred> preferredList,
+    List<TFallback> fallbackList,
+    Func<TPreferred, IAddressPoint> preferredSelector,
+    Func<TFallback, IAddressPoint> fallbackSelector)
+    {
+        if (preferredList.Count > 0)
+        {
+            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
+        }
+        else
+        {
+            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
         }
     }
 
@@ -307,15 +307,15 @@ public class ContactPointService(
     /// If <c>null</c> or empty, only official organization contact points are used.
     /// </param>
     /// <param name="applyPersonContactPoints">
-    /// A function that applies person user contact point data to a recipient. Invoked for recipients with a national identity number
+    /// A function that applies contact points to the recipient. Invoked for recipients with a national identity number
     /// and a matching <see cref="UserContactPoints"/> entry.
     /// </param>
     /// <param name="applyOrganizationContactPoints">
-    /// A function that applies organization contact point data to a recipient. Invoked for recipients with an organization number
+    /// A function that applies contact points to the recipient. Invoked for recipients with an organization number
     /// and a matching <see cref="OrganizationContactPoints"/> entry.
     /// </param>
     /// <param name="applySelfIdentifiedUserContactPoints">
-    /// A function that applies self-identified user contact point data to a recipient. Invoked for recipients with an external identity
+    /// A function that applies contact points to the recipient. Invoked for recipients with an external identity
     /// and a matching <see cref="SelfIdentifiedUserContactPoints"/> entry.
     /// </param>
     /// <returns>
@@ -417,7 +417,7 @@ public class ContactPointService(
     }
 
     /// <summary>
-    /// Retrieves contact points for self-identified user recipients.
+    /// Retrieves contact points for self-identified-users.
     /// </summary>
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
