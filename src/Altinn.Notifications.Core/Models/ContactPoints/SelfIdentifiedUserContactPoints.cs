@@ -12,15 +12,15 @@ public record SelfIdentifiedUserContactPoints
     /// <summary>
     /// The verified email address associated with the user.
     /// </summary>
-    public string Email { get; init; } = string.Empty;
+    public required string Email { get; init; } = string.Empty;
 
     /// <summary>
     /// The external identity of the user in URN format.
     /// </summary>
-    public string ExternalIdentity { get; init; } = string.Empty;
+    public required string ExternalIdentity { get; init; } = string.Empty;
 
     /// <summary>
     /// The verified mobile phone number associated with the user.
     /// </summary>
-    public string MobileNumber { get; init; } = string.Empty;
+    public required string MobileNumber { get; init; } = string.Empty;
 }

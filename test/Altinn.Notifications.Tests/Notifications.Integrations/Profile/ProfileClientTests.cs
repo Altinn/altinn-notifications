@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -34,6 +33,11 @@ public class ProfileClientTests
             {
                 UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
                 return await GetUserProfileResponse(lookup!);
+            }
+            else if (request!.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookupsi"))
+            {
+                SelfIdentifiedUserContactPointsLookup? lookup = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                return await GetSelfIdentifiedUserProfileResponse(lookup!);
             }
             else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
             {
@@ -87,6 +91,45 @@ public class ProfileClientTests
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetUserContactPoints(["unavailable"]));
 
         Assert.StartsWith("ProfileClient.GetUserContactPoints failed with status code", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_NoMatches()
+    {
+        // Act
+        List<SelfIdentifiedUserContactPoints> actual = await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["empty-list"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_TwoElementsInResponse()
+    {
+        // Act
+        List<SelfIdentifiedUserContactPoints> actual = await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["populated-list"]);
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        var firstContactPoint = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:example@altinnxyz.no");
+        var secondContactPoint = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:recipient@altinnxyz.no");
+
+        Assert.NotEmpty(firstContactPoint.Email);
+        Assert.Empty(firstContactPoint.MobileNumber);
+
+        Assert.NotEmpty(secondContactPoint.Email);
+        Assert.NotEmpty(secondContactPoint.MobileNumber);
+    }
+
+    [Fact]
+    public async Task GetSelfIdentifiedUserContactPoints_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["unavailable"]));
+
+        // Assert
+        Assert.StartsWith("ProfileClient.GetSelfIdentifiedUserContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
@@ -191,6 +234,36 @@ public class ProfileClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
+    private static Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
+    {
+        object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
+
+        switch (lookup.OrganizationNumbers[0])
+        {
+            case "empty-list":
+                contentData = new OrgContactPointsList() { ContactPointsList = [] };
+                break;
+
+            case "populated-list":
+                contentData = new OrgContactPointsList
+                {
+                    ContactPointsList =
+                    [
+                        new OrganizationContactPoints { OrganizationNumber = "910011154", EmailList = [] },
+                        new OrganizationContactPoints { OrganizationNumber = "910011155", EmailList = [] }
+                    ]
+                };
+                break;
+
+            case "unavailable":
+                statusCode = HttpStatusCode.ServiceUnavailable;
+                break;
+        }
+
+        return CreateMockResponse(contentData, statusCode);
+    }
+
     private static Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)
     {
         HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -261,24 +334,24 @@ public class ProfileClientTests
             });
     }
 
-    private static Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
+    private static Task<HttpResponseMessage> GetSelfIdentifiedUserProfileResponse(SelfIdentifiedUserContactPointsLookup lookup)
     {
-        object? contentData = null;
         HttpStatusCode statusCode = HttpStatusCode.OK;
+        object? contentData = null;
 
-        switch (lookup.OrganizationNumbers[0])
+        switch (lookup.ExternalIdentities[0])
         {
             case "empty-list":
-                contentData = new OrgContactPointsList() { ContactPointsList = [] };
+                contentData = new SelfIdentifiedUserContactPointsList() { ContactPointsList = [] };
                 break;
 
             case "populated-list":
-                contentData = new OrgContactPointsList
+                contentData = new SelfIdentifiedUserContactPointsList()
                 {
                     ContactPointsList =
                     [
-                        new OrganizationContactPoints { OrganizationNumber = "910011154", EmailList = [] },
-                        new OrganizationContactPoints { OrganizationNumber = "910011155", EmailList = [] }
+                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:example@altinnxyz.no", Email = "recipient@altinnxyz.no", MobileNumber = string.Empty },
+                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:recipient@altinnxyz.no", Email = "recipient@altinnxyz.no", MobileNumber = "+4799999999" }
                     ]
                 };
                 break;
