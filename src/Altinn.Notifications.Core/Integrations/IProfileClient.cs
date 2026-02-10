@@ -15,6 +15,13 @@ public interface IProfileClient
     public Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers);
 
     /// <summary>
+    /// Retrieves contact points for a list of self-identified users by their external identities.
+    /// </summary>
+    /// <param name="externalIdentities">A list of external identities (URNs) to look up contact points for.</param>
+    /// <returns>A list of contact points for the provided external identities.</returns>
+    public Task<List<SelfIdentifiedUserContactPoints>> GetSelfIdentifiedUserContactPoints(List<string> externalIdentities);
+
+    /// <summary>
     /// Retrieves the user registered contact points for a list of organizations identified by organization numbers
     /// </summary>
     /// <param name="organizationNumbers">The set or organizations to retrieve contact points for</param>

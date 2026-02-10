@@ -55,6 +55,34 @@ public class ProfileClient : IProfileClient
     }
 
     /// <inheritdoc/>
+    public async Task<List<SelfIdentifiedUserContactPoints>> GetSelfIdentifiedUserContactPoints(List<string> externalIdentities)
+    {
+        if (externalIdentities == null || externalIdentities.Count == 0)
+        {
+            return [];
+        }
+
+        var lookupObject = new SelfIdentifiedUserContactPointLookup
+        {
+            ExternalIdentities = externalIdentities
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("users/contactpoint/lookupsi", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetSelfIdentifiedUserContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsList>(responseContent, _jsonSerializerOptions);
+
+        return contactPoints?.ContactPointsList ?? [];
+    }
+
+    /// <inheritdoc/>
     public async Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId)
     {
         var lookupObject = new UnitContactPointLookup()

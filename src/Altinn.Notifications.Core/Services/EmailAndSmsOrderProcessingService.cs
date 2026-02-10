@@ -99,15 +99,20 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
             {
                 recipientIdentifier = recipient.NationalIdentityNumber;
             }
+            else if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
+            {
+                recipientIdentifier = recipient.ExternalIdentity;
+            }
 
             if (string.IsNullOrEmpty(recipientIdentifier))
             {
-                throw new ArgumentException("Recipient must have either OrganizationNumber or NationalIdentityNumber.");
+                throw new ArgumentException("Recipient must have either OrganizationNumber, NationalIdentityNumber, or ExternalIdentity.");
             }
 
             smsRecipients[recipientIdentifier] = new Recipient
             {
                 IsReserved = recipient.IsReserved,
+                ExternalIdentity = recipient.ExternalIdentity,
                 OrganizationNumber = recipient.OrganizationNumber,
                 NationalIdentityNumber = recipient.NationalIdentityNumber,
                 AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Sms)]
@@ -116,6 +121,7 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
             emailRecipients[recipientIdentifier] = new Recipient
             {
                 IsReserved = recipient.IsReserved,
+                ExternalIdentity = recipient.ExternalIdentity,
                 OrganizationNumber = recipient.OrganizationNumber,
                 NationalIdentityNumber = recipient.NationalIdentityNumber,
                 AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Email)]
