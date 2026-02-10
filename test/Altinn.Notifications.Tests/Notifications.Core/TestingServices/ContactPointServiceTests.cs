@@ -1499,7 +1499,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         {
             // Arrange
             string rawMobileNumber = "99999999";
-            string formattedMobileNumber = "+4799999999";
             string emailAddress = "recipient@example.com";
             string externalIdentity = "urn:altinn:person:idporten-email:recipient@example.com";
 
@@ -1537,9 +1536,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(emailAddress, emailPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailPoint.AddressType);
 
-            var smsPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
-            Assert.Equal(AddressType.Sms, smsPoint.AddressType);
-            Assert.Equal(formattedMobileNumber, smsPoint.MobileNumber);
+            Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);

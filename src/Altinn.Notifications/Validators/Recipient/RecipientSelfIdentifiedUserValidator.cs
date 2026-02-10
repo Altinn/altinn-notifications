@@ -32,6 +32,11 @@ internal sealed partial class RecipientSelfIdentifiedUserValidator : AbstractVal
                 .Must(BeValidExternalIdentity)
                 .When(options => !string.IsNullOrEmpty(options!.ExternalIdentity))
                 .WithMessage($"ExternalIdentity must be in the format '{_externalIdentityPrefix}{{email-address}}' with a valid email address.");
+
+            RuleFor(options => options!.ResourceId)
+                .Must(resourceId => RecipientRules.BeValidResourceId(resourceId!))
+                .When(options => options!.ResourceId != null)
+                .WithMessage("ResourceId must have a valid syntax.");
         });
     }
 

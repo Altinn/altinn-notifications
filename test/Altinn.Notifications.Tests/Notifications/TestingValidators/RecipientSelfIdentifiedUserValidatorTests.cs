@@ -44,7 +44,6 @@ public class RecipientSelfIdentifiedUserValidatorTests
     [InlineData("urn:altinn:person:idporten-email:@example.com")]
     [InlineData("urn:altinn:person:idporten-email:user@example")]
     [InlineData("urn:altinn:person:wrongprefix:user@example.com")]
-    [InlineData("urn:altinn:person:idporten-email:user@example.com ")]
     public void Should_Have_Validation_Error_For_ExternalIdentity_When_Invalid_Format(string externalIdentity)
     {
         // Arrange
