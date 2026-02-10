@@ -1,9 +1,11 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators;
 
 using FluentValidation.TestHelper;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
@@ -74,6 +76,26 @@ public class NotificationRecipientValidatorTests
     }
 
     [Fact]
+    public void Should_Use_Child_Validator_When_Invalid_SelfIdentifiedUser()
+    {
+        // Arrange
+        var recipient = new NotificationRecipientExt
+        {
+            RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+            {
+                ExternalIdentity = "not-a-urn",
+                ChannelSchema = NotificationChannelExt.Email
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(r => r!.RecipientSelfIdentifiedUser!.ExternalIdentity);
+    }
+
+    [Fact]
     public void Should_Have_Validation_Error_When_Multiple_Recipients()
     {
         // Arrange
@@ -96,6 +118,21 @@ public class NotificationRecipientValidatorTests
                     Sender = "Test message",
                     Body = "hello world"
                 }
+            },
+            RecipientOrganization = new RecipientOrganizationExt
+            {
+                OrgNumber = "123456789",
+                ChannelSchema = NotificationChannelExt.Email
+            },
+            RecipientPerson = new RecipientPersonExt
+            {
+                NationalIdentityNumber = "01010112345",
+                ChannelSchema = NotificationChannelExt.Email
+            },
+            RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+            {
+                ChannelSchema = NotificationChannelExt.Email,
+                ExternalIdentity = "urn:altinn:person:idporten-email:noreply@digdir.no"
             }
         };
 

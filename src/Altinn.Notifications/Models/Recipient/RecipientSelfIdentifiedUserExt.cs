@@ -16,7 +16,6 @@ public class RecipientSelfIdentifiedUserExt : RecipientBaseExt
     /// A URN string in the format <c>urn:altinn:person:idporten-email:{email-address}</c>,
     /// used to identify the user in Altinn Profile for contact information retrieval.
     /// </value>
-    /// <example>urn:altinn:person:idporten-email:example@email.com</example>
     [Required]
     [JsonPropertyName("externalIdentity")]
     public required string ExternalIdentity { get; set; }
