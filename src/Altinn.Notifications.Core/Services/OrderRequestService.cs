@@ -390,8 +390,9 @@ public class OrderRequestService : IOrderRequestService
     /// Each recipient is checked for the presence of contact information relevant to the specified channel.
     /// </param>
     /// <returns>
-    /// A list of strings representing the identifiers (either <see cref="Recipient.OrganizationNumber"/> or
-    /// <see cref="Recipient.NationalIdentityNumber"/>) of recipients who are missing the required contact information.
+    /// A list of strings representing the identifiers (either <see cref="Recipient.OrganizationNumber"/>,
+    /// <see cref="Recipient.NationalIdentityNumber"/>, or <see cref="Recipient.ExternalIdentity"/>) of recipients
+    /// who are missing the required contact information.
     /// </returns>
     private static List<string> GetMissingContactListIds(NotificationChannel channel, List<Recipient> recipients)
     {
@@ -400,19 +401,19 @@ public class OrderRequestService : IOrderRequestService
             NotificationChannel.Email =>
                                 [.. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
 
             NotificationChannel.Sms =>
                                 [.. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
 
             NotificationChannel.EmailAndSms or
             NotificationChannel.EmailPreferred or
             NotificationChannel.SmsPreferred =>
                                 [.. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
 
             _ => [],
         };
@@ -579,6 +580,7 @@ public class OrderRequestService : IOrderRequestService
         }
         else if (recipient.RecipientSelfIdentifiedUser != null)
         {
+            resourceIdentifier = recipient.RecipientSelfIdentifiedUser.ResourceId;
             notificationChannel = recipient.RecipientSelfIdentifiedUser.ChannelSchema;
 
             if (recipient.RecipientSelfIdentifiedUser.SmsSettings != null)

@@ -22,6 +22,12 @@ public class RecipientSelfIdentifiedUserExt : RecipientBaseExt
     public required string ExternalIdentity { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
+    /// </summary>
+    [JsonPropertyName("resourceId")]
+    public string? ResourceId { get; set; }
+
+    /// <summary>
     /// The channel scheme for delivering the notification.
     /// </summary>
     /// <value>

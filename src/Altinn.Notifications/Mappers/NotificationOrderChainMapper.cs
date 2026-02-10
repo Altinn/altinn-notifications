@@ -188,6 +188,7 @@ public static partial class NotificationOrderChainMapper
         {
             SmsSettings = smsSettings,
             EmailSettings = emailSettings,
+            ResourceId = recipientSelfIdentifiedUserExt.ResourceId,
             ExternalIdentity = recipientSelfIdentifiedUserExt.ExternalIdentity,
             ChannelSchema = (NotificationChannel)recipientSelfIdentifiedUserExt.ChannelSchema
         };

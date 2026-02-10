@@ -7,11 +7,11 @@ namespace Altinn.Notifications.Integrations.Profile;
 /// <summary>
 /// Response model containing a list of self-identified user contact points.
 /// </summary>
-public class SelfIdentifiedUserContactPointsList
+public record SelfIdentifiedUserContactPointsList
 {
     /// <summary>
-    /// Gets or sets a list of contact points for self-identified users.
+    /// A list containing contact points for self-identified users.
     /// </summary>
-    [JsonPropertyName("contactPoints")]
-    public List<SelfIdentifiedUserContactPoints> ContactPointsList { get; set; } = [];
+    [JsonPropertyName("contactPointsList")]
+    public List<SelfIdentifiedUserContactPoints> ContactPointsList { get; init; } = [];
 }

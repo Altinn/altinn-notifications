@@ -31,6 +31,14 @@ public record RecipientSelfIdentifiedUser
     public required NotificationChannel ChannelSchema { get; init; }
 
     /// <summary>
+    /// An optional resource identifier for authorization and auditing purposes.
+    /// </summary>
+    /// <value>
+    /// A resource URN or identifier, or <c>null</c> if not specified.
+    /// </value>
+    public string? ResourceId { get; init; }
+
+    /// <summary>
     /// Email-specific configuration for the notification.
     /// </summary>
     /// <value>

@@ -76,7 +76,7 @@ public class ProfileClient : IProfileClient
             throw new PlatformHttpException(response, $"ProfileClient.GetSelfIdentifiedUserContactPoints failed with status code {response.StatusCode}");
         }
 
-        string responseContent = await response.Content.ReadAsStringAsync();
+        string responseContent = await response.Content.ReadAsStringAsync();    
         var contactPoints = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsList>(responseContent, _jsonSerializerOptions);
 
         return contactPoints?.ContactPointsList ?? [];
