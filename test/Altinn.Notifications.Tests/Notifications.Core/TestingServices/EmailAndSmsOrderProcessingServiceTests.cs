@@ -38,6 +38,120 @@ public class EmailAndSmsOrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrder_SelfIdentifiedUserRecipientWithoutContactPoints_AddsContactPointsAndProcesses()
+    {
+        // Arrange
+        var order = GetBaseTestNotificationOrder();
+        order.Recipients =
+        [
+            new Recipient
+            {
+                AddressInfo = [],
+                IsReserved = false,
+                ExternalIdentity = "urn:altinn:person:idporten-email:self@example.com"
+            }
+        ];
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(e => e.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.Is<string>(resourceId => resourceId == order.ResourceId)))
+            .Callback<List<Recipient>, string>((recipients, _) =>
+            {
+                recipients[0].AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                recipients[0].AddressInfo.Add(new EmailAddressPoint("self@example.com"));
+            })
+            .Returns(Task.CompletedTask);
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderAsync(order);
+
+        // Assert
+        contactPointServiceMock.Verify(
+            e => e.AddEmailAndSmsContactPointsAsync(
+                It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com"),
+                order.ResourceId),
+            Times.Once);
+
+        smsProcessingServiceMock.Verify(
+            e => e.ProcessOrderWithoutAddressLookup(
+                It.Is<NotificationOrder>(o => o == order),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com" &&
+                    recipients[0].AddressInfo.Count == 1 &&
+                    recipients[0].AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))),
+            Times.Once);
+
+        emailProcessingServiceMock.Verify(
+            e => e.ProcessOrderWithoutAddressLookup(
+                It.Is<NotificationOrder>(o => o == order),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com" &&
+                    recipients[0].AddressInfo.Count == 1 &&
+                    recipients[0].AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_DuplicateSelfIdentifiedUser_LastEntryWins_ForFilteredContactPoints()
+    {
+        // Arrange
+        var order = GetBaseTestNotificationOrder();
+        order.Recipients =
+        [
+            new Recipient
+            {
+                ExternalIdentity = "urn:altinn:person:idporten-email:dup@example.com",
+                AddressInfo = [new SmsAddressPoint("+4711111111")]
+            },
+            new Recipient
+            {
+                ExternalIdentity = "urn:altinn:person:idporten-email:dup@example.com",
+                AddressInfo = [new EmailAddressPoint("last@example.com")]
+            }
+        ];
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(e => e.ProcessOrderWithoutAddressLookup(
+                It.IsAny<NotificationOrder>(),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:dup@example.com" &&
+                    recipients[0].AddressInfo.Count == 0)))
+            .Returns(Task.CompletedTask);
+
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(e => e.ProcessOrderWithoutAddressLookup(
+                It.IsAny<NotificationOrder>(),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:dup@example.com" &&
+                    recipients[0].AddressInfo.Count == 1 &&
+                    recipients[0].AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))))
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderAsync(order);
+
+        // Assert
+        contactPointServiceMock.Verify(s => s.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string>()), Times.Never);
+        smsProcessingServiceMock.VerifyAll();
+        emailProcessingServiceMock.VerifyAll();
+    }
+
+    [Fact]
     public async Task ProcessOrder_PersonRecipientWithoutContactPoints_AddsContactPointsAndProcesses()
     {
         // Arrange
@@ -84,6 +198,67 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients.Count == 1 &&
                     recipients[0].AddressInfo.Count == 1 &&
                     recipients[0].AddressInfo.Exists(e => e.AddressType == AddressType.Email))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_SelfIdentifiedUserRecipientWithoutContactPoints_AddsContactPointsAndProcesses()
+    {
+        // Arrange
+        var order = GetBaseTestNotificationOrder();
+        order.Recipients =
+        [
+            new Recipient
+            {
+                AddressInfo = [],
+                IsReserved = false,
+                ExternalIdentity = "urn:altinn:person:idporten-email:self@example.com"
+            }
+        ];
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(e => e.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.Is<string>(resourceId => resourceId == order.ResourceId)))
+            .Callback<List<Recipient>, string>((recipients, _) =>
+            {
+                recipients[0].AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                recipients[0].AddressInfo.Add(new EmailAddressPoint("self@example.com"));
+            })
+            .Returns(Task.CompletedTask);
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderRetryAsync(order);
+
+        // Assert
+        contactPointServiceMock.Verify(
+            e => e.AddEmailAndSmsContactPointsAsync(
+                It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com"),
+                order.ResourceId),
+            Times.Once);
+
+        smsProcessingServiceMock.Verify(
+            e => e.ProcessOrderRetryWithoutAddressLookup(
+                It.Is<NotificationOrder>(o => o == order),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com" &&
+                    recipients[0].AddressInfo.Count == 1 &&
+                    recipients[0].AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))),
+            Times.Once);
+
+        emailProcessingServiceMock.Verify(
+            e => e.ProcessOrderRetryWithoutAddressLookup(
+                It.Is<NotificationOrder>(o => o == order),
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Count == 1 &&
+                    recipients[0].ExternalIdentity == "urn:altinn:person:idporten-email:self@example.com" &&
+                    recipients[0].AddressInfo.Count == 1 &&
+                    recipients[0].AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))),
             Times.Once);
     }
 
