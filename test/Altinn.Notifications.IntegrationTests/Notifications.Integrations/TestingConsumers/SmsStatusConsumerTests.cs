@@ -44,8 +44,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             .OfType<SmsStatusConsumer>()
             .First();
 
-        (_, SmsNotification smsNotification) =
+        (NotificationOrder order, SmsNotification smsNotification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
+        _ordersToDelete.Add(order.Id);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -95,6 +96,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (NotificationOrder order, SmsNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+        _ordersToDelete.Add(order.Id);
 
         SmsSendOperationResult sendOperationResult = new()
         {
@@ -158,6 +160,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (NotificationOrder notificationOrder, SmsNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+        _ordersToDelete.Add(notificationOrder.Id);
 
         SmsSendOperationResult sendOperationResult = new()
         {
@@ -221,6 +224,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (NotificationOrder order, SmsNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+        _ordersToDelete.Add(order.Id);
 
         SmsSendOperationResult sendOperationResult = new()
         {
@@ -228,6 +232,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             GatewayReference = Guid.NewGuid().ToString(),
             SendResult = SmsNotificationResultType.Delivered
         };
+
+        _ordersToDelete.Add(order.Id);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -251,9 +257,6 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(1, statusFeedCount);
-
-        // Cleanup
-        _ordersToDelete.Add(order.Id);
     }
 
     [Theory]
@@ -343,6 +346,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (NotificationOrder order, SmsNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+        _ordersToDelete.Add(order.Id);
 
         SmsSendOperationResult sendOperationResult = new()
         {
@@ -401,11 +405,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
         foreach (var orderId in _ordersToDelete)
         {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
 

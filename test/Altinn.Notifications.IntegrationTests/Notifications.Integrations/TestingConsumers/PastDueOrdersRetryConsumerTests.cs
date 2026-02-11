@@ -208,13 +208,6 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         Assert.Equal(1, registeredOrderCount);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
@@ -284,5 +277,15 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
                 }
             }),
             logger);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await Dispose(true);
     }
 }
