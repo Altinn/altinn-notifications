@@ -32,7 +32,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
-    private List<Guid> _ordersToDelete = [];
+    private readonly List<Guid> _ordersToDelete = [];
 
     public PostTests(IntegrationTestWebApplicationFactory<SmsNotificationOrdersController> factory)
     {
@@ -122,12 +122,12 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
         foreach (Guid orderId in _ordersToDelete)
         {
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
+        
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
     private HttpClient GetTestClient()

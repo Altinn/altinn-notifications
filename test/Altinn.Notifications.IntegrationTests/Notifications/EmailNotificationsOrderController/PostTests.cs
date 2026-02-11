@@ -125,12 +125,12 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        
         foreach (Guid orderId in _ordersToDelete)
         {
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
+
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
     private HttpClient GetTestClient()
