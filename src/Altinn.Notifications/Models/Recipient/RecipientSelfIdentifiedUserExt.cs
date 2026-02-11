@@ -32,11 +32,11 @@ public class RecipientSelfIdentifiedUserExt : RecipientBaseExt
     /// <value>
     /// One of the available <see cref="NotificationChannelExt"/> values determining the communication channel(s) and priority:
     /// <list type="bullet">
-    /// <item><description><see cref="NotificationChannelExt.Email"/> — Email only</description></item>
-    /// <item><description><see cref="NotificationChannelExt.Sms"/> — SMS only</description></item>
-    /// <item><description><see cref="NotificationChannelExt.EmailPreferred"/> — Email first, SMS as fallback</description></item>
-    /// <item><description><see cref="NotificationChannelExt.SmsPreferred"/> — SMS first, email as fallback</description></item>
-    /// <item><description><see cref="NotificationChannelExt.EmailAndSms"/> — Both channels simultaneously</description></item>
+    /// <item><description><see cref="NotificationChannelExt.Email"/> Email only</description></item>
+    /// <item><description><see cref="NotificationChannelExt.Sms"/> SMS only</description></item>
+    /// <item><description><see cref="NotificationChannelExt.EmailPreferred"/> Email first, SMS as fallback</description></item>
+    /// <item><description><see cref="NotificationChannelExt.SmsPreferred"/> SMS first, email as fallback</description></item>
+    /// <item><description><see cref="NotificationChannelExt.EmailAndSms"/> Both channels simultaneously</description></item>
     /// </list>
     /// </value>
     [Required]

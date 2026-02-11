@@ -21,11 +21,11 @@ public record RecipientSelfIdentifiedUser
     /// <value>
     /// One of the available <see cref="NotificationChannel"/> values determining the communication channel(s) and priority:
     /// <list type="bullet">
-    /// <item><description><see cref="NotificationChannel.Email"/> — Email only</description></item>
-    /// <item><description><see cref="NotificationChannel.Sms"/> — SMS only</description></item>
-    /// <item><description><see cref="NotificationChannel.EmailPreferred"/> — Email first, SMS as fallback</description></item>
-    /// <item><description><see cref="NotificationChannel.SmsPreferred"/> — SMS first, email as fallback</description></item>
-    /// <item><description><see cref="NotificationChannel.EmailAndSms"/> — Both channels simultaneously</description></item>
+    /// <item><description><see cref="NotificationChannel.Email"/> Email only</description></item>
+    /// <item><description><see cref="NotificationChannel.Sms"/> SMS only</description></item>
+    /// <item><description><see cref="NotificationChannel.EmailPreferred"/> Email first, SMS as fallback</description></item>
+    /// <item><description><see cref="NotificationChannel.SmsPreferred"/> SMS first, email as fallback</description></item>
+    /// <item><description><see cref="NotificationChannel.EmailAndSms"/> Both channels simultaneously</description></item>
     /// </list>
     /// </value>
     public required NotificationChannel ChannelSchema { get; init; }
