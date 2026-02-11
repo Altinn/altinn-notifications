@@ -504,12 +504,12 @@ public static class PostgreUtil
     /// <param name="orderIds">Collection of order alternate IDs to delete.</param>
     public static async Task DeleteOrdersByAlternateIds(IEnumerable<Guid> orderIds)
     {
-        if (!orderIds.Any())
+        if (orderIds is null || !orderIds.Any())
         {
             return;
         }
 
-        string deleteSql = @"DELETE from notifications.orders o where o.alternateid = ANY(@orderIds)";
+        string deleteSql = @"DELETE from notifications.orders o where o.alternateid = ANY(`@orderIds`)";
         await RunSql(deleteSql, new NpgsqlParameter("orderIds", orderIds.ToArray()));
     }
 
