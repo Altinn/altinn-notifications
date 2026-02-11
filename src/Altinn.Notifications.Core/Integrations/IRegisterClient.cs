@@ -16,5 +16,6 @@ public interface IRegisterClient
     /// A task that represents the asynchronous operation. 
     /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals and organizations.
     /// </returns>
+    /// <exception cref="Exceptions.PlatformDependencyException">Thrown when the register service is unavailable or returns an error.</exception>
     Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers, List<string>? socialSecurityNumbers);
 }
