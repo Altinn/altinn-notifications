@@ -538,12 +538,12 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
                 {
-                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     ChannelSchema = NotificationChannelExt.Sms,
+                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     SmsSettings = new SmsSendingOptionsExt
                     {
-                        Body = "Self identified user sms body",
                         Sender = "Altinn",
+                        Body = "Self identified user sms body",
                         SendingTimePolicy = SendingTimePolicyExt.Daytime
                     }
                 }
@@ -563,8 +563,8 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("urn:altinn:person:idporten-email:user@example.com", result.Recipient.RecipientSelfIdentifiedUser.ExternalIdentity);
 
         Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser.SmsSettings);
-        Assert.Equal("Self identified user sms body", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Body);
         Assert.Equal("Altinn", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Sender);
+        Assert.Equal("Self identified user sms body", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Body);
         Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.SendingTimePolicy);
 
         Assert.Null(result.Recipient.RecipientSelfIdentifiedUser.EmailSettings);
@@ -590,14 +590,14 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
                 {
-                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     ChannelSchema = NotificationChannelExt.EmailPreferred,
+                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     EmailSettings = new EmailSendingOptionsExt
                     {
                         Body = "Preferred email body",
                         Subject = "Preferred email subject",
-                        SenderEmailAddress = "sender@example.com",
-                        ContentType = EmailContentTypeExt.Plain
+                        ContentType = EmailContentTypeExt.Plain,
+                        SenderEmailAddress = "sender@example.com"
                     },
                     SmsSettings = new SmsSendingOptionsExt
                     {
@@ -642,8 +642,8 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
                 {
-                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     ChannelSchema = NotificationChannelExt.Email,
+                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                     EmailSettings = new EmailSendingOptionsExt
                     {
                         Body = "Main email body",
@@ -661,12 +661,12 @@ public class NotificationOrderChainMapperTests
                     {
                         RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
                         {
-                            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                             ChannelSchema = NotificationChannelExt.Sms,
+                            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
                             SmsSettings = new SmsSendingOptionsExt
                             {
-                                Body = "Reminder sms body",
-                                Sender = "Altinn"
+                                Sender = "Altinn",
+                                Body = "Reminder sms body"
                             }
                         }
                     }

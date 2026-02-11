@@ -105,21 +105,17 @@ public class ProfileClientTests
     }
 
     [Fact]
-    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_TwoElementsInResponse()
+    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_OneElementsInResponse()
     {
         // Act
         List<SelfIdentifiedUserContactPoints> actual = await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["populated-list"]);
 
         // Assert
-        Assert.Equal(2, actual.Count);
-        var firstContactPoint = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:example@altinnxyz.no");
-        var secondContactPoint = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:recipient@altinnxyz.no");
+        Assert.Single(actual);
+        var firstContactPoint = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:example@altinn.xyz");
 
         Assert.NotEmpty(firstContactPoint.Email);
-        Assert.Empty(firstContactPoint.MobileNumber);
-
-        Assert.NotEmpty(secondContactPoint.Email);
-        Assert.NotEmpty(secondContactPoint.MobileNumber);
+        Assert.NotEmpty(firstContactPoint.MobileNumber);
     }
 
     [Fact]
@@ -350,8 +346,7 @@ public class ProfileClientTests
                 {
                     ContactPointsList =
                     [
-                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:example@altinnxyz.no", Email = "recipient@altinnxyz.no", MobileNumber = string.Empty },
-                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:recipient@altinnxyz.no", Email = "recipient@altinnxyz.no", MobileNumber = "+4799999999" }
+                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:example@altinn.xyz", Email = "recipient@altinn.xyz", MobileNumber = "+4799999999" },
                     ]
                 };
                 break;
