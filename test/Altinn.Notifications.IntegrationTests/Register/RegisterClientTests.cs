@@ -187,6 +187,52 @@ public class RegisterClientTests
         Assert.Empty(actual);
     }
 
+    [Fact]
+    public async Task GetPartyDetails_WithTransientHttpException_ThrowsPlatformDependencyException()
+    {
+        // Arrange
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                throw new HttpRequestException("Simulated transient network error");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]));
+
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+        Assert.Contains("Simulated transient network error", exception.InnerException.Message);
+    }
+
+    [Fact]
+    public async Task GetPartyDetails_WithTaskCanceledException_ThrowsPlatformDependencyException()
+    {
+        // Arrange
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                throw new TaskCanceledException("Request timeout");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]));
+
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<TaskCanceledException>(exception.InnerException);
+        Assert.Contains("Request timeout", exception.InnerException.Message);
+    }
+
     private RegisterClient CreateRegisterClient(DelegatingHandler? handler = null, string accessToken = "valid-token")
     {
         var registerHttpMessageHandler = handler ?? new DelegatingHandlerStub(async (request, token) =>
