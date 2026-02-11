@@ -400,11 +400,6 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await Dispose(true);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
         foreach (var orderId in _ordersToDelete)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
