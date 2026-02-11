@@ -91,17 +91,17 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
         {
             var recipientIdentifier = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
+            if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
+            {
+                recipientIdentifier = recipient.ExternalIdentity;
+            }
+            else if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
             {
                 recipientIdentifier = recipient.OrganizationNumber;
             }
             else if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
             {
                 recipientIdentifier = recipient.NationalIdentityNumber;
-            }
-            else if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
-            {
-                recipientIdentifier = recipient.ExternalIdentity;
             }
 
             if (string.IsNullOrEmpty(recipientIdentifier))
