@@ -509,8 +509,8 @@ public static class PostgreUtil
             return;
         }
 
-        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIds)}')";
-        await RunSql(deleteSql);
+        string deleteSql = @"DELETE from notifications.orders o where o.alternateid = ANY(@orderIds)";
+        await RunSql(deleteSql, new NpgsqlParameter("orderIds", orderIds.ToArray()));
     }
 
     // Helper to retrieve OrderRepository and EmailNotificationRepository together
