@@ -20,7 +20,8 @@ namespace Altinn.Notifications.Integrations.Clients;
 public class ProfileClient : IProfileClient
 {
     private readonly HttpClient _client;
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = JsonSerializerOptionsProvider.Options;
+    private const string _jsonMediaType = "application/json";
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptionsProvider.Options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileClient"/> class.
@@ -39,7 +40,7 @@ public class ProfileClient : IProfileClient
             NationalIdentityNumbers = nationalIdentityNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
 
         var response = await _client.PostAsync("users/contactpoint/lookup", content);
 
@@ -49,7 +50,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, _jsonSerializerOptions)!.ContactPointsList;
+        List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, _jsonOptions)!.ContactPointsList;
 
         return contactPoints.Select(contactPointDto => contactPointDto.ToUserContactPoint()).ToList();
     }
@@ -63,7 +64,7 @@ public class ProfileClient : IProfileClient
             OrganizationNumbers = organizationNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
 
         var response = await _client.PostAsync("units/contactpoint/lookup", content);
 
@@ -73,7 +74,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)!;
+        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonOptions)!;
 
         return contactPoints.ContactPointsList;
     }
@@ -86,7 +87,7 @@ public class ProfileClient : IProfileClient
             ExternalIdentities = externalIdentities
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
 
         var response = await _client.PostAsync("users/contactpoint/lookupsi", content);
 
@@ -96,7 +97,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        var contactPoints = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsList>(responseContent, _jsonSerializerOptions);
+        var contactPoints = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsList>(responseContent, _jsonOptions);
 
         return contactPoints?.ContactPointsList ?? [];
     }
@@ -114,7 +115,7 @@ public class ProfileClient : IProfileClient
             OrganizationNumbers = organizationNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
         var response = await _client.PostAsync("organizations/notificationaddresses/lookup", content);
 
         if (!response.IsSuccessStatusCode)
@@ -123,8 +124,8 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions);
-        
+        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonOptions);
+
         return contactPoints?.ContactPointsList ?? [];
     }
 }
