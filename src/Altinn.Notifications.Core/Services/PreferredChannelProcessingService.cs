@@ -100,7 +100,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         foreach (var recipient in recipients)
         {
             // Generate a unique identifier for the recipient
-            string recipientIdentifier = recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? recipient.ExternalIdentity ?? Guid.NewGuid().ToString();
+            string recipientIdentifier = recipient.ExternalIdentity ?? recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? Guid.NewGuid().ToString();
 
             // Process recipients with fallback addresses.
             int fallbackAddressCount = recipient.AddressInfo.Count(a => a.AddressType == fallbackAddressType);
