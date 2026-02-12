@@ -41,10 +41,15 @@ internal sealed record RecipientDeliveryDetails
     /// <summary>
     /// Gets an empty <see cref="RecipientDeliveryDetails"/> instance with default values.
     /// </summary>
+    /// <remarks>
+    /// The <see cref="Channel"/> value is set to <see cref="NotificationChannel.Email"/> as a placeholder.
+    /// This value is effectively inert since <see cref="Recipients"/> and <see cref="Templates"/> are empty,
+    /// and consumers should always verify these collections before processing.
+    /// </remarks>
     public static RecipientDeliveryDetails Empty { get; } = new()
     {
         Templates = [],
         Recipients = [],
-        Channel = NotificationChannel.Sms
+        Channel = NotificationChannel.Email
     };
 }
