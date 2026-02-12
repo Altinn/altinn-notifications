@@ -19,6 +19,8 @@ public class ContactPointService(
     IProfileClient profile,
     IAuthorizationService authorizationService) : IContactPointService
 {
+    private const string _profileClientName = "ProfileClient";
+
     private readonly IProfileClient _profileClient = profile;
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
@@ -420,7 +422,7 @@ public class ContactPointService(
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            throw new PlatformDependencyException("ProfileClient", "GetUserContactPoints", ex);
+            throw new PlatformDependencyException(_profileClientName, "GetUserContactPoints", ex);
         }
     }
 
@@ -445,16 +447,23 @@ public class ContactPointService(
             return [];
         }
 
-        List<SelfIdentifiedUserContactPoints> contactPoints = await _profileClient.GetSelfIdentifiedUserContactPoints(externalIdentities);
-
-        return [.. contactPoints.Select(contactPoint =>
+        try
         {
-            var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+            List<SelfIdentifiedUserContactPoints> contactPoints = await _profileClient.GetSelfIdentifiedUserContactPoints(externalIdentities);
 
-            var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
+            return [.. contactPoints.Select(contactPoint =>
+            {
+                var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
 
-            return contactPoint with { MobileNumber = validMobileNumber };
-        })];
+                var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
+
+                return contactPoint with { MobileNumber = validMobileNumber };
+            })];
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_profileClientName, "GetSelfIdentifiedUserContactPoints", ex);
+        }
     }
 
     /// <summary>
@@ -502,7 +511,7 @@ public class ContactPointService(
                 }
                 catch (Exception ex) when (ex is not PlatformDependencyException)
                 {
-                    throw new PlatformDependencyException("ProfileClient", "GetUserRegisteredContactPoints", ex);
+                    throw new PlatformDependencyException(_profileClientName, "GetUserRegisteredContactPoints", ex);
                 }
 
                 if (allUserContactPoints.Count > 0)
@@ -559,7 +568,7 @@ public class ContactPointService(
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            throw new PlatformDependencyException("ProfileClient", "GetOrganizationContactPoints", ex);
+            throw new PlatformDependencyException(_profileClientName, "GetOrganizationContactPoints", ex);
         }
     }
 
