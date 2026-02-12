@@ -1536,7 +1536,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             string rawMobileNumber = "99999999";
             string emailAddress = "recipient@example.com";
-            string externalIdentity = "urn:altinn:person:idporten-email:recipient@example.com";
+            string externalIdentity = $"urn:altinn:person:idporten-email:{emailAddress}";
 
             var recipientsToEnrich = new List<Recipient>
             {
