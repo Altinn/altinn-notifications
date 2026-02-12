@@ -119,7 +119,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients.Count == 1 &&
                     recipients[0].AddressInfo.Count == 1 &&
                     recipients[0].ExternalIdentity == externalIdentifier &&
-                    recipients[0].AddressInfo.OfType<SmsAddressPoint>().Any(e => e.MobileNumber == mobileNumber))),
+                    recipients[0].AddressInfo.OfType<SmsAddressPoint>().Any(s => s.MobileNumber == mobileNumber))),
             Times.Once);
 
         emailProcessingServiceMock.Verify(
@@ -129,7 +129,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients.Count == 1 &&
                     recipients[0].AddressInfo.Count == 1 &&
                     recipients[0].ExternalIdentity == externalIdentifier &&
-                    recipients[0].AddressInfo.OfType<EmailAddressPoint>().Any(e => e.EmailAddress == emailAddress))),
+                    recipients[0].AddressInfo.OfType<EmailAddressPoint>().Any(em => em.EmailAddress == emailAddress))),
             Times.Once);
     }
 
@@ -375,7 +375,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients.Count == 1 &&
                     recipients[0].AddressInfo.Count == 1 &&
                     recipients[0].ExternalIdentity == externalIdentifier &&
-                    recipients[0].AddressInfo.OfType<SmsAddressPoint>().Any(e => e.MobileNumber == mobileNumber))),
+                    recipients[0].AddressInfo.OfType<SmsAddressPoint>().Any(s => s.MobileNumber == mobileNumber))),
             Times.Once);
 
         emailProcessingServiceMock.Verify(
@@ -385,7 +385,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients.Count == 1 &&
                     recipients[0].AddressInfo.Count == 1 &&
                     recipients[0].ExternalIdentity == externalIdentifier &&
-                    recipients[0].AddressInfo.OfType<EmailAddressPoint>().Any(e => e.EmailAddress == emailAddress))),
+                    recipients[0].AddressInfo.OfType<EmailAddressPoint>().Any(em => em.EmailAddress == emailAddress))),
             Times.Once);
     }
 
