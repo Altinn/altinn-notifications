@@ -4,7 +4,7 @@ namespace Altinn.Notifications.Core.Models.ContactPoints;
 /// Represents the contact point information for a self-identified user.
 /// </summary>
 /// <remarks>
-/// Self-identified users can be used by people without a Norwegian national identifier and anyone that want to remain anonymous when using services that allows/encurage anonymous reporting.
+/// Self-identified users can be used by people without a Norwegian national identifier and anyone that want to remain anonymous when using services that allows/encourage anonymous reporting.
 /// </remarks>
 public record SelfIdentifiedUserContactPoints
 {
