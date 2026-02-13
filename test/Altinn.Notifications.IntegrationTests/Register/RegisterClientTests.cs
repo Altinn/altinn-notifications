@@ -149,11 +149,12 @@ public class RegisterClientTests
     public async Task GetPartyDetails_WithUnavailableEndpoint_ThrowsException()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
 
         // Assert
-        Assert.StartsWith("503 - Service Unavailable", exception.Message);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+        var innerException = Assert.IsType<PlatformHttpException>(exception.InnerException);
+        Assert.StartsWith("Platform dependency", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, innerException.Response?.StatusCode);
     }
 
     [Fact]

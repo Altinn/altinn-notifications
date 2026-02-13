@@ -122,11 +122,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             .OfType<IOrderRepository>()
             .First();
 
-        var smsNotificationRepository = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<ISmsNotificationRepository>()
-            .First();
-
+        var mockSmsNotificationRepository = new Mock<ISmsNotificationRepository>();
         var mockContactPointService = new Mock<IContactPointService>();
         var mockKeywordsService = new Mock<IKeywordsService>();
         var mockSmsNotificationService = new Mock<ISmsNotificationService>();
@@ -143,7 +139,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             mockKeywordsService.Object,
             mockSmsNotificationService.Object,
             mockContactPointService.Object,
-            smsNotificationRepository,
+            mockSmsNotificationRepository.Object,
             mockNotificationScheduleService.Object);
 
         // Create other mock processing services
@@ -307,7 +303,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Platform dependency")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.StartsWith("Platform dependency")),
                 It.Is<Exception>(ex => ex is PlatformDependencyException),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce(),
