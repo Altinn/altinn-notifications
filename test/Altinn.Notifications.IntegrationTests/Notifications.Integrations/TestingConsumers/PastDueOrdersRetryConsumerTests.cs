@@ -1,6 +1,8 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -17,7 +19,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class PastDueOrdersRetryConsumerTests : IDisposable
+public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
 {
     private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -111,6 +113,114 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Assert.Equal("Processed", processedstatus);
     }
 
+    [Fact]
+    public async Task RunTask_KeywordsServiceThrowsException_ConfirmRetryBehavior()
+    {
+        // Arrange
+        var orderRepository = ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .OfType<IOrderRepository>()
+            .First();
+
+        var smsNotificationRepository = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<ISmsNotificationRepository>()
+            .First();
+
+        var mockContactPointService = new Mock<IContactPointService>();
+        var mockKeywordsService = new Mock<IKeywordsService>();
+        var mockSmsNotificationService = new Mock<ISmsNotificationService>();
+        var mockOrderProcessingLogger = new Mock<ILogger<OrderProcessingService>>();
+        var mockNotificationScheduleService = new Mock<INotificationScheduleService>();
+
+        // Configure KeywordsService mock to throw PlatformDependencyException
+        mockKeywordsService
+            .Setup(x => x.ReplaceKeywordsAsync(It.IsAny<IEnumerable<SmsRecipient>>()))
+            .ThrowsAsync(new PlatformDependencyException("Register", "Register call failed", new TaskCanceledException()));
+
+        // Create SmsOrderProcessingService with mocked KeywordsService
+        var smsOrderProcessingService = new SmsOrderProcessingService(
+            mockKeywordsService.Object,
+            mockSmsNotificationService.Object,
+            mockContactPointService.Object,
+            smsNotificationRepository,
+            mockNotificationScheduleService.Object);
+
+        // Create other mock processing services
+        var mockEmailProcessingService = new Mock<IEmailOrderProcessingService>();
+        var mockPreferredChannelProcessingService = new Mock<IPreferredChannelProcessingService>();
+        var mockEmailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
+        var mockConditionClient = new Mock<IConditionClient>();
+        var mockKafkaProducer = new Mock<IKafkaProducer>();
+
+        var orderProcessingService = new OrderProcessingService(
+            orderRepository,
+            mockEmailProcessingService.Object,
+            smsOrderProcessingService,
+            mockPreferredChannelProcessingService.Object,
+            mockEmailAndSmsProcessingService.Object,
+            mockConditionClient.Object,
+            mockKafkaProducer.Object,
+            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
+            {
+                PastDueOrdersTopicName = "past-due-orders"
+            }),
+            mockOrderProcessingLogger.Object);
+
+        using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, null);
+
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithSmsOrder(sendersReference: _sendersRef);
+
+        // Act
+        await consumerRetryService.StartAsync(CancellationToken.None);
+        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+
+        // Assert - Wait for the consumer to attempt processing
+        var registeredOrderCount = 0L;
+
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                registeredOrderCount = await SelectRegisteredOrderCount(persistedOrder.Id);
+                
+                // Check if the mock was called
+                try
+                {
+                    mockKeywordsService.Verify(
+                        x => x.ReplaceKeywordsAsync(It.IsAny<IEnumerable<SmsRecipient>>()),
+                        Times.AtLeastOnce());
+                    return registeredOrderCount == 1;
+                }
+                catch (MockException)
+                {
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(10));
+
+        await consumerRetryService.StopAsync(CancellationToken.None);
+
+        // Verify the mock was called
+        mockKeywordsService.Verify(
+            x => x.ReplaceKeywordsAsync(It.IsAny<IEnumerable<SmsRecipient>>()),
+            Times.AtLeastOnce());
+
+        // Verify that SmsOrderProcessingService logged the PlatformDependencyException
+        mockOrderProcessingLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.StartsWith("Platform dependency")),
+                It.Is<Exception>(ex => ex is PlatformDependencyException),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce(),
+            "Expected OrderProcessingService to log PlatformDependencyException");
+
+        // Verify that the order status was set back to "Registered"
+        Assert.Equal(1, registeredOrderCount);
+    }
+
     /// <summary>
     /// When IOrderProcessingService.ProcessOrderRetry throws an exception,
     /// we confirm that the service exception is caught and logged, and the order is set back to status "Registered".
@@ -131,12 +241,11 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         var mockConditionClient = new Mock<IConditionClient>();
         var mockKafkaProducer = new Mock<IKafkaProducer>();
         var mockOrderProcessingLogger = new Mock<ILogger<OrderProcessingService>>();
-        var mockConsumerLogger = new Mock<ILogger<PastDueOrdersRetryConsumer>>();
 
         // Configure mocks to throw exception when processing retry
         mockEmailProcessingService
             .Setup(x => x.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .ThrowsAsync(new PlatformDependencyException("Profile", "Test", new TaskCanceledException()));
+            .ThrowsAsync(new PlatformDependencyException("Profile", "Profile call failed", new TaskCanceledException()));
 
         var orderProcessingService = new OrderProcessingService(
             orderRepository,
@@ -152,7 +261,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
             }),
             mockOrderProcessingLogger.Object);
 
-        using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, mockConsumerLogger);
+        using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, null);
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
@@ -208,17 +317,11 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Assert.Equal(1, registeredOrderCount);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
     }
 
     private static async Task<string> SelectProcessStatus(Guid orderId)
@@ -284,5 +387,15 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                 }
             }),
             logger);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        return Dispose(true);
     }
 }
