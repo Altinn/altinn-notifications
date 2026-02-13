@@ -97,18 +97,18 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert
-        var processedstatus = string.Empty;
+        var processedStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
          async () =>
          {
-             processedstatus = await SelectProcessStatus(persistedOrder.Id);
-             return processedstatus == "Processed";
+             processedStatus = await SelectProcessStatus(persistedOrder.Id);
+             return processedStatus == "Processed";
          },
          TimeSpan.FromSeconds(15));
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
-        Assert.Equal("Processed", processedstatus);
+        Assert.Equal("Processed", processedStatus);
     }
 
     /// <summary>

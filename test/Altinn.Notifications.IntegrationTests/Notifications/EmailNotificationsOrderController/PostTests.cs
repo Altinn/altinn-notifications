@@ -33,7 +33,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
-    private List<Guid> _ordersToDelete = [];
+    private readonly List<Guid> _ordersToDelete = [];
 
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
