@@ -4,8 +4,11 @@ using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+
+using Microsoft.Extensions.Options;
 
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
@@ -25,13 +28,15 @@ public class AuthorizationService : IAuthorizationService
     private const string AccessSubjectCategoryIdPrefix = "subject";
 
     private readonly IPDP _pdp;
+    private readonly int _authorizationBatchSize;
 
     /// <summary>
     /// Initialize a new instance the <see cref="AuthorizationService"/> class with the given dependenices.
     /// </summary>
-    public AuthorizationService(IPDP pdp)
+    public AuthorizationService(IPDP pdp, IOptions<NotificationConfig> config)
     {
         _pdp = pdp;
+        _authorizationBatchSize = config.Value.AuthorizationBatchSize;
     }
 
     /// <summary>
@@ -42,6 +47,31 @@ public class AuthorizationService : IAuthorizationService
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
     public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    {
+        int totalUsers = organizationContactPoints.Sum(o => o.UserContactPoints.Select(u => u.UserId).Distinct().Count());
+
+        if (totalUsers == 0)
+        {
+            return organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
+        }
+
+        if (totalUsers <= _authorizationBatchSize)
+        {
+            return await AuthorizeSingleBatch(organizationContactPoints, resourceId);
+        }
+
+        List<List<OrganizationContactPoints>> batches = CreateBatches(organizationContactPoints);
+
+        Task<List<OrganizationContactPoints>>[] batchTasks = batches
+            .Select(batch => AuthorizeSingleBatch(batch, resourceId))
+            .ToArray();
+
+        List<OrganizationContactPoints>[] batchResults = await Task.WhenAll(batchTasks);
+
+        return MergeBatchResults(organizationContactPoints, batchResults);
+    }
+
+    private async Task<List<OrganizationContactPoints>> AuthorizeSingleBatch(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
 
@@ -77,6 +107,92 @@ public class AuthorizationService : IAuthorizationService
         }
 
         return filtered;
+    }
+
+    private List<List<OrganizationContactPoints>> CreateBatches(List<OrganizationContactPoints> organizationContactPoints)
+    {
+        List<List<OrganizationContactPoints>> batches = [];
+        List<OrganizationContactPoints> currentBatch = [];
+        int currentBatchCount = 0;
+
+        foreach (var org in organizationContactPoints)
+        {
+            List<int> distinctUserIds = org.UserContactPoints.Select(u => u.UserId).Distinct().ToList();
+
+            if (distinctUserIds.Count == 0)
+            {
+                continue;
+            }
+
+            int userIndex = 0;
+
+            while (userIndex < distinctUserIds.Count)
+            {
+                int remaining = _authorizationBatchSize - currentBatchCount;
+
+                if (remaining == 0)
+                {
+                    batches.Add(currentBatch);
+                    currentBatch = [];
+                    currentBatchCount = 0;
+                    remaining = _authorizationBatchSize;
+                }
+
+                int take = Math.Min(remaining, distinctUserIds.Count - userIndex);
+                var userIdsForBatch = distinctUserIds.GetRange(userIndex, take);
+
+                var batchOrg = new OrganizationContactPoints
+                {
+                    OrganizationNumber = org.OrganizationNumber,
+                    PartyId = org.PartyId,
+                    UserContactPoints = org.UserContactPoints
+                        .Where(u => userIdsForBatch.Contains(u.UserId))
+                        .ToList()
+                };
+
+                currentBatch.Add(batchOrg);
+                currentBatchCount += take;
+                userIndex += take;
+            }
+        }
+
+        if (currentBatch.Count > 0)
+        {
+            batches.Add(currentBatch);
+        }
+
+        return batches;
+    }
+
+    private static List<OrganizationContactPoints> MergeBatchResults(
+        List<OrganizationContactPoints> originalOrganizations,
+        List<OrganizationContactPoints>[] batchResults)
+    {
+        List<OrganizationContactPoints> merged =
+            originalOrganizations.Select(o => o.CloneWithoutContactPoints()).ToList();
+
+        foreach (var batchResult in batchResults)
+        {
+            foreach (var batchOrg in batchResult)
+            {
+                OrganizationContactPoints? targetOrg = merged.Find(o => o.PartyId == batchOrg.PartyId);
+
+                if (targetOrg is null)
+                {
+                    continue;
+                }
+
+                foreach (var user in batchOrg.UserContactPoints)
+                {
+                    if (!targetOrg.UserContactPoints.Exists(u => u.UserId == user.UserId))
+                    {
+                        targetOrg.UserContactPoints.Add(user);
+                    }
+                }
+            }
+        }
+
+        return merged;
     }
 
     private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
