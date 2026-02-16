@@ -30,29 +30,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      kafka: # Kafka broker using KRaft mode (no Zookeeper required)
-        image: bitnami/kafka:3.9.0
-        env:
-          KAFKA_CFG_NODE_ID: 1
-          KAFKA_CFG_PROCESS_ROLES: broker,controller
-          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-          ALLOW_PLAINTEXT_LISTENER: "yes"
-        options: >-
-          --health-cmd "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"
-          --health-interval 10s
-          --health-timeout 10s
-          --health-retries 15
-          --health-start-period 45s
-        ports:
-          - 9092:9092
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
@@ -81,6 +58,14 @@ jobs:
             --filter "publish=5432" \
             -q \
           | xargs docker restart
+      - name: Set up Kafka
+        uses: ybyzek/cp-all-in-one-action@58cb2014706e386a7207356586a4fd64b6a9f7ab # v0.2.1
+        with:
+          service: broker
+      - name: Sleep for 30 seconds to allow Kafka to start
+        uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
+        with:
+          time: '30s'
       - name: Increase inotify watchers for test execution # Necessary due to a temporary problem with too many file watchers (e.g. https://github.com/Altinn/altinn-notifications/actions/runs/20168791056)
         run: |
           sudo sysctl -w fs.inotify.max_user_instances=524288
