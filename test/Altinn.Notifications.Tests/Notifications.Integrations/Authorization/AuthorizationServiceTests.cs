@@ -204,7 +204,8 @@ public class AuthorizationServiceTests
                 UserContactPoints =
                 [
                     new() { UserId = 4 },
-                    new() { UserId = 5 }
+                    new() { UserId = 5 },
+                    new() { UserId = 6 }
                 ]
             }
         ];
@@ -228,7 +229,7 @@ public class AuthorizationServiceTests
 
         result.Should().HaveCount(2);
         result.Find(o => o.PartyId == 1001)!.UserContactPoints.Should().HaveCount(3);
-        result.Find(o => o.PartyId == 1002)!.UserContactPoints.Should().HaveCount(2);
+        result.Find(o => o.PartyId == 1002)!.UserContactPoints.Should().HaveCount(3);
     }
 
     [Fact]
@@ -433,6 +434,49 @@ public class AuthorizationServiceTests
         result.Should().HaveCount(2);
         result.Find(o => o.PartyId == 1001)!.UserContactPoints.Should().HaveCount(3);
         result.Find(o => o.PartyId == 1002)!.UserContactPoints.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AuthorizeUsersForResource_OneOverBatchSize_ExactlyTwoPdpCalls()
+    {
+        // Arrange: batch size 3, 4 users (batchSize + 1) → exactly 2 PDP calls (3 + 1)
+        var target = CreateService(batchSize: 3);
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints =
+                [
+                    new() { UserId = 1 },
+                    new() { UserId = 2 },
+                    new() { UserId = 3 },
+                    new() { UserId = 4 }
+                ]
+            }
+        ];
+
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .Returns((XacmlJsonRequestRoot request) =>
+            {
+                var responses = request.Request.MultiRequests.RequestReference
+                    .Select(rr => CreatePermitResult(request, rr))
+                    .ToList();
+
+                return Task.FromResult(new XacmlJsonResponse { Response = responses });
+            });
+
+        // Act
+        List<OrganizationContactPoints> result =
+            await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
+
+        // Assert
+        _pdpMock.Verify(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()), Times.Exactly(2));
+
+        result.Should().HaveCount(1);
+        result[0].UserContactPoints.Should().HaveCount(4);
+        result[0].UserContactPoints.Select(u => u.UserId).Should().BeEquivalentTo([1, 2, 3, 4]);
     }
 
     private static XacmlJsonResult CreatePermitResult(XacmlJsonRequestRoot request, XacmlJsonRequestReference reference)
