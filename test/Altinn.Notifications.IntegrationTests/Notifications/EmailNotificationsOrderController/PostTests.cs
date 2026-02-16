@@ -127,6 +127,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     {
         foreach (Guid orderId in _ordersToDelete)
         {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
 
