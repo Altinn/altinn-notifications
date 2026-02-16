@@ -124,6 +124,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
     {
         foreach (Guid orderId in _ordersToDelete)
         {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
         
