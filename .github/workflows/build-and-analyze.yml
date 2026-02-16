@@ -9,6 +9,7 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+
 jobs:
   build-test-analyze:
     name: Build, test & analyze
@@ -16,8 +17,9 @@ jobs:
     permissions:
       contents: read
       checks: write
+    
     services:
-      postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
+      postgres:
         image: postgres:17@sha256:2006493727bd5277eece187319af1ef82b4cf82cf4fc1ed00da0775b646ac2a4
         env:
           POSTGRES_USER: platform_notifications_admin
@@ -30,54 +32,71 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
+      # --- NEW KAFKA SERVICE (KRaft Mode) ---
+      kafka:
+        image: bitnami/kafka:3.7
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_CFG_NODE_ID: 0
+          KAFKA_CFG_PROCESS_ROLES: controller,broker
+          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@localhost:9093
+          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        options: >-
+          --health-cmd "kafka-topics.sh --bootstrap-server localhost:9092 --list"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           dotnet-version: |
             10.0.x
+
       - name: Set up Java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: 17
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - name: Install SonarCloud scanners
         run: |
           dotnet tool install --global dotnet-sonarscanner
+
       - name: Setup PostgreSQL
         run: |
           chmod +x dbsetup.sh
           ./dbsetup.sh
+
       - name: Restart database to enable config changes
         run: |
-          # Restart only the Postgres service by filtering on the published port
-          docker ps \
-            --filter "publish=5432" \
-            -q \
-          | xargs docker restart
-      - name: Set up Kafka
-        uses: ybyzek/cp-all-in-one-action@58cb2014706e386a7207356586a4fd64b6a9f7ab # v0.2.1
-        with:
-          service: broker
-      - name: Sleep for 30 seconds to allow Kafka to start
-        uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
-        with:
-          time: '30s'
-      - name: Increase inotify watchers for test execution # Necessary due to a temporary problem with too many file watchers (e.g. https://github.com/Altinn/altinn-notifications/actions/runs/20168791056)
+          docker ps --filter "publish=5432" -q | xargs docker restart
+
+      # --- REMOVED OLD KAFKA ACTION AND SLEEP STEP ---
+
+      - name: Increase inotify watchers for test execution
         run: |
           sudo sysctl -w fs.inotify.max_user_instances=524288
+
       - name: Build & Test
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
-
+          
           dotnet build Altinn.Notifications.sln -v q
-
+          
           dotnet test Altinn.Notifications.sln \
           -v q \
           --collect:"XPlat Code Coverage" \
@@ -85,19 +104,22 @@ jobs:
           --logger "trx;" \
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
       - name: Complete sonar analysis
         if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: TestResults
           path: '**/TestResults/*.trx'
+
       - name: Process unit test result
         if: always()
         uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
