@@ -31,25 +31,22 @@ jobs:
         ports:
           - 5432:5432
       kafka:
-        image: confluentinc/cp-kafka:7.6.0
+        image: apache/kafka:3.9.0
         ports:
           - 9092:9092
         env:
           KAFKA_NODE_ID: 1
           KAFKA_PROCESS_ROLES: broker,controller
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
           KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
           KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
           KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
           KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
         options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
+          --health-cmd "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -67,9 +64,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Cache NuGet packages
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Cache SonarCloud tools
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.dotnet/tools
+          key: ${{ runner.os }}-sonar-tools-${{ hashFiles('.github/workflows/build-and-analyze.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-sonar-tools-
       - name: Install SonarCloud scanners
         run: |
-          dotnet tool install --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-sonarscanner || true
       - name: Setup PostgreSQL
         run: |
           chmod +x dbsetup.sh
@@ -95,6 +106,7 @@ jobs:
 
           dotnet test Altinn.Notifications.sln \
           -v q \
+          --no-build \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;" \
