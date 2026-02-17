@@ -4,8 +4,11 @@ using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+
+using Microsoft.Extensions.Options;
 
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
@@ -17,21 +20,27 @@ namespace Altinn.Notifications.Integrations.Authorization;
 /// </summary>
 public class AuthorizationService : IAuthorizationService
 {
-    private const string UserIdUrn = "urn:altinn:userid";
+    private const string _userIdUrn = "urn:altinn:userid";
 
-    private const string DefaultIssuer = "Altinn";
-    private const string ActionCategoryId = "action";
-    private const string ResourceCategoryIdPrefix = "resource";
-    private const string AccessSubjectCategoryIdPrefix = "subject";
+    private const string _defaultIssuer = "Altinn";
+    private const string _actionCategoryId = "action";
+    private const string _resourceCategoryIdPrefix = "resource";
+    private const string _accessSubjectCategoryIdPrefix = "subject";
 
     private readonly IPDP _pdp;
+    private readonly int _authorizationBatchSize;
 
     /// <summary>
     /// Initialize a new instance the <see cref="AuthorizationService"/> class with the given dependenices.
     /// </summary>
-    public AuthorizationService(IPDP pdp)
+    public AuthorizationService(IPDP pdp, IOptions<NotificationConfig> config)
     {
         _pdp = pdp;
+        _authorizationBatchSize = config.Value.AuthorizationBatchSize > 0
+            ? config.Value.AuthorizationBatchSize
+            : throw new ArgumentOutOfRangeException(
+                nameof(config),
+                "AuthorizationBatchSize must be greater than zero.");
     }
 
     /// <summary>
@@ -43,6 +52,31 @@ public class AuthorizationService : IAuthorizationService
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
     public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
+        int totalUsers = organizationContactPoints.Sum(o => o.UserContactPoints.Select(u => u.UserId).Distinct().Count());
+
+        if (totalUsers == 0)
+        {
+            return organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
+        }
+
+        if (totalUsers <= _authorizationBatchSize)
+        {
+            return await AuthorizeSingleBatch(organizationContactPoints, resourceId);
+        }
+
+        List<List<OrganizationContactPoints>> batches = CreateBatches(organizationContactPoints);
+
+        Task<List<OrganizationContactPoints>>[] batchTasks = batches
+            .Select(batch => AuthorizeSingleBatch(batch, resourceId))
+            .ToArray();
+
+        List<OrganizationContactPoints>[] batchResults = await Task.WhenAll(batchTasks);
+
+        return MergeBatchResults(organizationContactPoints, batchResults);
+    }
+
+    private async Task<List<OrganizationContactPoints>> AuthorizeSingleBatch(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    {
         XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
@@ -53,7 +87,7 @@ public class AuthorizationService : IAuthorizationService
         foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
         {
             string? partyId = GetValue(response, MatchAttributeCategory.Resource, AltinnXacmlUrns.PartyId);
-            string? userId = GetValue(response, MatchAttributeCategory.Subject, UserIdUrn);
+            string? userId = GetValue(response, MatchAttributeCategory.Subject, _userIdUrn);
 
             if (partyId == null || userId == null)
             {
@@ -77,6 +111,97 @@ public class AuthorizationService : IAuthorizationService
         }
 
         return filtered;
+    }
+
+    private List<List<OrganizationContactPoints>> CreateBatches(List<OrganizationContactPoints> organizationContactPoints)
+    {
+        List<List<OrganizationContactPoints>> batches = [];
+        List<OrganizationContactPoints> currentBatch = [];
+        int currentBatchCount = 0;
+
+        foreach (var org in organizationContactPoints)
+        {
+            List<int> distinctUserIds = org.UserContactPoints.Select(u => u.UserId).Distinct().ToList();
+
+            if (distinctUserIds.Count == 0)
+            {
+                continue;
+            }
+
+            int userIndex = 0;
+
+            // Process users from this organization, potentially splitting across multiple batches
+            while (userIndex < distinctUserIds.Count)
+            {
+                // Calculate how many more users can fit in current batch
+                int remaining = _authorizationBatchSize - currentBatchCount;
+
+                // Current batch is full - start a new batch
+                if (remaining == 0)
+                {
+                    batches.Add(currentBatch);
+                    currentBatch = [];
+                    currentBatchCount = 0;
+                    remaining = _authorizationBatchSize;
+                }
+
+                // Determine how many users to add: either fill the batch or take all remaining users from org
+                int take = Math.Min(remaining, distinctUserIds.Count - userIndex);
+                var userIdsForBatch = distinctUserIds.GetRange(userIndex, take);
+
+                // Create a partial copy of the organization with only the users for this batch
+                var batchOrg = new OrganizationContactPoints
+                {
+                    OrganizationNumber = org.OrganizationNumber,
+                    PartyId = org.PartyId,
+                    UserContactPoints = org.UserContactPoints
+                        .Where(u => userIdsForBatch.Contains(u.UserId))
+                        .ToList()
+                };
+
+                currentBatch.Add(batchOrg);
+                currentBatchCount += take;
+                userIndex += take;
+            }
+        }
+
+        if (currentBatch.Count > 0)
+        {
+            batches.Add(currentBatch);
+        }
+
+        return batches;
+    }
+
+    private static List<OrganizationContactPoints> MergeBatchResults(
+        List<OrganizationContactPoints> originalOrganizations,
+        List<OrganizationContactPoints>[] batchResults)
+    {
+        List<OrganizationContactPoints> merged =
+            originalOrganizations.Select(o => o.CloneWithoutContactPoints()).ToList();
+
+        foreach (var batchResult in batchResults)
+        {
+            foreach (var batchOrg in batchResult)
+            {
+                OrganizationContactPoints? targetOrg = merged.Find(o => o.PartyId == batchOrg.PartyId);
+
+                if (targetOrg is null)
+                {
+                    continue;
+                }
+
+                var usersToAdd = batchOrg.UserContactPoints
+                    .Where(user => !targetOrg.UserContactPoints.Exists(u => u.UserId == user.UserId));
+
+                foreach (var user in usersToAdd)
+                {
+                    targetOrg.UserContactPoints.Add(user);
+                }
+            }
+        }
+
+        return merged;
     }
 
     private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
@@ -119,11 +244,11 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                MatchAttributeIdentifiers.ActionId, "read", "string", DefaultIssuer);
+                MatchAttributeIdentifiers.ActionId, "read", "string", _defaultIssuer);
 
         return new XacmlJsonCategory()
         {
-            Id = ActionCategoryId,
+            Id = _actionCategoryId,
             Attribute = [attribute]
         };
     }
@@ -132,9 +257,9 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute subjectAttribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, DefaultIssuer, true);
+                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
 
-        string resourceCategoryId = ResourceCategoryIdPrefix + resourceOwnerId;
+        string resourceCategoryId = _resourceCategoryIdPrefix + resourceOwnerId;
 
         if (resourceId.StartsWith("app_"))
         {
@@ -142,11 +267,11 @@ public class AuthorizationService : IAuthorizationService
 
             XacmlJsonAttribute orgAttribute =
                 DecisionHelper.CreateXacmlJsonAttribute(
-                    AltinnXacmlUrns.OrgId, appResource[1], ClaimValueTypes.String, DefaultIssuer);
+                    AltinnXacmlUrns.OrgId, appResource[1], ClaimValueTypes.String, _defaultIssuer);
 
             XacmlJsonAttribute appAttribute =
                 DecisionHelper.CreateXacmlJsonAttribute(
-                    AltinnXacmlUrns.AppId, appResource[2], ClaimValueTypes.String, DefaultIssuer);
+                    AltinnXacmlUrns.AppId, appResource[2], ClaimValueTypes.String, _defaultIssuer);
 
             return new XacmlJsonCategory()
             {
@@ -157,7 +282,7 @@ public class AuthorizationService : IAuthorizationService
 
         XacmlJsonAttribute resourceAttribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                AltinnXacmlUrns.ResourceId, resourceId, ClaimValueTypes.String, DefaultIssuer);
+                AltinnXacmlUrns.ResourceId, resourceId, ClaimValueTypes.String, _defaultIssuer);
 
         return new XacmlJsonCategory()
         {
@@ -170,11 +295,11 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                UserIdUrn, userId.ToString(), ClaimValueTypes.String, DefaultIssuer, true);
+                _userIdUrn, userId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
 
         return new XacmlJsonCategory()
         {
-            Id = AccessSubjectCategoryIdPrefix + userId,
+            Id = _accessSubjectCategoryIdPrefix + userId,
             Attribute = [attribute]
         };
     }
@@ -186,7 +311,7 @@ public class AuthorizationService : IAuthorizationService
             ReferenceId =
             [
                 subjectCategoryId,
-                ActionCategoryId,
+                _actionCategoryId,
                 resourceCategoryId
             ]
         };
