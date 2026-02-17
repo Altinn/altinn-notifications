@@ -58,16 +58,16 @@ public class OrderRequestService : IOrderRequestService
         var order = new NotificationOrder
         {
             Id = orderId,
-            SendersReference = orderRequest.SendersReference,
             Templates = templates,
-            RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime,
-            NotificationChannel = orderRequest.NotificationChannel,
-            Creator = orderRequest.Creator,
             Created = currentTime,
+            Creator = orderRequest.Creator,
             Recipients = orderRequest.Recipients,
-            IgnoreReservation = orderRequest.IgnoreReservation,
             ResourceId = orderRequest.ResourceId,
-            ConditionEndpoint = orderRequest.ConditionEndpoint
+            SendersReference = orderRequest.SendersReference,
+            IgnoreReservation = orderRequest.IgnoreReservation,
+            ConditionEndpoint = orderRequest.ConditionEndpoint,
+            NotificationChannel = orderRequest.NotificationChannel,
+            RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
         };
 
         NotificationOrder savedOrder = await _repository.Create(order);
@@ -113,6 +113,245 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
+    /// Creates an instance of <see cref="SmsTemplate"/> based on the provided SMS sending options.
+    /// </summary>
+    private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
+    {
+        return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
+    }
+
+    /// <summary>
+    /// Creates an instance of <see cref="EmailTemplate"/> based on the provided Email sending options.
+    /// </summary>
+    private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
+    {
+        return new EmailTemplate(emailSettings.SenderEmailAddress, emailSettings.Subject, emailSettings.Body, emailSettings.ContentType);
+    }
+
+    /// <summary>
+    /// Applies default sender information to notification templates that do not have sender details configured.
+    /// </summary>
+    private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
+    {
+        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrEmpty(e.FromAddress)))
+        {
+            template.FromAddress = _defaultEmailFromAddress;
+        }
+
+        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
+        {
+            template.SenderNumber = _defaultSmsSender;
+        }
+
+        return templates;
+    }
+
+    /// <summary>
+    /// Extracts information from a <see cref="NotificationRecipient"/> into notification delivery components.
+    /// </summary>
+    /// <param name="recipient">The notification recipient containing targeting and messaging preferences.</param>
+    /// <returns>
+    /// A <see cref="RecipientDeliveryDetails"/> containing recipients, templates, channel, and other delivery settings.
+    /// </returns>
+    /// <remarks>
+    /// This method processes different recipient types (SMS, Email, Person, Organization) and creates
+    /// the appropriate templates and addressing information based on the recipient's configuration.
+    /// The default channel is SMS if the recipient type cannot be determined.
+    /// </remarks>
+    private static RecipientDeliveryDetails ExtractDeliveryDetails(NotificationRecipient recipient)
+    {
+        if (recipient.RecipientSms?.Settings != null)
+        {
+            return ExtractSmsRecipientComponents(recipient.RecipientSms);
+        }
+
+        if (recipient.RecipientEmail?.Settings != null)
+        {
+            return ExtractEmailRecipientComponents(recipient.RecipientEmail);
+        }
+
+        if (recipient.RecipientPerson != null)
+        {
+            return ExtractPersonRecipientComponents(recipient.RecipientPerson);
+        }
+
+        if (recipient.RecipientOrganization != null)
+        {
+            return ExtractOrganizationRecipientComponents(recipient.RecipientOrganization);
+        }
+
+        if (recipient.RecipientSelfIdentifiedUser != null)
+        {
+            return ExtractSelfIdentifiedUserRecipientComponents(recipient.RecipientSelfIdentifiedUser);
+        }
+
+        return RecipientDeliveryDetails.Empty;
+    }
+
+    /// <summary>
+    /// Extracts delivery components for an SMS-only recipient.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractSmsRecipientComponents(RecipientSms recipientSms)
+    {
+        return new RecipientDeliveryDetails
+        {
+            Channel = NotificationChannel.Sms,
+            Templates = [CreateSmsTemplate(recipientSms.Settings!)],
+            SmsSendingTimePolicy = recipientSms.Settings!.SendingTimePolicy,
+            Recipients = [new([new SmsAddressPoint(recipientSms.PhoneNumber)])]
+        };
+    }
+
+    /// <summary>
+    /// Extracts delivery components for an email-only recipient.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractEmailRecipientComponents(RecipientEmail recipientEmail)
+    {
+        return new RecipientDeliveryDetails
+        {
+            Channel = NotificationChannel.Email,
+            Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
+            Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
+        };
+    }
+
+    /// <summary>
+    /// Extracts delivery components for a person recipient identified by national identity number.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractPersonRecipientComponents(RecipientPerson recipientPerson)
+    {
+        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientPerson.SmsSettings, recipientPerson.EmailSettings);
+
+        return new RecipientDeliveryDetails
+        {
+            Templates = templates,
+            Channel = recipientPerson.ChannelSchema,
+            ResourceId = recipientPerson.ResourceId,
+            SmsSendingTimePolicy = smsSendingTimePolicy,
+            IgnoreReservation = recipientPerson.IgnoreReservation,
+            Recipients = [new([], nationalIdentityNumber: recipientPerson.NationalIdentityNumber)]
+        };
+    }
+
+    /// <summary>
+    /// Retrieves a list of identifiers for recipients who are missing the required contact information
+    /// for the specified notification channel.
+    /// </summary>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> to check for missing contact information.
+    /// Supported channels include Email, SMS, EmailAndSms, EmailPreferred, and SmsPreferred.
+    /// </param>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// Each recipient is checked for the presence of contact information relevant to the specified channel.
+    /// </param>
+    /// <returns>
+    /// A list of strings representing the identifiers (either <see cref="Recipient.OrganizationNumber"/>,
+    /// <see cref="Recipient.NationalIdentityNumber"/>, or <see cref="Recipient.ExternalIdentity"/>) of recipients
+    /// who are missing the required contact information.
+    /// </returns>
+    private static List<string> GetMissingContactListIds(NotificationChannel channel, List<Recipient> recipients)
+    {
+        return channel switch
+        {
+            NotificationChannel.Email =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+
+            NotificationChannel.Sms =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+
+            NotificationChannel.EmailAndSms or
+            NotificationChannel.EmailPreferred or
+            NotificationChannel.SmsPreferred =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+
+            _ => [],
+        };
+    }
+
+    /// <summary>
+    /// Extracts delivery components for an organization recipient identified by organization number.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractOrganizationRecipientComponents(RecipientOrganization recipientOrganization)
+    {
+        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientOrganization.SmsSettings, recipientOrganization.EmailSettings);
+
+        return new RecipientDeliveryDetails
+        {
+            Templates = templates,
+            SmsSendingTimePolicy = smsSendingTimePolicy,
+            Channel = recipientOrganization.ChannelSchema,
+            ResourceId = recipientOrganization.ResourceId,
+            Recipients = [new([], organizationNumber: recipientOrganization.OrgNumber)]
+        };
+    }
+
+    /// <summary>
+    /// Filters recipients who are missing contact information for the specified notification channel.
+    /// </summary>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> to check for missing contact information.
+    /// Supported channels include SMS, Email, EmailAndSms, EmailPreferred, and SmsPreferred.
+    /// </param>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// </param>
+    /// <returns>
+    /// A list of <see cref="Recipient"/> objects that are missing the required contact information
+    /// for the specified notification channel.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a deep copy of the recipients that are missing contact information to ensure the original list remains unaltered.
+    /// </remarks>
+    private static List<Recipient> FilterRecipientsWithoutContactPoints(NotificationChannel channel, List<Recipient> recipients)
+    {
+        return channel switch
+        {
+            NotificationChannel.Sms =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.Email =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.EmailAndSms or
+            NotificationChannel.SmsPreferred or
+            NotificationChannel.EmailPreferred =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            _ => []
+        };
+    }
+
+    /// <summary>
+    /// Extracts delivery components for a self-identified user recipient.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractSelfIdentifiedUserRecipientComponents(RecipientSelfIdentifiedUser recipientSelfIdentifiedUser)
+    {
+        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientSelfIdentifiedUser.SmsSettings, recipientSelfIdentifiedUser.EmailSettings);
+
+        return new RecipientDeliveryDetails
+        {
+            Templates = templates,
+            SmsSendingTimePolicy = smsSendingTimePolicy,
+            Channel = recipientSelfIdentifiedUser.ChannelSchema,
+            ResourceId = recipientSelfIdentifiedUser.ResourceId,
+            Recipients = [new([], externalIdentity: recipientSelfIdentifiedUser.ExternalIdentity)]
+        };
+    }
+
+    /// <summary>
     /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
     /// recipient information, validating contact details, and configuring message templates.
     /// </summary>
@@ -146,33 +385,121 @@ public class OrderRequestService : IOrderRequestService
     /// </remarks>
     private async Task<Result<NotificationOrder>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
-        var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
+        var deliveryDetails = ExtractDeliveryDetails(orderRequest.Recipient);
 
-        var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
+        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId);
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
             return Problems.MissingContactInformation;
         }
 
-        templates = SetSenderIfNotDefined(templates);
+        var templates = SetSenderIfNotDefined(deliveryDetails.Templates);
 
         return new NotificationOrder
         {
             Created = currentTime,
             Templates = templates,
-            ResourceId = resourceId,
-            Recipients = recipients,
             Type = orderRequest.Type,
             Id = orderRequest.OrderId,
-            NotificationChannel = channel,
             Creator = orderRequest.Creator,
-            IgnoreReservation = ignoreReservation,
-            SendingTimePolicy = sendingTimePolicyForSms,
+            ResourceId = deliveryDetails.ResourceId,
+            Recipients = deliveryDetails.Recipients,
+            NotificationChannel = deliveryDetails.Channel,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
-            ConditionEndpoint = orderRequest.ConditionEndpoint
+            ConditionEndpoint = orderRequest.ConditionEndpoint,
+            IgnoreReservation = deliveryDetails.IgnoreReservation,
+            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
         };
+    }
+
+    /// <summary>
+    /// Performs contact point lookup for recipients missing contact information and builds a lookup result.
+    /// </summary>
+    /// <param name="originalRecipients">
+    /// The list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// </param>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> that determines which type of contact information is required.
+    /// </param>
+    /// <param name="resourceId">
+    /// An optional resource identifier used for authorization during contact point lookup.
+    /// </param>
+    /// <returns>
+    /// A <see cref="RecipientLookupResult"/> containing information about reserved recipients and those
+    /// with missing contact details, or <c>null</c> if all recipients already have the required contact information.
+    /// </returns>
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
+    {
+        List<Recipient> recipientsWithoutContactPoint = FilterRecipientsWithoutContactPoints(channel, originalRecipients);
+        if (recipientsWithoutContactPoint.Count == 0)
+        {
+            return null;
+        }
+
+        switch (channel)
+        {
+            case NotificationChannel.Email:
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
+                break;
+
+            case NotificationChannel.Sms:
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
+                break;
+
+            case NotificationChannel.EmailAndSms:
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId);
+                break;
+
+            case NotificationChannel.SmsPreferred:
+            case NotificationChannel.EmailPreferred:
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId);
+                break;
+        }
+
+        var isReserved = recipientsWithoutContactPoint.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
+
+        RecipientLookupResult lookupResult = new()
+        {
+            IsReserved = isReserved,
+            MissingContact = [.. GetMissingContactListIds(channel, recipientsWithoutContactPoint).Except(isReserved)]
+        };
+
+        int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
+
+        if (recipientsWeCannotReach == recipientsWithoutContactPoint.Count)
+        {
+            lookupResult.Status = RecipientLookupStatus.Failed;
+        }
+        else if (recipientsWeCannotReach > 0)
+        {
+            lookupResult.Status = RecipientLookupStatus.PartialSuccess;
+        }
+
+        return lookupResult;
+    }
+
+    /// <summary>
+    /// Extracts notification templates from the provided SMS and email settings.
+    /// </summary>
+    private static (List<INotificationTemplate> Templates, SendingTimePolicy? SmsSendingTimePolicy) ExtractTemplatesFromSettings(SmsSendingOptions? smsSettings, EmailSendingOptions? emailSettings)
+    {
+        var templates = new List<INotificationTemplate>();
+        SendingTimePolicy? smsSendingTimePolicy = null;
+
+        if (smsSettings != null)
+        {
+            templates.Add(CreateSmsTemplate(smsSettings));
+            smsSendingTimePolicy = smsSettings.SendingTimePolicy;
+        }
+
+        if (emailSettings != null)
+        {
+            templates.Add(CreateEmailTemplate(emailSettings));
+        }
+
+        return (templates, smsSendingTimePolicy);
     }
 
     /// <summary>
@@ -212,7 +539,6 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Applies default sender information where needed</description></item>
     /// <item><description>Creates a properly configured notification order with creator metadata</description></item>
     /// </list>
-    /// 
     /// Processing stops at the first reminder that fails validation, returning the corresponding error.
     /// If the input list is empty or null, an empty list is returned.
     /// </remarks>
@@ -231,29 +557,29 @@ public class OrderRequestService : IOrderRequestService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(notificationReminder.Recipient);
+            var deliveryDetails = ExtractDeliveryDetails(notificationReminder.Recipient);
 
-            var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
+            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId);
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
                 return Problems.MissingContactInformation;
             }
 
-            templates = SetSenderIfNotDefined(templates);
+            var templates = SetSenderIfNotDefined(deliveryDetails.Templates);
 
             reminders.Add(new NotificationOrder
             {
                 Creator = creator,
                 Templates = templates,
                 Created = currentTime,
-                Recipients = recipients,
-                ResourceId = resourceId,
-                NotificationChannel = channel,
                 Type = notificationReminder.Type,
                 Id = notificationReminder.OrderId,
-                IgnoreReservation = ignoreReservation,
-                SendingTimePolicy = sendingTimePolicyForSms,
+                Recipients = deliveryDetails.Recipients,
+                ResourceId = deliveryDetails.ResourceId,
+                NotificationChannel = deliveryDetails.Channel,
+                IgnoreReservation = deliveryDetails.IgnoreReservation,
+                SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
                 ConditionEndpoint = notificationReminder.ConditionEndpoint
@@ -324,260 +650,5 @@ public class OrderRequestService : IOrderRequestService
         };
 
         return response;
-    }
-
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
-    {
-        List<Recipient> recipientsWithoutContactPoint = GetMissingContactRecipientList(channel, originalRecipients);
-
-        if (recipientsWithoutContactPoint.Count == 0)
-        {
-            return null;
-        }
-
-        switch (channel)
-        {
-            case NotificationChannel.Email:
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
-                break;
-
-            case NotificationChannel.Sms:
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
-                break;
-
-            case NotificationChannel.EmailAndSms:
-                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId);
-                break;
-
-            case NotificationChannel.SmsPreferred:
-            case NotificationChannel.EmailPreferred:
-                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId);
-                break;
-        }
-
-        var isReserved = recipientsWithoutContactPoint.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
-
-        RecipientLookupResult lookupResult = new()
-        {
-            IsReserved = isReserved,
-            MissingContact = GetMissingContactListIds(channel, recipientsWithoutContactPoint).Except(isReserved).ToList()
-        };
-
-        int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
-
-        if (recipientsWeCannotReach == recipientsWithoutContactPoint.Count)
-        {
-            lookupResult.Status = RecipientLookupStatus.Failed;
-        }
-        else if (recipientsWeCannotReach > 0)
-        {
-            lookupResult.Status = RecipientLookupStatus.PartialSuccess;
-        }
-
-        return lookupResult;
-    }
-
-    /// <summary>
-    /// Retrieves a list of identifiers for recipients who are missing the required contact information
-    /// for the specified notification channel.
-    /// </summary>
-    /// <param name="channel">
-    /// The <see cref="NotificationChannel"/> to check for missing contact information.
-    /// Supported channels include Email, SMS, EmailAndSms, EmailPreferred, and SmsPreferred.
-    /// </param>
-    /// <param name="recipients">
-    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
-    /// Each recipient is checked for the presence of contact information relevant to the specified channel.
-    /// </param>
-    /// <returns>
-    /// A list of strings representing the identifiers (either <see cref="Recipient.OrganizationNumber"/> or
-    /// <see cref="Recipient.NationalIdentityNumber"/>) of recipients who are missing the required contact information.
-    /// </returns>
-    private static List<string> GetMissingContactListIds(NotificationChannel channel, List<Recipient> recipients)
-    {
-        return channel switch
-        {
-            NotificationChannel.Email =>
-                                [.. recipients
-                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
-
-            NotificationChannel.Sms =>
-                                [.. recipients
-                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
-
-            NotificationChannel.EmailAndSms or
-            NotificationChannel.EmailPreferred or
-            NotificationChannel.SmsPreferred =>
-                                [.. recipients
-                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
-
-            _ => [],
-        };
-    }
-
-    /// <summary>
-    /// Retrieves a list of recipients who are missing contact information for the specified notification channel.
-    /// </summary>
-    /// <param name="channel">
-    /// The <see cref="NotificationChannel"/> to check for missing contact information.
-    /// Supported channels include SMS, Email, EmailAndSms, EmailPreferred, and SmsPreferred.
-    /// </param>
-    /// <param name="recipients">
-    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
-    /// </param>
-    /// <returns>
-    /// A list of <see cref="Recipient"/> objects that are missing the required contact information
-    /// for the specified notification channel.
-    /// </returns>
-    /// <remarks>
-    /// This method performs a deep copy of the recipients that are missing contact information to ensure the original list remains unaltered.
-    /// </remarks>
-    private static List<Recipient> GetMissingContactRecipientList(NotificationChannel channel, List<Recipient> recipients)
-    {
-        return channel switch
-        {
-            NotificationChannel.Sms =>
-                [..recipients
-                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                .Select(r => r.DeepCopy())],
-
-            NotificationChannel.Email =>
-                [..recipients
-                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                .Select(r => r.DeepCopy())],
-
-            NotificationChannel.EmailAndSms or
-            NotificationChannel.SmsPreferred or
-            NotificationChannel.EmailPreferred =>
-                [..recipients
-                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                .Select(r => r.DeepCopy())],
-
-            _ => []
-        };
-    }
-
-    private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
-    {
-        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrEmpty(e.FromAddress)))
-        {
-            template.FromAddress = _defaultEmailFromAddress;
-        }
-
-        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
-        {
-            template.SenderNumber = _defaultSmsSender;
-        }
-
-        return templates;
-    }
-
-    /// <summary>
-    /// Creates an instance of <see cref="EmailTemplate"/> based on the provided Email sending options.
-    /// </summary>
-    private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
-    {
-        return new EmailTemplate(emailSettings.SenderEmailAddress, emailSettings.Subject, emailSettings.Body, emailSettings.ContentType);
-    }
-
-    /// <summary>
-    /// Creates an instance of <see cref="SmsTemplate"/> based on the provided SMS sending options.
-    /// </summary>
-    private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
-    {
-        return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
-    }
-
-    /// <summary>
-    /// Extracts information from a <see cref="NotificationRecipient"/> into notification delivery components.
-    /// </summary>
-    /// <param name="recipient">The notification recipient containing targeting and messaging preferences.</param>
-    /// <returns>
-    /// A tuple containing:
-    /// <list type="bullet">
-    /// <item><description>Recipients - A list of recipients with proper addressing information</description></item>
-    /// <item><description>Templates - Notification templates based on the recipient's configuration</description></item>
-    /// <item><description>Channel - The determined notification channel based on recipient type</description></item>
-    /// <item><description>IgnoreReservation - Flag indicating whether to bypass KRR reservations</description></item>
-    /// <item><description>ResourceId - Optional resource ID for authorization and tracking</description></item>
-    /// <item><description>SmsSendingTimePolicy - The sendingTimePolicy associated with the selected SMS's configuration</description></item>
-    /// </list>
-    /// </returns>
-    /// <remarks>
-    /// This method processes different recipient types (SMS, Email, Person, Organization) and creates
-    /// the appropriate templates and addressing information based on the recipient's configuration.
-    /// The default channel is SMS if the recipient type cannot be determined.
-    /// </remarks>
-    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId, SendingTimePolicy? SmsSendingTimePolicy) ExtractDeliveryComponents(NotificationRecipient recipient)
-    {
-        bool? ignoreReservation = null;
-        string? resourceIdentifier = null;
-
-        var recipients = new List<Recipient>();
-        var templates = new List<INotificationTemplate>();
-
-        SendingTimePolicy? smsSendingTimePolicy = null;
-        NotificationChannel notificationChannel = NotificationChannel.Sms;
-
-        if (recipient.RecipientSms?.Settings != null)
-        {
-            notificationChannel = NotificationChannel.Sms;
-
-            smsSendingTimePolicy = recipient.RecipientSms.Settings.SendingTimePolicy;
-
-            templates.Add(CreateSmsTemplate(recipient.RecipientSms.Settings));
-
-            recipients.Add(new Recipient([new SmsAddressPoint(recipient.RecipientSms.PhoneNumber)]));
-        }
-        else if (recipient.RecipientEmail?.Settings != null)
-        {
-            notificationChannel = NotificationChannel.Email;
-
-            templates.Add(CreateEmailTemplate(recipient.RecipientEmail.Settings));
-
-            recipients.Add(new Recipient([new EmailAddressPoint(recipient.RecipientEmail.EmailAddress)]));
-        }
-        else if (recipient.RecipientPerson != null)
-        {
-            resourceIdentifier = recipient.RecipientPerson.ResourceId;
-            notificationChannel = recipient.RecipientPerson.ChannelSchema;
-            ignoreReservation = recipient.RecipientPerson.IgnoreReservation;
-
-            if (recipient.RecipientPerson.SmsSettings != null)
-            {
-                templates.Add(CreateSmsTemplate(recipient.RecipientPerson.SmsSettings));
-                smsSendingTimePolicy = recipient.RecipientPerson.SmsSettings.SendingTimePolicy;
-            }
-
-            if (recipient.RecipientPerson.EmailSettings != null)
-            {
-                templates.Add(CreateEmailTemplate(recipient.RecipientPerson.EmailSettings));
-            }
-
-            recipients.Add(new Recipient([], nationalIdentityNumber: recipient.RecipientPerson.NationalIdentityNumber));
-        }
-        else if (recipient.RecipientOrganization != null)
-        {
-            resourceIdentifier = recipient.RecipientOrganization.ResourceId;
-            notificationChannel = recipient.RecipientOrganization.ChannelSchema;
-
-            if (recipient.RecipientOrganization.SmsSettings != null)
-            {
-                templates.Add(CreateSmsTemplate(recipient.RecipientOrganization.SmsSettings));
-                smsSendingTimePolicy = recipient.RecipientOrganization.SmsSettings.SendingTimePolicy;
-            }
-
-            if (recipient.RecipientOrganization.EmailSettings != null)
-            {
-                templates.Add(CreateEmailTemplate(recipient.RecipientOrganization.EmailSettings));
-            }
-
-            recipients.Add(new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber));
-        }
-
-        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier, smsSendingTimePolicy);
     }
 }
