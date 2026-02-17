@@ -182,12 +182,12 @@ public class AuthorizationService : IAuthorizationService
                     continue;
                 }
 
-                foreach (var user in batchOrg.UserContactPoints)
+                var usersToAdd = batchOrg.UserContactPoints
+                    .Where(user => !targetOrg.UserContactPoints.Exists(u => u.UserId == user.UserId));
+
+                foreach (var user in usersToAdd)
                 {
-                    if (!targetOrg.UserContactPoints.Exists(u => u.UserId == user.UserId))
-                    {
-                        targetOrg.UserContactPoints.Add(user);
-                    }
+                    targetOrg.UserContactPoints.Add(user);
                 }
             }
         }
