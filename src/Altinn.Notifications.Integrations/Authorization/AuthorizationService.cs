@@ -20,12 +20,12 @@ namespace Altinn.Notifications.Integrations.Authorization;
 /// </summary>
 public class AuthorizationService : IAuthorizationService
 {
-    private const string UserIdUrn = "urn:altinn:userid";
+    private const string _userIdUrn = "urn:altinn:userid";
 
-    private const string DefaultIssuer = "Altinn";
-    private const string ActionCategoryId = "action";
-    private const string ResourceCategoryIdPrefix = "resource";
-    private const string AccessSubjectCategoryIdPrefix = "subject";
+    private const string _defaultIssuer = "Altinn";
+    private const string _actionCategoryId = "action";
+    private const string _resourceCategoryIdPrefix = "resource";
+    private const string _accessSubjectCategoryIdPrefix = "subject";
 
     private readonly IPDP _pdp;
     private readonly int _authorizationBatchSize;
@@ -87,7 +87,7 @@ public class AuthorizationService : IAuthorizationService
         foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
         {
             string? partyId = GetValue(response, MatchAttributeCategory.Resource, AltinnXacmlUrns.PartyId);
-            string? userId = GetValue(response, MatchAttributeCategory.Subject, UserIdUrn);
+            string? userId = GetValue(response, MatchAttributeCategory.Subject, _userIdUrn);
 
             if (partyId == null || userId == null)
             {
@@ -239,11 +239,11 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                MatchAttributeIdentifiers.ActionId, "read", "string", DefaultIssuer);
+                MatchAttributeIdentifiers.ActionId, "read", "string", _defaultIssuer);
 
         return new XacmlJsonCategory()
         {
-            Id = ActionCategoryId,
+            Id = _actionCategoryId,
             Attribute = [attribute]
         };
     }
@@ -252,9 +252,9 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute subjectAttribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, DefaultIssuer, true);
+                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
 
-        string resourceCategoryId = ResourceCategoryIdPrefix + resourceOwnerId;
+        string resourceCategoryId = _resourceCategoryIdPrefix + resourceOwnerId;
 
         if (resourceId.StartsWith("app_"))
         {
@@ -262,11 +262,11 @@ public class AuthorizationService : IAuthorizationService
 
             XacmlJsonAttribute orgAttribute =
                 DecisionHelper.CreateXacmlJsonAttribute(
-                    AltinnXacmlUrns.OrgId, appResource[1], ClaimValueTypes.String, DefaultIssuer);
+                    AltinnXacmlUrns.OrgId, appResource[1], ClaimValueTypes.String, _defaultIssuer);
 
             XacmlJsonAttribute appAttribute =
                 DecisionHelper.CreateXacmlJsonAttribute(
-                    AltinnXacmlUrns.AppId, appResource[2], ClaimValueTypes.String, DefaultIssuer);
+                    AltinnXacmlUrns.AppId, appResource[2], ClaimValueTypes.String, _defaultIssuer);
 
             return new XacmlJsonCategory()
             {
@@ -277,7 +277,7 @@ public class AuthorizationService : IAuthorizationService
 
         XacmlJsonAttribute resourceAttribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                AltinnXacmlUrns.ResourceId, resourceId, ClaimValueTypes.String, DefaultIssuer);
+                AltinnXacmlUrns.ResourceId, resourceId, ClaimValueTypes.String, _defaultIssuer);
 
         return new XacmlJsonCategory()
         {
@@ -290,11 +290,11 @@ public class AuthorizationService : IAuthorizationService
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                UserIdUrn, userId.ToString(), ClaimValueTypes.String, DefaultIssuer, true);
+                _userIdUrn, userId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
 
         return new XacmlJsonCategory()
         {
-            Id = AccessSubjectCategoryIdPrefix + userId,
+            Id = _accessSubjectCategoryIdPrefix + userId,
             Attribute = [attribute]
         };
     }
@@ -306,7 +306,7 @@ public class AuthorizationService : IAuthorizationService
             ReferenceId =
             [
                 subjectCategoryId,
-                ActionCategoryId,
+                _actionCategoryId,
                 resourceCategoryId
             ]
         };
