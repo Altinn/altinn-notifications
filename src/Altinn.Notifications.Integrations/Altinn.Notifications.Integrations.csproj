@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Altinn.ApiClients.Maskinporten" Version="10.0.1" />
     <PackageReference Include="Altinn.Common.AccessTokenClient" Version="3.2.0" />
-    <PackageReference Include="Altinn.Common.PEP" Version="4.2.2" />
+    <PackageReference Include="Altinn.Common.PEP" Version="4.2.3" />
     <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
     <PackageReference Include="Confluent.Kafka.Extensions.OpenTelemetry" Version="0.4.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.2" />
