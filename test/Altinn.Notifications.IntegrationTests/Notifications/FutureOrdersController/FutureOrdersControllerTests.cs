@@ -189,7 +189,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_OrganizationTokenWithCorrectScope_ReturnsCreateddWithOrderDetails()
+    public async Task Post_OrganizationTokenWithCorrectScope_ReturnsCreatedWithOrderDetails()
     {
         // Arrange
         var requestExt = CreateFutureEmailOrderChainRequest();
@@ -517,6 +517,40 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
+    public async Task Post_InvalidRequestUsingExternalIdentityRecipient_ReturnsBadRequest()
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = Guid.NewGuid().ToString(),
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ExternalIdentity = "invalid-urn-format", // Invalid URN
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Body",
+                        Subject = "Subject"
+                    }
+                }
+            }
+        };
+
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Post_ValidRequestUsingExternalIdentityRecipient_LegacyUsername_WithReminders_ReturnsCreated()
     {
         // Arrange
@@ -803,7 +837,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_RequestToInternalModelMapping_PreservesAllPropertiesIncludingReminders()
+    public async Task Post_ValidRequest_MapsAllPropertiesToInternalModel()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt

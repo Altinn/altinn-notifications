@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
 
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
@@ -1677,6 +1678,43 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Empty(recipient.AddressInfo);
 
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddSmsContactPoints_WhenUsingExternalIdentityProfileClientThrowsException_ShouldThrowPlatformDependencyException()
+        {
+            // Arrange
+            string externalIdentity = "urn:altinn:person:idporten-email:user@example.com";
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = externalIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .ThrowsAsync(new TaskCanceledException("Simulated timeout"));
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+                async () => await service.AddSmsContactPoints(recipientsToEnrich, null));
+
+            Assert.Equal("ProfileClient", exception.DependencyName);
+            Assert.Equal("GetExternalIdentityContactPoints", exception.Operation);
+            Assert.IsType<TaskCanceledException>(exception.InnerException);
+            Assert.True(exception.IsTransient);
+
+            profileClientMock.Verify(
+                e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))),
+                Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }

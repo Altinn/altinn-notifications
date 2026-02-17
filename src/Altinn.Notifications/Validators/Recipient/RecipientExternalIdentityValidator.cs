@@ -8,9 +8,6 @@ namespace Altinn.Notifications.Validators.Recipient;
 /// <summary>
 /// Represents validation logic for the external identity recipient model.
 /// </summary>
-/// <remarks>
-/// Validates recipients identified by external identity URNs, including self-identified users and username-based users.
-/// </remarks>
 internal sealed partial class RecipientExternalIdentityValidator : AbstractValidator<RecipientExternalIdentityExt?>
 {
     /// <summary>

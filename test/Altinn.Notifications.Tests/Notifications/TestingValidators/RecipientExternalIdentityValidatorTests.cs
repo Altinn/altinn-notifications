@@ -1,6 +1,7 @@
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Recipient;
 
 using FluentValidation.TestHelper;
@@ -13,10 +14,54 @@ public class RecipientExternalIdentityValidatorTests
 {
     private readonly RecipientExternalIdentityValidator _validator = new();
 
+    [Fact]
+    public void Validate_EmailChannelWithEmailSettings_NoError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveValidationErrorFor(r => r.SmsSettings);
+        actual.ShouldNotHaveValidationErrorFor(r => r.EmailSettings);
+    }
+
+    [Fact]
+    public void Validate_EmailPreferredMissingSettings_ReturnsError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            ChannelSchema = NotificationChannelExt.EmailPreferred
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(r => r.EmailSettings)
+            .WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
+
+        actual.ShouldHaveValidationErrorFor(r => r.SmsSettings)
+            .WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
+    }
+
     [Theory]
     [InlineData("", "ExternalIdentity cannot be null or empty.")]
     [InlineData(null, "ExternalIdentity cannot be null or empty.")]
-    public void Should_Have_Validation_Error_For_ExternalIdentity_When_Empty(string? externalIdentity, string errorMessage)
+    public void Validate_EmptyExternalIdentity_ReturnsError(string? externalIdentity, string errorMessage)
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
@@ -49,7 +94,7 @@ public class RecipientExternalIdentityValidatorTests
     [InlineData("urn:altinn:person:idporten-email:@example.com")]
     [InlineData("urn:altinn:person:idporten-email:user@example")]
     [InlineData("urn:altinn:person:wrongprefix:user@example.com")]
-    public void Should_Have_Validation_Error_For_ExternalIdentity_When_Invalid_Format(string externalIdentity)
+    public void Validate_InvalidExternalIdentityFormat_ReturnsError(string externalIdentity)
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
@@ -70,23 +115,19 @@ public class RecipientExternalIdentityValidatorTests
         actual.ShouldHaveValidationErrorFor(r => r.ExternalIdentity).WithErrorMessage("Invalid external identity URN format.");
     }
 
-    [Theory]
-    [InlineData("urn:altinn:username:john.doe")]
-    [InlineData("urn:altinn:party:username:user123")]
-    [InlineData("urn:altinn:person:legacy-selfidentified:user123")]
-    [InlineData("urn:altinn:person:legacy-selfidentified:john.doe")]
-    [InlineData("urn:altinn:person:idporten-email:user@example.com")]
-    public void Should_Not_Have_Validation_Error_For_ExternalIdentity_When_Valid(string externalIdentity)
+    [Fact]
+    public void Validate_InvalidResourceIdPrefix_ReturnsError()
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = externalIdentity,
             ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = "burn:altinn:resource:some-resource",
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
             EmailSettings = new EmailSendingOptionsExt
             {
-                Subject = "Test subject",
-                Body = "Test body"
+                Body = "Test body",
+                Subject = "Test subject"
             }
         };
 
@@ -94,21 +135,44 @@ public class RecipientExternalIdentityValidatorTests
         var actual = _validator.TestValidate(recipient);
 
         // Assert
-        actual.ShouldNotHaveValidationErrorFor(r => r.ExternalIdentity);
+        actual.ShouldHaveValidationErrorFor(r => r.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
     }
 
     [Fact]
-    public void Should_Not_Have_Validation_Errors_For_Base_Validator_Rules_When_ChannelSchema_Email_And_EmailSettings_Set()
+    public void Validate_NullResourceId_NoError()
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            ResourceId = null,
             ChannelSchema = NotificationChannelExt.Email,
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
             EmailSettings = new EmailSendingOptionsExt
             {
-                Subject = "Test subject",
-                Body = "Test body"
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveValidationErrorFor(r => r.ResourceId);
+    }
+
+    [Fact]
+    public void Validate_SmsChannelWithSmsSettings_NoError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Sms,
+            ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
+            SmsSettings = new SmsSendingOptionsExt
+            {
+                Body = "Test body",
+                Sender = "Test sender"
             }
         };
 
@@ -121,13 +185,13 @@ public class RecipientExternalIdentityValidatorTests
     }
 
     [Fact]
-    public void Should_Have_Validation_Errors_When_ChannelSchema_EmailPreferred_And_Missing_Settings()
+    public void Validate_SmsPreferredMissingSettings_ReturnsError()
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
-            ChannelSchema = NotificationChannelExt.EmailPreferred
+            ChannelSchema = NotificationChannelExt.SmsPreferred,
+            ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe"
         };
 
         // Act
@@ -142,18 +206,22 @@ public class RecipientExternalIdentityValidatorTests
     }
 
     [Fact]
-    public void Should_Not_Have_Validation_Error_For_ResourceId_When_Null()
+    public void Validate_SmsPreferredWithBothSettings_NoError()
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
-            ResourceId = null,
-            ChannelSchema = NotificationChannelExt.Email,
+            ChannelSchema = NotificationChannelExt.SmsPreferred,
+            ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
             EmailSettings = new EmailSendingOptionsExt
             {
-                Subject = "Test subject",
-                Body = "Test body"
+                Body = "Test body",
+                Subject = "Test subject"
+            },
+            SmsSettings = new SmsSendingOptionsExt
+            {
+                Body = "Test body",
+                Sender = "Test sender"
             }
         };
 
@@ -161,22 +229,27 @@ public class RecipientExternalIdentityValidatorTests
         var actual = _validator.TestValidate(recipient);
 
         // Assert
-        actual.ShouldNotHaveValidationErrorFor(r => r.ResourceId);
+        actual.ShouldNotHaveValidationErrorFor(e => e.SmsSettings);
+        actual.ShouldNotHaveValidationErrorFor(e => e.EmailSettings);
     }
 
-    [Fact]
-    public void Should_Have_Validation_Error_For_ResourceId_When_Invalid_Prefix()
+    [Theory]
+    [InlineData("urn:altinn:username:john.doe")]
+    [InlineData("urn:altinn:party:username:user123")]
+    [InlineData("urn:altinn:person:legacy-selfidentified:user123")]
+    [InlineData("urn:altinn:person:legacy-selfidentified:john.doe")]
+    [InlineData("urn:altinn:person:idporten-email:user@example.com")]
+    public void Validate_ValidExternalIdentity_NoError(string externalIdentity)
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
-            ResourceId = "burn:altinn:resource:some-resource",
+            ExternalIdentity = externalIdentity,
             ChannelSchema = NotificationChannelExt.Email,
             EmailSettings = new EmailSendingOptionsExt
             {
-                Subject = "Test subject",
-                Body = "Test body"
+                Body = "Test body",
+                Subject = "Test subject"
             }
         };
 
@@ -184,22 +257,22 @@ public class RecipientExternalIdentityValidatorTests
         var actual = _validator.TestValidate(recipient);
 
         // Assert
-        actual.ShouldHaveValidationErrorFor(r => r.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
+        actual.ShouldNotHaveValidationErrorFor(r => r.ExternalIdentity);
     }
 
     [Fact]
-    public void Should_Not_Have_Validation_Error_For_ResourceId_When_Valid_Prefix()
+    public void Validate_ValidResourceIdPrefix_NoError()
     {
         // Arrange
         var recipient = new RecipientExternalIdentityExt
         {
-            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            ChannelSchema = NotificationChannelExt.Email,
             ResourceId = "urn:altinn:resource:some-resource",
-            ChannelSchema = NotificationChannelExt.Email,
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
             EmailSettings = new EmailSendingOptionsExt
             {
-                Subject = "Test subject",
-                Body = "Test body"
+                Body = "Test body",
+                Subject = "Test subject"
             }
         };
 

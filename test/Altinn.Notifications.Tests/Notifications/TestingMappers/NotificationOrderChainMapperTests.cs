@@ -601,8 +601,8 @@ public class NotificationOrderChainMapperTests
                     },
                     SmsSettings = new SmsSendingOptionsExt
                     {
-                        Body = "Fallback sms body",
-                        Sender = "Altinn"
+                        Sender = "Altinn",
+                        Body = "Fallback sms body"
                     }
                 }
             }
@@ -628,7 +628,7 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
-    public void MapToNotificationOrderChainRequest_WithSelfIdentifiedUserRecipientAndReminder_MapsRecipientForReminder()
+    public void MapToNotificationOrderChainRequest_WithSelfIdentifiedUserRecipientAndReminderDifferentChannels_MapsRecipientForReminder()
     {
         // Arrange
         var creatorName = "ttd";
@@ -691,7 +691,7 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
-    public void MapToNotificationOrderChainRequest_WithLegacySelfIdentifiedUserRecipient_MapsCorrectly()
+    public void MapToNotificationOrderChainRequest_WithLegacySelfIdentifiedUserRecipientEmailChannel_MapsCorrectly()
     {
         // Arrange
         var creatorName = "ttd";
@@ -2238,7 +2238,7 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
-    public void Build_WithEmptyOrderChainId_ThrowsInvalidOperationException()
+    public void Build_WithoutOrderChainId_ThrowsInvalidOperationException()
     {
         // Arrange
         var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()

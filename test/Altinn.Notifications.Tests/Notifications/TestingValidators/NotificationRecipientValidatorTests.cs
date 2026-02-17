@@ -15,7 +15,7 @@ public class NotificationRecipientValidatorTests
     private readonly NotificationRecipientValidator _validator = new();
 
     [Fact]
-    public void Should_Have_No_Validation_Errors_When_Only_One_Recipient()
+    public void Should_Have_No_Validation_Errors_When_Only_One_Valid_Recipient()
     {
         // Arrange
         var recipient = new NotificationRecipientExt
