@@ -626,7 +626,7 @@ public class ContactPointService(
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Keep only unique and valid mobile numbers.
+            // Keep only user contact points with unique and valid contact details.
             contactPoint.UserContactPoints = [..
                 NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
