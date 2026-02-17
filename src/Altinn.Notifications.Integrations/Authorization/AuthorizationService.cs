@@ -130,10 +130,13 @@ public class AuthorizationService : IAuthorizationService
 
             int userIndex = 0;
 
+            // Process users from this organization, potentially splitting across multiple batches
             while (userIndex < distinctUserIds.Count)
             {
+                // Calculate how many more users can fit in current batch
                 int remaining = _authorizationBatchSize - currentBatchCount;
 
+                // Current batch is full - start a new batch
                 if (remaining == 0)
                 {
                     batches.Add(currentBatch);
@@ -142,9 +145,11 @@ public class AuthorizationService : IAuthorizationService
                     remaining = _authorizationBatchSize;
                 }
 
+                // Determine how many users to add: either fill the batch or take all remaining users from org
                 int take = Math.Min(remaining, distinctUserIds.Count - userIndex);
                 var userIdsForBatch = distinctUserIds.GetRange(userIndex, take);
 
+                // Create a partial copy of the organization with only the users for this batch
                 var batchOrg = new OrganizationContactPoints
                 {
                     OrganizationNumber = org.OrganizationNumber,
