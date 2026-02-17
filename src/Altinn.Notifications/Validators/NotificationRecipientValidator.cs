@@ -36,12 +36,15 @@ namespace Altinn.Notifications.Validators
 
             RuleFor(specification => specification.RecipientOrganization)
                 .SetValidator(validator: new RecipientOrganizationValidator());
+
+            RuleFor(specification => specification.RecipientSelfIdentifiedUser)
+                .SetValidator(validator: new RecipientSelfIdentifiedUserValidator());
         }
 
         /// <summary>
         /// Checks if only one recipient is set.
         /// </summary>
-        /// <param name="specification">Object containing four possible recipient types</param>
+        /// <param name="specification">Object containing five possible recipient types</param>
         /// <returns></returns>
         private static bool HaveOneSetRecipientOnly(NotificationRecipientExt specification)
         {
@@ -50,7 +53,8 @@ namespace Altinn.Notifications.Validators
                 specification.RecipientEmail,
                 specification.RecipientSms,
                 specification.RecipientPerson,
-                specification.RecipientOrganization
+                specification.RecipientOrganization,
+                specification.RecipientSelfIdentifiedUser
             }.Count(recipient => recipient != null) == 1;
         }
     }

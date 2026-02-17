@@ -30,6 +30,15 @@ public class Recipient
     public string? OrganizationNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the recipient's external identity in URN format.
+    /// </summary>
+    /// <remarks>
+    /// Used for self-identified users who authenticate via ID-porten email login.
+    /// The format is "urn:altinn:person:idporten-email:{email-address}".
+    /// </remarks>
+    public string? ExternalIdentity { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Recipient"/> class.
     /// </summary>
     public Recipient()
@@ -37,14 +46,16 @@ public class Recipient
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class with the specified address information, organization number, and national identity number.
+    /// Initializes a new instance of the <see cref="Recipient"/> class with the specified address information and identifiers.
     /// </summary>
     /// <param name="addressInfo">The list of address points for the recipient.</param>
     /// <param name="organizationNumber">The recipient's organization number.</param>
     /// <param name="nationalIdentityNumber">The recipient's national identity number.</param>
-    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null)
+    /// <param name="externalIdentity">The recipient's external identity in URN format.</param>
+    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null, string? externalIdentity = null)
     {
         AddressInfo = addressInfo;
+        ExternalIdentity = externalIdentity;
         OrganizationNumber = organizationNumber;
         NationalIdentityNumber = nationalIdentityNumber;
     }

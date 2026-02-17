@@ -43,11 +43,12 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     {
         List<Recipient> recipients = order.Recipients;
         List<Recipient> recipientsWithoutContactPoint =
-            recipients
-                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                .ToList();
+            [.. recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))];
 
-        await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId);
+        if (recipientsWithoutContactPoint.Count > 0)
+        {
+            await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId);
+        }
 
         List<Recipient> preferredChannelRecipients;
         List<Recipient> fallBackChannelRecipients;
@@ -99,7 +100,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         foreach (var recipient in recipients)
         {
             // Generate a unique identifier for the recipient
-            string recipientIdentifier = recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? Guid.NewGuid().ToString();
+            string recipientIdentifier = recipient.ExternalIdentity ?? recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? Guid.NewGuid().ToString();
 
             // Process recipients with fallback addresses.
             int fallbackAddressCount = recipient.AddressInfo.Count(a => a.AddressType == fallbackAddressType);
@@ -108,6 +109,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 fallbackChannelRecipients[recipientIdentifier] = new Recipient
                 {
                     IsReserved = recipient.IsReserved,
+                    ExternalIdentity = recipient.ExternalIdentity,
                     OrganizationNumber = recipient.OrganizationNumber,
                     NationalIdentityNumber = recipient.NationalIdentityNumber,
                     AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == fallbackAddressType)],
@@ -121,6 +123,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 preferredChannelRecipients[recipientIdentifier] = new Recipient
                 {
                     IsReserved = recipient.IsReserved,
+                    ExternalIdentity = recipient.ExternalIdentity,
                     OrganizationNumber = recipient.OrganizationNumber,
                     NationalIdentityNumber = recipient.NationalIdentityNumber,
                     AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == preferredAddressType)],

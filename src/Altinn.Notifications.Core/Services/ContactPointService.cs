@@ -19,6 +19,8 @@ public class ContactPointService(
     IProfileClient profile,
     IAuthorizationService authorizationService) : IContactPointService
 {
+    private const string _profileClientName = "ProfileClient";
+
     private readonly IProfileClient _profileClient = profile;
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
@@ -44,6 +46,15 @@ public class ContactPointService(
                 recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
                 return recipient;
+            },
+            (recipient, selfIdentifiedContactPoints) =>
+            {
+                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
+                {
+                    recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
+                }
+
+                return recipient;
             });
     }
 
@@ -67,6 +78,15 @@ public class ContactPointService(
                 recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
 
                 recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber)).Select(e => new SmsAddressPoint(e.MobileNumber)));
+
+                return recipient;
+            },
+            (recipient, selfIdentifiedContactPoints) =>
+            {
+                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
+                {
+                    recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
+                }
 
                 return recipient;
             });
@@ -101,6 +121,20 @@ public class ContactPointService(
                 recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
                 recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+
+                return recipient;
+            },
+            (recipient, selfIdentifiedContactPoints) =>
+            {
+                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
+                {
+                    recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
+                }
+
+                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
+                {
+                    recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
+                }
 
                 return recipient;
             });
@@ -177,7 +211,64 @@ public class ContactPointService(
                 }
 
                 return recipient;
+            },
+            (recipient, selfIdentifiedContactPoints) =>
+            {
+                if (channel == NotificationChannel.EmailPreferred)
+                {
+                    AddPreferredOrFallbackContactPoint(
+                        recipient,
+                        selfIdentifiedContactPoints.Email,
+                        selfIdentifiedContactPoints.MobileNumber,
+                        email => new EmailAddressPoint(email),
+                        mobile => new SmsAddressPoint(mobile));
+                }
+                else if (channel == NotificationChannel.SmsPreferred)
+                {
+                    AddPreferredOrFallbackContactPoint(
+                       recipient,
+                       selfIdentifiedContactPoints.MobileNumber,
+                       selfIdentifiedContactPoints.Email,
+                       mobile => new SmsAddressPoint(mobile),
+                       email => new EmailAddressPoint(email));
+                }
+
+                return recipient;
             });
+    }
+
+    private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
+        Recipient recipient,
+        TPreferred preferredContact,
+        TFallback fallbackContact,
+        Func<TPreferred, IAddressPoint> preferredSelector,
+        Func<TFallback, IAddressPoint> fallbackSelector)
+    {
+        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
+        {
+            recipient.AddressInfo.Add(preferredSelector(preferredContact));
+        }
+        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
+        {
+            recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
+        }
+    }
+
+    private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
+    Recipient recipient,
+    List<TPreferred> preferredList,
+    List<TFallback> fallbackList,
+    Func<TPreferred, IAddressPoint> preferredSelector,
+    Func<TFallback, IAddressPoint> fallbackSelector)
+    {
+        if (preferredList.Count > 0)
+        {
+            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
+        }
+        else
+        {
+            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
+        }
     }
 
     /// <summary>
@@ -206,59 +297,29 @@ public class ContactPointService(
         return trimmedResourceId.StartsWith(prefix, StringComparison.Ordinal) ? trimmedResourceId[prefix.Length..] : trimmedResourceId;
     }
 
-    private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
-    Recipient recipient,
-    List<TPreferred> preferredList,
-    List<TFallback> fallbackList,
-    Func<TPreferred, IAddressPoint> preferredSelector,
-    Func<TFallback, IAddressPoint> fallbackSelector)
-    {
-        if (preferredList.Count > 0)
-        {
-            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
-        }
-        else
-        {
-            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
-        }
-    }
-
-    private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
-        Recipient recipient,
-        TPreferred preferredContact,
-        TFallback fallbackContact,
-        Func<TPreferred, IAddressPoint> preferredSelector,
-        Func<TFallback, IAddressPoint> fallbackSelector)
-    {
-        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
-        {
-            recipient.AddressInfo.Add(preferredSelector(preferredContact));
-        }
-        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
-        {
-            recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
-        }
-    }
-
     /// <summary>
     /// Looks up and augments each recipient in the provided list with contact point information
-    /// based on their national identity number or organization number.
+    /// based on their national identity number, organization number, or external identity.
     /// </summary>
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to be augmented with contact point information.
-    /// Each recipient must have either a national identity number or an organization number.
+    /// Each recipient must have either a national identity number, organization number, or external identity.
     /// </param>
     /// <param name="resourceId">
     /// The resource identifier used to filter and authorize user-registered contact points for organizations.
     /// If <c>null</c> or empty, only official organization contact points are used.
     /// </param>
-    /// <param name="createUserContactPoint">
-    /// A function that applies user contact point data to a recipient. Invoked for recipients with a national identity number
+    /// <param name="applyPersonContactPoints">
+    /// A function that applies contact points to the recipient. Invoked for recipients with a national identity number
     /// and a matching <see cref="UserContactPoints"/> entry.
     /// </param>
-    /// <param name="createOrgContactPoint">
-    /// A function that applies organization contact point data to a recipient. Invoked for recipients with an organization number
+    /// <param name="applyOrganizationContactPoints">
+    /// A function that applies contact points to the recipient. Invoked for recipients with an organization number
     /// and a matching <see cref="OrganizationContactPoints"/> entry.
+    /// </param>
+    /// <param name="applySelfIdentifiedUserContactPoints">
+    /// A function that applies contact points to the recipient. Invoked for recipients with an external identity
+    /// and a matching <see cref="SelfIdentifiedUserContactPoints"/> entry.
     /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
@@ -266,39 +327,58 @@ public class ContactPointService(
     private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
-        Func<Recipient, UserContactPoints, Recipient> createUserContactPoint,
-        Func<Recipient, OrganizationContactPoints, Recipient> createOrgContactPoint)
+        Func<Recipient, UserContactPoints, Recipient> applyPersonContactPoints,
+        Func<Recipient, OrganizationContactPoints, Recipient> applyOrganizationContactPoints,
+        Func<Recipient, SelfIdentifiedUserContactPoints, Recipient> applySelfIdentifiedUserContactPoints)
     {
-        var userLookupTask = LookupPersonContactPoints(recipients);
-        var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
+        var personLookupTask = LookupPersonContactPoints(recipients);
+        var selfIdentifiedLookupTask = LookupSelfIdentifiedUserContactPoints(recipients);
+        var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
 
-        await Task.WhenAll(userLookupTask, orgLookupTask);
+        await Task.WhenAll(personLookupTask, selfIdentifiedLookupTask, organizationLookupTask);
 
-        List<UserContactPoints> userContactPointsList = userLookupTask.Result;
-        List<OrganizationContactPoints> organizationContactPointsList = orgLookupTask.Result;
+        List<UserContactPoints> personContactPointsList = personLookupTask.Result;
+        List<OrganizationContactPoints> organizationContactPointsList = organizationLookupTask.Result;
+        List<SelfIdentifiedUserContactPoints> selfIdentifiedContactPointsList = selfIdentifiedLookupTask.Result;
 
         foreach (Recipient recipient in recipients)
         {
             if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
             {
-                UserContactPoints? userContactPoints = userContactPointsList
-                    .Find(e => e.NationalIdentityNumber == recipient.NationalIdentityNumber);
+                UserContactPoints? userContactPoints = personContactPointsList
+                    .Find(e => string.Equals(e.NationalIdentityNumber, recipient.NationalIdentityNumber, StringComparison.OrdinalIgnoreCase));
 
-                if (userContactPoints != null)
+                if (userContactPoints == null)
                 {
-                    recipient.IsReserved = userContactPoints.IsReserved;
-                    createUserContactPoint(recipient, userContactPoints);
+                    continue;
                 }
+
+                recipient.IsReserved = userContactPoints.IsReserved;
+                applyPersonContactPoints(recipient, userContactPoints);
             }
             else if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
             {
                 OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
-                    .Find(o => o.OrganizationNumber == recipient.OrganizationNumber);
+                    .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
 
-                if (organizationContactPoints != null)
+                if (organizationContactPoints == null)
                 {
-                    createOrgContactPoint(recipient, organizationContactPoints);
+                    continue;
                 }
+
+                applyOrganizationContactPoints(recipient, organizationContactPoints);
+            }
+            else if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
+            {
+                SelfIdentifiedUserContactPoints? selfIdentifiedContactPoints = selfIdentifiedContactPointsList
+                    .Find(e => string.Equals(e.ExternalIdentity, recipient.ExternalIdentity, StringComparison.OrdinalIgnoreCase));
+
+                if (selfIdentifiedContactPoints == null)
+                {
+                    continue;
+                }
+
+                applySelfIdentifiedUserContactPoints(recipient, selfIdentifiedContactPoints);
             }
         }
     }
@@ -342,7 +422,47 @@ public class ContactPointService(
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            throw new PlatformDependencyException("ProfileClient", "GetUserContactPoints", ex);
+            throw new PlatformDependencyException(_profileClientName, "GetUserContactPoints", ex);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves contact points for self-identified-users.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="SelfIdentifiedUserContactPoints"/> 
+    /// corresponding to the provided external identities. If no valid external identities are found, an empty list is returned.
+    /// </returns>
+    private async Task<List<SelfIdentifiedUserContactPoints>> LookupSelfIdentifiedUserContactPoints(List<Recipient> recipients)
+    {
+        List<string> externalIdentities = [.. recipients
+                .Where(e => !string.IsNullOrWhiteSpace(e.ExternalIdentity))
+                .Select(e => e.ExternalIdentity!)];
+
+        if (externalIdentities.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            List<SelfIdentifiedUserContactPoints> contactPoints = await _profileClient.GetSelfIdentifiedUserContactPoints(externalIdentities);
+
+            return [.. contactPoints.Select(contactPoint =>
+            {
+                var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+
+                var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
+
+                return contactPoint with { MobileNumber = validMobileNumber };
+            })];
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_profileClientName, "GetSelfIdentifiedUserContactPoints", ex);
         }
     }
 
@@ -391,7 +511,7 @@ public class ContactPointService(
                 }
                 catch (Exception ex) when (ex is not PlatformDependencyException)
                 {
-                    throw new PlatformDependencyException("ProfileClient", "GetUserRegisteredContactPoints", ex);
+                    throw new PlatformDependencyException(_profileClientName, "GetUserRegisteredContactPoints", ex);
                 }
 
                 if (allUserContactPoints.Count > 0)
@@ -448,7 +568,7 @@ public class ContactPointService(
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            throw new PlatformDependencyException("ProfileClient", "GetOrganizationContactPoints", ex);
+            throw new PlatformDependencyException(_profileClientName, "GetOrganizationContactPoints", ex);
         }
     }
 
