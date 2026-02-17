@@ -36,7 +36,11 @@ public class AuthorizationService : IAuthorizationService
     public AuthorizationService(IPDP pdp, IOptions<NotificationConfig> config)
     {
         _pdp = pdp;
-        _authorizationBatchSize = config.Value.AuthorizationBatchSize;
+        _authorizationBatchSize = config.Value.AuthorizationBatchSize > 0
+            ? config.Value.AuthorizationBatchSize
+            : throw new ArgumentOutOfRangeException(
+                nameof(config),
+                "AuthorizationBatchSize must be greater than zero.");
     }
 
     /// <summary>
