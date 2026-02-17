@@ -14,7 +14,9 @@ using Altinn.Notifications.Validators;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
@@ -47,15 +49,13 @@ public class FutureOrdersControllerTests
     }
 
     [Fact]
-    public async Task Post_WithValidRequest_ReturnsCreatedWithOrderResponse()
+    public async Task Post_ValidRequest_ReturnsCreated()
     {
         // Arrange
         var notificationOrderChainRequest = new NotificationOrderChainRequestExt
         {
-            // Initialize properties as needed
             Recipient = new NotificationRecipientExt
             {
-                // Initialize properties as needed
                 RecipientEmail = new RecipientEmailExt
                 {
                     EmailAddress = "noreply@digdir.no",
@@ -84,19 +84,19 @@ public class FutureOrdersControllerTests
 
         // Assert
         Assert.NotNull(result);
+
         var createdResult = Assert.IsType<CreatedResult>(result.Result);
         Assert.Equal(201, createdResult.StatusCode);
     }
 
     [Fact]
-    public async Task InvalidRequest_ShouldReturn_BadRequest()
+    public async Task Post_InvalidRequest_ReturnsBadRequest()
     {
         // Arrange
         var invalidRequest = new NotificationOrderChainRequestExt
         {
-            // Missing required properties
-            IdempotencyId = "test-idempotency-id",
-            Recipient = null!
+            Recipient = null!,
+            IdempotencyId = "test-idempotency-id"
         };
 
         // Act
@@ -109,7 +109,7 @@ public class FutureOrdersControllerTests
     }
 
     [Fact]
-    public async Task ServiceProblem_ShouldReturn_ProblemDetails()
+    public async Task Post_ValidRequest_UnderlyingServiceReturnsProblem_ReturnsProblemDetails()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt
@@ -139,6 +139,7 @@ public class FutureOrdersControllerTests
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(422, objectResult.StatusCode);
+
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
         Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(objectResult.StatusCode, problemDetails.Status);
