@@ -594,7 +594,7 @@ public class ContactPointService(
         foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
         {
             var existingContactPoint = officialContactPoints
-                .Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                .Find(e => string.Equals(e.OrganizationNumber, authorizedUserContactPoint.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
 
             if (existingContactPoint == null)
             {
