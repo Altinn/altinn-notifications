@@ -14,7 +14,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
@@ -254,6 +253,921 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUser_ForSms_UsesSmsContactPointLookupAndCreatesOrderChain()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("self-identified-sms-id")
+            .SetSendersReference("self-identified-sms-ref")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.Sms,
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "Test SMS body",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    }
+                }
+            })
+            .Build();
+
+        var expectedNotificationOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendersReference = "self-identified-sms-ref",
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            NotificationChannel = NotificationChannel.Sms,
+            RequestedSendTime = currentTime.AddMinutes(10),
+            Templates = [new SmsTemplate("Altinn", "Test SMS body")],
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedNotificationOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(e => e.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.IsReserved = false;
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.NotNull(result.Value);
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsProblem);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == null)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUser_ForEmailPreferredChannel_UsesPreferredLookupAndCreatesOrderChain()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("self-identified-preferred-id")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetSendersReference("self-identified-preferred-ref")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.EmailPreferred,
+
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = "Body",
+                        Subject = "Subject",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    },
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "SMS body",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    }
+                }
+            })
+            .Build();
+
+        var expectedSavedOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            RequestedSendTime = currentTime.AddMinutes(10),
+            SendersReference = "self-identified-preferred-ref",
+            NotificationChannel = NotificationChannel.EmailPreferred,
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
+            Templates =
+            [
+                new SmsTemplate("Altinn", "SMS body"),
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedSavedOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddPreferredContactPoints(NotificationChannel.EmailPreferred, It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.IsReserved = false;
+                        recipient.AddressInfo.Add(new EmailAddressPoint("user@altinn.xyz"));
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(
+                It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == null)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUserMissingContact_ReturnsProblem()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("self-identified-missing-contact-id")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.Email,
+
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = "Body",
+                        Subject = "Subject",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((_, _) =>
+            {
+                // Intentionally don't add contact points to simulate missing contact
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.NotNull(result.Problem);
+        Assert.Equal(422, (int)result.Problem.StatusCode);
+        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString());
+
+        contactPointServiceMock.Verify(cp => cp.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.Is<string?>(s => s == null)), Times.Once);
+        orderRepositoryMock.Verify(repo => repo.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUser_ForEmail_UsesEmailContactPointLookupAndCreatesOrderChain()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        const string resourceId = "urn:altinn:resource:test-resource";
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("self-identified-email-id")
+            .SetSendersReference("self-identified-email-ref")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ResourceId = resourceId,
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.Email,
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Subject = "Test Subject",
+                        Body = "Test Email body",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var expectedNotificationOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            ResourceId = resourceId,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendersReference = "self-identified-email-ref",
+            RequestedSendTime = currentTime.AddMinutes(10),
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test Subject", "Test Email body", EmailContentType.Plain)]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.ResourceId == resourceId &&
+                    o.NotificationChannel == NotificationChannel.Email &&
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedNotificationOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.IsReserved = false;
+                        recipient.AddressInfo.Add(new EmailAddressPoint("user@altinn.xyz"));
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == resourceId)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUser_ForSmsPreferred_UsesPreferredLookupAndCreatesOrderChain()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string resourceId = "urn:altinn:resource:test-resource";
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetIdempotencyId("self-identified-sms-preferred-id")
+            .SetSendersReference("self-identified-sms-preferred-ref")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.SmsPreferred,
+                    ResourceId = resourceId,
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "SMS body",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    },
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Subject = "Subject",
+                        Body = "Email body",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var expectedSavedOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            ResourceId = resourceId,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            RequestedSendTime = currentTime.AddMinutes(10),
+            NotificationChannel = NotificationChannel.SmsPreferred,
+            SendersReference = "self-identified-sms-preferred-ref",
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
+            Templates =
+            [
+                new SmsTemplate("Altinn", "SMS body"),
+                new EmailTemplate("noreply@altinn.no", "Subject", "Email body", EmailContentType.Plain)
+            ]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                    o.NotificationChannel == NotificationChannel.SmsPreferred &&
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedSavedOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddPreferredContactPoints(NotificationChannel.SmsPreferred, It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.IsReserved = false;
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(
+                It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == resourceId)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUser_ForEmailAndSms_UsesEmailAndSmsLookupAndCreatesOrderChain()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string resourceId = "urn:altinn:resource:test-resource";
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetIdempotencyId("self-identified-email-and-sms-id")
+            .SetSendersReference("self-identified-email-and-sms-ref")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ResourceId = resourceId,
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.EmailAndSms,
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "SMS body",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    },
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Subject = "Subject",
+                        Body = "Email body",
+                        ContentType = EmailContentType.Html,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var expectedSavedOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            ResourceId = resourceId,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            RequestedSendTime = currentTime.AddMinutes(10),
+            NotificationChannel = NotificationChannel.EmailAndSms,
+            SendersReference = "self-identified-email-and-sms-ref",
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
+            Templates =
+            [
+                new SmsTemplate("Altinn", "SMS body"),
+                new EmailTemplate("noreply@altinn.no", "Subject", "Email body", EmailContentType.Html)
+            ]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                    o.NotificationChannel == NotificationChannel.EmailAndSms &&
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedSavedOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("user@altinn.xyz"));
+                        recipient.IsReserved = false;
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == resourceId)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUserReminderMissingContact_ReturnsProblem()
+    {
+        // Arrange
+        Guid mainOrderId = Guid.NewGuid();
+        Guid reminderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string mainExternalIdentity = "urn:altinn:person:idporten-email:main@altinn.xyz";
+        const string reminderExternalIdentity = "urn:altinn:person:idporten-email:reminder@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(mainOrderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("self-identified-reminder-missing-id")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ExternalIdentity = mainExternalIdentity,
+                    ChannelSchema = NotificationChannel.Email,
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = "Body",
+                        Subject = "Main",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .SetReminders(
+            [
+                new NotificationReminder
+                {
+                    DelayDays = 7,
+                    OrderId = reminderId,
+                    Type = OrderType.Reminder,
+                    Recipient = new NotificationRecipient
+                    {
+                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        {
+                            ChannelSchema = NotificationChannel.Email,
+                            ExternalIdentity = reminderExternalIdentity,
+                            EmailSettings = new EmailSendingOptions
+                            {
+                                Subject = "Reminder",
+                                Body = "Reminder body",
+                                ContentType = EmailContentType.Plain,
+                                SenderEmailAddress = "noreply@altinn.no"
+                            }
+                        }
+                    }
+                }
+            ])
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                // Only add contact for main order, not for reminder
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == mainExternalIdentity)
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint("main@altinn.xyz"));
+                        recipient.IsReserved = false;
+                    }
+
+                    // Intentionally don't add contact for reminder recipient to simulate missing contact
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, mainOrderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.NotNull(result.Problem);
+        Assert.Equal(422, (int)result.Problem.StatusCode);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.AtLeastOnce);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.Verify(
+            repo => repo.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SelfIdentifiedUserInReminder_CreatesOrderChainWithReminder()
+    {
+        // Arrange
+        Guid reminderId = Guid.NewGuid();
+        Guid mainOrderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string resourceId = "urn:altinn:resource:test-resource";
+        const string externalIdentity = "urn:altinn:person:idporten-email:user@altinn.xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(mainOrderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetSendersReference("main-order-ref")
+            .SetIdempotencyId("self-identified-reminder-id")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                {
+                    ResourceId = resourceId,
+                    ExternalIdentity = externalIdentity,
+                    ChannelSchema = NotificationChannel.Email,
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Subject = "Main Notification",
+                        Body = "Main notification body",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .SetReminders(
+            [
+                new NotificationReminder
+                {
+                    DelayDays = 7,
+                    OrderId = reminderId,
+                    Type = OrderType.Reminder,
+                    SendersReference = "reminder-ref",
+                    RequestedSendTime = currentTime.AddDays(7),
+                    Recipient = new NotificationRecipient
+                    {
+                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        {
+                            ResourceId = resourceId,
+                            ExternalIdentity = externalIdentity,
+                            ChannelSchema = NotificationChannel.Sms,
+                            SmsSettings = new SmsSendingOptions
+                            {
+                                Sender = "Altinn",
+                                Body = "Reminder SMS body",
+                                SendingTimePolicy = SendingTimePolicy.Daytime
+                            }
+                        }
+                    }
+                }
+            ])
+            .Build();
+
+        var expectedMainOrder = new NotificationOrder
+        {
+            Id = mainOrderId,
+            Created = currentTime,
+            ResourceId = resourceId,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            SendersReference = "main-order-ref",
+            RequestedSendTime = currentTime.AddMinutes(10),
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Main Notification", "Main notification body", EmailContentType.Plain)]
+        };
+
+        var expectedReminder = new NotificationOrder
+        {
+            Id = reminderId,
+            Created = currentTime,
+            ResourceId = resourceId,
+            Type = OrderType.Reminder,
+            Creator = new Creator("ttd"),
+            SendersReference = "reminder-ref",
+            RequestedSendTime = currentTime.AddDays(7),
+            NotificationChannel = NotificationChannel.Sms,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            Templates = [new SmsTemplate("Altinn", "Reminder SMS body")],
+            Recipients = [new Recipient([], externalIdentity: externalIdentity)]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o => o.Id == mainOrderId && o.NotificationChannel == NotificationChannel.Email),
+                It.Is<List<NotificationOrder>>(list =>
+                    list.Count == 1 &&
+                    list[0].Id == reminderId &&
+                    list[0].NotificationChannel == NotificationChannel.Sms),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedMainOrder, expectedReminder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint("user@altinn.xyz"));
+                        recipient.IsReserved = false;
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        contactPointServiceMock
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.ExternalIdentity == externalIdentity)
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.IsReserved = false;
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, mainOrderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+        Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
+        Assert.NotNull(result.Value.OrderChainReceipt.Reminders);
+        Assert.Single(result.Value.OrderChainReceipt.Reminders);
+        Assert.Equal(reminderId, result.Value.OrderChainReceipt.Reminders[0].ShipmentId);
+        Assert.Equal("reminder-ref", result.Value.OrderChainReceipt.Reminders[0].SendersReference);
+
+        // Verify main order used email lookup
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == resourceId)),
+            Times.Once);
+
+        // Verify reminder used SMS lookup
+        contactPointServiceMock.Verify(
+            cp => cp.AddSmsContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
+                It.Is<string?>(s => s == resourceId)),
+            Times.Once);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+            Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
     public async Task RegisterNotificationOrder_ForSms_LookupPartialSuccess_OrderCreated()
     {
         // Arrange
@@ -312,7 +1226,8 @@ public class OrderRequestServiceTests
                         recipient.IsReserved = true;
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
@@ -379,7 +1294,8 @@ public class OrderRequestServiceTests
                         recipient.IsReserved = false;
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
@@ -487,7 +1403,8 @@ public class OrderRequestServiceTests
                         recipient.IsReserved = false;
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
@@ -548,7 +1465,8 @@ public class OrderRequestServiceTests
                         recipient.IsReserved = false;
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
@@ -607,15 +1525,16 @@ public class OrderRequestServiceTests
                     if (recipient.NationalIdentityNumber == "14210548840")
                     {
                         recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
-                        recipient.AddressInfo.Add(new EmailAddressPoint("first-recipient@example.com"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("first-recipient@altinn.xyz"));
                     }
                     else if (recipient.NationalIdentityNumber == "30286043298")
                     {
                         recipient.AddressInfo.Add(new SmsAddressPoint("+4788888888"));
-                        recipient.AddressInfo.Add(new EmailAddressPoint("second-recipient@example.com"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("second-recipient@altinn.xyz"));
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
@@ -677,7 +1596,8 @@ public class OrderRequestServiceTests
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 // no contact information
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
@@ -770,10 +1690,11 @@ public class OrderRequestServiceTests
                 {
                     if (recipient != null && string.Equals(recipient.OrganizationNumber, "312508729", StringComparison.Ordinal))
                     {
-                        recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.xyz"));
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
@@ -998,7 +1919,7 @@ public class OrderRequestServiceTests
                         {
                             case NotificationChannel.Email:
                             case NotificationChannel.EmailPreferred:
-                                recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
+                                recipient.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.xyz"));
                                 break;
 
                             case NotificationChannel.Sms:
@@ -1010,7 +1931,8 @@ public class OrderRequestServiceTests
                         recipient.IsReserved = true;
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, mainOrderId, mainOrderSendTime);
 
@@ -1162,10 +2084,11 @@ public class OrderRequestServiceTests
                     if (recipient.OrganizationNumber == "312508729")
                     {
                         recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
-                        recipient.AddressInfo.Add(new EmailAddressPoint("organization@example.com"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("organization@altinn.xyz"));
                     }
                 }
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
@@ -1222,7 +2145,7 @@ public class OrderRequestServiceTests
             {
                 RecipientEmail = new RecipientEmail
                 {
-                    EmailAddress = "test@example.com",
+                    EmailAddress = "test@altinn.xyz",
                     Settings = new EmailSendingOptions
                     {
                         Body = "Test body",
@@ -1299,7 +2222,8 @@ public class OrderRequestServiceTests
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 // Intentionally don't add SMS contact point to simulate missing contact
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
@@ -1579,7 +2503,8 @@ public class OrderRequestServiceTests
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 // Intentionally don't add any address info to simulate missing contact
-            });
+            })
+            .Returns(Task.CompletedTask);
 
         Mock<IOrderRepository> orderRepositoryMock = new();
         var service = GetTestService(orderRepositoryMock.Object, contactPointMock.Object, orderId, currentTime);
