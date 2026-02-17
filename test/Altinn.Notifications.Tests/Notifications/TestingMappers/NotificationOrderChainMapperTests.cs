@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -83,7 +83,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientPerson);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Verify no reminders
         Assert.Null(result.Reminders);
@@ -317,7 +317,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientPerson);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Unused objects should be null
         Assert.Null(result.Reminders);
@@ -429,7 +429,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientPerson);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Unused objects should be null
         Assert.Null(result.Reminders);
@@ -515,7 +515,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientPerson);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Verify no reminders or DialogportenAssociation
         Assert.Null(result.Reminders);
@@ -536,7 +536,7 @@ public class NotificationOrderChainMapperTests
 
             Recipient = new NotificationRecipientExt
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
                 {
                     ChannelSchema = NotificationChannelExt.Sms,
                     ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
@@ -558,16 +558,16 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(requestTime.ToUniversalTime(), result.RequestedSendTime);
 
         Assert.NotNull(result.Recipient);
-        Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser);
-        Assert.Equal(NotificationChannel.Sms, result.Recipient.RecipientSelfIdentifiedUser.ChannelSchema);
-        Assert.Equal("urn:altinn:person:idporten-email:user@example.com", result.Recipient.RecipientSelfIdentifiedUser.ExternalIdentity);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.Sms, result.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:person:idporten-email:user@example.com", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
 
-        Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser.SmsSettings);
-        Assert.Equal("Altinn", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Sender);
-        Assert.Equal("Self identified user sms body", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Body);
-        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.SendingTimePolicy);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Equal("Altinn", result.Recipient.RecipientExternalIdentity.SmsSettings.Sender);
+        Assert.Equal("Self identified user sms body", result.Recipient.RecipientExternalIdentity.SmsSettings.Body);
+        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientExternalIdentity.SmsSettings.SendingTimePolicy);
 
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser.EmailSettings);
+        Assert.Null(result.Recipient.RecipientExternalIdentity.EmailSettings);
 
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
@@ -588,7 +588,7 @@ public class NotificationOrderChainMapperTests
 
             Recipient = new NotificationRecipientExt
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
                 {
                     ChannelSchema = NotificationChannelExt.EmailPreferred,
                     ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
@@ -613,18 +613,18 @@ public class NotificationOrderChainMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser);
-        Assert.Equal(NotificationChannel.EmailPreferred, result.Recipient.RecipientSelfIdentifiedUser.ChannelSchema);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.EmailPreferred, result.Recipient.RecipientExternalIdentity.ChannelSchema);
 
-        Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser.EmailSettings);
-        Assert.Equal("Preferred email body", result.Recipient.RecipientSelfIdentifiedUser.EmailSettings.Body);
-        Assert.Equal("Preferred email subject", result.Recipient.RecipientSelfIdentifiedUser.EmailSettings.Subject);
-        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientSelfIdentifiedUser.EmailSettings.ContentType);
-        Assert.Equal("sender@example.com", result.Recipient.RecipientSelfIdentifiedUser.EmailSettings.SenderEmailAddress);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.EmailSettings);
+        Assert.Equal("Preferred email body", result.Recipient.RecipientExternalIdentity.EmailSettings.Body);
+        Assert.Equal("Preferred email subject", result.Recipient.RecipientExternalIdentity.EmailSettings.Subject);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientExternalIdentity.EmailSettings.ContentType);
+        Assert.Equal("sender@example.com", result.Recipient.RecipientExternalIdentity.EmailSettings.SenderEmailAddress);
 
-        Assert.NotNull(result.Recipient.RecipientSelfIdentifiedUser.SmsSettings);
-        Assert.Equal("Altinn", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Sender);
-        Assert.Equal("Fallback sms body", result.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Body);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Equal("Altinn", result.Recipient.RecipientExternalIdentity.SmsSettings.Sender);
+        Assert.Equal("Fallback sms body", result.Recipient.RecipientExternalIdentity.SmsSettings.Body);
     }
 
     [Fact]
@@ -640,7 +640,7 @@ public class NotificationOrderChainMapperTests
             IdempotencyId = "D1B2C3D4-E5F6-7890-ABCD-EF0123456789",
             Recipient = new NotificationRecipientExt
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
                 {
                     ChannelSchema = NotificationChannelExt.Email,
                     ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
@@ -659,7 +659,7 @@ public class NotificationOrderChainMapperTests
                     SendersReference = "ref-selfidentified-reminder-002",
                     Recipient = new NotificationRecipientExt
                     {
-                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+                        RecipientExternalIdentity = new RecipientExternalIdentityExt
                         {
                             ChannelSchema = NotificationChannelExt.Sms,
                             ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
@@ -683,11 +683,201 @@ public class NotificationOrderChainMapperTests
         Assert.Single(result.Reminders);
 
         var reminder = result.Reminders[0];
-        Assert.NotNull(reminder.Recipient.RecipientSelfIdentifiedUser);
-        Assert.NotNull(reminder.Recipient.RecipientSelfIdentifiedUser.SmsSettings);
-        Assert.Equal("Reminder sms body", reminder.Recipient.RecipientSelfIdentifiedUser.SmsSettings.Body);
-        Assert.Equal(NotificationChannel.Sms, reminder.Recipient.RecipientSelfIdentifiedUser.ChannelSchema);
-        Assert.Equal("urn:altinn:person:idporten-email:user@example.com", reminder.Recipient.RecipientSelfIdentifiedUser.ExternalIdentity);
+        Assert.NotNull(reminder.Recipient.RecipientExternalIdentity);
+        Assert.NotNull(reminder.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Equal("Reminder sms body", reminder.Recipient.RecipientExternalIdentity.SmsSettings.Body);
+        Assert.Equal(NotificationChannel.Sms, reminder.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:person:idporten-email:user@example.com", reminder.Recipient.RecipientExternalIdentity.ExternalIdentity);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithLegacySelfIdentifiedUserRecipient_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestTime = DateTime.UtcNow;
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = requestTime,
+            SendersReference = "ref-legacy-selfidentified-001",
+            IdempotencyId = "E1E2E3E4-E5E6-E7E8-E9E0-E1E2E3E4E5E6",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ChannelSchema = NotificationChannelExt.Email,
+                    ResourceId = "urn:altinn:resource:test-resource",
+                    ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Legacy self-identified user email body",
+                        Subject = "Legacy self-identified user email subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(requestTime.ToUniversalTime(), result.RequestedSendTime);
+
+        Assert.NotNull(result.Recipient);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:resource:test-resource", result.Recipient.RecipientExternalIdentity.ResourceId);
+        Assert.Equal("urn:altinn:person:legacy-selfidentified:johndoe", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
+
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.EmailSettings);
+        Assert.Equal("Legacy self-identified user email body", result.Recipient.RecipientExternalIdentity.EmailSettings.Body);
+        Assert.Equal("Legacy self-identified user email subject", result.Recipient.RecipientExternalIdentity.EmailSettings.Subject);
+
+        Assert.Null(result.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Null(result.Recipient.RecipientSms);
+        Assert.Null(result.Recipient.RecipientEmail);
+        Assert.Null(result.Recipient.RecipientPerson);
+        Assert.Null(result.Recipient.RecipientOrganization);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithUsernameRecipientSmsPreferred_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestTime = DateTime.UtcNow;
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = requestTime,
+            SendersReference = "ref-username-smspreferred-001",
+            IdempotencyId = "17BE3210-5B0B-4DD0-847B-066FD7B59F32",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ChannelSchema = NotificationChannelExt.SmsPreferred,
+                    ExternalIdentity = "urn:altinn:username:test-user123",
+                    ResourceId = "urn:altinn:resource:username-resource",
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Body = "Username user SMS body",
+                        Sender = "Altinn",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime
+                    },
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Username user fallback email body",
+                        Subject = "Username user fallback email subject",
+                        SenderEmailAddress = "sender@example.com"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(requestTime.ToUniversalTime(), result.RequestedSendTime);
+
+        Assert.NotNull(result.Recipient);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.SmsPreferred, result.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:username:test-user123", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
+        Assert.Equal("urn:altinn:resource:username-resource", result.Recipient.RecipientExternalIdentity.ResourceId);
+
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Equal("Username user SMS body", result.Recipient.RecipientExternalIdentity.SmsSettings.Body);
+        Assert.Equal("Altinn", result.Recipient.RecipientExternalIdentity.SmsSettings.Sender);
+        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientExternalIdentity.SmsSettings.SendingTimePolicy);
+
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.EmailSettings);
+        Assert.Equal("Username user fallback email body", result.Recipient.RecipientExternalIdentity.EmailSettings.Body);
+        Assert.Equal("Username user fallback email subject", result.Recipient.RecipientExternalIdentity.EmailSettings.Subject);
+
+        Assert.Null(result.Recipient.RecipientSms);
+        Assert.Null(result.Recipient.RecipientEmail);
+        Assert.Null(result.Recipient.RecipientPerson);
+        Assert.Null(result.Recipient.RecipientOrganization);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithPartyUsernameRecipientAndReminders_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var baseTime = DateTime.UtcNow;
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = baseTime,
+            SendersReference = "ref-party-username-001",
+            IdempotencyId = "G1G2G3G4-G5G6-G7G8-G9G0-G1G2G3G4G5G6",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ChannelSchema = NotificationChannelExt.Email,
+                    ExternalIdentity = "urn:altinn:party:username:partyuser",
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Party username main email body",
+                        Subject = "Party username main email subject",
+                        SenderEmailAddress = "sender@example.com"
+                    }
+                }
+            },
+            Reminders =
+            [
+                new NotificationReminderExt
+                {
+                    DelayDays = 5,
+                    SendersReference = "ref-party-username-reminder-001",
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientExternalIdentity = new RecipientExternalIdentityExt
+                        {
+                            ChannelSchema = NotificationChannelExt.Sms,
+                            ExternalIdentity = "urn:altinn:party:username:partyuser",
+                            SmsSettings = new SmsSendingOptionsExt
+                            {
+                                Sender = "Altinn",
+                                Body = "Party username reminder SMS body"
+                            }
+                        }
+                    }
+                }
+            ]
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:party:username:partyuser", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
+
+        Assert.NotNull(result.Recipient.RecipientExternalIdentity.EmailSettings);
+        Assert.Equal("Party username main email body", result.Recipient.RecipientExternalIdentity.EmailSettings.Body);
+
+        Assert.NotNull(result.Reminders);
+        Assert.Single(result.Reminders);
+
+        var reminder = result.Reminders[0];
+        Assert.Equal(5, reminder.DelayDays);
+        Assert.NotNull(reminder.Recipient.RecipientExternalIdentity);
+        Assert.Equal(NotificationChannel.Sms, reminder.Recipient.RecipientExternalIdentity.ChannelSchema);
+        Assert.Equal("urn:altinn:party:username:partyuser", reminder.Recipient.RecipientExternalIdentity.ExternalIdentity);
+
+        Assert.NotNull(reminder.Recipient.RecipientExternalIdentity.SmsSettings);
+        Assert.Equal("Party username reminder SMS body", reminder.Recipient.RecipientExternalIdentity.SmsSettings.Body);
     }
 
     [Fact]
@@ -1445,7 +1635,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientPerson);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Verify no reminders or DialogportenAssociation
         Assert.Null(result.Reminders);
@@ -1572,7 +1762,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Unused objects should be null
         Assert.Null(result.Reminders);
@@ -1644,7 +1834,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Unused objects should be null
         Assert.Null(result.Reminders);
@@ -1730,7 +1920,7 @@ public class NotificationOrderChainMapperTests
         Assert.Null(result.Recipient.RecipientSms);
         Assert.Null(result.Recipient.RecipientEmail);
         Assert.Null(result.Recipient.RecipientOrganization);
-        Assert.Null(result.Recipient.RecipientSelfIdentifiedUser);
+        Assert.Null(result.Recipient.RecipientExternalIdentity);
 
         // Verify no reminders or DialogportenAssociation
         Assert.Null(result.Reminders);

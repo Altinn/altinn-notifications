@@ -54,13 +54,16 @@ public class NotificationRecipientExt
     public RecipientOrganizationExt? RecipientOrganization { get; set; }
 
     /// <summary>
-    /// Gets or sets the configuration for delivering a notification to a self-identified user.
+    /// Gets or sets the configuration for delivering a notification to a user identified by an external identity.
     /// </summary>
     /// <remarks>
-    /// Use when targeting a user who authenticates via ID-porten email login and does not have
-    /// a Norwegian national identifier (F- or D-number). Contact information will be retrieved
-    /// from Altinn Profile using the user's external identity.
+    /// Use when targeting a user identified by an external identity URN, such as:
+    /// <list type="bullet">
+    /// <item><description>Self-identified users (ID-porten email login)</description></item>
+    /// <item><description>username-users (legacy login)</description></item>
+    /// </list>
+    /// Contact information will be retrieved from Altinn Profile using the user's external identity.
     /// </remarks>
-    [JsonPropertyName("recipientSelfIdentifiedUser")]
-    public RecipientSelfIdentifiedUserExt? RecipientSelfIdentifiedUser { get; set; }
+    [JsonPropertyName("recipientExternalIdentity")]
+    public RecipientExternalIdentityExt? RecipientExternalIdentity { get; set; }
 }

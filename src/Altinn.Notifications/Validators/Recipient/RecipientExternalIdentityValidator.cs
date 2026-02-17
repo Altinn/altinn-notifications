@@ -6,19 +6,17 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators.Recipient;
 
 /// <summary>
-/// Represents validation logic for the self-identified user recipient model.
+/// Represents validation logic for the external identity recipient model.
 /// </summary>
-internal sealed partial class RecipientSelfIdentifiedUserValidator : AbstractValidator<RecipientSelfIdentifiedUserExt?>
+/// <remarks>
+/// Validates recipients identified by external identity URNs, including self-identified users and username-based users.
+/// </remarks>
+internal sealed partial class RecipientExternalIdentityValidator : AbstractValidator<RecipientExternalIdentityExt?>
 {
     /// <summary>
-    /// The expected prefix for self-identified user external identity URN.
+    /// Initializes a new instance of the <see cref="RecipientExternalIdentityValidator"/> class.
     /// </summary>
-    private const string _externalIdentityPrefix = "urn:altinn:person:idporten-email:";
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RecipientSelfIdentifiedUserValidator"/> class.
-    /// </summary>
-    public RecipientSelfIdentifiedUserValidator()
+    public RecipientExternalIdentityValidator()
     {
         Include(new RecipientBaseValidator());
 
@@ -31,7 +29,7 @@ internal sealed partial class RecipientSelfIdentifiedUserValidator : AbstractVal
             RuleFor(options => options!.ExternalIdentity)
                 .Must(BeValidExternalIdentity)
                 .When(options => !string.IsNullOrEmpty(options!.ExternalIdentity))
-                .WithMessage($"ExternalIdentity must be in the format '{_externalIdentityPrefix}{{email-address}}' with a valid email address.");
+                .WithMessage("Invalid external identity URN format.");
 
             RuleFor(options => options!.ResourceId)
                 .Must(resourceId => RecipientRules.BeValidResourceId(resourceId!))
@@ -41,7 +39,7 @@ internal sealed partial class RecipientSelfIdentifiedUserValidator : AbstractVal
     }
 
     /// <summary>
-    /// Validates that the external identity is in the correct URN format with a valid email.
+    /// Validates that the external identity is in a valid URN format using <see cref="ExternalIdentityUrn"/>.
     /// </summary>
     /// <param name="externalIdentity">The external identity to validate.</param>
     /// <returns>True if the external identity is valid; otherwise, false.</returns>
@@ -52,13 +50,21 @@ internal sealed partial class RecipientSelfIdentifiedUserValidator : AbstractVal
             return false;
         }
 
-        if (!externalIdentity.StartsWith(_externalIdentityPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!ExternalIdentityUrn.TryParse(externalIdentity, out var urn))
         {
             return false;
         }
 
-        var email = externalIdentity[_externalIdentityPrefix.Length..];
+        if (urn is ExternalIdentityUrn.IDPortenEmail idportenEmail)
+        {
+            return RecipientRules.IsValidEmail(idportenEmail.Value.Value);
+        }
 
-        return RecipientRules.IsValidEmail(email);
+        if (urn is ExternalIdentityUrn.Username username)
+        {
+            return !string.IsNullOrWhiteSpace(username.Value.Value);
+        }
+
+        return false;
     }
 }

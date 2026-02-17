@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -271,7 +271,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.Sms,
@@ -375,7 +375,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-preferred-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.EmailPreferred,
@@ -485,7 +485,7 @@ public class OrderRequestServiceTests
             .SetIdempotencyId("self-identified-missing-contact-id")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.Email,
@@ -548,7 +548,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -658,7 +658,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-sms-preferred-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.SmsPreferred,
@@ -780,7 +780,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-email-and-sms-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -897,7 +897,7 @@ public class OrderRequestServiceTests
             .SetIdempotencyId("self-identified-reminder-missing-id")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = mainExternalIdentity,
                     ChannelSchema = NotificationChannel.Email,
@@ -919,7 +919,7 @@ public class OrderRequestServiceTests
                     Type = OrderType.Reminder,
                     Recipient = new NotificationRecipient
                     {
-                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        RecipientExternalIdentity = new RecipientExternalIdentity
                         {
                             ChannelSchema = NotificationChannel.Email,
                             ExternalIdentity = reminderExternalIdentity,
@@ -1013,7 +1013,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -1038,7 +1038,7 @@ public class OrderRequestServiceTests
                     RequestedSendTime = currentTime.AddDays(7),
                     Recipient = new NotificationRecipient
                     {
-                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        RecipientExternalIdentity = new RecipientExternalIdentity
                         {
                             ResourceId = resourceId,
                             ExternalIdentity = externalIdentity,

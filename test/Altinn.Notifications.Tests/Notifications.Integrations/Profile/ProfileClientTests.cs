@@ -36,8 +36,8 @@ public class ProfileClientTests
             }
             else if (request!.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookupsi"))
             {
-                SelfIdentifiedUserContactPointsLookup? lookup = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
-                return await GetSelfIdentifiedUserProfileResponse(lookup!);
+                ExternalIdentityContactPointsLookup? lookup = JsonSerializer.Deserialize<ExternalIdentityContactPointsLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                return await GetExternalIdentityProfileResponse(lookup!);
             }
             else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
             {
@@ -95,20 +95,20 @@ public class ProfileClientTests
     }
 
     [Fact]
-    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_NoMatches()
+    public async Task GetExternalIdentityContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<SelfIdentifiedUserContactPoints> actual = await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["empty-list"]);
+        List<ExternalIdentityContactPoints> actual = await CreateProfileClient().GetExternalIdentityContactPoints(["empty-list"]);
 
         // Assert
         Assert.Empty(actual);
     }
 
     [Fact]
-    public async Task GetSelfIdentifiedUserContactPoints_SuccessResponse_OneElementsInResponse()
+    public async Task GetExternalIdentityContactPoints_SuccessResponse_OneElementsInResponse()
     {
         // Act
-        List<SelfIdentifiedUserContactPoints> actual = await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["populated-list"]);
+        List<ExternalIdentityContactPoints> actual = await CreateProfileClient().GetExternalIdentityContactPoints(["populated-list"]);
 
         // Assert
         Assert.Single(actual);
@@ -119,13 +119,69 @@ public class ProfileClientTests
     }
 
     [Fact]
-    public async Task GetSelfIdentifiedUserContactPoints_FailureResponse_ExceptionIsThrown()
+    public async Task GetExternalIdentityContactPoints_WithMultipleIdentityTypes_ReturnsAllContactPoints()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetSelfIdentifiedUserContactPoints(["unavailable"]));
+        List<ExternalIdentityContactPoints> actual = await CreateProfileClient().GetExternalIdentityContactPoints(["multiple-identity-types"]);
 
         // Assert
-        Assert.StartsWith("ProfileClient.GetSelfIdentifiedUserContactPoints failed with status code", exception.Message);
+        Assert.Equal(4, actual.Count);
+
+        // Verify ID-porten email identity
+        var idportenEmail = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:idporten-email:user@example.com");
+        Assert.Equal("user@example.com", idportenEmail.Email);
+        Assert.Equal("+4791234567", idportenEmail.MobileNumber);
+
+        // Verify legacy self-identified username identity
+        var legacySelfIdentified = actual.First(cp => cp.ExternalIdentity == "urn:altinn:person:legacy-selfidentified:legacyuser");
+        Assert.Equal("legacy@example.com", legacySelfIdentified.Email);
+        Assert.Equal("+4792345678", legacySelfIdentified.MobileNumber);
+
+        // Verify username identity
+        var username = actual.First(cp => cp.ExternalIdentity == "urn:altinn:username:testuser");
+        Assert.Equal("testuser@example.com", username.Email);
+        Assert.Equal("+4793456789", username.MobileNumber);
+
+        // Verify party username identity
+        var partyUsername = actual.First(cp => cp.ExternalIdentity == "urn:altinn:party:username:partyuser");
+        Assert.Equal("partyuser@example.com", partyUsername.Email);
+        Assert.Equal("+4794567890", partyUsername.MobileNumber);
+    }
+
+    [Fact]
+    public async Task GetExternalIdentityContactPoints_WithLegacySelfIdentifiedUser_ReturnsContactPoints()
+    {
+        // Act
+        List<ExternalIdentityContactPoints> actual = await CreateProfileClient().GetExternalIdentityContactPoints(["legacy-selfidentified-user"]);
+
+        // Assert
+        Assert.Single(actual);
+        var contactPoint = actual[0];
+        Assert.Equal("urn:altinn:person:legacy-selfidentified:johndoe", contactPoint.ExternalIdentity);
+        Assert.NotEmpty(contactPoint.Email);
+    }
+
+    [Fact]
+    public async Task GetExternalIdentityContactPoints_WithUsernameUser_ReturnsContactPoints()
+    {
+        // Act
+        List<ExternalIdentityContactPoints> actual = await CreateProfileClient().GetExternalIdentityContactPoints(["username-user"]);
+
+        // Assert
+        Assert.Single(actual);
+        var contactPoint = actual[0];
+        Assert.Equal("urn:altinn:username:simpleuser", contactPoint.ExternalIdentity);
+        Assert.NotEmpty(contactPoint.Email);
+    }
+
+    [Fact]
+    public async Task GetExternalIdentityContactPoints_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetExternalIdentityContactPoints(["unavailable"]));
+
+        // Assert
+        Assert.StartsWith("ProfileClient.GetExternalIdentityContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
@@ -330,7 +386,7 @@ public class ProfileClientTests
             });
     }
 
-    private static Task<HttpResponseMessage> GetSelfIdentifiedUserProfileResponse(SelfIdentifiedUserContactPointsLookup lookup)
+    private static Task<HttpResponseMessage> GetExternalIdentityProfileResponse(ExternalIdentityContactPointsLookup lookup)
     {
         HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
@@ -338,15 +394,48 @@ public class ProfileClientTests
         switch (lookup.ExternalIdentities[0])
         {
             case "empty-list":
-                contentData = new SelfIdentifiedUserContactPointsList() { ContactPointsList = [] };
+                contentData = new ExternalIdentityContactPointsList() { ContactPointsList = [] };
                 break;
 
             case "populated-list":
-                contentData = new SelfIdentifiedUserContactPointsList()
+                contentData = new ExternalIdentityContactPointsList()
                 {
                     ContactPointsList =
                     [
                         new() { ExternalIdentity = "urn:altinn:person:idporten-email:example@altinn.xyz", Email = "recipient@altinn.xyz", MobileNumber = "+4799999999" },
+                    ]
+                };
+                break;
+
+            case "multiple-identity-types":
+                contentData = new ExternalIdentityContactPointsList()
+                {
+                    ContactPointsList =
+                    [
+                        new() { ExternalIdentity = "urn:altinn:username:testuser", Email = "testuser@example.com", MobileNumber = "+4793456789" },
+                        new() { ExternalIdentity = "urn:altinn:party:username:partyuser", Email = "partyuser@example.com", MobileNumber = "+4794567890" },
+                        new() { ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com", Email = "user@example.com", MobileNumber = "+4791234567" },
+                        new() { ExternalIdentity = "urn:altinn:person:legacy-selfidentified:legacyuser", Email = "legacy@example.com", MobileNumber = "+4792345678" },
+                    ]
+                };
+                break;
+
+            case "legacy-selfidentified-user":
+                contentData = new ExternalIdentityContactPointsList()
+                {
+                    ContactPointsList =
+                    [
+                        new() { ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe", Email = "johndoe@example.com", MobileNumber = "+4795678901" },
+                    ]
+                };
+                break;
+
+            case "username-user":
+                contentData = new ExternalIdentityContactPointsList()
+                {
+                    ContactPointsList =
+                    [
+                        new() { ExternalIdentity = "urn:altinn:username:simpleuser", Email = "simpleuser@example.com", MobileNumber = "+4796789012" },
                     ]
                 };
                 break;

@@ -325,7 +325,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid(), 1);
 
         var client = GetTestClient(expectedResponse);
-        
+
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -514,6 +514,127 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(2, responseObject.OrderChainReceipt.Reminders.Count);
         Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == Guid.Empty));
         Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == expectedResponse.OrderChainId));
+    }
+
+    [Fact]
+    public async Task Post_ValidRequestUsingExternalIdentityRecipient_LegacyUsername_WithReminders_ReturnsCreated()
+    {
+        // Arrange
+        var requestedSendTime = DateTime.UtcNow.AddHours(2);
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = requestedSendTime,
+            IdempotencyId = Guid.NewGuid().ToString(),
+            SendersReference = "order-legacy-username-ref",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
+                    ResourceId = "urn:altinn:resource:test-resource",
+                    ChannelSchema = NotificationChannelExt.EmailPreferred,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Email body",
+                        Subject = "Email subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    },
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Body = "SMS body",
+                        Sender = "SMS sender",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime
+                    }
+                }
+            },
+            Reminders =
+            [
+                new NotificationReminderExt
+                {
+                    DelayDays = 3,
+                    SendersReference = "reminder-legacy-username-ref",
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientExternalIdentity = new RecipientExternalIdentityExt
+                        {
+                            ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
+                            ResourceId = "urn:altinn:resource:test-resource",
+                            ChannelSchema = NotificationChannelExt.Sms,
+                            SmsSettings = new SmsSendingOptionsExt
+                            {
+                                Body = "SMS body",
+                                Sender = "SMS sender",
+                                SendingTimePolicy = SendingTimePolicyExt.Daytime
+                            }
+                        }
+                    }
+                }
+            ]
+        };
+
+        var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid(), 1);
+        var client = GetTestClient(expectedResponse);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(responseObject);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotNull(responseObject.OrderChainReceipt.Reminders);
+        Assert.Single(responseObject.OrderChainReceipt.Reminders);
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == Guid.Empty));
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == expectedResponse.OrderChainId));
+    }
+
+    [Fact]
+    public async Task Post_ValidRequestUsingExternalIdentityRecipient_IdPortenEmail_WithoutReminders_ReturnsCreated()
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = Guid.NewGuid().ToString(),
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentityExt
+                {
+                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Email body",
+                        Subject = "Email subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    }
+                }
+            }
+        };
+
+        var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid());
+        var client = GetTestClient(expectedResponse);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(responseObject);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.Null(responseObject.OrderChainReceipt.Reminders);
     }
 
     [Fact]

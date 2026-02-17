@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
@@ -81,7 +81,7 @@ public class NotificationRecipientValidatorTests
         // Arrange
         var recipient = new NotificationRecipientExt
         {
-            RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+            RecipientExternalIdentity = new RecipientExternalIdentityExt
             {
                 ExternalIdentity = "not-a-urn",
                 ChannelSchema = NotificationChannelExt.Email
@@ -92,7 +92,7 @@ public class NotificationRecipientValidatorTests
         var actual = _validator.TestValidate(recipient);
 
         // Assert
-        actual.ShouldHaveValidationErrorFor(r => r!.RecipientSelfIdentifiedUser!.ExternalIdentity);
+        actual.ShouldHaveValidationErrorFor(r => r!.RecipientExternalIdentity!.ExternalIdentity);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class NotificationRecipientValidatorTests
                 NationalIdentityNumber = "01010112345",
                 ChannelSchema = NotificationChannelExt.Email
             },
-            RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUserExt
+            RecipientExternalIdentity = new RecipientExternalIdentityExt
             {
                 ChannelSchema = NotificationChannelExt.Email,
                 ExternalIdentity = "urn:altinn:person:idporten-email:noreply@digdir.no"
