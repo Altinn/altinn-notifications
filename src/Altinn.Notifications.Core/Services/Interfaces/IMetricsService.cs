@@ -11,5 +11,15 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// Retrieves the monthly metrics for the provided month and year
         /// </summary>
         public Task<MonthlyNotificationMetrics> GetMonthlyMetrics(int month, int year);
+
+        /// <summary>
+        /// Retrieves the daily metrics 
+        /// </summary>
+        public Task<DailySmsMetrics> GetDailySmsMetrics(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Create a Parquet file stream from the provided daily SMS metrics
+        /// </summary>
+        Task<MetricsSummary> GetParquetFile(DailySmsMetrics metrics, CancellationToken cancellationToken);
     }
 }

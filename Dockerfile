@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.101-alpine3.23@sha256:2267f81b6463e39df275f2affa1859471bda67dd6bea884f7d3b7f4eb28c3fd9 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.23@sha256:d17d8d6511aee3dd54b4d9e8e03d867b1c3df28fb518ee9dd69e50305b7af4ee AS build
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
@@ -14,7 +14,7 @@ RUN dotnet build ./src/DbTools/DbTools.csproj -c Release -o /app_tools
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.1-alpine3.23@sha256:a126f0550b963264c5493fd9ec5dc887020c7ea7ebe1da09bc10c9f26d16c253 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.2-alpine3.23@sha256:8e21337e482e353c958681789872b3451e966e07c259b9a6f9a8b7902749a785 AS final
 WORKDIR /app
 EXPOSE 5090
 

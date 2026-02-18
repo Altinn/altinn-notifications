@@ -293,6 +293,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
+    services.AddScoped<MetricsApiKeyFilter>();
 
     // services required for access token handler
     services.AddMemoryCache();
