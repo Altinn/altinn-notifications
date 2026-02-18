@@ -32,4 +32,10 @@ public static class Problems
     /// </summary>
     public static ProblemDescriptor ShipmentNotFound { get; }
         = _factory.Create(3, HttpStatusCode.NotFound, "Shipment not found");
+
+    /// <summary>
+    /// Gets a descriptor indicating that a required platform dependency is currently unavailable.
+    /// </summary>
+    public static ProblemDescriptor PlatformDependencyError { get; }
+        = _factory.Create(4, HttpStatusCode.ServiceUnavailable, "A platform dependency is currently unavailable");
 }

@@ -13,7 +13,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -258,22 +258,23 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
         
-        _ = Task.Run(
-            async () =>
+        try
+        {
+            var instantEmail = new InstantEmail
             {
-                var instantEmail = new InstantEmail
-                {
-                    Subject = emailContent.Subject,
-                    Body = emailContent.Body,
-                    ContentType = emailContent.ContentType,
-                    Sender = senderEmailAddress,
-                    Recipient = emailNotification.Recipient.ToAddress,
-                    NotificationId = emailNotification.Id
-                };
-
-                await _instantEmailServiceClient.SendAsync(instantEmail);
-            },
-            CancellationToken.None);
+                Subject = emailContent.Subject,
+                Body = emailContent.Body,
+                ContentType = emailContent.ContentType,
+                Sender = senderEmailAddress,
+                Recipient = emailNotification.Recipient.ToAddress,
+                NotificationId = emailNotification.Id
+            };
+            await _instantEmailServiceClient.SendAsync(instantEmail);
+        }
+        catch (Exception ex)
+        {
+            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", ex);
+        }
 
         return trackingInformation;
     }
