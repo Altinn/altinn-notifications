@@ -233,8 +233,6 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             SendResult = SmsNotificationResultType.Delivered
         };
 
-        _ordersToDelete.Add(order.Id);
-
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
