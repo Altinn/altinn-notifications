@@ -290,6 +290,15 @@ public class ContactPointService(
     /// Normalizes a resource identifier value by removing the leading
     /// 'urn:altinn:resource:' prefix if it is present.
     /// </summary>
+    /// <param name="resourceId">
+    /// The raw resource identifier (may be a plain slug like 'tax-report', or
+    /// a full attribute value starting with 'urn:altinn:resource:').
+    /// Can be <c>null</c> or whitespace.
+    /// </param>
+    /// <returns>
+    /// The resource identifier without the 'urn:altinn:resource:' prefix, or
+    /// <see cref="string.Empty"/> when the input is <c>null</c> or whitespace.
+    /// </returns>
     private static string GetSanitizedResourceId(string? resourceId)
     {
         var trimmedResourceId = resourceId?.Trim();
@@ -414,6 +423,13 @@ public class ContactPointService(
     /// <summary>
     /// Retrieves contact points for recipients with a valid national identity number.
     /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="UserContactPoints"/> 
+    /// corresponding to the provided national identity numbers. If no valid national identity numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
         List<string> nationalIdentityNumbers = recipients
@@ -450,6 +466,13 @@ public class ContactPointService(
     /// <summary>
     /// Retrieves contact points for self-identified-users.
     /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="SelfIdentifiedUserContactPoints"/> 
+    /// corresponding to the provided external identities. If no valid external identities are found, an empty list is returned.
+    /// </returns>
     private async Task<List<SelfIdentifiedUserContactPoints>> LookupSelfIdentifiedUserContactPoints(List<Recipient> recipients)
     {
         List<string> externalIdentities = [.. recipients
@@ -483,6 +506,17 @@ public class ContactPointService(
     /// Retrieves contact points for recipients with a valid organization number.
     /// Optionally enriches the contact points with user-registered contact points authorized for a specific resource.
     /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve organization contact information for.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for the organizations.
+    /// If <c>null</c> or empty, only official organization contact points are returned.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>
+    /// corresponding to the provided organization numbers. If no valid organization numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
         List<string> organizationNumbers = recipients
@@ -639,6 +673,12 @@ public class ContactPointService(
     /// Only the first occurrence of each unique email address or mobile number is retained across the collection.
     /// Subsequent duplicates have the corresponding field set to an empty string.
     /// </summary>
+    /// <param name="userContacts">
+    /// The collection of user contact points to process for internal deduplication.
+    /// </param>
+    /// <returns>
+    /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
+    /// </returns>
     private static IEnumerable<UserContactPoints> NullifyDuplicateContactAddress(IEnumerable<UserContactPoints> userContacts)
     {
         var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -675,6 +715,16 @@ public class ContactPointService(
     /// that are already present in the specified <see cref="OrganizationContactPoints"/>. 
     /// If a match is found, the corresponding field in the user contact is cleared (set to an empty string).
     /// </summary>
+    /// <param name="userContact">
+    /// The user contact information to evaluate and modify if duplicates are found.
+    /// </param>
+    /// <param name="organizationContactPoints">
+    /// The organization's official contact point data containing email addresses and mobile numbers.
+    /// </param>
+    /// <returns>
+    /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
+    /// If both fields become empty, the caller is responsible for removing the contact from the list.
+    /// </returns>
     private static UserContactPoints NullifyDuplicateContactAddress(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
     {
         var isDuplicateEmail =
