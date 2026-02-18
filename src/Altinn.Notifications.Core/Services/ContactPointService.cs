@@ -61,23 +61,26 @@ public class ContactPointService(
     /// <inheritdoc/>
     public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId)
     {
-        if (channel == NotificationChannel.EmailPreferred)
+        switch (channel)
         {
-            await AugmentRecipients(
-                recipients,
-                resourceId,
-                ApplyEmailPreferredForPerson,
-                ApplyEmailPreferredForOrganization,
-                ApplyEmailPreferredForSelfIdentified);
-        }
-        else if (channel == NotificationChannel.SmsPreferred)
-        {
-            await AugmentRecipients(
-                recipients,
-                resourceId,
-                ApplySmsPreferredForPerson,
-                ApplySmsPreferredForOrganization,
-                ApplySmsPreferredForSelfIdentified);
+            case NotificationChannel.EmailPreferred:
+                await AugmentRecipients(
+                    recipients,
+                    resourceId,
+                    ApplyEmailPreferredForPerson,
+                    ApplyEmailPreferredForOrganization,
+                    ApplyEmailPreferredForSelfIdentified);
+                break;
+            case NotificationChannel.SmsPreferred:
+                await AugmentRecipients(
+                    recipients,
+                    resourceId,
+                    ApplySmsPreferredForPerson,
+                    ApplySmsPreferredForOrganization,
+                    ApplySmsPreferredForSelfIdentified);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, $"Unsupported notification channel: {channel}");
         }
     }
 
@@ -306,6 +309,29 @@ public class ContactPointService(
     /// Looks up and augments each recipient in the provided list with contact point information
     /// based on their national identity number, organization number, or external identity.
     /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to be augmented with contact point information.
+    /// Each recipient must have either a national identity number, organization number, or external identity.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for organizations.
+    /// If <c>null</c> or empty, only official organization contact points are used.
+    /// </param>
+    /// <param name="applyPersonContactPoints">
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with a national identity number
+    /// and a matching <see cref="UserContactPoints"/> entry.
+    /// </param>
+    /// <param name="applyOrganizationContactPoints">
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with an organization number
+    /// and a matching <see cref="OrganizationContactPoints"/> entry.
+    /// </param>
+    /// <param name="applySelfIdentifiedUserContactPoints">
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with an external identity
+    /// and a matching <see cref="SelfIdentifiedUserContactPoints"/> entry.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
+    /// </returns>
     private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
