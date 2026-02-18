@@ -15,7 +15,7 @@ public abstract partial record ExternalIdentityUrn
     public partial bool IsIDPortenEmail(out UrnEncoded email);
 
     /// <summary>
-    /// Determines whether this URN is an ID-porten email identity, and retrieves the decoded username if available.
+    /// Determines whether this URN is a username-based identity, and retrieves the decoded username if available.
     /// </summary>
     [UrnKey("altinn:username")]
     [UrnKey("altinn:person:legacy-selfidentified")]

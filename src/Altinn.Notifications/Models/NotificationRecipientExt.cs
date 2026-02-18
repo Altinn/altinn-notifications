@@ -57,11 +57,7 @@ public class NotificationRecipientExt
     /// Gets or sets the configuration for delivering a notification to a user identified by an external identity.
     /// </summary>
     /// <remarks>
-    /// Use when targeting a user identified by an external identity URN, such as:
-    /// <list type="bullet">
-    /// <item><description>Self-identified users (ID-porten email login)</description></item>
-    /// <item><description>username-users (legacy login)</description></item>
-    /// </list>
+    /// Use when targeting a user identified by an external identity URN.
     /// Contact information will be retrieved from Altinn Profile using the user's external identity.
     /// </remarks>
     [JsonPropertyName("recipientExternalIdentity")]
