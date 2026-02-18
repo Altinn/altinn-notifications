@@ -26,10 +26,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Messaging.EventGrid" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
     <PackageReference Include="Npgsql" Version="10.0.1" />
-    <PackageReference Include="System.Memory.Data" Version="10.0.2" />
+    <PackageReference Include="System.Memory.Data" Version="10.0.3" />
   </ItemGroup>
 
 </Project>
