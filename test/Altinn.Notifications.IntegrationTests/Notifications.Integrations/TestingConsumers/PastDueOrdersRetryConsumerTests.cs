@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class PastDueOrdersRetryConsumerTests : IDisposable
+public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
 {
     private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -97,18 +97,18 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert
-        var processedstatus = string.Empty;
+        var processedStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
          async () =>
          {
-             processedstatus = await SelectProcessStatus(persistedOrder.Id);
-             return processedstatus == "Processed";
+             processedStatus = await SelectProcessStatus(persistedOrder.Id);
+             return processedStatus == "Processed";
          },
          TimeSpan.FromSeconds(15));
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
-        Assert.Equal("Processed", processedstatus);
+        Assert.Equal("Processed", processedStatus);
     }
 
     /// <summary>
@@ -208,13 +208,6 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Assert.Equal(1, registeredOrderCount);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
@@ -284,5 +277,15 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                 }
             }),
             logger);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await Dispose(true);
     }
 }
