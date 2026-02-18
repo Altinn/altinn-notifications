@@ -83,34 +83,29 @@ public class ContactPointService(
 
     #region Person Contact Point Applicators
 
-    private static Recipient ApplyEmailForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    private static void ApplyEmailForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
         {
             recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
         }
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    private static void ApplySmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
         {
             recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
         }
-
-        return recipient;
     }
 
-    private static Recipient ApplyEmailAndSmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    private static void ApplyEmailAndSmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         ApplyEmailForPerson(recipient, userContactPoints);
         ApplySmsForPerson(recipient, userContactPoints);
-        return recipient;
     }
 
-    private static Recipient ApplyEmailPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    private static void ApplyEmailPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         AddPreferredOrFallbackContactPoint(
             recipient,
@@ -118,11 +113,9 @@ public class ContactPointService(
             userContactPoints.MobileNumber,
             email => new EmailAddressPoint(email),
             mobile => new SmsAddressPoint(mobile));
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    private static void ApplySmsPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         AddPreferredOrFallbackContactPoint(
            recipient,
@@ -130,15 +123,13 @@ public class ContactPointService(
            userContactPoints.Email,
            mobile => new SmsAddressPoint(mobile),
            email => new EmailAddressPoint(email));
-
-        return recipient;
     }
 
     #endregion
 
     #region Organization Contact Point Applicators
 
-    private static Recipient ApplyEmailForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    private static void ApplyEmailForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
         recipient.AddressInfo.AddRange(
             orgContactPoints.EmailList
@@ -149,11 +140,9 @@ public class ContactPointService(
             orgContactPoints.UserContactPoints
                 .Where(u => !string.IsNullOrWhiteSpace(u.Email))
                 .Select(u => new EmailAddressPoint(u.Email)));
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    private static void ApplySmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
         recipient.AddressInfo.AddRange(
             orgContactPoints.MobileNumberList
@@ -164,18 +153,15 @@ public class ContactPointService(
             orgContactPoints.UserContactPoints
                 .Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber))
                 .Select(e => new SmsAddressPoint(e.MobileNumber)));
-
-        return recipient;
     }
 
-    private static Recipient ApplyEmailAndSmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    private static void ApplyEmailAndSmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
         ApplyEmailForOrganization(recipient, orgContactPoints);
         ApplySmsForOrganization(recipient, orgContactPoints);
-        return recipient;
     }
 
-    private static Recipient ApplyEmailPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    private static void ApplyEmailPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
         AddPreferredOrFallbackContactPointList(
            recipient,
@@ -193,11 +179,9 @@ public class ContactPointService(
                 email => new EmailAddressPoint(email),
                 mobile => new SmsAddressPoint(mobile));
         }
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    private static void ApplySmsPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
         AddPreferredOrFallbackContactPointList(
            recipient,
@@ -215,42 +199,35 @@ public class ContactPointService(
                 mobile => new SmsAddressPoint(mobile),
                 email => new EmailAddressPoint(email));
         }
-
-        return recipient;
     }
 
     #endregion
 
     #region Self-Identified Contact Point Applicators
 
-    private static Recipient ApplyEmailForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
+    private static void ApplyEmailForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
         {
             recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
         }
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
+    private static void ApplySmsForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
         {
             recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
         }
-
-        return recipient;
     }
 
-    private static Recipient ApplyEmailAndSmsForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
+    private static void ApplyEmailAndSmsForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         ApplyEmailForSelfIdentified(recipient, selfIdentifiedContactPoints);
         ApplySmsForSelfIdentified(recipient, selfIdentifiedContactPoints);
-        return recipient;
     }
 
-    private static Recipient ApplyEmailPreferredForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
+    private static void ApplyEmailPreferredForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         AddPreferredOrFallbackContactPoint(
             recipient,
@@ -258,11 +235,9 @@ public class ContactPointService(
             selfIdentifiedContactPoints.MobileNumber,
             email => new EmailAddressPoint(email),
             mobile => new SmsAddressPoint(mobile));
-
-        return recipient;
     }
 
-    private static Recipient ApplySmsPreferredForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
+    private static void ApplySmsPreferredForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         AddPreferredOrFallbackContactPoint(
            recipient,
@@ -270,8 +245,6 @@ public class ContactPointService(
            selfIdentifiedContactPoints.Email,
            mobile => new SmsAddressPoint(mobile),
            email => new EmailAddressPoint(email));
-
-        return recipient;
     }
 
     #endregion
@@ -336,9 +309,9 @@ public class ContactPointService(
     private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
-        Func<Recipient, UserContactPoints, Recipient> applyPersonContactPoints,
-        Func<Recipient, OrganizationContactPoints, Recipient> applyOrganizationContactPoints,
-        Func<Recipient, SelfIdentifiedUserContactPoints, Recipient> applySelfIdentifiedUserContactPoints)
+        Action<Recipient, UserContactPoints> applyPersonContactPoints,
+        Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
+        Action<Recipient, SelfIdentifiedUserContactPoints> applySelfIdentifiedUserContactPoints)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
         var selfIdentifiedLookupTask = LookupSelfIdentifiedUserContactPoints(recipients);
@@ -370,7 +343,7 @@ public class ContactPointService(
     private static void ApplyPersonContactPoints(
         Recipient recipient,
         List<UserContactPoints> personContactPointsList,
-        Func<Recipient, UserContactPoints, Recipient> applyContactPoints)
+        Action<Recipient, UserContactPoints> applyContactPoints)
     {
         UserContactPoints? userContactPoints = personContactPointsList
             .Find(e => string.Equals(e.NationalIdentityNumber, recipient.NationalIdentityNumber, StringComparison.OrdinalIgnoreCase));
@@ -387,7 +360,7 @@ public class ContactPointService(
     private static void ApplyOrganizationContactPoints(
         Recipient recipient,
         List<OrganizationContactPoints> organizationContactPointsList,
-        Func<Recipient, OrganizationContactPoints, Recipient> applyContactPoints)
+        Action<Recipient, OrganizationContactPoints> applyContactPoints)
     {
         OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
             .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
@@ -401,7 +374,7 @@ public class ContactPointService(
     private static void ApplySelfIdentifiedContactPoints(
         Recipient recipient,
         List<SelfIdentifiedUserContactPoints> selfIdentifiedContactPointsList,
-        Func<Recipient, SelfIdentifiedUserContactPoints, Recipient> applyContactPoints)
+        Action<Recipient, SelfIdentifiedUserContactPoints> applyContactPoints)
     {
         SelfIdentifiedUserContactPoints? selfIdentifiedContactPoints = selfIdentifiedContactPointsList
             .Find(e => string.Equals(e.ExternalIdentity, recipient.ExternalIdentity, StringComparison.OrdinalIgnoreCase));
