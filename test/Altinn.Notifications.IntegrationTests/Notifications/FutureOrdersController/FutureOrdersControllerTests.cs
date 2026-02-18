@@ -545,9 +545,14 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Act
         var response = await SendPostRequest(client, requestExt);
+        string content = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Equal("One or more validation errors occurred.", problem.Title);
+        Assert.Contains("ExternalIdentity", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
