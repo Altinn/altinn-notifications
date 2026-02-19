@@ -317,9 +317,9 @@ public class ContactPointService(
     /// A function that applies contact points to the recipient. Invoked for recipients with an organization number
     /// and a matching <see cref="OrganizationContactPoints"/> entry.
     /// </param>
-    /// <param name="applySelfIdentifiedUserContactPoints">
+    /// <param name="applyExternalIdentityContactPoints">
     /// A function that applies contact points to the recipient. Invoked for recipients with an external identity
-    /// and a matching <see cref="SelfIdentifiedUserContactPoints"/> entry.
+    /// and a matching <see cref="ExternalIdentityContactPoints"/> entry.
     /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
@@ -329,17 +329,17 @@ public class ContactPointService(
         string? resourceId,
         Func<Recipient, UserContactPoints, Recipient> applyPersonContactPoints,
         Func<Recipient, OrganizationContactPoints, Recipient> applyOrganizationContactPoints,
-        Func<Recipient, SelfIdentifiedUserContactPoints, Recipient> applySelfIdentifiedUserContactPoints)
+        Func<Recipient, ExternalIdentityContactPoints, Recipient> applyExternalIdentityContactPoints)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
-        var selfIdentifiedLookupTask = LookupSelfIdentifiedUserContactPoints(recipients);
+        var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
         var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
 
-        await Task.WhenAll(personLookupTask, selfIdentifiedLookupTask, organizationLookupTask);
+        await Task.WhenAll(personLookupTask, externalIdentityLookupTask, organizationLookupTask);
 
         List<UserContactPoints> personContactPointsList = personLookupTask.Result;
         List<OrganizationContactPoints> organizationContactPointsList = organizationLookupTask.Result;
-        List<SelfIdentifiedUserContactPoints> selfIdentifiedContactPointsList = selfIdentifiedLookupTask.Result;
+        List<ExternalIdentityContactPoints> externalIdentityContactPointsList = externalIdentityLookupTask.Result;
 
         foreach (Recipient recipient in recipients)
         {
@@ -370,15 +370,15 @@ public class ContactPointService(
             }
             else if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
             {
-                SelfIdentifiedUserContactPoints? selfIdentifiedContactPoints = selfIdentifiedContactPointsList
+                ExternalIdentityContactPoints? externalIdentityContactPoints = externalIdentityContactPointsList
                     .Find(e => string.Equals(e.ExternalIdentity, recipient.ExternalIdentity, StringComparison.OrdinalIgnoreCase));
 
-                if (selfIdentifiedContactPoints == null)
+                if (externalIdentityContactPoints == null)
                 {
                     continue;
                 }
 
-                applySelfIdentifiedUserContactPoints(recipient, selfIdentifiedContactPoints);
+                applyExternalIdentityContactPoints(recipient, externalIdentityContactPoints);
             }
         }
     }
@@ -427,16 +427,16 @@ public class ContactPointService(
     }
 
     /// <summary>
-    /// Retrieves contact points for self-identified-users.
+    /// Retrieves contact points for external identity users.
     /// </summary>
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
     /// </param>
     /// <returns>
-    /// A task representing the asynchronous operation. The task result contains a list of <see cref="SelfIdentifiedUserContactPoints"/> 
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="ExternalIdentityContactPoints"/> 
     /// corresponding to the provided external identities. If no valid external identities are found, an empty list is returned.
     /// </returns>
-    private async Task<List<SelfIdentifiedUserContactPoints>> LookupSelfIdentifiedUserContactPoints(List<Recipient> recipients)
+    private async Task<List<ExternalIdentityContactPoints>> LookupExternalIdentityContactPoints(List<Recipient> recipients)
     {
         List<string> externalIdentities = [.. recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.ExternalIdentity))
@@ -449,7 +449,7 @@ public class ContactPointService(
 
         try
         {
-            List<SelfIdentifiedUserContactPoints> contactPoints = await _profileClient.GetSelfIdentifiedUserContactPoints(externalIdentities);
+            List<ExternalIdentityContactPoints> contactPoints = await _profileClient.GetExternalIdentityContactPoints(externalIdentities);
 
             return [.. contactPoints.Select(contactPoint =>
             {
@@ -462,7 +462,7 @@ public class ContactPointService(
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
-            throw new PlatformDependencyException(_profileClientName, "GetSelfIdentifiedUserContactPoints", ex);
+            throw new PlatformDependencyException(_profileClientName, "GetExternalIdentityContactPoints", ex);
         }
     }
 

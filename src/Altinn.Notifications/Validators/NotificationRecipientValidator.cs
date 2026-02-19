@@ -37,8 +37,8 @@ namespace Altinn.Notifications.Validators
             RuleFor(specification => specification.RecipientOrganization)
                 .SetValidator(validator: new RecipientOrganizationValidator());
 
-            RuleFor(specification => specification.RecipientSelfIdentifiedUser)
-                .SetValidator(validator: new RecipientSelfIdentifiedUserValidator());
+            RuleFor(specification => specification.RecipientExternalIdentity)
+                .SetValidator(validator: new RecipientExternalIdentityValidator());
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Validators
                 specification.RecipientSms,
                 specification.RecipientPerson,
                 specification.RecipientOrganization,
-                specification.RecipientSelfIdentifiedUser
+                specification.RecipientExternalIdentity
             }.Count(recipient => recipient != null) == 1;
         }
     }
