@@ -20,9 +20,6 @@ using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
-using FluentValidation;
-using FluentValidation.Results;
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
@@ -168,12 +165,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Arrange
         var requestExt = CreateFutureEmailOrderChainRequest();
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
 
         var httpContextMock = new Mock<HttpContext>();
         httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
 
-        var controller = new FutureOrdersController(orderRequestServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderRequestServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContextMock.Object }
         };
@@ -522,7 +519,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
         var existingResponse = CreateOrderChainResponse();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -531,7 +528,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -555,7 +552,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var request = CreateFutureEmailOrderChainRequest();
         var newResponse = CreateOrderChainResponse();
         var expectedUrl = newResponse.OrderChainId.GetSelfLinkFromOrderChainId();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -567,7 +564,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -587,7 +584,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -596,7 +593,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -620,7 +617,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
@@ -628,7 +625,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             .ReturnsAsync(Problems.MissingContactInformation);
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -651,7 +648,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -663,7 +660,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -730,7 +727,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         NotificationOrderChainRequest? capturedRequest = null;
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -743,7 +740,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -770,7 +767,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
-        var validatorMock = SetupValidator();
+        var dateTimeServiceMock = SetupDateTimeService();
         var cancellationToken = CancellationToken.None;
         var orderServiceMock = new Mock<IOrderRequestService>();
 
@@ -785,7 +782,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, dateTimeServiceMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -844,15 +841,14 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     /// <summary>
-    /// Configures a mock validator that always returns a valid validation result.
+    /// Configures a mock datetime service that returns a fixed UTC time for testing.
     /// </summary>
-    /// <returns>A configured mock of <see cref="IValidator{T}"/> for <see cref="NotificationOrderChainRequestExt"/>.</returns>
-    private static Mock<IValidator<NotificationOrderChainRequestExt>> SetupValidator()
+    /// <returns>A configured mock of <see cref="IDateTimeService"/>.</returns>
+    private static Mock<IDateTimeService> SetupDateTimeService()
     {
-        var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
-        validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
-            .Returns(new ValidationResult());
-        return validatorMock;
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(x => x.UtcNow()).Returns(new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc));
+        return dateTimeServiceMock;
     }
 
     /// <summary>

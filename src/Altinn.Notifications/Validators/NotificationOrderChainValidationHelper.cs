@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Validators;
 
 /// <summary>
 /// Provides validation methods for notification order chain requests using ValidationErrorBuilder.
-/// Throws <see cref="ValidationErrorBuilder.ProblemInstanceException"/> when validation fails.
+/// Throws <see cref="ProblemInstanceException"/> when validation fails.
 /// </summary>
 public static class NotificationOrderChainValidationHelper
 {
@@ -25,31 +25,34 @@ public static class NotificationOrderChainValidationHelper
     /// </summary>
     /// <param name="request">The notification order chain request to validate.</param>
     /// <param name="utcNow">The current UTC time for time-based validations.</param>
-    /// <exception cref="ValidationErrorBuilder.ProblemInstanceException">Thrown when validation fails.</exception>
+    /// <exception cref="ProblemInstanceException">Thrown when validation fails.</exception>
     public static void ValidateOrderChainRequest(NotificationOrderChainRequestExt request, DateTime utcNow)
     {
-        var errors = ValidationErrorBuilder.New();
+        var errors = default(ValidationErrorBuilder);
 
-        ValidateIdempotencyId(request.IdempotencyId, errors);
-        ValidateSendTime(request.RequestedSendTime, utcNow, errors, "RequestedSendTime");
-        ValidateConditionEndpoint(request.ConditionEndpoint, errors, "ConditionEndpoint");
-        ValidateRecipient(request.Recipient, errors, "Recipient");
+        ValidateIdempotencyId(request.IdempotencyId, ref errors);
+        ValidateSendTime(request.RequestedSendTime, utcNow, ref errors, "RequestedSendTime");
+        ValidateConditionEndpoint(request.ConditionEndpoint, ref errors, "ConditionEndpoint");
+        ValidateRecipient(request.Recipient, ref errors, "Recipient");
 
         if (request.Reminders != null)
         {
             for (int i = 0; i < request.Reminders.Count; i++)
             {
-                ValidateReminder(request.Reminders[i], $"Reminders[{i}]", utcNow, errors);
+                ValidateReminder(request.Reminders[i], $"Reminders[{i}]", utcNow, ref errors);
             }
         }
 
-        errors.ThrowIfErrors();
+        if (errors.TryBuild(out var problemInstance))
+        {
+            throw new ProblemInstanceException(problemInstance);
+        }
     }
 
     /// <summary>
     /// Validates idempotency identifier.
     /// </summary>
-    public static void ValidateIdempotencyId(string? idempotencyId, ValidationErrorBuilder errors)
+    public static void ValidateIdempotencyId(string? idempotencyId, ref ValidationErrorBuilder errors)
     {
         if (string.IsNullOrWhiteSpace(idempotencyId))
         {
@@ -60,7 +63,7 @@ public static class NotificationOrderChainValidationHelper
     /// <summary>
     /// Validates send time.
     /// </summary>
-    public static void ValidateSendTime(DateTime sendTime, DateTime utcNow, ValidationErrorBuilder errors, string path)
+    public static void ValidateSendTime(DateTime sendTime, DateTime utcNow, ref ValidationErrorBuilder errors, string path)
     {
         if (sendTime.Kind == DateTimeKind.Unspecified)
         {
@@ -75,7 +78,7 @@ public static class NotificationOrderChainValidationHelper
     /// <summary>
     /// Validates condition endpoint.
     /// </summary>
-    public static void ValidateConditionEndpoint(Uri? conditionEndpoint, ValidationErrorBuilder errors, string path)
+    public static void ValidateConditionEndpoint(Uri? conditionEndpoint, ref ValidationErrorBuilder errors, string path)
     {
         if (conditionEndpoint == null)
         {
@@ -95,7 +98,7 @@ public static class NotificationOrderChainValidationHelper
     /// <summary>
     /// Validates recipient specification.
     /// </summary>
-    public static void ValidateRecipient(NotificationRecipientExt? recipient, ValidationErrorBuilder errors, string path)
+    public static void ValidateRecipient(NotificationRecipientExt? recipient, ref ValidationErrorBuilder errors, string path)
     {
         if (recipient == null)
         {
@@ -120,57 +123,57 @@ public static class NotificationOrderChainValidationHelper
 
         if (recipient.RecipientEmail != null)
         {
-            ValidateRecipientEmail(recipient.RecipientEmail, errors, $"{path}.RecipientEmail");
+            ValidateRecipientEmail(recipient.RecipientEmail, ref errors, $"{path}.RecipientEmail");
         }
 
         if (recipient.RecipientSms != null)
         {
-            ValidateRecipientSms(recipient.RecipientSms, errors, $"{path}.RecipientSms");
+            ValidateRecipientSms(recipient.RecipientSms, ref errors, $"{path}.RecipientSms");
         }
 
         if (recipient.RecipientPerson != null)
         {
-            ValidateRecipientPerson(recipient.RecipientPerson, errors, $"{path}.RecipientPerson");
+            ValidateRecipientPerson(recipient.RecipientPerson, ref errors, $"{path}.RecipientPerson");
         }
 
         if (recipient.RecipientOrganization != null)
         {
-            ValidateRecipientOrganization(recipient.RecipientOrganization, errors, $"{path}.RecipientOrganization");
+            ValidateRecipientOrganization(recipient.RecipientOrganization, ref errors, $"{path}.RecipientOrganization");
         }
     }
 
     /// <summary>
     /// Validates email recipient.
     /// </summary>
-    public static void ValidateRecipientEmail(RecipientEmailExt recipientEmail, ValidationErrorBuilder errors, string path)
+    public static void ValidateRecipientEmail(RecipientEmailExt recipientEmail, ref ValidationErrorBuilder errors, string path)
     {
         if (!IsValidEmail(recipientEmail.EmailAddress))
         {
             errors.Add(ValidationErrors.EmailAddress_Invalid, $"{path}.EmailAddress");
         }
 
-        ValidateEmailSendingOptions(recipientEmail.Settings, errors, $"{path}.Settings");
+        ValidateEmailSendingOptions(recipientEmail.Settings, ref errors, $"{path}.Settings");
     }
 
     /// <summary>
     /// Validates SMS recipient.
     /// </summary>
-    public static void ValidateRecipientSms(RecipientSmsExt recipientSms, ValidationErrorBuilder errors, string path)
+    public static void ValidateRecipientSms(RecipientSmsExt recipientSms, ref ValidationErrorBuilder errors, string path)
     {
         if (!MobileNumberHelper.IsValidMobileNumber(recipientSms.PhoneNumber))
         {
             errors.Add(ValidationErrors.PhoneNumber_Invalid, $"{path}.PhoneNumber");
         }
 
-        ValidateSmsSendingOptions(recipientSms.Settings, errors, $"{path}.Settings");
+        ValidateSmsSendingOptions(recipientSms.Settings, ref errors, $"{path}.Settings");
     }
 
     /// <summary>
     /// Validates person recipient.
     /// </summary>
-    public static void ValidateRecipientPerson(RecipientPersonExt recipientPerson, ValidationErrorBuilder errors, string path)
+    public static void ValidateRecipientPerson(RecipientPersonExt recipientPerson, ref ValidationErrorBuilder errors, string path)
     {
-        ValidateNationalIdentityNumber(recipientPerson.NationalIdentityNumber, errors, $"{path}.NationalIdentityNumber");
+        ValidateNationalIdentityNumber(recipientPerson.NationalIdentityNumber, ref errors, $"{path}.NationalIdentityNumber");
 
         if (recipientPerson.ResourceId != null && !IsValidResourceId(recipientPerson.ResourceId))
         {
@@ -181,14 +184,14 @@ public static class NotificationOrderChainValidationHelper
             recipientPerson.ChannelSchema,
             recipientPerson.EmailSettings,
             recipientPerson.SmsSettings,
-            errors,
+            ref errors,
             path);
     }
 
     /// <summary>
     /// Validates organization recipient.
     /// </summary>
-    public static void ValidateRecipientOrganization(RecipientOrganizationExt recipientOrganization, ValidationErrorBuilder errors, string path)
+    public static void ValidateRecipientOrganization(RecipientOrganizationExt recipientOrganization, ref ValidationErrorBuilder errors, string path)
     {
         if (string.IsNullOrWhiteSpace(recipientOrganization.OrgNumber))
         {
@@ -208,7 +211,7 @@ public static class NotificationOrderChainValidationHelper
             recipientOrganization.ChannelSchema,
             recipientOrganization.EmailSettings,
             recipientOrganization.SmsSettings,
-            errors,
+            ref errors,
             path);
     }
 
@@ -219,7 +222,7 @@ public static class NotificationOrderChainValidationHelper
         NotificationChannelExt channelSchema,
         EmailSendingOptionsExt? emailSettings,
         SmsSendingOptionsExt? smsSettings,
-        ValidationErrorBuilder errors,
+        ref ValidationErrorBuilder errors,
         string path)
     {
         if (!Enum.IsDefined(channelSchema))
@@ -276,19 +279,19 @@ public static class NotificationOrderChainValidationHelper
 
         if (emailSettings != null)
         {
-            ValidateEmailSendingOptions(emailSettings, errors, $"{path}.EmailSettings");
+            ValidateEmailSendingOptions(emailSettings, ref errors, $"{path}.EmailSettings");
         }
 
         if (smsSettings != null)
         {
-            ValidateSmsSendingOptions(smsSettings, errors, $"{path}.SmsSettings");
+            ValidateSmsSendingOptions(smsSettings, ref errors, $"{path}.SmsSettings");
         }
     }
 
     /// <summary>
     /// Validates email sending options.
     /// </summary>
-    public static void ValidateEmailSendingOptions(EmailSendingOptionsExt? settings, ValidationErrorBuilder errors, string path)
+    public static void ValidateEmailSendingOptions(EmailSendingOptionsExt? settings, ref ValidationErrorBuilder errors, string path)
     {
         if (settings == null)
         {
@@ -325,7 +328,7 @@ public static class NotificationOrderChainValidationHelper
     /// <summary>
     /// Validates SMS sending options.
     /// </summary>
-    public static void ValidateSmsSendingOptions(SmsSendingOptionsExt? settings, ValidationErrorBuilder errors, string path)
+    public static void ValidateSmsSendingOptions(SmsSendingOptionsExt? settings, ref ValidationErrorBuilder errors, string path)
     {
         if (settings == null)
         {
@@ -347,7 +350,7 @@ public static class NotificationOrderChainValidationHelper
     /// <summary>
     /// Validates a reminder.
     /// </summary>
-    public static void ValidateReminder(NotificationReminderExt reminder, string path, DateTime utcNow, ValidationErrorBuilder errors)
+    public static void ValidateReminder(NotificationReminderExt reminder, string path, DateTime utcNow, ref ValidationErrorBuilder errors)
     {
         // Check mutual exclusivity of DelayDays and RequestedSendTime
         bool hasDelayDays = reminder.DelayDays.HasValue;
@@ -388,14 +391,14 @@ public static class NotificationOrderChainValidationHelper
             }
         }
 
-        ValidateConditionEndpoint(reminder.ConditionEndpoint, errors, $"{path}.ConditionEndpoint");
-        ValidateRecipient(reminder.Recipient, errors, $"{path}.Recipient");
+        ValidateConditionEndpoint(reminder.ConditionEndpoint, ref errors, $"{path}.ConditionEndpoint");
+        ValidateRecipient(reminder.Recipient, ref errors, $"{path}.Recipient");
     }
 
     /// <summary>
     /// Validates national identity number (11 digits).
     /// </summary>
-    public static void ValidateNationalIdentityNumber(string? nin, ValidationErrorBuilder errors, string path)
+    public static void ValidateNationalIdentityNumber(string? nin, ref ValidationErrorBuilder errors, string path)
     {
         if (string.IsNullOrWhiteSpace(nin) || nin.Length != NationalIdentityNumberLength || !nin.All(char.IsDigit))
         {

@@ -10,7 +10,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
-using Altinn.Notifications.Validators;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,12 +22,14 @@ public class FutureOrdersControllerTests
 {
     private readonly FutureOrdersController _controller;
     private readonly Mock<IOrderRequestService> _orderRequestService;
+    private readonly Mock<IDateTimeService> _dateTimeService;
 
     public FutureOrdersControllerTests()
     {
         _orderRequestService = new Mock<IOrderRequestService>();
-        var validator = new NotificationOrderChainRequestValidator();
-        _controller = new FutureOrdersController(_orderRequestService.Object, validator)
+        _dateTimeService = new Mock<IDateTimeService>();
+        _dateTimeService.Setup(x => x.UtcNow()).Returns(new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc));
+        _controller = new FutureOrdersController(_orderRequestService.Object, _dateTimeService.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -105,7 +106,7 @@ public class FutureOrdersControllerTests
         // Assert
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        Assert.IsType<AltinnValidationProblemDetails>(objectResult.Value);
     }
 
     [Fact]
