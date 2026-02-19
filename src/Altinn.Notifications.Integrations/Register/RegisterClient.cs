@@ -49,7 +49,7 @@ public class RegisterClient : IRegisterClient
                 return [];
             }
 
-            HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
+            using HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
             {
                 Content = JsonContent.Create(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers), options: _jsonSerializerOptions)
             };
