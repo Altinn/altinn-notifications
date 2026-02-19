@@ -258,22 +258,21 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
         
-        try
+        var instantEmail = new InstantEmail
         {
-            var instantEmail = new InstantEmail
-            {
-                Subject = emailContent.Subject,
-                Body = emailContent.Body,
-                ContentType = emailContent.ContentType,
-                Sender = senderEmailAddress,
-                Recipient = emailNotification.Recipient.ToAddress,
-                NotificationId = emailNotification.Id
-            };
-            await _instantEmailServiceClient.SendAsync(instantEmail);
-        }
-        catch (Exception ex)
+            Subject = emailContent.Subject,
+            Body = emailContent.Body,
+            ContentType = emailContent.ContentType,
+            Sender = senderEmailAddress,
+            Recipient = emailNotification.Recipient.ToAddress,
+            NotificationId = emailNotification.Id
+        };
+        var response = await _instantEmailServiceClient.SendAsync(instantEmail);
+      
+        if (!response.Success)
         {
-            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", ex);
+            // todo: log the event
+            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", null);
         }
 
         return trackingInformation;
