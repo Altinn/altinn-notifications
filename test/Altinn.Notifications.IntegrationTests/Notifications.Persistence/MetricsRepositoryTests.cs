@@ -24,6 +24,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
 
         foreach (var id in _orderIdsToDelete)
         {
+            await PostgreUtil.DeleteStatusFeedFromDb(id);
             await PostgreUtil.DeleteOrderFromDb(id);
         }
     }

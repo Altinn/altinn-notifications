@@ -149,11 +149,12 @@ public class RegisterClientTests
     public async Task GetPartyDetails_WithUnavailableEndpoint_ThrowsException()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
 
         // Assert
-        Assert.StartsWith("503 - Service Unavailable", exception.Message);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+        var innerException = Assert.IsType<PlatformHttpException>(exception.InnerException);
+        Assert.StartsWith("Platform dependency", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, innerException.Response?.StatusCode);
     }
 
     [Fact]
@@ -185,6 +186,52 @@ public class RegisterClientTests
         // Assert
         Assert.NotNull(actual);
         Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetPartyDetails_WithTransientHttpException_ThrowsPlatformDependencyException()
+    {
+        // Arrange
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                throw new HttpRequestException("Simulated transient network error");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]));
+
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+        Assert.Contains("Simulated transient network error", exception.InnerException.Message);
+    }
+
+    [Fact]
+    public async Task GetPartyDetails_WithTaskCanceledException_ThrowsPlatformDependencyException()
+    {
+        // Arrange
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                throw new TaskCanceledException("Request timeout");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]));
+
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<TaskCanceledException>(exception.InnerException);
+        Assert.Contains("Request timeout", exception.InnerException.Message);
     }
 
     private RegisterClient CreateRegisterClient(DelegatingHandler? handler = null, string accessToken = "valid-token")

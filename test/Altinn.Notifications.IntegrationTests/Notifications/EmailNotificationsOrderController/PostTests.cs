@@ -33,6 +33,8 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
+    private readonly List<Guid> _ordersToDelete = [];
+
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
@@ -105,6 +107,12 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
+
+        if (orderIdObjectExt.OrderId.HasValue)
+        {
+            _ordersToDelete.Add(orderIdObjectExt.OrderId.Value);
+        }
+
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
 
@@ -117,6 +125,13 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     protected virtual async Task Dispose(bool disposing)
     {
+        foreach (Guid orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
+
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
