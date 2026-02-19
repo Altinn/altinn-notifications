@@ -132,7 +132,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         // Configure KeywordsService mock to throw PlatformDependencyException
         mockKeywordsService
             .Setup(x => x.ReplaceKeywordsAsync(It.IsAny<IEnumerable<SmsRecipient>>()))
-            .ThrowsAsync(new PlatformDependencyException("Register", "Register call failed", new TaskCanceledException()));
+            .ThrowsAsync(new PlatformDependencyException("Register", "GetPartyDetails", new TaskCanceledException()));
 
         // Create SmsOrderProcessingService with mocked KeywordsService
         var smsOrderProcessingService = new SmsOrderProcessingService(
@@ -241,7 +241,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         // Configure mocks to throw exception when processing retry
         mockEmailProcessingService
             .Setup(x => x.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .ThrowsAsync(new PlatformDependencyException("Profile", "Profile call failed", new TaskCanceledException()));
+            .ThrowsAsync(new PlatformDependencyException("Profile", "GetUserContactPoints", new TaskCanceledException()));
 
         var orderProcessingService = new OrderProcessingService(
             orderRepository,
