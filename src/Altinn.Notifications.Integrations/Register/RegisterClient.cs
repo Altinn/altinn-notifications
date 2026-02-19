@@ -42,30 +42,37 @@ public class RegisterClient : IRegisterClient
     /// <inheritdoc/>
     public async Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers, List<string>? socialSecurityNumbers)
     {
-        if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
+        try
         {
-            return [];
+            if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
+            {
+                return [];
+            }
+
+            using HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
+            {
+                Content = JsonContent.Create(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers), options: _jsonSerializerOptions)
+            };
+
+            var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notifications");
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                requestMessage.Headers.Add("PlatformAccessToken", accessToken);
+            }
+
+            var response = await _client.SendAsync(requestMessage, CancellationToken.None);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw await PlatformHttpException.CreateAsync(response);
+            }
+
+            var deserializeResponse = await response.Content.ReadFromJsonAsync<PartyDetailsLookupResult>(_jsonSerializerOptions);
+            return deserializeResponse?.PartyDetailsList ?? [];
         }
-
-        HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
+        catch (Exception ex)
         {
-            Content = JsonContent.Create(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers), options: _jsonSerializerOptions)
-        };
-
-        var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notifications");
-        if (!string.IsNullOrEmpty(accessToken))
-        {
-            requestMessage.Headers.Add("PlatformAccessToken", accessToken);
+            throw new PlatformDependencyException("RegisterClient", "GetPartyDetails", ex);
         }
-
-        var response = await _client.SendAsync(requestMessage, CancellationToken.None);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw await PlatformHttpException.CreateAsync(response);
-        }
-
-        var deserializeResponse = await response.Content.ReadFromJsonAsync<PartyDetailsLookupResult>(_jsonSerializerOptions);
-        return deserializeResponse?.PartyDetailsList ?? [];
     }
 }

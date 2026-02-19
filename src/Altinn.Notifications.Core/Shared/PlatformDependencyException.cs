@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Core.Shared;
 /// Wraps all failure types including HTTP errors, network failures, timeouts, and cancellations.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public class PlatformDependencyException : Exception
+public sealed class PlatformDependencyException : Exception
 {
     /// <summary>
     /// The name of the dependency that failed (e.g., "ProfileClient", "AuthorizationService")
