@@ -202,7 +202,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             x => x.ReplaceKeywordsAsync(It.IsAny<IEnumerable<SmsRecipient>>()),
             Times.AtLeastOnce());
 
-        // Verify that SmsOrderProcessingService logged the PlatformDependencyException
+        // Verify that OrderProcessingService logged the PlatformDependencyException
         mockOrderProcessingLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
