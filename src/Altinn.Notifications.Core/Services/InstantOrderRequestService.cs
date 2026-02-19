@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -31,6 +32,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     private readonly IOrderRepository _orderRepository;
     private readonly IShortMessageServiceClient _shortMessageServiceClient;
     private readonly IInstantEmailServiceClient _instantEmailServiceClient;
+    private readonly ILogger<InstantOrderRequestService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantOrderRequestService"/> class.
@@ -41,13 +43,15 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         IOrderRepository instantOrderRepository,
         IOptions<NotificationConfig> configurationOptions,
         IShortMessageServiceClient shortMessageServiceClient,
-        IInstantEmailServiceClient instantEmailServiceClient)
+        IInstantEmailServiceClient instantEmailServiceClient,
+        ILogger<InstantOrderRequestService> logger)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _orderRepository = instantOrderRepository;
         _shortMessageServiceClient = shortMessageServiceClient;
         _instantEmailServiceClient = instantEmailServiceClient;
+        _logger = logger;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
         _defaultEmailFromAddress = configurationOptions.Value.DefaultEmailFromAddress;
     }
@@ -271,8 +275,17 @@ public class InstantOrderRequestService : IInstantOrderRequestService
       
         if (!response.Success)
         {
-            // todo: log the event
-            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", null);
+            // delete order
+
+            // delete orders chain
+
+            _logger.LogError(
+                "Instant email service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
+                emailNotification.Id,
+                MaskEmail(emailNotification.Recipient.ToAddress),
+                response.ErrorDetails ?? "No error details provided");
+
+            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", response.ErrorDetails ?? string.Empty);
         }
 
         return trackingInformation;
@@ -404,5 +417,35 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             Recipients = [new([new EmailAddressPoint(deliveryDetails.EmailAddress)])],
             Templates = [new EmailTemplate(senderEmailAddress, emailContent.Subject, emailContent.Body, emailContent.ContentType)]
         };
+    }
+
+    /// <summary>
+    /// Masks an email address for logging purposes, keeping only the first two characters
+    /// of the local part visible. Example: "john.doe@example.com" becomes "jo******@example.com"
+    /// </summary>
+    private static string MaskEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return email;
+        }
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0)
+        {
+            return email; // Invalid email, return as-is
+        }
+
+        var localPart = email[..atIndex];
+        var domainPart = email[atIndex..];
+        
+        if (localPart.Length <= 2)
+        {
+            // For very short local parts, mask all but the first character
+            return localPart[0] + new string('*', localPart.Length - 1) + domainPart;
+        }
+
+        // Keep first two characters, mask the rest
+        return localPart[..2] + new string('*', localPart.Length - 2) + domainPart;
     }
 }

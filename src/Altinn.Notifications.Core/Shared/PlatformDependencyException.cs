@@ -36,4 +36,17 @@ public sealed class PlatformDependencyException : Exception
         DependencyName = dependencyName;
         Operation = operation;
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlatformDependencyException"/> class.
+    /// </summary>
+    /// <param name="dependencyName">The name of the dependency that failed</param>
+    /// <param name="operation">The operation that was being performed when the failure occurred</param>
+    /// <param name="message">The error message that describes the failure</param>
+    public PlatformDependencyException(string dependencyName, string operation, string message)
+        : base($"Platform dependency '{dependencyName}' failed during '{operation}': {message}")
+    {
+        DependencyName = dependencyName;
+        Operation = operation;
+    }
 }
