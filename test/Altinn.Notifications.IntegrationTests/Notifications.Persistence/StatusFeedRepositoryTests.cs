@@ -17,11 +17,21 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
     private readonly string _creatorName = "ttd";
+    private readonly List<Guid> _ordersToDelete = [];
+    private readonly List<int> _fakeOrderIdsToDelete = [];
 
     public async Task DisposeAsync()
     {
-        string deleteSql = $@"DELETE from notifications.statusfeed s where s.creatorname = '{_creatorName}'";
-        await PostgreUtil.RunSql(deleteSql);
+        foreach (var orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
+
+        foreach (var fakeOrderId in _fakeOrderIdsToDelete)
+        {
+            await PostgreUtil.RunSql($"DELETE FROM notifications.statusfeed WHERE orderid = {fakeOrderId}");
+        }
     }
 
     public Task InitializeAsync()
@@ -33,7 +43,9 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     public async Task GetStatusFeed_WithTestCreatorName_ReturnsExpectedResult()
     {
         // Arrange
-        await InsertTestDataRowForStatusFeed(123, "2025-5-21", Guid.NewGuid());
+        var fakeOrderId = 123;
+        await InsertTestDataRowForStatusFeed(fakeOrderId, "2025-5-21", Guid.NewGuid());
+        _fakeOrderIdsToDelete.Add(fakeOrderId);
 
         StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
             .GetServices([typeof(IStatusFeedRepository)])
@@ -45,7 +57,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         // Assert
         var item = Assert.Single(results);
         Assert.True(item.SequenceNumber > 0);
-        Assert.Equal(Altinn.Notifications.Core.Enums.ProcessingLifecycle.Order_Completed, item.OrderStatus.Status);
+        Assert.Equal(ProcessingLifecycle.Order_Completed, item.OrderStatus.Status);
     }
 
     [Fact]
@@ -80,8 +92,10 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         string recentDate = DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-dd");
 
         await InsertTestDataRowForStatusFeed(oldOrderId, oldDate, oldShipmentId);
+        _fakeOrderIdsToDelete.Add(oldOrderId);
         await InsertTestDataRowForStatusFeed(recentOrderId, recentDate, recentShipmentId);
-
+        _fakeOrderIdsToDelete.Add(recentOrderId);
+        
         // Act
         var rowsAffected = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
 
@@ -186,7 +200,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
         Assert.Equal(1, statusFeedCount);
 
-        // Note: Cleanup is handled by DisposeAsync which deletes all status feed entries with creatorname = 'ttd'
+        // Cleanup
+        _ordersToDelete.Add(orderAlternateId);
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)

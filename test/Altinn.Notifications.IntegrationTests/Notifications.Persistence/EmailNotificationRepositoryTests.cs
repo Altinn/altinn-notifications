@@ -38,8 +38,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             return;
         }
 
-        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
-        await PostgreUtil.RunSql(deleteSql);
+        foreach (Guid orderId in _orderIdsToDelete)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+        }
+        
+        await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
     }
 
     [Fact]

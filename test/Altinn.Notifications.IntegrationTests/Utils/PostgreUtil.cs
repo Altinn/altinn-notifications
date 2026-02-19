@@ -295,6 +295,17 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static async Task DeleteStatusFeedFromDb(Guid id)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        string sql = @"DELETE FROM notifications.statusfeed s
+                       USING notifications.orders o
+                       WHERE s.orderid = o._id AND o.alternateid = @id";
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("id", id);
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
     public static async Task UpdateResultAndExpiryTimeNotification<T>(T notification, string timeInterval)
         where T : class
     {
@@ -479,6 +490,21 @@ public static class PostgreUtil
         }
 
         return await reader.GetFieldValueAsync<long>(0);
+    }
+
+    /// <summary>
+    /// Deletes orders from the database by their alternate IDs.
+    /// </summary>
+    /// <param name="orderIds">Collection of order alternate IDs to delete.</param>
+    public static async Task DeleteOrdersByAlternateIds(IEnumerable<Guid> orderIds)
+    {
+        if (orderIds is null || !orderIds.Any())
+        {
+            return;
+        }
+
+        string deleteSql = @"DELETE from notifications.orders o where o.alternateid = ANY(@orderIds)";
+        await RunSql(deleteSql, new NpgsqlParameter("orderIds", orderIds.ToArray()));
     }
 
     // Helper to retrieve OrderRepository and EmailNotificationRepository together
