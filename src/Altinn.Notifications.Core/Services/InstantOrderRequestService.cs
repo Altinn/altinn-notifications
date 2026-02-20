@@ -83,23 +83,22 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
+
+        var shortMessage = new ShortMessage
+        {
+            Message = messageContent.Message,
+            NotificationId = smsNotification.Id,
+            TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+            Recipient = smsNotification.Recipient.MobileNumber,
+            Sender = senderIdentifier
+        };
+
+        var response = await _shortMessageServiceClient.SendAsync(shortMessage);
+        if (!response.Success)
+        {
+            HandleNetworkTransientFailure(smsNotification, response);
+        }
         
-        _ = Task.Run(
-            async () =>
-            {
-                var shortMessage = new ShortMessage
-                {
-                    Message = messageContent.Message,
-                    NotificationId = smsNotification.Id,
-                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                    Recipient = smsNotification.Recipient.MobileNumber,
-                    Sender = senderIdentifier
-                };
-
-                await _shortMessageServiceClient.SendAsync(shortMessage);
-            },
-            CancellationToken.None);
-
         return trackingInformation;
     }
 
@@ -124,22 +123,22 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        
-        _ = Task.Run(
-            async () =>
-            {
-                var shortMessage = new ShortMessage
-                {
-                    Message = messageContent.Message,
-                    NotificationId = smsNotification.Id,
-                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                    Recipient = smsNotification.Recipient.MobileNumber,
-                    Sender = senderIdentifier
-                };
 
-                await _shortMessageServiceClient.SendAsync(shortMessage);
-            },
-            CancellationToken.None);
+        var shortMessage = new ShortMessage
+        {
+            Message = messageContent.Message,
+            NotificationId = smsNotification.Id,
+            TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+            Recipient = smsNotification.Recipient.MobileNumber,
+            Sender = senderIdentifier
+        };
+
+        var response = await _shortMessageServiceClient.SendAsync(shortMessage);
+
+        if (!response.Success)
+        {
+            HandleNetworkTransientFailure(smsNotification, response);
+        }
 
         return trackingInformation;
     }
@@ -275,17 +274,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
       
         if (!response.Success)
         {
-            // delete order
-
-            // delete orders chain
-
-            _logger.LogError(
-                "Instant email service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
-                emailNotification.Id,
-                MaskEmail(emailNotification.Recipient.ToAddress),
-                response.ErrorDetails ?? "No error details provided");
-
-            throw new PlatformDependencyException("InstantEmailServiceClient", "PersistInstantEmailNotificationAsync", response.ErrorDetails ?? string.Empty);
+            HandleNetworkTransientFailure(emailNotification, response);
         }
 
         return trackingInformation;
@@ -419,6 +408,44 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         };
     }
 
+    private void HandleNetworkTransientFailure(SmsNotification smsNotification, ShortMessageSendResult response)
+    {
+        const string noDetailsMessage = "No error details provided";
+        
+        // todo: delete order or change status
+        // todo: delete orders chain
+
+        _logger.LogCritical(
+            "Short message service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
+            smsNotification.Id,
+            MaskPhoneNumber(smsNotification.Recipient.MobileNumber),
+            response.ErrorDetails ?? noDetailsMessage);
+
+        throw new PlatformDependencyException(
+            "ShortMessageServiceClient", 
+            "PersistInstantSmsNotificationAsync", 
+            response.ErrorDetails ?? noDetailsMessage);
+    }
+
+    private void HandleNetworkTransientFailure(EmailNotification emailNotification, InstantEmailSendResult response)
+    {
+        const string noDetailsMessage = "No error details provided";
+
+        // todo: delete order or change status
+        // todo: delete orders chain
+
+        _logger.LogCritical(
+            "Instant email service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
+            emailNotification.Id,
+            MaskEmail(emailNotification.Recipient.ToAddress),
+            response.ErrorDetails ?? noDetailsMessage);
+
+        throw new PlatformDependencyException(
+            "InstantEmailServiceClient",
+            "PersistInstantEmailNotificationAsync",
+            response.ErrorDetails ?? noDetailsMessage);
+    }
+
     /// <summary>
     /// Masks an email address for logging purposes, keeping only the first two characters
     /// of the local part visible. Example: "john.doe@example.com" becomes "jo******@example.com"
@@ -447,5 +474,23 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Keep first two characters, mask the rest
         return localPart[..2] + new string('*', localPart.Length - 2) + domainPart;
+    }
+
+    /// <summary>
+    /// Masks a phone number for logging purposes, keeping only the first two and last two digits visible.
+    /// Example: "+4712345678" becomes "+47******78"
+    /// </summary>
+    private static string MaskPhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length <= 4)
+        {
+            return phoneNumber;
+        }
+
+        var visibleStart = phoneNumber[..2];
+        var visibleEnd = phoneNumber[^2..];
+        var maskedMiddle = new string('*', phoneNumber.Length - 4);
+
+        return visibleStart + maskedMiddle + visibleEnd;
     }
 }

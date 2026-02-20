@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -497,6 +498,7 @@ public class InstantSmsOrderRequestServiceTests
             orderRepository,
             configurationOptions,
             shortMessageServiceClient,
-            instantEmailServiceClient);
+            instantEmailServiceClient,
+            NullLogger<InstantOrderRequestService>.Instance);
     }
 }
