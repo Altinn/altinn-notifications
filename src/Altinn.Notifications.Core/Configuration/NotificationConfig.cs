@@ -46,6 +46,11 @@ public class NotificationConfig
     public int TerminationBatchSize { get; set; } = 100;
 
     /// <summary>
+    /// The maximum number of user-organization pairs per authorization batch call to PDP.
+    /// </summary>
+    public int AuthorizationBatchSize { get; set; } = 500;
+
+    /// <summary>
     /// Grace period in seconds added to expiry time of notifications, before setting a notification to failed time to live.
     /// </summary>
     public int ExpiryOffsetSeconds { get; set; } = 300;

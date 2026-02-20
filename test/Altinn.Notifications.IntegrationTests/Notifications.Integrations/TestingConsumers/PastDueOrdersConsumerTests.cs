@@ -22,10 +22,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class PastDueOrdersConsumerTests : IDisposable
+public class PastDueOrdersConsumerTests : IAsyncLifetime
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private readonly List<Guid> _ordersToDelete = [];
 
     /// <summary>
     /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
@@ -47,6 +48,7 @@ public class PastDueOrdersConsumerTests : IDisposable
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
+        _ordersToDelete.Add(persistedOrder.Id);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -80,6 +82,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Arrange
         using var consumerService = CreateConsumerService();
         (NotificationOrder order, _) = await SetupOrderWithFailedEmailRecipient(status);
+        _ordersToDelete.Add(order.Id);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -99,6 +102,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Arrange
         using var consumerService = CreateConsumerService();
         (NotificationOrder order, _) = await SetupOrderWithFailedSmsRecipient(status);
+        _ordersToDelete.Add(order.Id);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -180,16 +184,14 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Contains(statusFeedEntry.Recipients, x => x.Status == expectedStatus);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
     protected virtual async Task Dispose(bool disposing)
     {
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        foreach (var orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
+
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
@@ -221,5 +223,15 @@ public class PastDueOrdersConsumerTests : IDisposable
         }
 
         return JsonSerializer.Deserialize<OrderStatus>(json, JsonSerializerOptionsProvider.Options);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        return Dispose(true);
     }
 }

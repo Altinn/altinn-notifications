@@ -33,7 +33,7 @@ public static partial class NotificationOrderChainMapper
             RecipientEmail = notificationOrderChainRequestExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
             RecipientPerson = notificationOrderChainRequestExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
             RecipientOrganization = notificationOrderChainRequestExt.Recipient.RecipientOrganization?.MapToRecipientOrganization(),
-            RecipientSelfIdentifiedUser = notificationOrderChainRequestExt.Recipient.RecipientSelfIdentifiedUser?.MapToRecipientSelfIdentifiedUser()
+            RecipientExternalIdentity = notificationOrderChainRequestExt.Recipient.RecipientExternalIdentity?.MapToRecipientExternalIdentity()
         };
 
         // Map the reminders and set their RequestedSendTime based on the main notification's requested time plus the delay.
@@ -118,7 +118,7 @@ public static partial class NotificationOrderChainMapper
                 RecipientEmail = notificationReminderExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
                 RecipientPerson = notificationReminderExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
                 RecipientOrganization = notificationReminderExt.Recipient.RecipientOrganization?.MapToRecipientOrganization(),
-                RecipientSelfIdentifiedUser = notificationReminderExt.Recipient.RecipientSelfIdentifiedUser?.MapToRecipientSelfIdentifiedUser()
+                RecipientExternalIdentity = notificationReminderExt.Recipient.RecipientExternalIdentity?.MapToRecipientExternalIdentity()
             },
 
             OrderId = Guid.NewGuid(),
@@ -177,20 +177,20 @@ public static partial class NotificationOrderChainMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="RecipientSelfIdentifiedUserExt"/> to a <see cref="RecipientSelfIdentifiedUser"/>.
+    /// Maps a <see cref="RecipientExternalIdentityExt"/> to a <see cref="RecipientExternalIdentity"/>.
     /// </summary>
-    private static RecipientSelfIdentifiedUser MapToRecipientSelfIdentifiedUser(this RecipientSelfIdentifiedUserExt recipientSelfIdentifiedUserExt)
+    private static RecipientExternalIdentity MapToRecipientExternalIdentity(this RecipientExternalIdentityExt recipientExternalIdentityExt)
     {
-        var smsSettings = recipientSelfIdentifiedUserExt.SmsSettings?.MapToSmsSendingOptions();
-        var emailSettings = recipientSelfIdentifiedUserExt.EmailSettings?.MapToEmailSendingOptions();
+        var smsSettings = recipientExternalIdentityExt.SmsSettings?.MapToSmsSendingOptions();
+        var emailSettings = recipientExternalIdentityExt.EmailSettings?.MapToEmailSendingOptions();
 
-        return new RecipientSelfIdentifiedUser
+        return new RecipientExternalIdentity
         {
             SmsSettings = smsSettings,
             EmailSettings = emailSettings,
-            ResourceId = recipientSelfIdentifiedUserExt.ResourceId,
-            ExternalIdentity = recipientSelfIdentifiedUserExt.ExternalIdentity,
-            ChannelSchema = (NotificationChannel)recipientSelfIdentifiedUserExt.ChannelSchema
+            ResourceId = recipientExternalIdentityExt.ResourceId,
+            ExternalIdentity = recipientExternalIdentityExt.ExternalIdentity,
+            ChannelSchema = (NotificationChannel)recipientExternalIdentityExt.ChannelSchema
         };
     }
 

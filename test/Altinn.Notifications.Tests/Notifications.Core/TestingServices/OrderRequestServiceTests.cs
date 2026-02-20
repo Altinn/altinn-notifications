@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -271,7 +271,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.Sms,
@@ -375,7 +375,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-preferred-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.EmailPreferred,
@@ -485,7 +485,7 @@ public class OrderRequestServiceTests
             .SetIdempotencyId("self-identified-missing-contact-id")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.Email,
@@ -548,7 +548,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -658,7 +658,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-sms-preferred-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = externalIdentity,
                     ChannelSchema = NotificationChannel.SmsPreferred,
@@ -780,7 +780,7 @@ public class OrderRequestServiceTests
             .SetSendersReference("self-identified-email-and-sms-ref")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -897,7 +897,7 @@ public class OrderRequestServiceTests
             .SetIdempotencyId("self-identified-reminder-missing-id")
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ExternalIdentity = mainExternalIdentity,
                     ChannelSchema = NotificationChannel.Email,
@@ -919,7 +919,7 @@ public class OrderRequestServiceTests
                     Type = OrderType.Reminder,
                     Recipient = new NotificationRecipient
                     {
-                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        RecipientExternalIdentity = new RecipientExternalIdentity
                         {
                             ChannelSchema = NotificationChannel.Email,
                             ExternalIdentity = reminderExternalIdentity,
@@ -1013,7 +1013,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(10))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                RecipientExternalIdentity = new RecipientExternalIdentity
                 {
                     ResourceId = resourceId,
                     ExternalIdentity = externalIdentity,
@@ -1038,7 +1038,7 @@ public class OrderRequestServiceTests
                     RequestedSendTime = currentTime.AddDays(7),
                     Recipient = new NotificationRecipient
                     {
-                        RecipientSelfIdentifiedUser = new RecipientSelfIdentifiedUser
+                        RecipientExternalIdentity = new RecipientExternalIdentity
                         {
                             ResourceId = resourceId,
                             ExternalIdentity = externalIdentity,
@@ -2252,6 +2252,107 @@ public class OrderRequestServiceTests
                 It.IsAny<List<NotificationOrder>>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_RecipientPersonIsReserved_OrderChainCreatedSuccessfully()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string nationalIdentityNumber = "16069412345";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("skd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("reserved-recipient-test-id")
+            .SetSendersReference("reserved-recipient-ref")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientPerson = new RecipientPerson
+                {
+                    NationalIdentityNumber = nationalIdentityNumber,
+                    ChannelSchema = NotificationChannel.Email,
+                    ResourceId = "urn:altinn:resource:test-resource",
+                    IgnoreReservation = false,
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = "Test Body",
+                        Subject = "Test Subject",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var expectedOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = currentTime,
+            Creator = new Creator("skd"),
+            Type = OrderType.Notification,
+            SendersReference = "reserved-recipient-ref",
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = currentTime.AddMinutes(10),
+            ResourceId = "urn:altinn:resource:test-resource",
+            Recipients = [new Recipient([], nationalIdentityNumber: nationalIdentityNumber)],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test Subject", "Test Body", EmailContentType.Plain)]
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.IgnoreReservation == false &&
+                    o.NotificationChannel == NotificationChannel.Email &&
+                    o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber)),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([expectedOrder]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                // Mark recipient as reserved and don't add contact info
+                // This simulates a person who is in the reservation registry (KRR)
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.NationalIdentityNumber == nationalIdentityNumber)
+                    {
+                        recipient.IsReserved = true;
+                    }
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsProblem);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+        Assert.Equal(orderId, result.Value.OrderChainReceipt.ShipmentId);
+
+        contactPointServiceMock.Verify(
+            cp => cp.AddEmailContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == nationalIdentityNumber)),
+                It.Is<string?>(s => s == "urn:altinn:resource:test-resource")),
+            Times.Once);
+
+        orderRepositoryMock.VerifyAll();
     }
 
     [Fact]

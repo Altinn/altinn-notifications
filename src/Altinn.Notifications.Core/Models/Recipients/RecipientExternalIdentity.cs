@@ -3,15 +3,28 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents a notification recipient who authenticates via ID-porten email login (self-identified user).
+/// Represents a notification recipient identified by an external identity.
 /// </summary>
-public record RecipientSelfIdentifiedUser
+/// <remarks>
+/// This model supports users identified by external identity URNs, including:
+/// <list type="bullet">
+/// <item><description>Self-identified users (ID-porten email login)</description></item>
+/// <item><description>username-users (legacy login)</description></item>
+/// </list>
+/// Contact information is resolved via Altinn Profile using the user's external identity.
+/// </remarks>
+public record RecipientExternalIdentity
 {
     /// <summary>
     /// The external identity of the recipient in URN format.
     /// </summary>
     /// <value>
-    /// A URN string in the format <c>urn:altinn:person:idporten-email:{email-address}</c>.
+    /// A URN string identifying the user, for example:
+    /// <list type="bullet">
+    /// <item><description><c>urn:altinn:person:idporten-email:{email-address}</c> for self-identified users</description></item>
+    /// <item><description><c>urn:altinn:person:legacy-selfidentified:{username}</c> for username-based users</description></item>
+    /// </list>
+    /// Used to identify the user in Altinn Profile for contact information retrieval.
     /// </value>
     public required string ExternalIdentity { get; init; }
 

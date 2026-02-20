@@ -11,10 +11,10 @@
   <ItemGroup>
     <PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="4.0.1" />
     <PackageReference Include="Parquet.Net" Version="5.5.0" />
-    <PackageReference Include="libphonenumber-csharp" Version="9.0.23" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.2" />
+    <PackageReference Include="libphonenumber-csharp" Version="9.0.24" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">

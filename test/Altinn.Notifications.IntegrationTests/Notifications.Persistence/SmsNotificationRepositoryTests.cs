@@ -23,7 +23,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             return;
         }
 
-        await Task.WhenAll(_orderIdsToCleanup.Select(PostgreUtil.DeleteOrderFromDb));
+        foreach (var orderId in _orderIdsToCleanup)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
     }
 
     public async Task InitializeAsync()
