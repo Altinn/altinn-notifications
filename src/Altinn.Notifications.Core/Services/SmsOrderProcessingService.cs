@@ -224,7 +224,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         if (recipientsMissingSmsContact.Count > 0)
         {
-            await _contactPointService.AddSmsContactPoints(recipientsMissingSmsContact, order.ResourceId);
+            await _contactPointService.AddSmsContactPoints(recipientsMissingSmsContact, order.ResourceId, OrderPhase.Processing);
         }
 
         return order.Recipients;

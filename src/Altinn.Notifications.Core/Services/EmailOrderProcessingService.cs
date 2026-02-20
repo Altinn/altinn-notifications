@@ -176,7 +176,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
         if (recipientsWithoutEmail.Count > 0)
         {
-            await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
+            await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId, OrderPhase.Processing);
         }
 
         return order.Recipients;
