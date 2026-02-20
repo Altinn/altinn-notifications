@@ -20,6 +20,7 @@ public class ContactPointService(
     IAuthorizationService authorizationService) : IContactPointService
 {
     private const string _profileClientName = "ProfileClient";
+    private const string _authorizationServiceName = "AuthorizationService";
 
     private readonly IProfileClient _profileClient = profile;
     private readonly IAuthorizationService _authorizationService = authorizationService;
@@ -30,32 +31,9 @@ public class ContactPointService(
         await AugmentRecipients(
             recipients,
             resourceId,
-            (recipient, userContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
-                {
-                    recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
-                }
-
-                return recipient;
-            },
-            (recipient, orgContactPoints) =>
-            {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
-
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
-
-                return recipient;
-            },
-            (recipient, selfIdentifiedContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
-                {
-                    recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
-                }
-
-                return recipient;
-            });
+            ApplyEmailForPerson,
+            ApplyEmailForOrganization,
+            ApplyEmailForSelfIdentified);
     }
 
     /// <inheritdoc/>
@@ -64,32 +42,9 @@ public class ContactPointService(
         await AugmentRecipients(
             recipients,
             resourceId,
-            (recipient, userContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
-                {
-                    recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
-                }
-
-                return recipient;
-            },
-            (recipient, orgContactPoints) =>
-            {
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
-
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber)).Select(e => new SmsAddressPoint(e.MobileNumber)));
-
-                return recipient;
-            },
-            (recipient, selfIdentifiedContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
-                {
-                    recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
-                }
-
-                return recipient;
-            });
+            ApplySmsForPerson,
+            ApplySmsForOrganization,
+            ApplySmsForSelfIdentified);
     }
 
     /// <inheritdoc/>
@@ -98,168 +53,216 @@ public class ContactPointService(
         await AugmentRecipients(
             recipients,
             resourceId,
-            (recipient, userContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
-                {
-                    recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
-                }
-
-                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
-                {
-                    recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
-                }
-
-                return recipient;
-            },
-            (recipient, orgContactPoints) =>
-            {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
-
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
-
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
-
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
-
-                return recipient;
-            },
-            (recipient, selfIdentifiedContactPoints) =>
-            {
-                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
-                {
-                    recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
-                }
-
-                if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
-                {
-                    recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
-                }
-
-                return recipient;
-            });
+            ApplyEmailAndSmsForPerson,
+            ApplyEmailAndSmsForOrganization,
+            ApplyEmailAndSmsForSelfIdentified);
     }
 
     /// <inheritdoc/>
     public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId)
     {
-        await AugmentRecipients(
-            recipients,
-            resourceId,
-            (recipient, userContactPoints) =>
-            {
-                if (channel == NotificationChannel.EmailPreferred)
-                {
-                    AddPreferredOrFallbackContactPoint(
-                        recipient,
-                        userContactPoints.Email,
-                        userContactPoints.MobileNumber,
-                        email => new EmailAddressPoint(email),
-                        mobile => new SmsAddressPoint(mobile));
-                }
-                else if (channel == NotificationChannel.SmsPreferred)
-                {
-                    AddPreferredOrFallbackContactPoint(
-                       recipient,
-                       userContactPoints.MobileNumber,
-                       userContactPoints.Email,
-                       mobile => new SmsAddressPoint(mobile),
-                       email => new EmailAddressPoint(email));
-                }
-
-                return recipient;
-            },
-            (recipient, orgContactPoints) =>
-            {
-                if (channel == NotificationChannel.EmailPreferred)
-                {
-                    AddPreferredOrFallbackContactPointList(
-                       recipient,
-                       orgContactPoints.EmailList,
-                       orgContactPoints.MobileNumberList,
-                       e => new EmailAddressPoint(e),
-                       m => new SmsAddressPoint(m));
-
-                    foreach (var userContact in orgContactPoints.UserContactPoints)
-                    {
-                        AddPreferredOrFallbackContactPoint(
-                            recipient,
-                            userContact.Email,
-                            userContact.MobileNumber,
-                            email => new EmailAddressPoint(email),
-                            mobile => new SmsAddressPoint(mobile));
-                    }
-                }
-                else if (channel == NotificationChannel.SmsPreferred)
-                {
-                    AddPreferredOrFallbackContactPointList(
-                       recipient,
-                       orgContactPoints.MobileNumberList,
-                       orgContactPoints.EmailList,
-                       e => new SmsAddressPoint(e),
-                       e => new EmailAddressPoint(e));
-
-                    foreach (var userContact in orgContactPoints.UserContactPoints)
-                    {
-                        AddPreferredOrFallbackContactPoint(
-                            recipient,
-                            userContact.MobileNumber,
-                            userContact.Email,
-                            mobile => new SmsAddressPoint(mobile),
-                            email => new EmailAddressPoint(email));
-                    }
-                }
-
-                return recipient;
-            },
-            (recipient, selfIdentifiedContactPoints) =>
-            {
-                if (channel == NotificationChannel.EmailPreferred)
-                {
-                    AddPreferredOrFallbackContactPoint(
-                        recipient,
-                        selfIdentifiedContactPoints.Email,
-                        selfIdentifiedContactPoints.MobileNumber,
-                        email => new EmailAddressPoint(email),
-                        mobile => new SmsAddressPoint(mobile));
-                }
-                else if (channel == NotificationChannel.SmsPreferred)
-                {
-                    AddPreferredOrFallbackContactPoint(
-                       recipient,
-                       selfIdentifiedContactPoints.MobileNumber,
-                       selfIdentifiedContactPoints.Email,
-                       mobile => new SmsAddressPoint(mobile),
-                       email => new EmailAddressPoint(email));
-                }
-
-                return recipient;
-            });
+        switch (channel)
+        {
+            case NotificationChannel.EmailPreferred:
+                await AugmentRecipients(
+                    recipients,
+                    resourceId,
+                    ApplyEmailPreferredForPerson,
+                    ApplyEmailPreferredForOrganization,
+                    ApplyEmailPreferredForSelfIdentified);
+                break;
+            case NotificationChannel.SmsPreferred:
+                await AugmentRecipients(
+                    recipients,
+                    resourceId,
+                    ApplySmsPreferredForPerson,
+                    ApplySmsPreferredForOrganization,
+                    ApplySmsPreferredForSelfIdentified);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, $"Unsupported notification channel: {channel}");
+        }
     }
 
-    private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
-        Recipient recipient,
-        TPreferred preferredContact,
-        TFallback fallbackContact,
-        Func<TPreferred, IAddressPoint> preferredSelector,
-        Func<TFallback, IAddressPoint> fallbackSelector)
+    private static void ApplyEmailForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
-        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
+        if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
+        {
+            recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
+        }
+    }
+
+    private static void ApplySmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    {
+        if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
+        {
+            recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+        }
+    }
+
+    private static void ApplyEmailAndSmsForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    {
+        ApplyEmailForPerson(recipient, userContactPoints);
+        ApplySmsForPerson(recipient, userContactPoints);
+    }
+
+    private static void ApplyEmailPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    {
+        AddPreferredOrFallbackContactPoint(
+            recipient,
+            userContactPoints.Email,
+            userContactPoints.MobileNumber,
+            email => new EmailAddressPoint(email),
+            mobile => new SmsAddressPoint(mobile));
+    }
+
+    private static void ApplySmsPreferredForPerson(Recipient recipient, UserContactPoints userContactPoints)
+    {
+        AddPreferredOrFallbackContactPoint(
+           recipient,
+           userContactPoints.MobileNumber,
+           userContactPoints.Email,
+           mobile => new SmsAddressPoint(mobile),
+           email => new EmailAddressPoint(email));
+    }
+
+    private static void ApplyEmailForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    {
+        recipient.AddressInfo.AddRange(
+            orgContactPoints.EmailList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => new EmailAddressPoint(e)));
+
+        recipient.AddressInfo.AddRange(
+            orgContactPoints.UserContactPoints
+                .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+                .Select(u => new EmailAddressPoint(u.Email)));
+    }
+
+    private static void ApplySmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    {
+        recipient.AddressInfo.AddRange(
+            orgContactPoints.MobileNumberList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => new SmsAddressPoint(e)));
+
+        recipient.AddressInfo.AddRange(
+            orgContactPoints.UserContactPoints
+                .Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber))
+                .Select(e => new SmsAddressPoint(e.MobileNumber)));
+    }
+
+    private static void ApplyEmailAndSmsForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    {
+        ApplyEmailForOrganization(recipient, orgContactPoints);
+        ApplySmsForOrganization(recipient, orgContactPoints);
+    }
+
+    private static void ApplyEmailPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    {
+        AddPreferredOrFallbackContactPointList(
+           recipient,
+           orgContactPoints.EmailList,
+           orgContactPoints.MobileNumberList,
+           e => new EmailAddressPoint(e),
+           m => new SmsAddressPoint(m));
+
+        foreach (var userContact in orgContactPoints.UserContactPoints)
+        {
+            AddPreferredOrFallbackContactPoint(
+                recipient,
+                userContact.Email,
+                userContact.MobileNumber,
+                email => new EmailAddressPoint(email),
+                mobile => new SmsAddressPoint(mobile));
+        }
+    }
+
+    private static void ApplySmsPreferredForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
+    {
+        AddPreferredOrFallbackContactPointList(
+           recipient,
+           orgContactPoints.MobileNumberList,
+           orgContactPoints.EmailList,
+           e => new SmsAddressPoint(e),
+           e => new EmailAddressPoint(e));
+
+        foreach (var userContact in orgContactPoints.UserContactPoints)
+        {
+            AddPreferredOrFallbackContactPoint(
+                recipient,
+                userContact.MobileNumber,
+                userContact.Email,
+                mobile => new SmsAddressPoint(mobile),
+                email => new EmailAddressPoint(email));
+        }
+    }
+
+    private static void ApplyEmailForSelfIdentified(Recipient recipient, ExternalIdentityContactPoints selfIdentifiedContactPoints)
+    {
+        if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
+        {
+            recipient.AddressInfo.Add(new EmailAddressPoint(selfIdentifiedContactPoints.Email));
+        }
+    }
+
+    private static void ApplySmsForSelfIdentified(Recipient recipient, ExternalIdentityContactPoints selfIdentifiedContactPoints)
+    {
+        if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.MobileNumber))
+        {
+            recipient.AddressInfo.Add(new SmsAddressPoint(selfIdentifiedContactPoints.MobileNumber));
+        }
+    }
+
+    private static void ApplyEmailAndSmsForSelfIdentified(Recipient recipient, ExternalIdentityContactPoints selfIdentifiedContactPoints)
+    {
+        ApplyEmailForSelfIdentified(recipient, selfIdentifiedContactPoints);
+        ApplySmsForSelfIdentified(recipient, selfIdentifiedContactPoints);
+    }
+
+    private static void ApplyEmailPreferredForSelfIdentified(Recipient recipient, ExternalIdentityContactPoints selfIdentifiedContactPoints)
+    {
+        AddPreferredOrFallbackContactPoint(
+            recipient,
+            selfIdentifiedContactPoints.Email,
+            selfIdentifiedContactPoints.MobileNumber,
+            email => new EmailAddressPoint(email),
+            mobile => new SmsAddressPoint(mobile));
+    }
+
+    private static void ApplySmsPreferredForSelfIdentified(Recipient recipient, ExternalIdentityContactPoints selfIdentifiedContactPoints)
+    {
+        AddPreferredOrFallbackContactPoint(
+           recipient,
+           selfIdentifiedContactPoints.MobileNumber,
+           selfIdentifiedContactPoints.Email,
+           mobile => new SmsAddressPoint(mobile),
+           email => new EmailAddressPoint(email));
+    }
+
+    private static void AddPreferredOrFallbackContactPoint(
+        Recipient recipient,
+        string preferredContact,
+        string fallbackContact,
+        Func<string, IAddressPoint> preferredSelector,
+        Func<string, IAddressPoint> fallbackSelector)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredContact))
         {
             recipient.AddressInfo.Add(preferredSelector(preferredContact));
         }
-        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
+        else if (!string.IsNullOrWhiteSpace(fallbackContact))
         {
             recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
         }
     }
 
     private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
-    Recipient recipient,
-    List<TPreferred> preferredList,
-    List<TFallback> fallbackList,
-    Func<TPreferred, IAddressPoint> preferredSelector,
-    Func<TFallback, IAddressPoint> fallbackSelector)
+        Recipient recipient,
+        List<TPreferred> preferredList,
+        List<TFallback> fallbackList,
+        Func<TPreferred, IAddressPoint> preferredSelector,
+        Func<TFallback, IAddressPoint> fallbackSelector)
     {
         if (preferredList.Count > 0)
         {
@@ -294,7 +297,9 @@ public class ContactPointService(
 
         const string prefix = "urn:altinn:resource:";
 
-        return trimmedResourceId.StartsWith(prefix, StringComparison.Ordinal) ? trimmedResourceId[prefix.Length..] : trimmedResourceId;
+        return trimmedResourceId.StartsWith(prefix, StringComparison.Ordinal)
+            ? trimmedResourceId[prefix.Length..]
+            : trimmedResourceId;
     }
 
     /// <summary>
@@ -310,15 +315,15 @@ public class ContactPointService(
     /// If <c>null</c> or empty, only official organization contact points are used.
     /// </param>
     /// <param name="applyPersonContactPoints">
-    /// A function that applies contact points to the recipient. Invoked for recipients with a national identity number
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with a national identity number
     /// and a matching <see cref="UserContactPoints"/> entry.
     /// </param>
     /// <param name="applyOrganizationContactPoints">
-    /// A function that applies contact points to the recipient. Invoked for recipients with an organization number
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with an organization number
     /// and a matching <see cref="OrganizationContactPoints"/> entry.
     /// </param>
     /// <param name="applyExternalIdentityContactPoints">
-    /// A function that applies contact points to the recipient. Invoked for recipients with an external identity
+    /// An action that applies contact points to the recipient in place. Invoked for recipients with an external identity
     /// and a matching <see cref="ExternalIdentityContactPoints"/> entry.
     /// </param>
     /// <returns>
@@ -327,59 +332,79 @@ public class ContactPointService(
     private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
-        Func<Recipient, UserContactPoints, Recipient> applyPersonContactPoints,
-        Func<Recipient, OrganizationContactPoints, Recipient> applyOrganizationContactPoints,
-        Func<Recipient, ExternalIdentityContactPoints, Recipient> applyExternalIdentityContactPoints)
+        Action<Recipient, UserContactPoints> applyPersonContactPoints,
+        Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
+        Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
-        var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
+        var selfIdentifiedLookupTask = LookupExternalIdentityContactPoints(recipients);
         var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
 
-        await Task.WhenAll(personLookupTask, externalIdentityLookupTask, organizationLookupTask);
+        await Task.WhenAll(personLookupTask, selfIdentifiedLookupTask, organizationLookupTask);
 
         List<UserContactPoints> personContactPointsList = personLookupTask.Result;
         List<OrganizationContactPoints> organizationContactPointsList = organizationLookupTask.Result;
-        List<ExternalIdentityContactPoints> externalIdentityContactPointsList = externalIdentityLookupTask.Result;
+        List<ExternalIdentityContactPoints> selfIdentifiedContactPointsList = selfIdentifiedLookupTask.Result;
 
         foreach (Recipient recipient in recipients)
         {
             if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
             {
-                UserContactPoints? userContactPoints = personContactPointsList
-                    .Find(e => string.Equals(e.NationalIdentityNumber, recipient.NationalIdentityNumber, StringComparison.OrdinalIgnoreCase));
-
-                if (userContactPoints == null)
-                {
-                    continue;
-                }
-
-                recipient.IsReserved = userContactPoints.IsReserved;
-                applyPersonContactPoints(recipient, userContactPoints);
+                ApplyPersonContactPoints(recipient, personContactPointsList, applyPersonContactPoints);
             }
             else if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
             {
-                OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
-                    .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
-
-                if (organizationContactPoints == null)
-                {
-                    continue;
-                }
-
-                applyOrganizationContactPoints(recipient, organizationContactPoints);
+                ApplyOrganizationContactPoints(recipient, organizationContactPointsList, applyOrganizationContactPoints);
             }
             else if (!string.IsNullOrWhiteSpace(recipient.ExternalIdentity))
             {
-                ExternalIdentityContactPoints? externalIdentityContactPoints = externalIdentityContactPointsList
-                    .Find(e => string.Equals(e.ExternalIdentity, recipient.ExternalIdentity, StringComparison.OrdinalIgnoreCase));
-
-                if (externalIdentityContactPoints == null)
-                {
-                    continue;
-                }
-
-                applyExternalIdentityContactPoints(recipient, externalIdentityContactPoints);
+                ApplySelfIdentifiedContactPoints(recipient, selfIdentifiedContactPointsList, applyExternalIdentityContactPoints);
             }
+        }
+    }
+
+    private static void ApplyPersonContactPoints(
+        Recipient recipient,
+        List<UserContactPoints> personContactPointsList,
+        Action<Recipient, UserContactPoints> applyContactPoints)
+    {
+        UserContactPoints? userContactPoints = personContactPointsList
+            .Find(e => string.Equals(e.NationalIdentityNumber, recipient.NationalIdentityNumber, StringComparison.OrdinalIgnoreCase));
+
+        if (userContactPoints == null)
+        {
+            return;
+        }
+
+        recipient.IsReserved = userContactPoints.IsReserved;
+        applyContactPoints(recipient, userContactPoints);
+    }
+
+    private static void ApplyOrganizationContactPoints(
+        Recipient recipient,
+        List<OrganizationContactPoints> organizationContactPointsList,
+        Action<Recipient, OrganizationContactPoints> applyContactPoints)
+    {
+        OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
+            .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
+
+        if (organizationContactPoints != null)
+        {
+            applyContactPoints(recipient, organizationContactPoints);
+        }
+    }
+
+    private static void ApplySelfIdentifiedContactPoints(
+        Recipient recipient,
+        List<ExternalIdentityContactPoints> selfIdentifiedContactPointsList,
+        Action<Recipient, ExternalIdentityContactPoints> applyContactPoints)
+    {
+        ExternalIdentityContactPoints? selfIdentifiedContactPoints = selfIdentifiedContactPointsList
+            .Find(e => string.Equals(e.ExternalIdentity, recipient.ExternalIdentity, StringComparison.OrdinalIgnoreCase));
+
+        if (selfIdentifiedContactPoints != null)
+        {
+            applyContactPoints(recipient, selfIdentifiedContactPoints);
         }
     }
 
@@ -427,7 +452,7 @@ public class ContactPointService(
     }
 
     /// <summary>
-    /// Retrieves contact points for external identity users.
+    /// Retrieves contact points for self-identified-users.
     /// </summary>
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
@@ -454,7 +479,6 @@ public class ContactPointService(
             return [.. contactPoints.Select(contactPoint =>
             {
                 var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
-
                 var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
 
                 return contactPoint with { MobileNumber = validMobileNumber };
@@ -492,76 +516,31 @@ public class ContactPointService(
             return [];
         }
 
+        List<OrganizationContactPoints> contactPoints = await GetOfficialOrganizationContactPoints(organizationNumbers);
+
+        var sanitizedResourceId = GetSanitizedResourceId(resourceId);
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
+        {
+            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId);
+        }
+
+        CleanupOrganizationContactPoints(contactPoints);
+
+        return contactPoints;
+    }
+
+    /// <summary>
+    /// Retrieves official organization contact points from the profile service.
+    /// </summary>
+    private async Task<List<OrganizationContactPoints>> GetOfficialOrganizationContactPoints(List<string> organizationNumbers)
+    {
         try
         {
             List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
+
             contactPoints.ForEach(contactPoint =>
             {
                 contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
-            });
-
-            var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-            if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
-            {
-                List<OrganizationContactPoints> allUserContactPoints;
-                
-                try
-                {
-                    allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
-                }
-                catch (Exception ex) when (ex is not PlatformDependencyException)
-                {
-                    throw new PlatformDependencyException(_profileClientName, "GetUserRegisteredContactPoints", ex);
-                }
-
-                if (allUserContactPoints.Count > 0)
-                {
-                    List<OrganizationContactPoints> authorizedUserContactPoints;
-                    
-                    try
-                    {
-                        authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
-                    }
-                    catch (Exception ex) when (ex is not PlatformDependencyException)
-                    {
-                        throw new PlatformDependencyException("AuthorizationService", "AuthorizeUserContactPointsForResource", ex);
-                    }
-
-                    foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
-                    {
-                        var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
-                        if (existingContactPoint == null)
-                        {
-                            contactPoints.Add(authorizedUserContactPoint);
-                        }
-                        else
-                        {
-                            existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
-                        }
-                    }
-                }
-            }
-
-            contactPoints.ForEach(contactPoint =>
-            {
-                // Keep only unique and valid mobile numbers.
-                contactPoint.MobileNumberList = [..
-                    contactPoint.MobileNumberList
-                    .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)];
-
-                // Keep only unique email addresses.
-                contactPoint.EmailList = [..
-                    contactPoint.EmailList
-                    .Where(e => !string.IsNullOrWhiteSpace(e))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)];
-
-                // Keep only unique and valid mobile numbers.
-                contactPoint.UserContactPoints = [..
-                    NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
-                    .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
-                    .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
-                    ];
             });
 
             return contactPoints;
@@ -570,6 +549,111 @@ public class ContactPointService(
         {
             throw new PlatformDependencyException(_profileClientName, "GetOrganizationContactPoints", ex);
         }
+    }
+
+    /// <summary>
+    /// Enriches organization contact points with authorized user-registered contact points.
+    /// </summary>
+    private async Task EnrichWithUserRegisteredContactPoints(
+        List<OrganizationContactPoints> contactPoints,
+        List<string> organizationNumbers,
+        string sanitizedResourceId)
+    {
+        List<OrganizationContactPoints> allUserContactPoints = await GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+
+        if (allUserContactPoints.Count == 0)
+        {
+            return;
+        }
+
+        List<OrganizationContactPoints> authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
+
+        MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
+    }
+
+    /// <summary>
+    /// Retrieves user-registered contact points from the profile service.
+    /// </summary>
+    private async Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(
+        List<string> organizationNumbers,
+        string sanitizedResourceId)
+    {
+        try
+        {
+            return await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_profileClientName, "GetUserRegisteredContactPoints", ex);
+        }
+    }
+
+    /// <summary>
+    /// Authorizes user contact points for a specific resource.
+    /// </summary>
+    private async Task<List<OrganizationContactPoints>> AuthorizeUserContactPoints(
+        List<OrganizationContactPoints> userContactPoints,
+        string sanitizedResourceId)
+    {
+        try
+        {
+            return await _authorizationService.AuthorizeUserContactPointsForResource(userContactPoints, sanitizedResourceId);
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_authorizationServiceName, "AuthorizeUserContactPointsForResource", ex);
+        }
+    }
+
+    /// <summary>
+    /// Merges authorized user contact points into the official organization contact points list.
+    /// </summary>
+    private static void MergeUserContactPointsIntoOfficial(
+        List<OrganizationContactPoints> officialContactPoints,
+        List<OrganizationContactPoints> authorizedUserContactPoints)
+    {
+        foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
+        {
+            var existingContactPoint = officialContactPoints
+                .Find(e => string.Equals(e.OrganizationNumber, authorizedUserContactPoint.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
+
+            if (existingContactPoint == null)
+            {
+                officialContactPoints.Add(authorizedUserContactPoint);
+            }
+            else
+            {
+                existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cleans up organization contact points by removing duplicates and invalid entries.
+    /// </summary>
+    private static void CleanupOrganizationContactPoints(List<OrganizationContactPoints> contactPoints)
+    {
+        contactPoints.ForEach(contactPoint =>
+        {
+            // Keep only unique and valid mobile numbers.
+            contactPoint.MobileNumberList = [..
+                contactPoint.MobileNumberList
+                .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            // Keep only unique email addresses.
+            contactPoint.EmailList = [..
+                contactPoint.EmailList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            // Keep only user contact points with unique and valid contact details.
+            contactPoint.UserContactPoints = [..
+                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
+                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
+                ];
+        });
     }
 
     /// <summary>
