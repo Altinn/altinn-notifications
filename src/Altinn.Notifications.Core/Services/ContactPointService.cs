@@ -84,8 +84,6 @@ public class ContactPointService(
         }
     }
 
-    #region Person Contact Point Applicators
-
     private static void ApplyEmailForPerson(Recipient recipient, UserContactPoints userContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
@@ -127,10 +125,6 @@ public class ContactPointService(
            mobile => new SmsAddressPoint(mobile),
            email => new EmailAddressPoint(email));
     }
-
-    #endregion
-
-    #region Organization Contact Point Applicators
 
     private static void ApplyEmailForOrganization(Recipient recipient, OrganizationContactPoints orgContactPoints)
     {
@@ -204,10 +198,6 @@ public class ContactPointService(
         }
     }
 
-    #endregion
-
-    #region Self-Identified Contact Point Applicators
-
     private static void ApplyEmailForSelfIdentified(Recipient recipient, SelfIdentifiedUserContactPoints selfIdentifiedContactPoints)
     {
         if (!string.IsNullOrWhiteSpace(selfIdentifiedContactPoints.Email))
@@ -249,8 +239,6 @@ public class ContactPointService(
            mobile => new SmsAddressPoint(mobile),
            email => new EmailAddressPoint(email));
     }
-
-    #endregion
 
     private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
         Recipient recipient,
