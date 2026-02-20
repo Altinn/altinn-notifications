@@ -264,15 +264,29 @@ public class ContactPointService(
         Func<TPreferred, IAddressPoint> preferredSelector,
         Func<TFallback, IAddressPoint> fallbackSelector)
     {
-        if (preferredList.Count > 0)
+        var filteredFallback = fallbackList.Where(IsNonEmptyEntry).ToList();
+        var filteredPreferred = preferredList.Where(IsNonEmptyEntry).ToList();
+
+        if (filteredPreferred.Count > 0)
         {
-            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
+            recipient.AddressInfo.AddRange(filteredPreferred.Select(preferredSelector));
         }
         else
         {
-            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
+            recipient.AddressInfo.AddRange(filteredFallback.Select(fallbackSelector));
         }
     }
+
+    /// <summary>
+    /// Determines whether an entry should be considered present when selecting preferred or fallback contact points.
+    /// Treats null and empty/whitespace strings as missing; all other values are treated as present.
+    /// </summary>
+    private static bool IsNonEmptyEntry<TEntry>(TEntry entry) => entry switch
+    {
+        string s => !string.IsNullOrWhiteSpace(s),
+        null => false,
+        _ => true
+    };
 
     /// <summary>
     /// Normalizes a resource identifier value by removing the leading
