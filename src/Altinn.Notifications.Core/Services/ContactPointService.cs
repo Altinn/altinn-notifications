@@ -240,18 +240,18 @@ public class ContactPointService(
            email => new EmailAddressPoint(email));
     }
 
-    private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
+    private static void AddPreferredOrFallbackContactPoint(
         Recipient recipient,
-        TPreferred preferredContact,
-        TFallback fallbackContact,
-        Func<TPreferred, IAddressPoint> preferredSelector,
-        Func<TFallback, IAddressPoint> fallbackSelector)
+        string preferredContact,
+        string fallbackContact,
+        Func<string, IAddressPoint> preferredSelector,
+        Func<string, IAddressPoint> fallbackSelector)
     {
-        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
+        if (!string.IsNullOrWhiteSpace(preferredContact))
         {
             recipient.AddressInfo.Add(preferredSelector(preferredContact));
         }
-        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
+        else if (!string.IsNullOrWhiteSpace(fallbackContact))
         {
             recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
         }
