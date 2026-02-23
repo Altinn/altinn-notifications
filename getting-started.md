@@ -38,8 +38,8 @@ Each component has its own solution file. To build a specific component:
 
 ```bash
 # Build API
-dotnet restore components/api/Altinn.Notifications.sln
-dotnet build components/api/Altinn.Notifications.sln
+dotnet restore components/api/Altinn.Notifications.API.sln
+dotnet build components/api/Altinn.Notifications.API.sln
 
 # Build Email Service
 dotnet restore components/email-service/Altinn.Notifications.Email.sln
@@ -54,7 +54,7 @@ dotnet build components/sms-service/Altinn.Notifications.Sms.sln
 
 ```bash
 # Test API
-dotnet test components/api/Altinn.Notifications.sln
+dotnet test components/api/Altinn.Notifications.API.sln
 
 # Test Email Service
 dotnet test components/email-service/Altinn.Notifications.Email.sln
@@ -82,7 +82,7 @@ docker build -t notifications-sms -f components/sms-service/Dockerfile .
 
 When working on a single component, open the component's solution file directly:
 
-- **API**: `components/api/Altinn.Notifications.sln`
+- **API**: `components/api/Altinn.Notifications.API.sln`
 - **Email Service**: `components/email-service/Altinn.Notifications.Email.sln`
 - **SMS Service**: `components/sms-service/Altinn.Notifications.Sms.sln`
 

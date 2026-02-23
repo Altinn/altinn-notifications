@@ -16,21 +16,21 @@ components/api/
 │   ├── Altinn.Notifications.Tests/        # Unit tests
 │   ├── Altinn.Notifications.IntegrationTests/
 │   └── Altinn.Notifications.Tools.Tests/
-├── Altinn.Notifications.sln
+├── Altinn.Notifications.API.sln
 └── Dockerfile
 ```
 
 ## Building
 
 ```bash
-dotnet restore Altinn.Notifications.sln
-dotnet build Altinn.Notifications.sln
+dotnet restore Altinn.Notifications.API.sln
+dotnet build Altinn.Notifications.API.sln
 ```
 
 ## Testing
 
 ```bash
-dotnet test Altinn.Notifications.sln
+dotnet test Altinn.Notifications.API.sln
 ```
 
 ## Running Locally
