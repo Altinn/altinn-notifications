@@ -10,7 +10,7 @@ public enum OrderPhase
     /// <summary>
     /// Signifies that this is happening through the order creation phase.
     /// </summary>
-    Creation,
+    NewOrder,
 
     /// <summary>
     /// Happens when the order is picked up for further processing by the consumer.
