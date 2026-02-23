@@ -4,5 +4,5 @@ review/domain-model-changes:
 - any:
   - changed-files:
     - any-glob-to-any-file:
-      - src/Altinn.Notifications.Core/Enums/*
-      - src/Altinn.Notifications.Core/Models/*
+      - components/api/src/Altinn.Notifications.Core/Enums/*
+      - components/api/src/Altinn.Notifications.Core/Models/*

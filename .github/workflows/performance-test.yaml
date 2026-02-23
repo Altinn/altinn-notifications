@@ -39,12 +39,12 @@ on:
       testSuitePath:
         description: 'Path to test suite to run'
         required: true
-        default: 'test/k6/src/tests/orders-org-no.js'
+        default: 'components/api/test/k6/src/tests/orders-org-no.js'
         type: choice
         options:
-          - 'test/k6/src/tests/orders-org-no.js'
-          - 'test/k6/src/tests/orders-email.js'
-          - 'test/k6/src/tests/orders-sms.js'
+          - 'components/api/test/k6/src/tests/orders-org-no.js'
+          - 'components/api/test/k6/src/tests/orders-email.js'
+          - 'components/api/test/k6/src/tests/orders-sms.js'
 
 permissions:
   id-token: write
@@ -88,7 +88,7 @@ jobs:
           echo "Running k6 test suite $TESTSUITE_PATH with $VIRTUAL_USERS VUs for $DURATION on $PARALLELISM parallelism"
           k6configName=$(basename "$TESTSUITE_PATH" .js)
           k6configName="k6-${k6configName}"
-          ./test/k6/src/tests/run-test-in-k8s.sh \
+          ./components/api/test/k6/src/tests/run-test-in-k8s.sh \
             -f "$TESTSUITE_PATH" \
             -c "$k6configName" \
             -n "$k6configName" \

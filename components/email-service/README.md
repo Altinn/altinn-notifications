@@ -1,4 +1,4 @@
-# altinn-notifications-email
+# Altinn Notifications Email Service
 
 This component handles the functionality related to sending an email through Altinn Notifications.
 
@@ -39,19 +39,19 @@ Relevant implementations:
 
 ### Cloning the application
 
-Clone [Altinn Notifications Email repo](https://github.com/Altinn/altinn-notifications-email) and navigate to the folder.
+This component is part of the [Altinn Notifications monorepo](https://github.com/Altinn/altinn-notifications).
 
 ```bash
-git clone https://github.com/Altinn/altinn-notifications-email
-cd altinn-notifications-email
+git clone https://github.com/Altinn/altinn-notifications
+cd altinn-notifications/components/email-service
 ```
 
 ### Setting up Kafka broker and visualization
 
-Ensure that Docker and Podman are installed and is running.
+Ensure that Docker/Podman is installed and running.
 
-In a terminal navigate to the root of this repository
-and run command `podman compose -f setup-kafka.yml up -d`
+From the repository root, run:
+`podman compose -f tools/dev-setup/setup-kafka.yml up -d`
 
 Kafdrop is now available at http://localhost:9000.
 
@@ -75,9 +75,22 @@ dotnet user-secrets set "CommunicationServicesSettings:ConnectionString" "insert
 
 The Notifications Email component can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
 
-- Navigate to _src/Altinn.Notifications.Email_, and build and run the code from there, or run the solution using you selected code editor
+- Navigate to the project directory and run:
 
   ```cmd
   cd src/Altinn.Notifications.Email
   dotnet run
   ```
+
+## Building
+
+```bash
+dotnet restore Altinn.Notifications.Email.sln
+dotnet build Altinn.Notifications.Email.sln
+```
+
+## Testing
+
+```bash
+dotnet test Altinn.Notifications.Email.sln
+```

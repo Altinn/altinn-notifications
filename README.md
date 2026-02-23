@@ -1,14 +1,34 @@
 # Altinn Notifications
 
-Altinn platform microservice for handling notifications (mail, sms, etc)
-This component handles the functionality related to registering and sending notifications.
+Altinn platform microservices for handling notifications (email, SMS, etc). This monorepo contains:
+
+- **API** - Main Notifications API for registering and managing notification orders
+- **Email Service** - Service for sending email notifications
+- **SMS Service** - Service for sending SMS notifications
+
+## Repository Structure
+
+```
+altinn-notifications/
+├── components/
+│   ├── api/                    # Main Notifications API
+│   ├── email-service/          # Email sending service
+│   ├── sms-service/            # SMS sending service
+│   └── shared/                 # Shared contracts and utilities
+├── docs/                       # Documentation
+├── tools/                      # Build scripts and dev setup
+└── .github/workflows/          # CI/CD workflows
+```
+
+For detailed setup instructions, see [getting-started.md](getting-started.md).
 
 ## Architecture
 Detailed architecture documentation can be found in the [docs/architecture](docs/architecture) folder.
 
-## Project organization
-This is a backend WebAPI solution written in .NET / C# following the clean architecture principles.
-The solution is into four projects, each with their associated test project.
+## API Component
+
+The API component follows clean architecture principles and is organized into:
+
 
 ### Altinn.Notifications
 The API layer that consumes services provided by _Altinn.Notifications.Core_
@@ -16,7 +36,6 @@ The API layer that consumes services provided by _Altinn.Notifications.Core_
 Relevant implementations:
 - Controllers
 - Program.cs
-
 
 ### Altinn.Notifications.Core
 The domain and application layer that implements the business logic of the system.
@@ -33,11 +52,14 @@ Relevant implementations:
 - Kafka producer and consumer implementation
 - Clients for communicating with Altinn Platform components
 
-
-### Altinn.Notifications.Persistance
-The persistance layer that implements repository logic.
+### Altinn.Notifications.Persistence
+The persistence layer that implements repository logic.
 
 ## Getting started
+
+See [getting-started.md](getting-started.md) for detailed setup instructions.
+
+### Prerequisites
 
 1. [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 2. Newest [Git](https://git-scm.com/downloads)
@@ -69,10 +91,10 @@ cd altinn-notifications
 ```
 
 ### Setting up Kafka broker and visualization
-Ensure that Docker has been installed and is running.
+Ensure that Docker/Podman has been installed and is running.
 
 In a terminal navigate to the root of this repository
-and run command `podman compose -f setup-kafka.yml up -d`
+and run command `podman compose -f tools/dev-setup/setup-kafka.yml up -d`
 
 Kafdrop is now available at http://localhost:9000.
 
@@ -80,10 +102,10 @@ Kafdrop is now available at http://localhost:9000.
 
 The Notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
 
-- Navigate to _src/Altinn.Notifications_, and build and run the code from there, or run the solution using you selected code editor
+- Navigate to the API project and build and run the code from there:
 
   ```cmd
-  cd src/Notifications
+  cd components/api/src/Altinn.Notifications
   dotnet run
   ```
 
@@ -91,9 +113,9 @@ The notifications solution is now available locally at http://localhost:5090/.
 To access swagger use http://localhost:5090/swagger.
 
 ### Testing
-There is a Bruno (https://www.usebruno.com/) collection in ```<project root>/test/bruno``` with examples and testcases for the API.
+There is a Bruno (https://www.usebruno.com/) collection in `components/api/test/bruno` with examples and testcases for the API.
 
-Before running any tests, remember to prepare an ```.env``` file. See ```<project root>/test/bruno/.env.sample``` for an example of how to set it up.
+Before running any tests, remember to prepare an `.env` file. See `components/api/test/bruno/.env.sample` for an example of how to set it up.
 
 ### Swagger
 

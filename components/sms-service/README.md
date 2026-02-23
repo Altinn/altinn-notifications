@@ -1,6 +1,6 @@
-# altinn-notifications-sms
+# Altinn Notifications SMS Service
 
-This component handles the functionality related to sending an sms through Altinn Notifications.
+This component handles the functionality related to sending SMS through Altinn Notifications.
 
 ## Project organization
 This is a backend WebAPI solution written in .NET / C# following the clean architecture principles.
@@ -29,9 +29,7 @@ Relevant implementations:
 
 ## Getting started
 
-## Getting started
-
-1. [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+1. [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 2. Newest [Git](https://git-scm.com/downloads)
 3. A code editor - we like [Visual Studio Code](https://code.visualstudio.com/download)
    - Also install [recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) (e.g. [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp))
@@ -39,19 +37,19 @@ Relevant implementations:
 
 ### Cloning the application
 
-Clone [Altinn Notifications Sms repo](https://github.com/Altinn/altinn-notifications-sms) and navigate to the folder.
+This component is part of the [Altinn Notifications monorepo](https://github.com/Altinn/altinn-notifications).
 
 ```bash
-git clone https://github.com/Altinn/altinn-notifications-sms
-cd altinn-notifications-sms
+git clone https://github.com/Altinn/altinn-notifications
+cd altinn-notifications/components/sms-service
 ```
 
 ### Setting up Kafka broker and visualization
 
-Ensure that Docker and Podman are installed and is running.
+Ensure that Docker/Podman is installed and running.
 
-In a terminal navigate to the root of the repository called altinn-notifications
-and run command `podman compose -f setup-kafka.yml up -d`
+From the repository root, run:
+`podman compose -f tools/dev-setup/setup-kafka.yml up -d`
 
 Kafdrop is now available at http://localhost:9000.
 
@@ -76,9 +74,22 @@ dotnet user-secrets set "SmsDeliveryReportSettings:Password" "insert-password"
 
 The Notifications SMS component can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
 
-- Navigate to _src/Altinn.Notifications.Sms_, and build and run the code from there, or run the solution using you selected code editor
+- Navigate to the project directory and run:
 
   ```cmd
   cd src/Altinn.Notifications.Sms
   dotnet run
   ```
+
+## Building
+
+```bash
+dotnet restore Altinn.Notifications.Sms.sln
+dotnet build Altinn.Notifications.Sms.sln
+```
+
+## Testing
+
+```bash
+dotnet test Altinn.Notifications.Sms.sln
+```
