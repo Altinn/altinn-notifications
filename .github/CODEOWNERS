@@ -1,19 +1,51 @@
-# Repository-wide ownership
+# =============================================================================
+# CODEOWNERS - Altinn Notifications Repository
+# =============================================================================
+# This file defines code ownership for automatic PR review requests.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Rules are evaluated bottom-to-top; the last matching pattern takes precedence.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Default ownership (catch-all)
+# -----------------------------------------------------------------------------
 * @altinn/team-notifications
 
-# GitHub configuration
+# -----------------------------------------------------------------------------
+# GitHub configuration & CI/CD
+# -----------------------------------------------------------------------------
 /.github/ @altinn/team-core @altinn/team-notifications
+/.github/workflows/ @altinn/team-core @altinn/team-notifications
+/.github/CODEOWNERS @altinn/team-core @altinn/team-notifications
 
-# Component ownership
+# -----------------------------------------------------------------------------
+# Components
+# -----------------------------------------------------------------------------
 /components/api/ @altinn/team-notifications
 /components/email-service/ @altinn/team-notifications
 /components/sms-service/ @altinn/team-notifications
 /components/shared/ @altinn/team-notifications
 
+# -----------------------------------------------------------------------------
 # Documentation
+# -----------------------------------------------------------------------------
 /docs/ @altinn/team-notifications
+/*.md @altinn/team-notifications
 
-# Build and tooling
+# -----------------------------------------------------------------------------
+# Build, tooling & configuration
+# -----------------------------------------------------------------------------
 /tools/ @altinn/team-notifications
+/*.sln @altinn/team-notifications
 /*.props @altinn/team-notifications
 /*.json @altinn/team-notifications
+
+
+# -----------------------------------------------------------------------------
+# Editor & Git configuration
+# -----------------------------------------------------------------------------
+/.gitignore @altinn/team-notifications
+/.dockerignore @altinn/team-notifications
+/.editorconfig @altinn/team-notifications
+/.gitattributes @altinn/team-notifications
