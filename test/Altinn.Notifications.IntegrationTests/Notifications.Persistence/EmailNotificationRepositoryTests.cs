@@ -26,12 +26,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete = [];
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdsToDelete.Count == 0)
         {
@@ -566,15 +566,15 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act - should not throw and should insert status feed
         // Note: alternateId is the notification ID, not the order ID
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
         var task = (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
         await task;
-        await transaction.CommitAsync();
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert - verify status feed entry was inserted
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -592,8 +592,8 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act & Assert
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);

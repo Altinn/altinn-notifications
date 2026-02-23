@@ -33,12 +33,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await Task.CompletedTask;
         }
 
-        async Task IAsyncLifetime.DisposeAsync()
+        async ValueTask IAsyncDisposable.DisposeAsync()
         {
             if (_orderIdsToDelete.Count != 0)
             {
@@ -59,7 +59,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
             // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -80,7 +80,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
             // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -100,8 +100,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
             // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-            string responseString = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+            string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);

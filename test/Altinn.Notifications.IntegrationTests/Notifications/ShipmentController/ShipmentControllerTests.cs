@@ -79,7 +79,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
 
         // Assert
@@ -193,7 +193,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
 
         // Assert
@@ -328,7 +328,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);
@@ -363,7 +363,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode); // 499 Client Closed Request
         
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);

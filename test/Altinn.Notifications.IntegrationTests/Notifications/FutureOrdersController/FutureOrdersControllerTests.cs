@@ -75,7 +75,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Act
         var response = await SendPostRequest(client, requestExt);
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -102,7 +102,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         Assert.NotNull(problem);
@@ -1022,7 +1022,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// <returns>A deserialized <see cref="NotificationOrderChainResponseExt"/> object, or <c>null</c> if deserialization fails.</returns>
     private static async Task<NotificationOrderChainResponseExt?> DeserializeResponse(HttpResponseMessage response)
     {
-        string responseString = await response.Content.ReadAsStringAsync();
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         return JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(responseString, _options);
     }
 
@@ -1035,7 +1035,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     private static async Task<HttpResponseMessage> SendPostRequest(HttpClient client, NotificationOrderChainRequestExt request)
     {
         using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        return await client.PostAsync(BasePath, content);
+        return await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
     }
 
     /// <summary>

@@ -109,8 +109,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync(BasePath, requestContent);
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var response = await client.PostAsync(BasePath, requestContent, TestContext.Current.CancellationToken);
+        var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         // Assert
@@ -186,12 +186,12 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync(BasePath, content);
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var result = JsonSerializer.Deserialize<InstantNotificationOrderResponseExt>(responseContent, _options);
 
         Assert.NotNull(result);
@@ -249,7 +249,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync(BasePath, content);
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -315,12 +315,12 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync(BasePath, content);
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var result = JsonSerializer.Deserialize<InstantNotificationOrderResponseExt>(responseContent, _options);
 
         Assert.NotNull(result);
@@ -395,7 +395,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
-        string responseContent = await response.Content.ReadAsStringAsync();
+        string responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
 
         // Assert
@@ -440,7 +440,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
-        string responseContent = await response.Content.ReadAsStringAsync();
+        string responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
 
         // Assert

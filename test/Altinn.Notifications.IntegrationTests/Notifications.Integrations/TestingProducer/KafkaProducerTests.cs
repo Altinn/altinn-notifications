@@ -29,7 +29,7 @@ public class KafkaProducerTests : IAsyncLifetime
     /// <summary>
     /// Disposes the class instance, after all tests have been run.
     /// </summary>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _sharedProducer?.Dispose();
 
@@ -41,7 +41,7 @@ public class KafkaProducerTests : IAsyncLifetime
     /// <summary>
     /// Initializes the class instance, creating the necessary Kafka topics.
     /// </summary>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await KafkaUtil.CreateTopicAsync(_validTopic);
         await KafkaUtil.CreateTopicAsync(_batchTopic);
@@ -266,7 +266,7 @@ public class KafkaProducerTests : IAsyncLifetime
         using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
 
         // Act
-        var result = await producer.ProduceAsync(_batchTopic, emptyBatch);
+        var result = await producer.ProduceAsync(_batchTopic, emptyBatch, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(emptyBatch, result);
@@ -306,7 +306,7 @@ public class KafkaProducerTests : IAsyncLifetime
         using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
 
         // Act
-        var result = await producer.ProduceAsync(invalidTopic, validBatch);
+        var result = await producer.ProduceAsync(invalidTopic, validBatch, TestContext.Current.CancellationToken);
         var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == validBatch.Count, TimeSpan.FromMilliseconds(500));
 
         // Assert
@@ -346,7 +346,7 @@ public class KafkaProducerTests : IAsyncLifetime
         using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
 
         // Act
-        var result = await producer.ProduceAsync(_batchTopic, invalidBatch);
+        var result = await producer.ProduceAsync(_batchTopic, invalidBatch, TestContext.Current.CancellationToken);
         var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == invalidBatch.Count, TimeSpan.FromMilliseconds(500));
 
         // Assert
@@ -413,7 +413,7 @@ public class KafkaProducerTests : IAsyncLifetime
         InjectMockProducer(producer, mockProducer.Object);
 
         // Act
-        var result = await producer.ProduceAsync(_batchTopic, mixedBatch);
+        var result = await producer.ProduceAsync(_batchTopic, mixedBatch, TestContext.Current.CancellationToken);
         var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) >= 2, TimeSpan.FromMilliseconds(500));
 
         // Assert
@@ -460,7 +460,7 @@ public class KafkaProducerTests : IAsyncLifetime
             using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
 
             // Act
-            var result = await producer.ProduceAsync(testTopic, validBatch);
+            var result = await producer.ProduceAsync(testTopic, validBatch, TestContext.Current.CancellationToken);
             var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == validBatch.Count, TimeSpan.FromMilliseconds(500));
 
             // Assert

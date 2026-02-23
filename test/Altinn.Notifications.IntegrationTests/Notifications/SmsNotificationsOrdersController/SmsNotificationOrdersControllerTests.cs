@@ -78,7 +78,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -93,7 +93,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -111,9 +111,9 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -137,8 +137,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string content = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -159,7 +159,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -191,8 +191,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -230,8 +230,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -269,8 +269,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -307,8 +307,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -354,8 +354,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
 
         // Assert

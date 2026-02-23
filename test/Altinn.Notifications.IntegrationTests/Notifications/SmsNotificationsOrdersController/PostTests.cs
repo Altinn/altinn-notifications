@@ -74,8 +74,8 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -97,8 +97,8 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);

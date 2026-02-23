@@ -27,12 +27,12 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         _ordersChainIdsToDelete = [];
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdsToDelete.Count != 0)
         {
@@ -120,7 +120,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             notificationOrder,
             smsNotification,
             expiryDateTime,
-            smsMessageCount);
+            smsMessageCount,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -202,7 +203,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             instantEmailNotificationOrder,
             notificationOrder,
             emailNotification,
-            emailExpiryDateTime);
+            emailExpiryDateTime, 
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -281,7 +283,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             notificationOrder,
             smsNotification,
             expiryDateTime,
-            expectedSmsMessageCount);
+            expectedSmsMessageCount,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -358,7 +361,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             instantEmailNotificationOrder,
             notificationOrder,
             emailNotification,
-            emailExpiryDateTime);
+            emailExpiryDateTime,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -435,7 +439,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             notificationOrder,
             smsNotification,
             expiryDateTime,
-            1);
+            1,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -512,7 +517,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             instantEmailNotificationOrder,
             notificationOrder,
             emailNotification,
-            emailExpiryDateTime);
+            emailExpiryDateTime,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -588,10 +594,11 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             notificationOrder,
             smsNotification,
             creationDateTime.AddSeconds(3600),
-            1);
+            1,
+            TestContext.Current.CancellationToken);
 
         // Act
-        var result = await repository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId);
+        var result = await repository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -613,7 +620,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         var idempotencyId = "non-existent-id";
 
         // Act
-        var result = await repository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId);
+        var result = await repository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);

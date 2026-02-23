@@ -26,7 +26,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         _ordersChainIdentifiers = [];
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdentifiers.Count != 0)
         {
@@ -41,9 +41,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         }
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]

@@ -104,7 +104,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -121,7 +121,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -138,7 +138,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -160,7 +160,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -183,7 +183,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -199,7 +199,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -216,7 +216,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -233,7 +233,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -257,7 +257,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -282,7 +282,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -307,7 +307,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -323,7 +323,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -340,7 +340,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -357,7 +357,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -381,7 +381,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -407,7 +407,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -432,7 +432,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -447,7 +447,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -463,7 +463,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -479,7 +479,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -503,8 +503,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -534,8 +534,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -561,9 +561,9 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -580,7 +580,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -597,7 +597,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -614,7 +614,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -638,7 +638,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -663,7 +663,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -689,7 +689,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();
@@ -715,7 +715,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         orderService.VerifyAll();

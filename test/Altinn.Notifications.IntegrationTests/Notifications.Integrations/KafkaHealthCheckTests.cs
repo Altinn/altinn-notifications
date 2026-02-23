@@ -37,20 +37,20 @@ public class KafkaHealthCheckTests : IAsyncLifetime
     public async Task CheckHealthAsync_ReturnsHealthyResult()
     {
         using KafkaHealthCheck healthCheck = new(_settings);
-        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Healthy, res.Status);
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 
     /// <inheritdoc/>
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }

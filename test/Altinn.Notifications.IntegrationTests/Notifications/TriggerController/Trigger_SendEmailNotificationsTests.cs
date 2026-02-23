@@ -29,12 +29,12 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         _factory = factory;
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_topicName);
@@ -55,7 +55,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         var actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);

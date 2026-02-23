@@ -20,7 +20,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     private readonly List<Guid> _ordersToDelete = [];
     private readonly List<int> _fakeOrderIdsToDelete = [];
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         foreach (var orderId in _ordersToDelete)
         {
@@ -34,9 +34,9 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         }
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]
@@ -151,8 +151,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         };
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -187,12 +187,12 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         };
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act
         await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
-        await transaction.CommitAsync();
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert - verify status feed entry was created
         // Note: We use SelectStatusFeedEntryCount instead of GetStatusFeed because GetStatusFeed

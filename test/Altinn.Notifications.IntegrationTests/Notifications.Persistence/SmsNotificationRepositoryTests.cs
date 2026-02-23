@@ -16,7 +16,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToCleanup = [];
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdsToCleanup.Count == 0)
         {
@@ -30,7 +30,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await Task.CompletedTask;
     }

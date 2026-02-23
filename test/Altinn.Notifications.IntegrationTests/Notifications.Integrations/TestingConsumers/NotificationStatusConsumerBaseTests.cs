@@ -33,7 +33,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     /// <summary>
     /// Called immediately after the class has been created, before it is used.
     /// </summary>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await KafkaUtil.CreateTopicAsync(_smsStatusUpdatedTopicName);
         await KafkaUtil.CreateTopicAsync(_emailStatusUpdatedTopicName);
@@ -65,7 +65,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     /// <summary>
     /// Called when an object is no longer needed.
     /// </summary>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await Dispose(true);
     }
@@ -144,7 +144,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            CancellationToken.None);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -223,7 +225,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -310,7 +314,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -397,7 +403,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -481,7 +489,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -565,7 +575,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -649,7 +661,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -743,7 +757,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -837,7 +853,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }

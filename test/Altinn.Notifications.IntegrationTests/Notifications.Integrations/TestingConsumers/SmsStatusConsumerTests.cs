@@ -70,7 +70,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 return observedSmsStatus == SmsNotificationResultType.New.ToString() && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -133,7 +134,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 return observedSmsStatus == SmsNotificationResultType.Delivered.ToString() && completedOrderCount == 1 && statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -197,7 +199,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 return observedSmsStatus == SmsNotificationResultType.Accepted.ToString() && processedOrderCount == 1 && statusFeedCount == 0;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -249,7 +252,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -310,7 +314,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 }
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -381,7 +386,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                 return observedSmsStatus == resultType.ToString() && completedCount == 1 && statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -391,12 +397,12 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         Assert.Equal(resultType.ToString(), observedSmsStatus);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         foreach (var orderId in _ordersToDelete)
         {

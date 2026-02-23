@@ -560,7 +560,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             .First(s => s is DeadDeliveryReportRepository);
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_createdIds.Count != 0)
         {
@@ -574,8 +574,8 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         }
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }
