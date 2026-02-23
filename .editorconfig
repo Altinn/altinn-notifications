@@ -113,6 +113,7 @@ dotnet_style_namespace_match_folder = true:suggestion
 # StyleCop.Analyzers
 [*.{cs,vb}]
 
+dotnet_diagnostic.CA1873.severity = none
 dotnet_diagnostic.SA0001.severity = error
 dotnet_diagnostic.SA0002.severity = none
 dotnet_diagnostic.SA1000.severity = warning
@@ -286,7 +287,3 @@ dotnet_diagnostic.SA1648.severity = error
 dotnet_diagnostic.SA1649.severity = error
 dotnet_diagnostic.SA1651.severity = error
 insert_final_newline = true
-
-# Code Analysis
-[*.cs]
-dotnet_diagnostic.CA1873.severity = none
