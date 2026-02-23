@@ -1,0 +1,167 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+
+# API Component - Source Projects
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "API", "API", "{A0000000-0000-0000-0000-000000000001}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A0000000-0000-0000-0000-000000000002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A0000000-0000-0000-0000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications", "components\api\src\Altinn.Notifications\Altinn.Notifications.csproj", "{A791EC3D-DC08-416D-9522-C4BE4540084F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Core", "components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj", "{B1000001-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Integrations", "components\api\src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj", "{B1000002-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Persistence", "components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj", "{B1000003-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbTools", "components\api\src\DbTools\DbTools.csproj", "{B1000004-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tests", "components\api\test\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj", "{B1000005-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.IntegrationTests", "components\api\test\Altinn.Notifications.IntegrationTests\Altinn.Notifications.IntegrationTests.csproj", "{B1000006-0000-0000-0000-000000000001}"
+EndProject
+
+# Email Service Component
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Email", "Email", "{E0000000-0000-0000-0000-000000000001}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E0000000-0000-0000-0000-000000000002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{E0000000-0000-0000-0000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email", "components\email-service\src\Altinn.Notifications.Email\Altinn.Notifications.Email.csproj", "{560E000A-D3C6-4B73-8893-1E87498A3D19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.Core", "components\email-service\src\Altinn.Notifications.Email.Core\Altinn.Notifications.Email.Core.csproj", "{E1000001-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.Integrations", "components\email-service\src\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj", "{E1000002-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.Tests", "components\email-service\test\Altinn.Notifications.Email.Tests\Altinn.Notifications.Email.Tests.csproj", "{E1000003-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.IntegrationTests", "components\email-service\test\Altinn.Notifications.Email.IntegrationTests\Altinn.Notifications.Email.IntegrationTests.csproj", "{E1000004-0000-0000-0000-000000000001}"
+EndProject
+
+# SMS Service Component
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SMS", "SMS", "{S0000000-0000-0000-0000-000000000001}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{S0000000-0000-0000-0000-000000000002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{S0000000-0000-0000-0000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms", "components\sms-service\src\Altinn.Notifications.Sms\Altinn.Notifications.Sms.csproj", "{S1000001-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Core", "components\sms-service\src\Altinn.Notifications.Sms.Core\Altinn.Notifications.Sms.Core.csproj", "{S1000002-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Integrations", "components\sms-service\src\Altinn.Notifications.Sms.Integrations\Altinn.Notifications.Sms.Integrations.csproj", "{S1000003-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Tests", "components\sms-service\test\Altinn.Notifications.Sms.Tests\Altinn.Notifications.Sms.Tests.csproj", "{S1000004-0000-0000-0000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.IntegrationTests", "components\sms-service\test\Altinn.Notifications.Sms.IntegrationTests\Altinn.Notifications.Sms.IntegrationTests.csproj", "{S1000005-0000-0000-0000-000000000001}"
+EndProject
+
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1000001-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1000001-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1000001-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1000001-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1000002-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1000002-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1000002-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1000002-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1000003-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1000003-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1000003-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1000003-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1000004-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{S1000001-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{S1000001-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{S1000001-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{S1000001-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{S1000002-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{S1000002-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{S1000002-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{S1000002-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{S1000003-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{S1000003-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{S1000003-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{S1000003-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{S1000004-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{S1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{S1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{S1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{S1000005-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{S1000005-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{S1000005-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{S1000005-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A0000000-0000-0000-0000-000000000002} = {A0000000-0000-0000-0000-000000000001}
+		{A0000000-0000-0000-0000-000000000003} = {A0000000-0000-0000-0000-000000000001}
+		{A791EC3D-DC08-416D-9522-C4BE4540084F} = {A0000000-0000-0000-0000-000000000002}
+		{B1000001-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
+		{B1000002-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
+		{B1000003-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
+		{B1000004-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
+		{B1000005-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000003}
+		{B1000006-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000003}
+		{E0000000-0000-0000-0000-000000000002} = {E0000000-0000-0000-0000-000000000001}
+		{E0000000-0000-0000-0000-000000000003} = {E0000000-0000-0000-0000-000000000001}
+		{560E000A-D3C6-4B73-8893-1E87498A3D19} = {E0000000-0000-0000-0000-000000000002}
+		{E1000001-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000002}
+		{E1000002-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000002}
+		{E1000003-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000003}
+		{E1000004-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000003}
+		{S0000000-0000-0000-0000-000000000002} = {S0000000-0000-0000-0000-000000000001}
+		{S0000000-0000-0000-0000-000000000003} = {S0000000-0000-0000-0000-000000000001}
+		{S1000001-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
+		{S1000002-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
+		{S1000003-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
+		{S1000004-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000003}
+		{S1000005-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000003}
+	EndGlobalSection
+EndGlobal
