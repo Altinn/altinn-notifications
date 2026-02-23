@@ -67,7 +67,9 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
               selectEmailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
               return selectProcessedOrderCount == 1 && selectEmailNotificationCount == 1;
           },
-          TimeSpan.FromSeconds(15));
+          TimeSpan.FromSeconds(15),
+          null,
+          TestContext.Current.CancellationToken);
 
         await consumerService.StopAsync(CancellationToken.None);
         Assert.Equal(1L, selectProcessedOrderCount);
@@ -177,7 +179,9 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
                 var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderId);
                 return statusFeedCount == 1;
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         var statusFeedEntry = await GetStatusFeedOrderStatus(orderId);
         Assert.NotNull(statusFeedEntry);
@@ -225,13 +229,13 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
         return JsonSerializer.Deserialize<OrderStatus>(json, JsonSerializerOptionsProvider.Options);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        return Dispose(true);
+         await Dispose(true);
     }
 }

@@ -97,7 +97,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Act
         var response = await client.PostAsync(
             BasePath,
-            new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json"));
+            new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json"), 
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -156,7 +157,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         {
             Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
         };
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -179,7 +180,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(requestExt);
+        var result = await controller.Post(requestExt, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
@@ -264,7 +265,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         request.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
         var responseObject = await DeserializeResponse(response);
 
         // Assert
@@ -545,7 +546,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Act
         var response = await SendPostRequest(client, requestExt);
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -697,7 +698,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(request);
+        var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         var objectResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -733,7 +734,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(request);
+        var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         var createdResult = Assert.IsType<CreatedResult>(result.Result);
@@ -762,7 +763,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(request);
+        var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -794,7 +795,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(request);
+        var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -829,7 +830,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        var result = await controller.Post(request);
+        var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -909,7 +910,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         // Act
-        await controller.Post(request);
+        await controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedRequest);

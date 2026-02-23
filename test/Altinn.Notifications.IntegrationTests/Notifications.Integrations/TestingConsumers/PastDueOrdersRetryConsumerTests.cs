@@ -63,7 +63,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
              emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
              return processedOrderCount == 1 && emailNotificationCount == 1;
          },
-         TimeSpan.FromSeconds(15));
+         TimeSpan.FromSeconds(15), 
+         null,
+         TestContext.Current.CancellationToken);
         
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -106,7 +108,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
              processedStatus = await SelectProcessStatus(persistedOrder.Id);
              return processedStatus == "Processed";
          },
-         TimeSpan.FromSeconds(15));
+         TimeSpan.FromSeconds(15),
+         null, 
+         TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -193,7 +197,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(10),
+            null,
+            TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -289,7 +295,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(10),
+            null,
+            TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -385,13 +393,13 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             logger);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        return Dispose(true);
+        await Dispose(true);
     }
 }

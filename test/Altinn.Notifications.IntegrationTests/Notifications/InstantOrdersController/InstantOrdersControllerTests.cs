@@ -394,7 +394,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
 
         // Act
-        var response = await client.PostAsync(BasePath, requestContent);
+        var response = await client.PostAsync(BasePath, requestContent, TestContext.Current.CancellationToken);
         string responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
 
@@ -439,7 +439,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
 
         // Act
-        var response = await client.PostAsync(BasePath, requestContent);
+        var response = await client.PostAsync(BasePath, requestContent, TestContext.Current.CancellationToken);
         string responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
 
@@ -498,7 +498,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync(BasePath, requestContent);
+        var response = await client.PostAsync(BasePath, requestContent, TestContext.Current.CancellationToken);
         
         // Assert
         // The unhandled exception should result in a 500 Internal Server Error
