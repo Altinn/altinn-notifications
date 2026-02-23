@@ -4,30 +4,78 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'Dockerfile'
+      - 'components/api/src/**'
+      - 'components/api/Dockerfile'
+      - 'components/email-service/src/**'
+      - 'components/email-service/Dockerfile'
+      - 'components/sms-service/src/**'
+      - 'components/sms-service/Dockerfile'
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'Dockerfile'
+      - 'components/*/src/**'
+      - 'components/*/Dockerfile'
   schedule:
     - cron: '0 8 * * 1,4'
 
 jobs:
-  build:
+  build-api:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build the Docker image
-        run: docker build . --tag altinn-notifications:${{github.sha}}
+        run: docker build . -f components/api/Dockerfile --tag altinn-notifications-api:${{github.sha}}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
         with:
-          image-ref: 'altinn-notifications:${{ github.sha }}'
+          image-ref: 'altinn-notifications-api:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+
+  build-email:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build the Docker image
+        run: docker build . -f components/email-service/Dockerfile --tag altinn-notifications-email:${{github.sha}}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
+        with:
+          image-ref: 'altinn-notifications-email:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+
+  build-sms:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build the Docker image
+        run: docker build . -f components/sms-service/Dockerfile --tag altinn-notifications-sms:${{github.sha}}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
+        with:
+          image-ref: 'altinn-notifications-sms:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true

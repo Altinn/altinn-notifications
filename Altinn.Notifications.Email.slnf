@@ -1,0 +1,12 @@
+{
+  "solution": {
+    "path": "Altinn.Notifications.All.sln",
+    "projects": [
+      "components\\email-service\\src\\Altinn.Notifications.Email\\Altinn.Notifications.Email.csproj",
+      "components\\email-service\\src\\Altinn.Notifications.Email.Core\\Altinn.Notifications.Email.Core.csproj",
+      "components\\email-service\\src\\Altinn.Notifications.Email.Integrations\\Altinn.Notifications.Email.Integrations.csproj",
+      "components\\email-service\\test\\Altinn.Notifications.Email.Tests\\Altinn.Notifications.Email.Tests.csproj",
+      "components\\email-service\\test\\Altinn.Notifications.Email.IntegrationTests\\Altinn.Notifications.Email.IntegrationTests.csproj"
+    ]
+  }
+}

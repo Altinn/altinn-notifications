@@ -5,14 +5,14 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.23@sha256:d17d8d6511aee3dd54b
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
-COPY /src/Altinn.Notifications.Sms/*.csproj ./src/Altinn.Notifications.Sms/
-COPY /src/Altinn.Notifications.Sms.Core/*.csproj ./src/Altinn.Notifications.Sms.Core/
-COPY /src/Altinn.Notifications.Sms.Integrations/*.csproj ./src/Altinn.Notifications.Sms.Integrations/
+COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj ./src/Altinn.Notifications.Sms/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Core/*.csproj ./src/Altinn.Notifications.Sms.Core/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Integrations/*.csproj ./src/Altinn.Notifications.Sms.Integrations/
 
 RUN dotnet restore ./src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 # Copy the remaining source code and build the application
-COPY /src ./src
+COPY components/sms-service/src ./src
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 

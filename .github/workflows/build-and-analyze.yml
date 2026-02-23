@@ -3,8 +3,9 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'test/k6/**'
-      - '.github/**'
+      - 'components/api/test/k6/**'
+      - 'docs/**'
+      - '*.md'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -72,8 +73,8 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
       - name: Setup PostgreSQL
         run: |
-          chmod +x dbsetup.sh
-          ./dbsetup.sh
+          chmod +x tools/dev-setup/dbsetup.sh
+          ./tools/dev-setup/dbsetup.sh
       - name: Restart database to enable config changes
         run: |
           # Restart only the Postgres service by filtering on the published port
@@ -89,11 +90,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
+          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          dotnet build Altinn.Notifications.sln -v q
+          dotnet build Altinn.Notifications.All.sln -v q
 
-          dotnet test Altinn.Notifications.sln \
+          dotnet test Altinn.Notifications.All.sln \
           -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \

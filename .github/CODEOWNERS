@@ -1,1 +1,19 @@
-/.github/CODEOWNERS @altinn/team-core
+# Repository-wide ownership
+* @altinn/team-notifications
+
+# GitHub configuration
+/.github/ @altinn/team-core @altinn/team-notifications
+
+# Component ownership
+/components/api/ @altinn/team-notifications
+/components/email-service/ @altinn/team-notifications
+/components/sms-service/ @altinn/team-notifications
+/components/shared/ @altinn/team-notifications
+
+# Documentation
+/docs/ @altinn/team-notifications
+
+# Build and tooling
+/tools/ @altinn/team-notifications
+/*.props @altinn/team-notifications
+/*.json @altinn/team-notifications

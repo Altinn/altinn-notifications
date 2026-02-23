@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
+      - 'components/*/src/**'
       - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
+      - 'components/*/src/**'
       - '.github/workflows/**'
   schedule:
     - cron: '18 22 * * 3'

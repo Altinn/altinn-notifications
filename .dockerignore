@@ -1,0 +1,38 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# Test directories (for faster builds)
+**/test/
+components/api/test/
+components/email-service/test/
+components/sms-service/test/
+
+# Tools
+components/api/src/Tools/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# GitHub
+.github/
+
+# Documentation
+docs/
+*.md
+
+# IDE
+.idea/
+.vscode/
+
+# Temporary files
+*.log
+*.tmp

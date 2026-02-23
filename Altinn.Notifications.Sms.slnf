@@ -1,0 +1,12 @@
+{
+  "solution": {
+    "path": "Altinn.Notifications.All.sln",
+    "projects": [
+      "components\\sms-service\\src\\Altinn.Notifications.Sms\\Altinn.Notifications.Sms.csproj",
+      "components\\sms-service\\src\\Altinn.Notifications.Sms.Core\\Altinn.Notifications.Sms.Core.csproj",
+      "components\\sms-service\\src\\Altinn.Notifications.Sms.Integrations\\Altinn.Notifications.Sms.Integrations.csproj",
+      "components\\sms-service\\test\\Altinn.Notifications.Sms.Tests\\Altinn.Notifications.Sms.Tests.csproj",
+      "components\\sms-service\\test\\Altinn.Notifications.Sms.IntegrationTests\\Altinn.Notifications.Sms.IntegrationTests.csproj"
+    ]
+  }
+}
