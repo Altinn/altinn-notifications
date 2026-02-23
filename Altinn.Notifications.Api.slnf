@@ -1,6 +1,6 @@
 {
   "solution": {
-    "path": "Altinn.Notifications.All.sln",
+    "path": "Altinn.Notifications.sln"
     "projects": [
       "components\\api\\src\\Altinn.Notifications\\Altinn.Notifications.csproj",
       "components\\api\\src\\Altinn.Notifications.Core\\Altinn.Notifications.Core.csproj",

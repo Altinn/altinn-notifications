@@ -92,9 +92,9 @@ jobs:
         run: |
           dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          dotnet build Altinn.Notifications.All.sln -v q
+          dotnet build Altinn.Notifications.sln -v q
 
-          dotnet test Altinn.Notifications.All.sln \
+          dotnet test Altinn.Notifications.sln \
           -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
