@@ -354,3 +354,6 @@ MigrationBackup/
 
 # macOS 
 .DS_Store
+
+altinn-notifications-email.git/
+altinn-notifications-sms.git/
