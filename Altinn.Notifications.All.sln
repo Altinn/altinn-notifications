@@ -1,9 +1,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+VisualStudioVersion = 17.0.0.0
 MinimumVisualStudioVersion = 10.0.40219.1
-
-# API Component - Source Projects
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "API", "API", "{A0000000-0000-0000-0000-000000000001}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A0000000-0000-0000-0000-000000000002}"
@@ -24,8 +22,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.IntegrationTests", "components\api\test\Altinn.Notifications.IntegrationTests\Altinn.Notifications.IntegrationTests.csproj", "{B1000006-0000-0000-0000-000000000001}"
 EndProject
-
-# Email Service Component
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Email", "Email", "{E0000000-0000-0000-0000-000000000001}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E0000000-0000-0000-0000-000000000002}"
@@ -42,25 +38,22 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Email.IntegrationTests", "components\email-service\test\Altinn.Notifications.Email.IntegrationTests\Altinn.Notifications.Email.IntegrationTests.csproj", "{E1000004-0000-0000-0000-000000000001}"
 EndProject
-
-# SMS Service Component
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SMS", "SMS", "{S0000000-0000-0000-0000-000000000001}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SMS", "SMS", "{528C6724-5451-40E8-ACCE-29A76843B2AF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{S0000000-0000-0000-0000-000000000002}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E6B9CE4B-084E-4407-B601-C6723A932141}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{S0000000-0000-0000-0000-000000000003}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{BB619C38-B5C1-4268-A0DF-B8241A28C8D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms", "components\sms-service\src\Altinn.Notifications.Sms\Altinn.Notifications.Sms.csproj", "{S1000001-0000-0000-0000-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms", "components\sms-service\src\Altinn.Notifications.Sms\Altinn.Notifications.Sms.csproj", "{00C7CA54-D9F1-42AA-BAF6-364375BD4EE1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Core", "components\sms-service\src\Altinn.Notifications.Sms.Core\Altinn.Notifications.Sms.Core.csproj", "{S1000002-0000-0000-0000-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Core", "components\sms-service\src\Altinn.Notifications.Sms.Core\Altinn.Notifications.Sms.Core.csproj", "{DE2E2BE6-6354-4866-AFDC-BD195EF62175}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Integrations", "components\sms-service\src\Altinn.Notifications.Sms.Integrations\Altinn.Notifications.Sms.Integrations.csproj", "{S1000003-0000-0000-0000-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Integrations", "components\sms-service\src\Altinn.Notifications.Sms.Integrations\Altinn.Notifications.Sms.Integrations.csproj", "{BB22E576-2300-47F3-A167-0512F71B11E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Tests", "components\sms-service\test\Altinn.Notifications.Sms.Tests\Altinn.Notifications.Sms.Tests.csproj", "{S1000004-0000-0000-0000-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.Tests", "components\sms-service\test\Altinn.Notifications.Sms.Tests\Altinn.Notifications.Sms.Tests.csproj", "{785491B8-0FC9-4F96-ACD6-5975341D71CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.IntegrationTests", "components\sms-service\test\Altinn.Notifications.Sms.IntegrationTests\Altinn.Notifications.Sms.IntegrationTests.csproj", "{S1000005-0000-0000-0000-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.IntegrationTests", "components\sms-service\test\Altinn.Notifications.Sms.IntegrationTests\Altinn.Notifications.Sms.IntegrationTests.csproj", "{60C310E2-2B18-438E-971B-B5C6BA70410C}"
 EndProject
-
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,26 +108,26 @@ Global
 		{E1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{S1000001-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{S1000001-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{S1000001-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{S1000001-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{S1000002-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{S1000002-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{S1000002-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{S1000002-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{S1000003-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{S1000003-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{S1000003-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{S1000003-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{S1000004-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{S1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{S1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{S1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{S1000005-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{S1000005-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{S1000005-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{S1000005-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00C7CA54-D9F1-42AA-BAF6-364375BD4EE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00C7CA54-D9F1-42AA-BAF6-364375BD4EE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00C7CA54-D9F1-42AA-BAF6-364375BD4EE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00C7CA54-D9F1-42AA-BAF6-364375BD4EE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE2E2BE6-6354-4866-AFDC-BD195EF62175}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE2E2BE6-6354-4866-AFDC-BD195EF62175}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE2E2BE6-6354-4866-AFDC-BD195EF62175}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE2E2BE6-6354-4866-AFDC-BD195EF62175}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB22E576-2300-47F3-A167-0512F71B11E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB22E576-2300-47F3-A167-0512F71B11E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB22E576-2300-47F3-A167-0512F71B11E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB22E576-2300-47F3-A167-0512F71B11E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{785491B8-0FC9-4F96-ACD6-5975341D71CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{785491B8-0FC9-4F96-ACD6-5975341D71CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{785491B8-0FC9-4F96-ACD6-5975341D71CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{785491B8-0FC9-4F96-ACD6-5975341D71CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60C310E2-2B18-438E-971B-B5C6BA70410C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60C310E2-2B18-438E-971B-B5C6BA70410C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60C310E2-2B18-438E-971B-B5C6BA70410C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60C310E2-2B18-438E-971B-B5C6BA70410C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -156,12 +149,5 @@ Global
 		{E1000002-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000002}
 		{E1000003-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000003}
 		{E1000004-0000-0000-0000-000000000001} = {E0000000-0000-0000-0000-000000000003}
-		{S0000000-0000-0000-0000-000000000002} = {S0000000-0000-0000-0000-000000000001}
-		{S0000000-0000-0000-0000-000000000003} = {S0000000-0000-0000-0000-000000000001}
-		{S1000001-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
-		{S1000002-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
-		{S1000003-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000002}
-		{S1000004-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000003}
-		{S1000005-0000-0000-0000-000000000001} = {S0000000-0000-0000-0000-000000000003}
 	EndGlobalSection
 EndGlobal
