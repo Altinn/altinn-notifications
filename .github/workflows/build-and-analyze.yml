@@ -3,12 +3,36 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'components/api/test/k6/**'
       - 'docs/**'
-      - '*.md'
+      - '**/*.md'
+      - '**/*.svg'
+      - '**/*.png'
+      - '.github/CODEOWNERS'
+      - '.github/labeler.yml'
+
+
+      - 'components/api/test/k6/**'
+      - '.editorconfig'
+      - '.gitattributes'
+      - '.dockerignore'
+      - 'LICENSE'
+      - 'renovate.json'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - 'components/api/test/k6/**'
+      - 'docs/**'
+      - '**/*.md'
+      - '**/*.svg'
+      - '**/*.png'
+      - '.github/CODEOWNERS'
+      - '.github/labeler.yml'
+      - '.editorconfig'
+      - '.gitattributes'
+      - '.dockerignore'
+      - 'LICENSE'
+      - 'renovate.json'
   workflow_dispatch:
 jobs:
   build-test-analyze:
