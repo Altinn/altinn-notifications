@@ -104,10 +104,6 @@ Run the database setup script:
 
 ## Configuration
 
-### Central Package Management
-
-NuGet package versions are centrally managed in `Directory.Packages.props` at the repository root. When adding a new package, define its version there.
-
 ### Build Properties
 
 Common MSBuild properties are defined in `Directory.Build.props` at the repository root. This ensures consistent build settings across all components.
