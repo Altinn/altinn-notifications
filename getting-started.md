@@ -1,34 +1,35 @@
 # Getting Started
 
-This guide will help you set up your development environment and get started with the Altinn Notifications.
+This guide will help you set up your development environment and get started with **Altinn Notifications**.
 
-## Prerequisites
+## 🚀 Quick Overview
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Podman](https://podman.io/) (preferred). [Docker](https://www.docker.com/get-started) is supported if you do not use Podman.
-- [PostgreSQL](https://www.postgresql.org/download/)
-- [pgAdmin](https://www.pgadmin.org/download/)
-- [Visual Studio](https://visualstudio.microsoft.com/) or [Visual Studio Code](https://code.visualstudio.com/)
-- [Git](https://git-scm.com/)
+This repository uses a mono-repo structure, consolidating multiple services into one Place.
+You can work on the entire system using the root solution or focus on individual components using their specific solutions.
 
-## Repository Structure
+| Solution | File Path | Purpose |
+| :--- | :--- | :--- |
+| **Full Stack** | `Altinn.Notifications.sln` | Work on API, Email, SMS, and Tools simultaneously. |
+| **API** | `components/api/Altinn.Notifications.API.sln` | Core Notification API logic. |
+| **Email Service** | `components/email-service/Altinn.Notifications.Email.sln` | Email sending and processing. |
+| **SMS Service** | `components/sms-service/Altinn.Notifications.Sms.sln` | SMS sending and processing. |
+| **Tools** | `tools/Altinn.Notifications.Tools.sln` | Utility and maintenance tools. |
 
-```
-altinn-notifications/
-├── Altinn.Notifications.sln
-├── components/           # All components
-│   ├── api/              # Main Notifications API
-│   ├── email-service/    # Email sending service
-│   ├── sms-service/      # SMS sending service
-│   └── shared/           # Shared utilities
-├── docs/                 # Documentation
-├── tools/                # Build scripts
-└── .github/workflows/    # CI/CD workflows
-```
+---
 
-The root `Altinn.Notifications.sln` provides an overview of the repo, while each component has its own solution for day-to-day work.
+## 🛠 Prerequisites
 
-## Quick Start
+Ensure you have the following installed:
+
+*   **[.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)** – Required to build and run the code.
+*   **[Podman](https://podman.io/) (Preferred) or [Docker](https://www.docker.com/get-started)** – For running local infrastructure (Kafka, etc.).
+*   **[PostgreSQL](https://www.postgresql.org/download/) & [pgAdmin](https://www.pgadmin.org/download/)** – Database and management tool.
+*   **IDE:** [Visual Studio](https://visualstudio.microsoft.com/) or [Visual Studio Code](https://code.visualstudio.com/).
+*   **[Git](https://git-scm.com/)** – Version control.
+
+---
+
+## 🏗 Setup & Installation
 
 ### 1. Clone the Repository
 
@@ -37,186 +38,154 @@ git clone https://github.com/Altinn/altinn-notifications.git
 cd altinn-notifications
 ```
 
-### 2. Build a Component
+### 2. Infrastructure Setup (Kafka)
 
-Each component has its own solution file. To build a specific component:
+Altinn Notifications uses Kafka for message queuing. Start the local Kafka instance using Podman or Docker.
 
+**Podman (Preferred):**
 ```bash
-# Build API
-dotnet build components/api/Altinn.Notifications.API.sln
-
-# Build Email Service
-dotnet build components/email-service/Altinn.Notifications.Email.sln
-
-# Build SMS Service
-dotnet build components/sms-service/Altinn.Notifications.Sms.sln
+podman compose -f tools/dev-setup/setup-kafka.yml up -d
 ```
 
-### 3. Run Tests
+**Dstoker:**
+```bash
+docker compose -f tools/dev-setup/setup-kafka.yml up -d
+```
+
+> 🎯 **Tip:** You can access the **Kafdrop** UI at `http://localhost:9000` to monitor your topics.
+
+### 3. Database Setup (PostgreSQL)
+
+1.  Ensure PostgreSQL is running.
+2.  Open **pgAdmin** and connect to your local server.
+3.  Create a new database named: `notificationsdb`
+4.  Create the following **Login/Group Roles** (set password to `Password` for local dev):
+    *   `platform_notifications_admin` (Grant: `Superuser`, `Can login`)
+    *   `platform_notifications` (Grant: `Can login`)
+
+---
+
+## 🏃 Running the Application
+
+### Option A: Run Everything (Visual Studio)
+
+1.  Open `Altinn.Notifications.sln` in Visual Studio.
+2.  Set the **Startup Projects** to multiple:
+    *   `Altinn.Notifications` (API)
+    *   `Altinn.Notifications.Email` (Email Worker)
+    *   `Altinn.Notifications.Sms` (Sms Worker)
+3.  Press **F5** to debug.
+
+### Option B: Run Specific Components (CLI)
+
+You can run individual services from the command line.
+
+**1.  Notifications API**
+   *   URL: `http://localhost:5090/`
+   *   Swagger: `http://localhost:5090/swagger`
+
+   ```bash
+   cd components/api/src/Altinn.Notifications
+   dotnet run
+   ```
+
+**2. Email Service**
+
+   ```bash
+   cd components/email-service/src/Altinn.Notifications.Email
+   dotnet run
+   ```
+
+**3. SMS Service**
+
+   ```bash
+   cd components/sms-service/src/Altinn.Notifications.Sms
+   dotnet run
+   ```
+
+---
+
+## ⚙️ Configuration (User Secrets)
+
+To enable end-to-end functionality (like actually sending emails or SMS), you need to configure connection strings and credentials. We use **User Secrets** to keep these out of source control.
+
+### Email Service (Azure Communication Services)
+
+1.  Obtain an ACS connection string from the Azure Portal.
+2.  Run:
 
 ```bash
-# Test API
+cd components/email-service/src/Altinn.Notifications.Email
+dotnet user-secrets init
+dotnet user-secrets set "CommunicationServicesSettings:ConnectionString" "<your-connection-string>"
+```
+
+### SMS Service (Link Mobility)
+
+1.  Obtain Link Mobility gateway credentials.
+2.  Run:
+
+```bash
+cd components/sms-service/src/Altinn.Notifications.Sms
+dotnet user-secrets init
+dotnet user-secrets set "SmsGatewaySettings:Username" "<username>"
+dotnet user-secrets set "SmsGatewaySettings:Password" "<password>"
+dotnet user-secrets set "SmsDeliveryReportSettings:Username" "<username>"
+dotnet user-secrets set "SmsDeliveryReportSettings:Password" "<password>"
+```
+
+---
+
+## 🧪 Testing
+
+### Running Unit & Integration Tests
+
+You can run tests for the entire solution or per component.
+
+**Full Suite:**
+```bash
+dotnet test Altinn.Notifications.sln
+```
+
+**Per Component:**
+```bash
 dotnet test components/api/Altinn.Notifications.API.sln
-
-# Test Email Service
 dotnet test components/email-service/Altinn.Notifications.Email.sln
-
-# Test SMS Service
 dotnet test components/sms-service/Altinn.Notifications.Sms.sln
 ```
 
-### 4. Build Container Images
+### API Testing with Bruno
 
+We use [Bruno](https://www.usebruno.com/) for API testing.
+1.  Navigate to `components/api/test/bruno`.
+2.  Copy `.env.sample` to `.env` and configure your local environment variables.
+3.  Open the collection in Bruno to run requests.
+
+---
+
+## 📦 Containerization
+
+To build container images locally:
+
+**Podman:**
 ```bash
-# Podman (preferred)
 podman build -t notifications-api -f components/api/Dockerfile .
 podman build -t notifications-email -f components/email-service/Dockerfile .
 podman build -t notifications-sms -f components/sms-service/Dockerfile .
+```
 
-# Docker equivalents
+**Docker:**
+```bash
 docker build -t notifications-api -f components/api/Dockerfile .
 docker build -t notifications-email -f components/email-service/Dockerfile .
 docker build -t notifications-sms -f components/sms-service/Dockerfile .
 ```
 
-## Development Workflow
+---
 
-### Working on a Single Component
+## 📚 Additional Resources
 
-When working on a single component, open the component's solution file directly:
-
-- **API**: `components/api/Altinn.Notifications.API.sln`
-- **Email Service**: `components/email-service/Altinn.Notifications.Email.sln`
-- **SMS Service**: `components/sms-service/Altinn.Notifications.Sms.sln`
-
-### Email Service Component
-
-This component handles the functionality related to sending an email through Altinn Notifications.
-
-Project organization:
-
-- `Altinn.Notifications.Email`: API layer that consumes services provided by `Altinn.Notifications.Email.Core`
-  - Relevant implementations: `Program.cs`, Kafka consumer implementation
-- `Altinn.Notifications.Email.Core`: domain and application layer
-  - Relevant implementations: interfaces for external dependencies, domain models, services for sending emails
-- `Altinn.Notifications.Email.Integrations`: infrastructure layer
-  - Relevant implementations: client for integrating with the e-mail service, Kafka producer implementation
-
-### SMS Service Component
-
-This component handles the functionality related to sending an SMS through Altinn Notifications.
-
-Project organization:
-
-- `Altinn.Notifications.Sms`: API layer that consumes services provided by `Altinn.Notifications.Sms.Core`
-  - Relevant implementations: `Program.cs`
-- `Altinn.Notifications.Sms.Core`: domain and application layer
-  - Relevant implementations: interfaces for external dependencies, domain models, services for sending SMS
-- `Altinn.Notifications.Sms.Integrations`: infrastructure layer
-  - Relevant implementations: client for integrating with the SMS service
-
-### Local Development Setup
-
-Use the Kafka setup script for local development (Podman preferred):
-
-```bash
-podman compose -f tools/dev-setup/setup-kafka.yml up -d
-```
-
-If you are using Docker instead of Podman (Docker Compose):
-
-```bash
-docker compose -f tools/dev-setup/setup-kafka.yml up -d
-```
-
-Kafdrop is available at `http://localhost:9000`.
-
-### PostgreSQL Setup
-
-Ensure that both PostgreSQL and pgAdmin have been installed and start pgAdmin.
-
-In pgAdmin:
-
-- Create database `notificationsdb`
-- Create the following users with password: `Password` (see privileges in parentheses)
-  - `platform_notifications_admin` (superuser, canlogin)
-  - `platform_notifications` (canlogin)
-
-### Running the Application with .NET
-
-The notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
-
-- Navigate to `components/api/src/Altinn.Notifications`, and build and run the code from there, or run the solution using your selected code editor.
-
-```bash
-cd components/api/src/Altinn.Notifications
-dotnet run
-```
-
-The notifications solution is available locally at `http://localhost:5090/`. For Swagger, use `http://localhost:5090/swagger`.
-
-### Azure Communication Services (Email Service)
-
-If you need end-to-end functionality when working on Notifications Email, Azure Communication Services (ACS) must be set up. Create or use an existing ACS resource and copy the connection string from Azure Portal under **Settings** > **Keys**.
-
-We recommend setting it up as a user secret:
-
-```bash
-cd components/email-service/src/Altinn.Notifications.Email
-dotnet user-secrets init
-dotnet user-secrets set "CommunicationServicesSettings:ConnectionString" "insert-connection-string"
-```
-
-### Running the Email Service with .NET
-
-Navigate to `components/email-service/src/Altinn.Notifications.Email` and run the service:
-
-```bash
-cd components/email-service/src/Altinn.Notifications.Email
-dotnet run
-```
-
-### SMS Gateway Credentials (SMS Service)
-
-If you need end-to-end functionality when working on Notifications SMS, configure credentials for Link Mobility's SMS gateway. We recommend setting it up as user secrets:
-
-```bash
-cd components/sms-service/src/Altinn.Notifications.Sms
-dotnet user-secrets init
-dotnet user-secrets set "SmsGatewaySettings:Username" "insert-username"
-dotnet user-secrets set "SmsGatewaySettings:Password" "insert-password"
-dotnet user-secrets set "SmsDeliveryReportSettings:Username" "insert-username"
-dotnet user-secrets set "SmsDeliveryReportSettings:Password" "insert-password"
-```
-
-### Running the SMS Service with .NET
-
-Navigate to `components/sms-service/src/Altinn.Notifications.Sms` and run the service:
-
-```bash
-cd components/sms-service/src/Altinn.Notifications.Sms
-dotnet run
-```
-
-### Testing
-
-There is a Bruno collection in `components/api/test/bruno` with examples and testcases for the API.
-
-Before running any tests, remember to prepare an `.env` file. See `components/api/test/bruno/.env.sample` for an example of how to set it up.
-
-### Swagger
-
-The Swagger generated by the application differs from what is published in the documentation and used in APIM. See [transformations](docs/swagger_transforms/transforms.md) for the steps to generate these artifacts.
-
-## Configuration
-
-### .NET SDK Version
-
-The required .NET SDK version is pinned in `global.json` at the repository root. See also `tools/dev-setup/` for local development assets.
-
-## Additional Resources
-
-- [Architecture Documentation](docs/architecture/)
-- [API Component README](components/api/README.md)
-- [Email Service README](components/email-service/README.md)
-- [SMS Service README](components/sms-service/README.md)
+*   [Architecture Documentation](docs/architecture/)
+*   [API Readme](components/api/README.md)
+*   [Email Service Readme](components/email-service/README.md)
+*   [SMS Service Readme](components/sms-service/README.md)

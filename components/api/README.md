@@ -2,45 +2,43 @@
 
 The main API component for Altinn Notifications, providing endpoints for creating and managing notification orders.
 
-## Structure
+## Project Structure
 
-```
-components/api/
-├── src/
-│   ├── Altinn.Notifications/              # Controllers, Program.cs
-│   ├── Altinn.Notifications.Core/         # Business logic, services
-│   ├── Altinn.Notifications.Persistence/  # Data access
-│   ├── Altinn.Notifications.Integrations/ # External systems (Kafka, etc.)
-│   └── DbTools/                           # Database migrations/tools
-├── test/
-│   ├── Altinn.Notifications.Tests/        # Unit tests
-│   ├── Altinn.Notifications.IntegrationTests/
-│   └── Altinn.Notifications.Tools.Tests/
-├── Altinn.Notifications.API.sln
-└── Dockerfile
-```
+*   **Altinn.Notifications** - API Controllers, Program.cs, and Configuration.
+*   **Altinn.Notifications.Core** - Domain logic, services, and interfaces.
+*   **Altinn.Notifications.Persistence** - Database access and repositories (PostgreSQL).
+*   **Altinn.Notifications.Integrations** - External integrations (Kafka producers, etc.).
 
-## Building
+## 🏗 Building & Running
 
+**Build:**
 ```bash
-dotnet restore Altinn.Notifications.API.sln
 dotnet build Altinn.Notifications.API.sln
 ```
 
-## Testing
+**Run:**
+```bash
+cd src/Altinn.Notifications
+dotnet run
+```
 
+*The API will be available at `http://localhost:5090/`. Swagger: `http://localhost:5090/swagger`.*
+
+**Test:**
 ```bash
 dotnet test Altinn.Notifications.API.sln
 ```
 
-## Running Locally
+## 🐳 Containerization
 
+To run the API as a container (from the repo root):
+
+**Podman:**
 ```bash
-dotnet run --project src/Altinn.Notifications/Altinn.Notifications.csproj
+podman build -t notifications-api -f components/api/Dockerfile .
 ```
 
-## Docker
-
+**Docker:**
 ```bash
-docker build -t notifications-api -f Dockerfile ../..
+docker build -t notifications-api -f components/api/Dockerfile .
 ```
