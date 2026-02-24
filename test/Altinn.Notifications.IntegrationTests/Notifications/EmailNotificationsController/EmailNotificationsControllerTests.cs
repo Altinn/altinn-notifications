@@ -141,12 +141,12 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
-        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(respoonseString);
+        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
         Assert.NotNull(summaryExt);
         Assert.Equal(id, summaryExt.OrderId);
 
@@ -178,12 +178,12 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
-        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(respoonseString);
+        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
         Assert.NotNull(summaryExt);
         Assert.Equal(id, summaryExt.OrderId);
 

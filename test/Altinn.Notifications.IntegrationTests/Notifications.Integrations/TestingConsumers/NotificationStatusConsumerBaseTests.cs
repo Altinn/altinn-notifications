@@ -148,9 +148,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             },
             TimeSpan.FromSeconds(15),
             null,
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -231,7 +231,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -320,7 +320,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -409,7 +409,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -461,7 +461,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -495,7 +495,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -547,7 +547,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -581,7 +581,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -633,7 +633,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -667,7 +667,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -721,7 +721,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -763,7 +763,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -817,7 +817,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
 
         // Assert
@@ -859,7 +859,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             null,
             TestContext.Current.CancellationToken);
 
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(TestContext.Current.CancellationToken);
     }
 
     /// <summary>

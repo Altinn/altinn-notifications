@@ -585,7 +585,7 @@ public class InstantOrderRequestServiceTests
         };
 
         // Act
-        await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+        await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
         await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
