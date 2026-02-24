@@ -1,0 +1,46 @@
+meta {
+  name: External Identity - IDporten Email
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "requestedSendTime": "{{requestedSendTime}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "dialogportenAssociation": {
+      "dialogId": "{{$guid}}",  
+      "transmissionId": "{{$guid}}"
+    },
+    "recipient": {
+      "recipientExternalIdentity": {
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "externalIdentity": "urn:altinn:person:idporten-email:{{process.env.TESTDATA_EXTERNAL_IDENTITY_IDPORTEN_EMAIL}}",
+        "channelSchema": "EmailAndSms",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "body": "(TEST) This is a test notification sent to a user identified via ID-porten email login."
+        },
+        "emailSettings": {
+          "contentType": "Html",
+          "sendingTimePolicy": "Anytime",
+          "subject": "(TEST) Notification for External Identity User",
+          "body": "(TEST) This is a test notification sent to a user identified via ID-porten email login."
+        }
+      }
+    }
+  }
+}
+
+script:pre-request {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 1);
+  bru.setVar("requestedSendTime", date.toISOString());
+}

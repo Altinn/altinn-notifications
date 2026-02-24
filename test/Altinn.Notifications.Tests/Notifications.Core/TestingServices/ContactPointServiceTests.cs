@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
 
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
@@ -24,9 +25,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             string nationalId = "17269942983";
             var recipientsToEnrich = new List<Recipient>
-    {
-        new() { NationalIdentityNumber = nationalId }
-    };
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
@@ -1066,11 +1067,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         {
             // Arrange
             string organizationNumber = "123456789";
-            string organizationFirstEmailAddresse = "first-organization-email@example.com";
-            string organizationSecondEmailAddresse = "second-organization-email@example.com";
+            string organizationFirstEmailAddress = "first-organization-email@example.com";
+            string organizationSecondEmailAddress = "second-organization-email@example.com";
 
             string contactPersonNationalId = "29326345553";
-            string contactPersonEmailAddresse = "main-recipient@example.com";
+            string contactPersonEmailAddress = "main-recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -1086,14 +1087,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         PartyId = 1001,
                         OrganizationNumber = organizationNumber,
-                        EmailList = [organizationFirstEmailAddresse, organizationSecondEmailAddresse],
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress],
                         UserContactPoints =
                         [
                             new()
                             {
                                 UserId = 200001,
                                 IsReserved = false,
-                                Email = contactPersonEmailAddresse,
+                                Email = contactPersonEmailAddress,
                                 NationalIdentityNumber = contactPersonNationalId
                             }
                         ]
@@ -1117,9 +1118,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var emailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().ToList();
             Assert.Equal(3, emailAddresses.Count);
-            Assert.Contains(emailAddresses, e => e.EmailAddress == contactPersonEmailAddresse);
-            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationFirstEmailAddresse);
-            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationSecondEmailAddresse);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == contactPersonEmailAddress);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationFirstEmailAddress);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationSecondEmailAddress);
 
             Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
 
@@ -1199,7 +1200,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberdAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumbers()
+        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumbers()
         {
             // Arrange
             string organizationNumber = "123456789";
@@ -1488,10 +1489,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = emailAddress,
                         MobileNumber = string.Empty,
@@ -1524,7 +1525,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
@@ -1545,10 +1546,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = emailAddress,
                         MobileNumber = rawMobileNumber,
@@ -1576,7 +1577,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
@@ -1597,10 +1598,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = string.Empty,
                         MobileNumber = rawMobileNumber,
@@ -1632,7 +1633,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
@@ -1652,10 +1653,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = string.Empty,
                         MobileNumber = invalidMobileNumber,
@@ -1676,7 +1677,44 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var recipient = Assert.Single(recipientsToEnrich);
             Assert.Empty(recipient.AddressInfo);
 
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddSmsContactPoints_WhenUsingExternalIdentityProfileClientThrowsException_ShouldThrowPlatformDependencyException()
+        {
+            // Arrange
+            string externalIdentity = "urn:altinn:person:idporten-email:user@example.com";
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = externalIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .ThrowsAsync(new TaskCanceledException("Simulated timeout"));
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+                async () => await service.AddSmsContactPoints(recipientsToEnrich, null));
+
+            Assert.Equal("ProfileClient", exception.DependencyName);
+            Assert.Equal("GetExternalIdentityContactPoints", exception.Operation);
+            Assert.IsType<TaskCanceledException>(exception.InnerException);
+            Assert.True(exception.IsTransient);
+
+            profileClientMock.Verify(
+                e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))),
+                Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -1697,10 +1735,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = emailAddress,
                         MobileNumber = rawMobileNumber,
@@ -1737,7 +1775,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
@@ -1759,10 +1797,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = emailAddress,
                         MobileNumber = rawMobileNumber,
@@ -1790,7 +1828,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
@@ -1811,10 +1849,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = string.Empty,
                         MobileNumber = rawMobileNumber,
@@ -1840,7 +1878,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(formattedMobileNumber, smsPoint.MobileNumber);
             Assert.Equal(AddressType.Sms, smsPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -1859,10 +1897,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
                 .ReturnsAsync(
                 [
-                    new SelfIdentifiedUserContactPoints
+                    new ExternalIdentityContactPoints
                     {
                         Email = emailAddress,
                         MobileNumber = string.Empty,
@@ -1888,7 +1926,223 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(emailAddress, emailPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetSelfIdentifiedUserContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenUsingLegacySelfIdentifiedUsername_ShouldEnrichRecipientsWithEmailAddress()
+        {
+            // Arrange
+            string emailAddress = "legacy-user@example.com";
+            string externalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = externalIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .ReturnsAsync(
+                [
+                    new ExternalIdentityContactPoints
+                    {
+                        Email = emailAddress,
+                        MobileNumber = string.Empty,
+                        ExternalIdentity = externalIdentity
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(externalIdentity, recipient.ExternalIdentity);
+
+            var addressInfo = Assert.Single(recipient.AddressInfo);
+            var emailAddressPoint = Assert.IsType<EmailAddressPoint>(addressInfo);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddSmsContactPoints_WhenUsingUsernameIdentity_ShouldEnrichRecipientsWithMobileNumber()
+        {
+            // Arrange
+            string rawMobileNumber = "98765432";
+            string formattedMobileNumber = "+4798765432";
+            string externalIdentity = "urn:altinn:username:testuser123";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = externalIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .ReturnsAsync(
+                [
+                    new ExternalIdentityContactPoints
+                    {
+                        Email = "testuser@example.com",
+                        MobileNumber = rawMobileNumber,
+                        ExternalIdentity = externalIdentity
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddSmsContactPoints(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(externalIdentity, recipient.ExternalIdentity);
+
+            var addressInfo = Assert.Single(recipient.AddressInfo);
+            var smsAddressPoint = Assert.IsType<SmsAddressPoint>(addressInfo);
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingPartyUsername_ShouldEnrichRecipientsWithBothContactPoints()
+        {
+            // Arrange
+            string rawMobileNumber = "91234567";
+            string formattedMobileNumber = "+4791234567";
+            string emailAddress = "partyuser@example.com";
+            string externalIdentity = "urn:altinn:party:username:partyuser";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = externalIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))))
+                .ReturnsAsync(
+                [
+                    new ExternalIdentityContactPoints
+                    {
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        ExternalIdentity = externalIdentity
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(externalIdentity, recipient.ExternalIdentity);
+
+            Assert.Equal(2, recipient.AddressInfo.Count);
+
+            var smsAddressPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+
+            var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingMultipleExternalIdentityTypes_ShouldEnrichAllRecipients()
+        {
+            // Arrange
+            string idportenEmailIdentity = "urn:altinn:person:idporten-email:user@example.com";
+            string legacySelfIdentifiedIdentity = "urn:altinn:person:legacy-selfidentified:legacyuser";
+            string usernameIdentity = "urn:altinn:username:testuser";
+            string partyUsernameIdentity = "urn:altinn:party:username:partyuser";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { ExternalIdentity = idportenEmailIdentity },
+                new() { ExternalIdentity = legacySelfIdentifiedIdentity },
+                new() { ExternalIdentity = usernameIdentity },
+                new() { ExternalIdentity = partyUsernameIdentity }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetExternalIdentityContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync(
+                [
+                    new ExternalIdentityContactPoints { Email = "user@example.com", MobileNumber = "91111111", ExternalIdentity = idportenEmailIdentity },
+                    new ExternalIdentityContactPoints { Email = "legacy@example.com", MobileNumber = "92222222", ExternalIdentity = legacySelfIdentifiedIdentity },
+                    new ExternalIdentityContactPoints { Email = "testuser@example.com", MobileNumber = "93333333", ExternalIdentity = usernameIdentity },
+                    new ExternalIdentityContactPoints { Email = "partyuser@example.com", MobileNumber = "94444444", ExternalIdentity = partyUsernameIdentity }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null);
+
+            // Assert
+            Assert.Equal(4, recipientsToEnrich.Count);
+
+            foreach (var recipient in recipientsToEnrich)
+            {
+                var emailPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+                Assert.NotEmpty(emailPoint.EmailAddress);
+                Assert.Equal(AddressType.Email, emailPoint.AddressType);
+            }
+
+            profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.IsAny<List<string>>()), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }

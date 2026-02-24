@@ -31,7 +31,7 @@ public class NotificationRecipient
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed
-    /// to send an email or SMS to a self-identified user (ID-porten email login user).
+    /// to send an email or SMS to a user identified by an external identity.
     /// </summary>
-    public RecipientSelfIdentifiedUser? RecipientSelfIdentifiedUser { get; set; }
+    public RecipientExternalIdentity? RecipientExternalIdentity { get; set; }
 }

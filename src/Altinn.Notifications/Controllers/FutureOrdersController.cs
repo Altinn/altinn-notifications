@@ -34,7 +34,7 @@ public class FutureOrdersController : ControllerBase
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     public FutureOrdersController(
-        IOrderRequestService orderRequestService, 
+        IOrderRequestService orderRequestService,
         IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;

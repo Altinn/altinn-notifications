@@ -8,6 +8,13 @@ namespace Altinn.Notifications.Core.Integrations;
 public interface IProfileClient
 {
     /// <summary>
+    /// Retrieves contact points for a list of external identity users using their external identities.
+    /// </summary>
+    /// <param name="externalIdentities">A list of external identities (URNs) to look up contact points for.</param>
+    /// <returns>A list of contact points for the provided external identities.</returns>
+    Task<List<ExternalIdentityContactPoints>> GetExternalIdentityContactPoints(List<string> externalIdentities);
+
+    /// <summary>
     /// Retrieves contact points for a list of users corresponding to a list of national identity numbers
     /// </summary>
     /// <param name="nationalIdentityNumbers">A list of national identity numbers to look up contact points for</param>
@@ -21,13 +28,6 @@ public interface IProfileClient
     /// <param name="resourceId">The id of the resource to look up contact points for</param>
     /// <returns>A list of organization contact points containing user registered contact points</returns>
     Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId);
-
-    /// <summary>
-    /// Retrieves contact points for a list of self-identified users using their external identities.
-    /// </summary>
-    /// <param name="externalIdentities">A list of external identities (URNs) to look up contact points for.</param>
-    /// <returns>A list of contact points for the provided external identities.</returns>
-    Task<List<SelfIdentifiedUserContactPoints>> GetSelfIdentifiedUserContactPoints(List<string> externalIdentities);
 
     /// <summary>
     /// Asynchronously retrieves contact point details for the specified organizations.

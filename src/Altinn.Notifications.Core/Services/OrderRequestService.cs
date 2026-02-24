@@ -180,9 +180,9 @@ public class OrderRequestService : IOrderRequestService
             return ExtractOrganizationRecipientComponents(recipient.RecipientOrganization);
         }
 
-        if (recipient.RecipientSelfIdentifiedUser != null)
+        if (recipient.RecipientExternalIdentity != null)
         {
-            return ExtractSelfIdentifiedUserRecipientComponents(recipient.RecipientSelfIdentifiedUser);
+            return ExtractExternalIdentityRecipientComponents(recipient.RecipientExternalIdentity);
         }
 
         return RecipientDeliveryDetails.Empty;
@@ -335,19 +335,19 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Extracts delivery components for a self-identified user recipient.
+    /// Extracts delivery components for an external identity recipient.
     /// </summary>
-    private static RecipientDeliveryDetails ExtractSelfIdentifiedUserRecipientComponents(RecipientSelfIdentifiedUser recipientSelfIdentifiedUser)
+    private static RecipientDeliveryDetails ExtractExternalIdentityRecipientComponents(RecipientExternalIdentity recipientExternalIdentity)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientSelfIdentifiedUser.SmsSettings, recipientSelfIdentifiedUser.EmailSettings);
+        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientExternalIdentity.SmsSettings, recipientExternalIdentity.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
             Templates = templates,
             SmsSendingTimePolicy = smsSendingTimePolicy,
-            Channel = recipientSelfIdentifiedUser.ChannelSchema,
-            ResourceId = recipientSelfIdentifiedUser.ResourceId,
-            Recipients = [new([], externalIdentity: recipientSelfIdentifiedUser.ExternalIdentity)]
+            Channel = recipientExternalIdentity.ChannelSchema,
+            ResourceId = recipientExternalIdentity.ResourceId,
+            Recipients = [new([], externalIdentity: recipientExternalIdentity.ExternalIdentity)]
         };
     }
 

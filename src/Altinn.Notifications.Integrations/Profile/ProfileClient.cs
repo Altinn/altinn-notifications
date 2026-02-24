@@ -80,9 +80,9 @@ public class ProfileClient : IProfileClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<SelfIdentifiedUserContactPoints>> GetSelfIdentifiedUserContactPoints(List<string> externalIdentities)
+    public async Task<List<ExternalIdentityContactPoints>> GetExternalIdentityContactPoints(List<string> externalIdentities)
     {
-        var lookupObject = new SelfIdentifiedUserContactPointsLookup
+        var lookupObject = new ExternalIdentityContactPointsLookup
         {
             ExternalIdentities = externalIdentities
         };
@@ -93,11 +93,11 @@ public class ProfileClient : IProfileClient
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new PlatformHttpException(response, $"ProfileClient.GetSelfIdentifiedUserContactPoints failed with status code {response.StatusCode}");
+            throw new PlatformHttpException(response, $"ProfileClient.GetExternalIdentityContactPoints failed with status code {response.StatusCode}");
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        var contactPoints = JsonSerializer.Deserialize<SelfIdentifiedUserContactPointsList>(responseContent, _jsonOptions);
+        var contactPoints = JsonSerializer.Deserialize<ExternalIdentityContactPointsList>(responseContent, _jsonOptions);
 
         return contactPoints?.ContactPointsList ?? [];
     }
