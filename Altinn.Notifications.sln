@@ -57,11 +57,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Sms.In
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.RetryDeadDeliveryReports", "tools\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj", "{D03A2AEF-AFBC-4B06-B96E-153F26D71FD7}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D0000000-0000-0000-0000-000000000002}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.StatusFeedBackfillTool", "tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj", "{D0612642-BB6E-4C37-99E5-C10DCB725681}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D0000000-0000-0000-0000-000000000003}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.Tests", "components\api\test\Altinn.Notifications.Tools.Tests\Altinn.Notifications.Tools.Tests.csproj", "{D75564C7-2371-40F9-9722-43007064E8BD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.RetryDeadDeliveryReports", "tools\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj", "{D03A2AEF-AFBC-4B06-B96E-153F26D71FD7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.StatusFeedBackfillTool", "tools\src\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj", "{D0612642-BB6E-4C37-99E5-C10DCB725681}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.Tests", "tools\test\Altinn.Notifications.Tools.Tests\Altinn.Notifications.Tools.Tests.csproj", "{D75564C7-2371-40F9-9722-43007064E8BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -177,8 +181,10 @@ Global
 		{BB22E576-2300-47F3-A167-0512F71B11E9} = {E6B9CE4B-084E-4407-B601-C6723A932141}
 		{785491B8-0FC9-4F96-ACD6-5975341D71CC} = {BB619C38-B5C1-4268-A0DF-B8241A28C8D8}
 		{60C310E2-2B18-438E-971B-B5C6BA70410C} = {BB619C38-B5C1-4268-A0DF-B8241A28C8D8}
-		{D03A2AEF-AFBC-4B06-B96E-153F26D71FD7} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
-		{D0612642-BB6E-4C37-99E5-C10DCB725681} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
-		{D75564C7-2371-40F9-9722-43007064E8BD} = {A0000000-0000-0000-0000-000000000003}
+		{D0000000-0000-0000-0000-000000000002} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
+		{D0000000-0000-0000-0000-000000000003} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
+		{D03A2AEF-AFBC-4B06-B96E-153F26D71FD7} = {D0000000-0000-0000-0000-000000000002}
+		{D0612642-BB6E-4C37-99E5-C10DCB725681} = {D0000000-0000-0000-0000-000000000002}
+		{D75564C7-2371-40F9-9722-43007064E8BD} = {D0000000-0000-0000-0000-000000000003}
 	EndGlobalSection
 EndGlobal

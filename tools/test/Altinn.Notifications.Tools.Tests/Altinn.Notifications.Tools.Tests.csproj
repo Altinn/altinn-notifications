@@ -21,11 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Altinn.Notifications\Altinn.Notifications.csproj" />
-    <ProjectReference Include="..\..\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
-    <ProjectReference Include="..\..\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
-    <ProjectReference Include="..\..\..\..\tools\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
-    <ProjectReference Include="..\..\..\..\tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
+    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications\Altinn.Notifications.csproj" />
+    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
+    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,7 +42,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
+    <AdditionalFiles Include="..\..\..\stylecop.json">
       <Link>stylecop.json</Link>
     </AdditionalFiles>
   </ItemGroup>
