@@ -28,6 +28,8 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     public async ValueTask InitializeAsync()

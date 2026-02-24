@@ -39,6 +39,8 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdentifiers)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()

@@ -46,6 +46,8 @@ public class KafkaHealthCheckTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await KafkaUtil.DeleteTopicAsync(_topicName);
+
+        GC.SuppressFinalize(this);
     }
 
     /// <inheritdoc/>

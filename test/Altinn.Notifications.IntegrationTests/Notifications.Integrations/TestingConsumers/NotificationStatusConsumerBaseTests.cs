@@ -68,6 +68,8 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await Dispose(true);
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

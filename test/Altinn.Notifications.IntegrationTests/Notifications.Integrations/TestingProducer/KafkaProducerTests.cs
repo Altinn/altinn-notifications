@@ -36,6 +36,8 @@ public class KafkaProducerTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_batchTopic);
         await KafkaUtil.DeleteTopicAsync(_validTopic);
         await KafkaUtil.DeleteTopicAsync(_invalidTopic);
+
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

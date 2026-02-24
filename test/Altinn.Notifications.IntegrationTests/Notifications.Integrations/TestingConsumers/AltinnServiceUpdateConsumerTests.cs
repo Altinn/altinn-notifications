@@ -89,5 +89,7 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
                         WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
 
         await PostgreUtil.RunSql(sql);
+
+        GC.SuppressFinalize(this);
     }
 }

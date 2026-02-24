@@ -38,6 +38,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_topicName);
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

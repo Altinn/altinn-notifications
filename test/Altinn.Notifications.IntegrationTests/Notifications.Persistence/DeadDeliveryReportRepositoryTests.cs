@@ -572,6 +572,8 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
 
             await PostgreUtil.RunSql(deleteSql, parameters);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()

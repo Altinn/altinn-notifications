@@ -27,6 +27,8 @@ public class MetricsRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(id);
             await PostgreUtil.DeleteOrderFromDb(id);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

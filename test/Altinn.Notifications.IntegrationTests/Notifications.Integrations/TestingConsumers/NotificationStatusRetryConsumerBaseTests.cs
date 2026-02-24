@@ -236,6 +236,8 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await Dispose(true);
+
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

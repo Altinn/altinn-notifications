@@ -659,6 +659,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await Dispose(true);
+
+        GC.SuppressFinalize(this);
     }
 
     protected virtual async Task Dispose(bool disposing)

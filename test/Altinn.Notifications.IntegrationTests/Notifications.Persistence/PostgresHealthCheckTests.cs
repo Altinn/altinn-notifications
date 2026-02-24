@@ -50,5 +50,7 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _dataSource.DisposeAsync();
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -506,6 +506,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async ValueTask DisposeAsync()
         {
             await Dispose(true);
+
+            GC.SuppressFinalize(this);
         }
 
         public async ValueTask InitializeAsync()

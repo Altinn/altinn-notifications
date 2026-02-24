@@ -412,6 +412,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+
+        GC.SuppressFinalize(this);
     }
 
     private static async Task<string> GetSmsNotificationStatus(Guid notificationId)

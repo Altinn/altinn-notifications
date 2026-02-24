@@ -32,6 +32,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         {
             await PostgreUtil.RunSql($"DELETE FROM notifications.statusfeed WHERE orderid = {fakeOrderId}");
         }
+
+        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()

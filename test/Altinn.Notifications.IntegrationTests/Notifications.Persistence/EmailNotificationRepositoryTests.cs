@@ -44,6 +44,8 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         }
         
         await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

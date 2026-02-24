@@ -45,6 +45,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

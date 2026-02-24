@@ -237,5 +237,7 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
          await Dispose(true);
+
+         GC.SuppressFinalize(this);
     }
 }
