@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 
 using Altinn.Notifications.Sms.Configuration;
-using Altinn.Notifications.Sms.Core.Sending;
+using Altinn.Notifications.Sms.Core.Status;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -113,17 +113,28 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     {
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
-            var sendingServiceMock = new Mock<ISendingService>();
+            var statusServiceMock = new Mock<IStatusService>();
 
             builder.ConfigureTestServices(services =>
             {
-                services.Configure<SmsDeliveryReportSettings>(opts =>
+                // Remove the existing SmsDeliveryReportSettings singleton
+                var existingSettings = services.SingleOrDefault(d => d.ServiceType == typeof(SmsDeliveryReportSettings));
+                if (existingSettings != null)
                 {
-                    opts.UserSettings.Username = _username;
-                    opts.UserSettings.Password = _password;
+                    services.Remove(existingSettings);
+                }
+
+                // Register with test credentials
+                services.AddSingleton(new SmsDeliveryReportSettings
+                {
+                    UserSettings = new UserSettings
+                    {
+                        Username = _username,
+                        Password = _password
+                    }
                 });
 
-                services.AddSingleton(sendingServiceMock.Object);
+                services.AddSingleton(statusServiceMock.Object);
             });
         }).CreateClient();
 
