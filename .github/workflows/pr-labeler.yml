@@ -7,6 +7,8 @@ on:
       - opened
     paths:
       - '**/Altinn.Notifications.Core/**'
+      - '**/Altinn.Notifications.Sms.Core/**'
+      - '**/Altinn.Notifications.Email.Core/**'
 
 jobs:
   add_labels:

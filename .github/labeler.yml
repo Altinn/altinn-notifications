@@ -6,3 +6,5 @@ review/domain-model-changes:
       - any-glob-to-any-file:
           - components/api/src/Altinn.Notifications.Core/Enums/*
           - components/api/src/Altinn.Notifications.Core/Models/*
+          - components/sms-service/src/Altinn.Notifications.Sms.Core/Status/*
+          - components/email-service/src/Altinn.Notifications.Email.Core/Models/*
