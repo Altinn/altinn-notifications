@@ -81,9 +81,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Create the tracking information for the order.
-        var trackingInformation = await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-
         var shortMessage = new ShortMessage
         {
             Message = messageContent.Message,
@@ -99,6 +96,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             HandleNetworkTransientFailure(smsNotification, response);
         }
         
+        // Create the tracking information for the order.
+        var trackingInformation = await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
+
         return trackingInformation;
     }
 
@@ -121,9 +121,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Create the tracking information for the order.
-        var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-
         var shortMessage = new ShortMessage
         {
             Message = messageContent.Message,
@@ -139,6 +136,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         {
             HandleNetworkTransientFailure(smsNotification, response);
         }
+
+        // Create the tracking information for the order.
+        var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
 
         return trackingInformation;
     }
@@ -258,9 +258,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Create the tracking information for the order.
-        var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
-        
         var instantEmail = new InstantEmail
         {
             Subject = emailContent.Subject,
@@ -277,6 +274,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             HandleNetworkTransientFailure(emailNotification, response);
         }
 
+        // Create the tracking information for the order.
+        var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
+        
         return trackingInformation;
     }
 
@@ -412,9 +412,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     {
         const string noDetailsMessage = "No error details provided";
         
-        // todo: delete order or change status
-        // todo: delete orders chain
-
         _logger.LogCritical(
             "Short message service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
             smsNotification.Id,
@@ -430,9 +427,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     private void HandleNetworkTransientFailure(EmailNotification emailNotification, InstantEmailSendResult response)
     {
         const string noDetailsMessage = "No error details provided";
-
-        // todo: delete order or change status
-        // todo: delete orders chain
 
         _logger.LogCritical(
             "Instant email service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",

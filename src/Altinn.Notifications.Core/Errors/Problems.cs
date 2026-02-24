@@ -37,5 +37,5 @@ public static class Problems
     /// Gets a descriptor indicating that a required platform dependency is currently unavailable.
     /// </summary>
     public static ProblemDescriptor PlatformDependencyError { get; }
-        = _factory.Create(4, HttpStatusCode.ServiceUnavailable, "A platform dependency is currently unavailable");
+        = _factory.Create(4, HttpStatusCode.ServiceUnavailable, "A temporary network failure occurred");
 }
