@@ -1,33 +1,24 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 18
-VisualStudioVersion = 18.1.11312.151 d18.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.0.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications", "src\Altinn.Notifications\Altinn.Notifications.csproj", "{A791EC3D-DC08-416D-9522-C4BE4540084F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A0000000-0000-0000-0000-000000000001}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Core", "src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj", "{607C02FB-8C76-41BD-A3DF-282B2D0E2296}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A0000000-0000-0000-0000-000000000002}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Integrations", "src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj", "{DC8CDE0B-67F9-496D-8B01-CE2257950D05}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications", "src\Altinn.Notifications\Altinn.Notifications.csproj", "{A791EC3D-DC08-416D-9522-C4BE4540084F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Persistence", "src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj", "{DB57DAD7-753D-4595-81AD-9CB43B7A697A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Core", "src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj", "{B1000001-0000-0000-0000-000000000001}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tests", "test\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj", "{0098D647-A30E-44E1-8E0E-DFD08738B9A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Integrations", "src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj", "{B1000002-0000-0000-0000-000000000001}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AE428FE3-8E5E-4998-ADFF-0CB8B629A17A}"
-	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-		Dockerfile = Dockerfile
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Persistence", "src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj", "{B1000003-0000-0000-0000-000000000001}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.IntegrationTests", "test\Altinn.Notifications.IntegrationTests\Altinn.Notifications.IntegrationTests.csproj", "{A66C6EF7-205D-44E7-AAD9-6612997B7C08}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbTools", "src\DbTools\DbTools.csproj", "{B1000004-0000-0000-0000-000000000001}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbTools", "src\DbTools\DbTools.csproj", "{72A62A0A-8E24-488C-9093-5D204C1FF900}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tests", "test\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj", "{B1000005-0000-0000-0000-000000000001}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.StatusFeedBackfillTool", "src\Tools\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj", "{47178504-F329-428C-9CE2-005D41EE8500}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tools.Tests", "test\Altinn.Notifications.Tools.Tests\Altinn.Notifications.Tools.Tests.csproj", "{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tools.RetryDeadDeliveryReports", "src\Tools\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj", "{B601292D-DFEA-35B4-B545-B60951D89154}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.IntegrationTests", "test\Altinn.Notifications.IntegrationTests\Altinn.Notifications.IntegrationTests.csproj", "{B1000006-0000-0000-0000-000000000001}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,47 +30,41 @@ Global
 		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A791EC3D-DC08-416D-9522-C4BE4540084F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{607C02FB-8C76-41BD-A3DF-282B2D0E2296}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{607C02FB-8C76-41BD-A3DF-282B2D0E2296}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{607C02FB-8C76-41BD-A3DF-282B2D0E2296}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{607C02FB-8C76-41BD-A3DF-282B2D0E2296}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DC8CDE0B-67F9-496D-8B01-CE2257950D05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DC8CDE0B-67F9-496D-8B01-CE2257950D05}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DC8CDE0B-67F9-496D-8B01-CE2257950D05}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DC8CDE0B-67F9-496D-8B01-CE2257950D05}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DB57DAD7-753D-4595-81AD-9CB43B7A697A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DB57DAD7-753D-4595-81AD-9CB43B7A697A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DB57DAD7-753D-4595-81AD-9CB43B7A697A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DB57DAD7-753D-4595-81AD-9CB43B7A697A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0098D647-A30E-44E1-8E0E-DFD08738B9A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0098D647-A30E-44E1-8E0E-DFD08738B9A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0098D647-A30E-44E1-8E0E-DFD08738B9A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0098D647-A30E-44E1-8E0E-DFD08738B9A7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A66C6EF7-205D-44E7-AAD9-6612997B7C08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A66C6EF7-205D-44E7-AAD9-6612997B7C08}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A66C6EF7-205D-44E7-AAD9-6612997B7C08}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A66C6EF7-205D-44E7-AAD9-6612997B7C08}.Release|Any CPU.Build.0 = Release|Any CPU
-		{72A62A0A-8E24-488C-9093-5D204C1FF900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{72A62A0A-8E24-488C-9093-5D204C1FF900}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{72A62A0A-8E24-488C-9093-5D204C1FF900}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{72A62A0A-8E24-488C-9093-5D204C1FF900}.Release|Any CPU.Build.0 = Release|Any CPU
-		{47178504-F329-428C-9CE2-005D41EE8500}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{47178504-F329-428C-9CE2-005D41EE8500}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{47178504-F329-428C-9CE2-005D41EE8500}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{47178504-F329-428C-9CE2-005D41EE8500}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5D1B8A0-9C3E-4F2A-8B5D-1C8E9F6A7B4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B601292D-DFEA-35B4-B545-B60951D89154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B601292D-DFEA-35B4-B545-B60951D89154}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B601292D-DFEA-35B4-B545-B60951D89154}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B601292D-DFEA-35B4-B545-B60951D89154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000001-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000002-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000003-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000004-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000005-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1000006-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {E27A13A1-549E-4A9B-A3BA-9A02745B6861}
+	GlobalSection(NestedProjects) = preSolution
+		{A791EC3D-DC08-416D-9522-C4BE4540084F} = {A0000000-0000-0000-0000-000000000001}
+		{B1000001-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000001}
+		{B1000002-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000001}
+		{B1000003-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000001}
+		{B1000004-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000001}
+		{B1000005-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
+		{B1000006-0000-0000-0000-000000000001} = {A0000000-0000-0000-0000-000000000002}
 	EndGlobalSection
 EndGlobal
