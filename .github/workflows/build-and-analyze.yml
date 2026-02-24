@@ -5,44 +5,112 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+      - 'LICENSE'
       - '**/*.svg'
       - '**/*.png'
+      - '.gitignore'
+      - 'renovate.json'
+      - '.dockerignore'
+      - '.gitattributes'
       - '.github/CODEOWNERS'
       - '.github/labeler.yml'
-
-
       - 'components/api/test/k6/**'
-      - '.editorconfig'
-      - '.gitattributes'
-      - '.dockerignore'
-      - 'LICENSE'
-      - 'renovate.json'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
     paths-ignore:
-      - 'components/api/test/k6/**'
       - 'docs/**'
       - '**/*.md'
+      - 'LICENSE'
       - '**/*.svg'
       - '**/*.png'
+      - '.gitignore'
+      - 'renovate.json'
+      - '.dockerignore'
+      - '.gitattributes'
       - '.github/CODEOWNERS'
       - '.github/labeler.yml'
-      - '.editorconfig'
-      - '.gitattributes'
-      - '.dockerignore'
-      - 'LICENSE'
-      - 'renovate.json'
+      - 'components/api/test/k6/**'
   workflow_dispatch:
+
+concurrency:
+  group: dotnet-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-test-analyze:
-    name: Build, test & analyze
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      sms: ${{ steps.filter.outputs.sms }}
+      email: ${{ steps.filter.outputs.email }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'components/api/**'
+            sms:
+              - 'components/sms-service/**'
+            email:
+              - 'components/email-service/**'
+      - name: Summary of detected changes
+        run: |
+          echo "### Detected Changes" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Changed |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API | ${{ steps.filter.outputs.api }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SMS | ${{ steps.filter.outputs.sms }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Email | ${{ steps.filter.outputs.email }} |" >> $GITHUB_STEP_SUMMARY
+
+  build:
+    name: Build solution
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Cache NuGet packages
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build solution
+        run: dotnet build Altinn.Notifications.sln -c release -v q
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: build-output
+          path: |
+            **/bin/release/
+          retention-days: 1
+          
+  test-api:
+    name: "Test: Notifications API"
+    needs: [changes, build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     services:
-      postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
+      postgres:
         image: postgres:17.8@sha256:1eada89ec2521ae0f61125f6bdaf83bbbf88a43fecda48d112a83bb92df75c36
         env:
           POSTGRES_USER: platform_notifications_admin
@@ -61,23 +129,252 @@ jobs:
           - 9092:9092
         env:
           KAFKA_NODE_ID: 1
-          KAFKA_PROCESS_ROLES: broker,controller
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
         options: >-
           --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Download build artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: build-output
+          path: .
+      - name: Setup PostgreSQL
+        run: |
+          chmod +x tools/dev-setup/dbsetup.sh
+          ./tools/dev-setup/dbsetup.sh
+      - name: Restart database to enable config changes
+        run: docker restart ${{ job.services.postgres.id }}
+      - name: Increase inotify watchers
+        run: sudo sysctl -w fs.inotify.max_user_instances=524288
+      - name: Run API unit tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-unit/ \
+          --logger "trx;LogFileName=api-unit.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API tools tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-tools/ \
+          --logger "trx;LogFileName=api-tools.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API integration tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration/ \
+          --logger "trx;LogFileName=api-integration.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-api
+          path: TestResults/
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-api
+          path: '**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  test-email:
+    name: "Test: Email Delivery Service"
+    needs: [changes, build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    services:
+      kafka:
+        image: confluentinc/cp-kafka:7.9.5@sha256:c4c6b755551da17fff056b9c8b39700f99020083bd2d69a171ece4784f33e640
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Download build artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: build-output
+          path: .
+      - name: Run Email unit tests
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-unit/ \
+          --logger "trx;LogFileName=email-unit.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run Email integration tests
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-integration/ \
+          --logger "trx;LogFileName=email-integration.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-email
+          path: TestResults/
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-email
+          path: '**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-sms:
+    name: "Test: SMS Delivery Service"
+    needs: [changes, build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    services:
+      kafka:
+        image: confluentinc/cp-kafka:7.9.5@sha256:c4c6b755551da17fff056b9c8b39700f99020083bd2d69a171ece4784f33e640
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Download build artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: build-output
+          path: .
+      - name: Run SMS unit tests
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-unit/ \
+          --logger "trx;LogFileName=sms-unit.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run SMS integration tests
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
+          -v q --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-integration/ \
+          --logger "trx;LogFileName=sms-integration.trx" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-sms
+          path: TestResults/
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-sms
+          path: '**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  sonarcloud:
+    name: SonarCloud Analysis
+    needs: [changes, build, test-api, test-sms, test-email]
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
@@ -91,56 +388,94 @@ jobs:
           java-version: 17
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Install SonarCloud scanners
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
-      - name: Setup PostgreSQL
-        run: |
-          chmod +x tools/dev-setup/dbsetup.sh
-          ./tools/dev-setup/dbsetup.sh
-      - name: Restart database to enable config changes
-        run: |
-          # Restart only the Postgres service by filtering on the published port
-          docker ps \
-            --filter "publish=5432" \
-            -q \
-          | xargs docker restart
-      - name: Increase inotify watchers for test execution # Necessary due to a temporary problem with too many file watchers (e.g. https://github.com/Altinn/altinn-notifications/actions/runs/20168791056)
-        run: |
-          sudo sysctl -w fs.inotify.max_user_instances=524288
-      - name: Build & Test
+          fetch-depth: 0
+      - name: Cache NuGet packages
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Download build artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: build-output
+          path: .
+      - name: Download API coverage
+        if: needs.test-api.result == 'success'
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: coverage-api
+          path: coverage/api
+        continue-on-error: true
+      - name: Download SMS coverage
+        if: needs.test-sms.result == 'success'
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: coverage-sms
+          path: coverage/sms
+        continue-on-error: true
+      - name: Download Email coverage
+        if: needs.test-email.result == 'success'
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: coverage-email
+          path: coverage/email
+        continue-on-error: true
+      - name: Install SonarCloud scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Run SonarCloud analysis
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
+          dotnet-sonarscanner begin \
+            /k:"Altinn_altinn-notifications" \
+            /o:"altinn" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          dotnet build Altinn.Notifications.sln -v q
+          dotnet build Altinn.Notifications.sln -c release -v q
 
-          dotnet test Altinn.Notifications.sln \
-          -v q \
-          --collect:"XPlat Code Coverage" \
-          --results-directory TestResults/ \
-          --logger "trx;" \
-          --configuration release \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-      - name: Complete sonar analysis
-        if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: TestResults
-          path: '**/TestResults/*.trx'
-      - name: Process unit test result
-        if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
-        with:
-          TRX_PATH: ${{ github.workspace }}/TestResults
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  status-check:
+    name: Status Check
+    needs: [build, test-api, test-sms, test-email, sonarcloud]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        run: |
+          echo "### Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Notifications API | ${{ needs.test-api.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: SMS Delivery Service | ${{ needs.test-sms.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Email Delivery Service | ${{ needs.test-email.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SonarCloud | ${{ needs.sonarcloud.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-api.result }}" == "failure" ]]; then
+            echo "❌ API tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-sms.result }}" == "failure" ]]; then
+            echo "❌ SMS tests failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-email.result }}" == "failure" ]]; then
+            echo "❌ Email tests failed"
+            exit 1
+          fi
+
+          echo "✅ All required checks passed"
