@@ -115,7 +115,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(TestContext.Current.CancellationToken);
         await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport);
 
         // Assert
