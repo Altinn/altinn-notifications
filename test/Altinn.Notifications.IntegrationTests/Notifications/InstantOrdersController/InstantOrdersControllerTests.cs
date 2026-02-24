@@ -119,7 +119,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.NotNull(problem);
         Assert.Equal("NOT-00002", problem.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problem.Status);
-        Assert.Contains("client disconnected", problem.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("client disconnected", problem.Title, StringComparison.OrdinalIgnoreCase);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);

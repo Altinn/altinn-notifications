@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -14,9 +11,13 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -477,6 +478,11 @@ public class InstantOrderRequestServiceTests
             .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedEmailOrderTracking);
         var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+        instantEmailServiceClient.Setup(e => e.SendAsync(It.IsAny<InstantEmail>())).ReturnsAsync(new InstantEmailSendResult()
+        {
+            Success = true,
+            StatusCode = System.Net.HttpStatusCode.OK
+        });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -556,7 +562,11 @@ public class InstantOrderRequestServiceTests
                 sentEmail = email;
                 taskCompletionSource.SetResult();
             })
-            .ReturnsAsync(new InstantEmailSendResult());
+            .ReturnsAsync(new InstantEmailSendResult()
+            {
+                Success = true,
+                StatusCode = System.Net.HttpStatusCode.OK
+            });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -635,7 +645,11 @@ public class InstantOrderRequestServiceTests
                 sentEmail = email;
                 taskCompletionSource.SetResult();
             })
-            .ReturnsAsync(new InstantEmailSendResult());
+            .ReturnsAsync(new InstantEmailSendResult()
+            {
+                Success = true,
+                StatusCode = System.Net.HttpStatusCode.OK
+            });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -678,6 +692,158 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(emailOrderId, sentEmail.NotificationId);
 
         instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(System.Net.HttpStatusCode.BadGateway)]
+    [InlineData(System.Net.HttpStatusCode.GatewayTimeout)]
+    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError)]
+    public async Task PersistInstantEmailNotificationAsync_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
+    {
+        // Arrange
+        var emailOrderId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+
+        var instantEmailNotificationOrder = new InstantEmailNotificationOrder
+        {
+            OrderId = emailOrderId,
+            OrderChainId = orderChainId,
+            Created = orderCreationDateTime,
+            SendersReference = "test-ref",
+            Creator = new Creator("test-creator"),
+            IdempotencyId = "test-idempotency",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "test@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "sender@example.com",
+                    Subject = "Subject",
+                    Body = "Body",
+                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                }
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+        instantEmailServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<InstantEmail>()))
+            .ReturnsAsync(new InstantEmailSendResult
+            {
+                Success = false,
+                ErrorDetails = $"Error with status code {statusCode}",
+                StatusCode = statusCode
+            });
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await service.PersistInstantEmailNotificationAsync(instantEmailNotificationOrder));
+
+        Assert.Equal("InstantEmailServiceClient", exception.DependencyName);
+
+        // Verify no data was persisted
+        orderRepositoryMock.Verify(
+            e => e.Create(
+                It.IsAny<InstantEmailNotificationOrder>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<EmailNotification>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(System.Net.HttpStatusCode.BadGateway)]
+    [InlineData(System.Net.HttpStatusCode.GatewayTimeout)]
+    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError)]
+    public async Task PersistInstantSmsNotificationAsync_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
+    {
+        // Arrange
+        var orderId = Guid.NewGuid();
+        var smsOrderId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = orderId,
+            OrderChainId = orderChainId,
+            Created = orderCreationDateTime,
+            SendersReference = "test-ref",
+            Creator = new Creator("test-creator"),
+            IdempotencyId = "test-idempotency",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Sender",
+                        Message = "Message"
+                    }
+                }
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+
+        var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
+        shortMessageServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<ShortMessage>()))
+            .ReturnsAsync(new ShortMessageSendResult
+            {
+                Success = false,
+                ErrorDetails = $"Error with status code {statusCode}",
+                StatusCode = statusCode
+            });
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            shortMessageServiceClient: shortMessageServiceClient.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder));
+
+        Assert.Equal("ShortMessageServiceClient", exception.DependencyName);
+
+        // Verify no data was persisted
+        orderRepositoryMock.Verify(
+            e => e.Create(
+                It.IsAny<InstantNotificationOrder>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<SmsNotification>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null, IInstantEmailServiceClient? instantEmailServiceClient = null)
