@@ -11,11 +11,16 @@ on:
       - '.gitignore'
       - '.editorconfig'
       - 'renovate.json'
+      - 'stylecop.json'
       - '.dockerignore'
       - '.gitattributes'
       - '.github/CODEOWNERS'
       - '.github/labeler.yml'
       - 'components/api/test/k6/**'
+      - 'components/api/test/bruno/**'
+      - '.github/workflows/pr-label-*.yml'
+      - '.github/workflows/send-slack-warning.yml'
+      - '.github/workflows/assign-issue-to-project.yml'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -28,11 +33,16 @@ on:
       - '.gitignore'
       - '.editorconfig'
       - 'renovate.json'
+      - 'stylecop.json'
       - '.dockerignore'
       - '.gitattributes'
       - '.github/CODEOWNERS'
       - '.github/labeler.yml'
       - 'components/api/test/k6/**'
+      - 'components/api/test/bruno/**'
+      - '.github/workflows/pr-label-*.yml'
+      - '.github/workflows/send-slack-warning.yml'
+      - '.github/workflows/assign-issue-to-project.yml'
   workflow_dispatch:
 
 concurrency:
