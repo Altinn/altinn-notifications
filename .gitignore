@@ -394,3 +394,16 @@ FodyWeavers.xsd
 
 # macOS 
 .DS_Store
+
+# Environment files (may contain secrets)
+.env
+.env.*
+!.env.sample
+!.env.example
+!.env.template
+
+# Secrets & Certificates
+**/secrets/
+*.pem
+*.key
+**/appsettings.Local.json
