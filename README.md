@@ -1,10 +1,26 @@
 # Altinn Notifications
 
+[![.NET Analysis](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml)
+[![CodeQL](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
+
 Altinn Notifications is a set of microservices designed to manage and deliver notification messages, including email and SMS. This monorepo contains the following components:
 
 *   **API** – The primary Notifications API used to register and track notification orders
 *   **Email Service** – Handles the processing and delivery of email notifications
 *   **SMS Service** – Handles the processing and delivery of SMS notifications
+
+## Table of Contents
+
+- [Repository Structure](#repository-structure)
+- [Documentation](#documentation)
+- [Runtime Highlights](#runtime-highlights)
+- [API Component](#api-component)
+- [Email Service Component](#email-service-component)
+- [SMS Service Component](#sms-service-component)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Repository Structure
 
@@ -34,7 +50,7 @@ For complete instructions—including PostgreSQL configuration, test collections
 - API uses PostgreSQL and supports Azure Key Vault for secrets.
 - Email and SMS services support Azure Key Vault for secrets and can emit telemetry to Application Insights via OpenTelemetry exporters.
 
-***
+---
 
 ## API Component
 
@@ -72,7 +88,7 @@ Key elements:
 
 The persistence layer responsible for repository logic and data storage operations.
 
-***
+---
 
 ## Email Service Component
 
@@ -106,7 +122,7 @@ Key elements:
 *   Email service client
 *   Kafka producer implementation
 
-***
+---
 
 ## SMS Service Component
 
@@ -137,3 +153,15 @@ The infrastructure layer implementing SMS service integrations.
 Key elements:
 
 *   Client for external SMS delivery service
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Altinn contributing guidelines](https://github.com/Altinn/altinn-studio/blob/main/CONTRIBUTING.md) before submitting a pull request.
+
+For local development setup, see [getting-started.md](getting-started.md).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
