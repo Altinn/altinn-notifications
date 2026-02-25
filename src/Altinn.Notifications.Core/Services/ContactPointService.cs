@@ -589,25 +589,21 @@ public class ContactPointService(
         string sanitizedResourceId,
         OrderPhase orderPhase)
     {
-        List<OrganizationContactPoints> allUserContactPoints = await GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
-
-        if (allUserContactPoints.Count == 0)
-        {
-            return;
-        }
-
         List<OrganizationContactPoints> authorizedUserContactPoints;
+
         if (orderPhase == OrderPhase.Processing)
         {
+            List<OrganizationContactPoints> allUserContactPoints = await GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+
+            if (allUserContactPoints.Count == 0)
+            {
+                return;
+            }
+
             // During the processing phase, only include user-registered contact points that are explicitly authorized for the resource.
             authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
+            MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
         }
-        else
-        {
-            authorizedUserContactPoints = [];
-        }
-
-        MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
     }
 
     /// <summary>
