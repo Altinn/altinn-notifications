@@ -33,7 +33,7 @@ dotnet test Altinn.Notifications.API.sln
 
 To run the API as a container (from the repo root):
 
-**Podman:**
+**Podman (Preferred):**
 ```bash
 podman build -t notifications-api -f components/api/Dockerfile .
 ```
@@ -42,3 +42,7 @@ podman build -t notifications-api -f components/api/Dockerfile .
 ```bash
 docker build -t notifications-api -f components/api/Dockerfile .
 ```
+
+## 📚 Additional Resources
+
+For full setup instructions including database and Kafka configuration, see [getting-started.md](../../getting-started.md).
