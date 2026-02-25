@@ -47,7 +47,7 @@ Altinn Notifications uses Kafka for message queuing. Start the local Kafka insta
 podman compose -f tools/dev-setup/setup-kafka.yml up -d
 ```
 
-**Dstoker:**
+**Docker:**
 ```bash
 docker compose -f tools/dev-setup/setup-kafka.yml up -d
 ```
