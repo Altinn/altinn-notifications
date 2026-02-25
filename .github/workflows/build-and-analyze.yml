@@ -546,6 +546,8 @@ jobs:
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   status-check:
+    permissions:
+      contents: read
     name: Status Check
     needs: [build, test-api, test-sms, test-email, test-tools, sonarcloud]
     if: always()
