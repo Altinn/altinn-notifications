@@ -9,7 +9,6 @@
 # IDE & Editor
 **/*.csproj.user
 **/*.dcproj
-**/*.sln
 **/launchSettings.json
 *.suo
 *.user
@@ -61,6 +60,12 @@ stylecop.json
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Secrets & Certificates (should never be in container)
+*.pfx
+*.pem
+*.key
+**/secrets/
 
 # Docker (prevent recursive context)
 **/.env
