@@ -93,6 +93,22 @@ jobs:
   build:
     name: Build solution
     needs: changes
+    strategy:
+      matrix:
+        include:
+          - component: api
+            solution: components/api/Altinn.Notifications.API.sln
+            changed: ${{ needs.changes.outputs.api }}
+          - component: email
+            solution: components/email-service/Altinn.Notifications.Email.sln
+            changed: ${{ needs.changes.outputs.email }}
+          - component: sms
+            solution: components/sms-service/Altinn.Notifications.Sms.sln
+            changed: ${{ needs.changes.outputs.sms }}
+          - component: tools
+            solution: tools/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj
+            changed: ${{ needs.changes.outputs.tools }}
+    if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -113,11 +129,11 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
       - name: Build solution
-        run: dotnet build Altinn.Notifications.sln -c release -v q
+        run: dotnet build ${{ matrix.solution }} -c release -v q
       - name: Upload build artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: build-output
+          name: build-output-${{ matrix.component }}
           path: |
             **/bin/release/
           retention-days: 1
@@ -125,7 +141,7 @@ jobs:
   test-api:
     name: "Test: Notifications API"
     needs: [changes, build]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -175,7 +191,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          name: build-output
+          name: build-output-api
           path: .
       - name: Setup PostgreSQL
         run: |
@@ -225,7 +241,7 @@ jobs:
   test-email:
     name: "Test: Email Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -262,7 +278,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          name: build-output
+          name: build-output-email
           path: .
       - name: Run Email unit tests
         run: |
@@ -304,7 +320,7 @@ jobs:
   test-sms:
     name: "Test: SMS Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -341,7 +357,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          name: build-output
+          name: build-output-sms
           path: .
       - name: Run SMS unit tests
         run: |
@@ -383,7 +399,7 @@ jobs:
   test-tools:
     name: "Test: Tools"
     needs: [changes, build]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.tools == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.tools == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -412,7 +428,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          name: build-output
+          name: build-output-tools
           path: .
       - name: Setup PostgreSQL
         run: |
@@ -479,7 +495,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          name: build-output
+          pattern: build-output-*
+          merge-multiple: true
           path: .
       - name: Download API coverage
         if: needs.test-api.result == 'success'
