@@ -106,7 +106,7 @@ jobs:
             solution: components/sms-service/Altinn.Notifications.Sms.sln
             changed: ${{ needs.changes.outputs.sms }}
           - component: tools
-            solution: tools/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj
+            solution: tools/Altinn.Notifications.Tools.sln
             changed: ${{ needs.changes.outputs.tools }}
     if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
     runs-on: ubuntu-latest
