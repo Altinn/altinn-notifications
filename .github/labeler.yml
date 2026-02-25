@@ -1,8 +1,21 @@
 # Labels for pull requests
+review/component/api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - components/api/**
+
+review/component/email-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - components/email-service/**
+
+review/component/sms-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - components/sms-service/**
 
 review/domain-model-changes:
-  - any:
-    - changed-files:
+  - changed-files:
       - any-glob-to-any-file:
           - components/api/src/Altinn.Notifications.Core/Enums/*
           - components/api/src/Altinn.Notifications.Core/Models/*
