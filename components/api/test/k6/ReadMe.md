@@ -2,10 +2,14 @@
 
 ## Install prerequisites
 
-*We recommend running the tests through a Docker container.*
+*We recommend running the tests through a container.*
 
-From the command line:
+**Podman (Preferred):**
+```bash
+podman pull grafana/k6
+```
 
+**Docker:**
 ```bash
 docker pull grafana/k6
 ```
@@ -30,15 +34,25 @@ All tests are defined in the `src/tests` folder. At the top of each test file, a
 The command should be run from the `k6` folder:
 
 ```bash
-$> cd /altinn-notifications/test/k6
+cd components/api/test/k6
 ```
 
 Run the test suite by specifying the filename.
 
-For example:
-
+**Podman (Preferred):**
 ```bash
-$> podman compose run k6 run /src/tests/orders-email.js \
+podman compose run k6 run /src/tests/orders-email.js \
+    -e tokenGeneratorUserName=*** \
+    -e tokenGeneratorUserPwd=*** \
+    -e altinn_env=*** \
+    -e emailRecipient=*** \
+    -e ninRecipient=*** \
+    -e runFullTestSet=true
+```
+
+**Docker:**
+```bash
+docker compose run k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
     -e altinn_env=*** \
@@ -49,7 +63,7 @@ $> podman compose run k6 run /src/tests/orders-email.js \
 
 ### Command Breakdown
 
-1. **`podman compose run`**: Runs the test in a Docker container.
+1. **`podman compose run` / `docker compose run`**: Runs the test in a container.
 2. **`k6 run {path to test file}`**: Points to the test file you want to run, e.g., `/src/tests/orders-email.js`.
 3. **Script parameters**: Provided as environment variables for the container:
    ```bash
@@ -73,8 +87,19 @@ For example:
 
 Run a test with 10 virtual users (VUs) for 5 minutes:
 
+**Podman:**
 ```bash
-$> k6 run /src/tests/orders-email.js \
+podman compose run k6 run /src/tests/orders-email.js \
+    -e tokenGeneratorUserName=*** \
+    -e tokenGeneratorUserPwd=*** \
+    -e altinn_env=*** \
+    --vus=10 \
+    --duration=5m
+```
+
+**Docker:**
+```bash
+docker compose run k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
     -e altinn_env=*** \
