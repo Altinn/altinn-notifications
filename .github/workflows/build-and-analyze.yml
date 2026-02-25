@@ -467,7 +467,11 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     needs: [changes, build, test-api, test-sms, test-email, test-tools]
-    if: always() && needs.build.result == 'success'
+    if: always() && needs.build.result == 'success' && (
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.email == 'true' ||
+      needs.changes.outputs.sms == 'true' ||
+      needs.changes.outputs.tools == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -541,7 +545,21 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          dotnet build Altinn.Notifications.sln -c release -v q
+          if [[ "${{ needs.changes.outputs.api }}" == "true" ]]; then
+            dotnet build components/api/Altinn.Notifications.API.sln -c release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.email }}" == "true" ]]; then
+            dotnet build components/email-service/Altinn.Notifications.Email.sln -c release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.sms }}" == "true" ]]; then
+            dotnet build components/sms-service/Altinn.Notifications.Sms.sln -c release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.tools }}" == "true" ]]; then
+            dotnet build tools/Altinn.Notifications.Tools.sln -c release -v q
+          fi
 
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
