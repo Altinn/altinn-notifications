@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the GuidService
+/// Service for generating
 /// </summary>
 [ExcludeFromCodeCoverage]
 public class GuidService : IGuidService
