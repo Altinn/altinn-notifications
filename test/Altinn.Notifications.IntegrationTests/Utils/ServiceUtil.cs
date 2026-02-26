@@ -19,8 +19,9 @@ public static class ServiceUtil
 {
     private static readonly object _lock = new();
     private static NpgsqlDataSource? _sharedDataSource;
+    private static ServiceProvider? _sharedServiceProvider;
 
-    private static NpgsqlDataSource GetOrCreateDataSource(IConfiguration config)
+    public static NpgsqlDataSource GetSharedDataSource()
     {
         lock (_lock)
         {
@@ -29,34 +30,28 @@ public static class ServiceUtil
                 return _sharedDataSource;
             }
 
-            PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
-                .Get<PostgreSqlSettings>()
-                ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
-
-            string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
-
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-            dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
-            dataSourceBuilder.EnableDynamicJson();
-
-            // Note: Tracing configuration (ConfigureTracing) is intentionally omitted in tests
-            // to reduce noise and overhead. Tests focus on functional correctness rather than observability.
-            _sharedDataSource = dataSourceBuilder.Build();
-
+            var config = BuildConfiguration();
+            _sharedDataSource = CreateDataSource(config);
             return _sharedDataSource;
         }
     }
 
-    public static void DisposeSharedDataSource()
+    private static NpgsqlDataSource CreateDataSource(IConfiguration config)
     {
-        lock (_lock)
-        {
-            _sharedDataSource?.Dispose();
-            _sharedDataSource = null;
-        }
+        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
+            .Get<PostgreSqlSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
+
+        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
+        dataSourceBuilder.EnableDynamicJson();
+
+        return dataSourceBuilder.Build();
     }
 
-    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    private static IConfiguration BuildConfiguration(Dictionary<string, string>? envVariables = null)
     {
         if (envVariables != null)
         {
@@ -66,19 +61,57 @@ public static class ServiceUtil
             }
         }
 
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
+        return new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();
-        
-        var config = builder.Build();
+            .AddEnvironmentVariables()
+            .Build();
+    }
+
+    public static void DisposeSharedDataSource()
+    {
+        lock (_lock)
+        {
+            _sharedServiceProvider?.Dispose();
+            _sharedServiceProvider = null;
+            _sharedDataSource?.Dispose();
+            _sharedDataSource = null;
+        }
+    }
+
+    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    {
+        // When env variables are customized (e.g., Kafka topic names), build a one-off provider
+        if (envVariables is { Count: > 0 })
+        {
+            return BuildServiceProvider(envVariables, interfaceTypes);
+        }
+
+        // Otherwise, reuse the shared provider
+        lock (_lock)
+        {
+            _sharedServiceProvider ??= BuildSharedServiceProvider();
+        }
+
+        List<object> outputServices = [];
+        foreach (Type interfaceType in interfaceTypes)
+        {
+            var outputServiceObject = _sharedServiceProvider.GetServices(interfaceType)!;
+            outputServices.AddRange(outputServiceObject!);
+        }
+
+        return outputServices;
+    }
+
+    private static ServiceProvider BuildSharedServiceProvider()
+    {
+        var config = BuildConfiguration();
 
         WebApplication.CreateBuilder()
                        .Build()
                        .SetUpPostgreSql(true, config);
 
         IServiceCollection services = new ServiceCollection();
-
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
         {
             EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
@@ -88,25 +121,48 @@ public static class ServiceUtil
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddLogging();
 
-        // Register the shared data source as a singleton
-        var sharedDataSource = GetOrCreateDataSource(config);
+        var sharedDataSource = GetSharedDataSource();
         services.AddSingleton(sharedDataSource);
-
-        // Register all repository implementations using the shared data source
         RegisterRepositories(services);
-
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
 
-        var serviceProvider = services.BuildServiceProvider();
-        List<object> outputServices = new();
+        return services.BuildServiceProvider();
+    }
 
+    private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
+    {
+        var config = BuildConfiguration(envVariables);
+
+        WebApplication.CreateBuilder()
+                       .Build()
+                       .SetUpPostgreSql(true, config);
+
+        IServiceCollection services = new ServiceCollection();
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
+        {
+            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
+            ApplicationName = "Altinn.Notifications.IntegrationTests",
+            ContentRootPath = Directory.GetCurrentDirectory()
+        });
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddLogging();
+
+        var sharedDataSource = GetSharedDataSource();
+        services.AddSingleton(sharedDataSource);
+        RegisterRepositories(services);
+        services.AddCoreServices(config);
+        services.AddKafkaServices(config);
+        services.AddAltinnClients(config);
+        services.AddAuthorizationService(config);
+
+        var sp = services.BuildServiceProvider();
+        List<object> outputServices = [];
         foreach (Type interfaceType in interfaceTypes)
         {
-            var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
-            outputServices.AddRange(outputServiceObject!);
+            outputServices.AddRange(sp.GetServices(interfaceType)!);
         }
 
         return outputServices;
@@ -114,8 +170,6 @@ public static class ServiceUtil
 
     private static void RegisterRepositories(IServiceCollection services)
     {
-        // Explicitly register repositories to match production configuration.
-        // This provides compile-time safety and avoids fragility of reflection-based registration.
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
