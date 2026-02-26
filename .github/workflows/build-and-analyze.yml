@@ -133,7 +133,7 @@ jobs:
             nuget-${{ runner.os }}-
       - name: Build solution
         if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
-        run: dotnet build ${{ matrix.solution }} -c release -v q
+        run: dotnet build ${{ matrix.solution }} -c Release -v q
       - name: Upload build artifacts
         if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -213,7 +213,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/api-unit/ \
           --logger "trx;LogFileName=api-unit.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API integration tests
         run: |
@@ -222,7 +222,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/api-integration/ \
           --logger "trx;LogFileName=api-integration.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
@@ -292,7 +292,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/email-unit/ \
           --logger "trx;LogFileName=email-unit.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email integration tests
         run: |
@@ -301,7 +301,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/email-integration/ \
           --logger "trx;LogFileName=email-integration.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
@@ -371,7 +371,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/sms-unit/ \
           --logger "trx;LogFileName=sms-unit.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS integration tests
         run: |
@@ -380,7 +380,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/sms-integration/ \
           --logger "trx;LogFileName=sms-integration.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
@@ -448,7 +448,7 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/tools/ \
           --logger "trx;LogFileName=tools.trx" \
-          --configuration release \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
@@ -551,19 +551,19 @@ jobs:
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
           if [[ "${{ needs.changes.outputs.api }}" == "true" ]]; then
-            dotnet build components/api/Altinn.Notifications.API.sln -c release -v q
+            dotnet build components/api/Altinn.Notifications.API.sln -c Release -v q
           fi
 
           if [[ "${{ needs.changes.outputs.email }}" == "true" ]]; then
-            dotnet build components/email-service/Altinn.Notifications.Email.sln -c release -v q
+            dotnet build components/email-service/Altinn.Notifications.Email.sln -c Release -v q
           fi
 
           if [[ "${{ needs.changes.outputs.sms }}" == "true" ]]; then
-            dotnet build components/sms-service/Altinn.Notifications.Sms.sln -c release -v q
+            dotnet build components/sms-service/Altinn.Notifications.Sms.sln -c Release -v q
           fi
 
           if [[ "${{ needs.changes.outputs.tools }}" == "true" ]]; then
-            dotnet build tools/Altinn.Notifications.Tools.sln -c release -v q
+            dotnet build tools/Altinn.Notifications.Tools.sln -c Release -v q
           fi
 
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
