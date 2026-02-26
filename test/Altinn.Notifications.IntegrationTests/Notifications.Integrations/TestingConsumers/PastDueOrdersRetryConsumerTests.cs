@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
@@ -313,13 +314,6 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         Assert.Equal(1, registeredOrderCount);
     }
 
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-    }
-
     private static async Task<string> SelectProcessStatus(Guid orderId)
     {
         string sql = $"select processedstatus from notifications.orders where alternateid='{orderId}'";
@@ -390,8 +384,10 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        return Dispose(true);
+        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
+        
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
     }
 }

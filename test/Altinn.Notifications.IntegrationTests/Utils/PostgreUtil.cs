@@ -39,6 +39,26 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
+    public static async Task DeleteOrdersByRefPrefix(string sendersRefPrefix)
+    {
+        string sql = $@"
+        DELETE FROM notifications.statusfeed 
+        WHERE orderid IN (
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+        );
+        DELETE FROM notifications.emailnotifications 
+        WHERE _orderid IN (
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+        );
+        DELETE FROM notifications.smsnotifications 
+        WHERE _orderid IN (
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+        );
+        DELETE FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%';";
+
+        await RunSql(sql);
+    }
+
     public static async Task<NotificationOrder> PopulateDBWithSmsOrder(string? sendersReference = null)
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });

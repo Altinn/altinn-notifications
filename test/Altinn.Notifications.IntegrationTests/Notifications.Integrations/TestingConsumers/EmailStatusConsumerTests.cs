@@ -334,13 +334,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await Dispose(true);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+        
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
     }
