@@ -109,7 +109,7 @@ jobs:
           - component: tools
             solution: tools/Altinn.Notifications.Tools.sln
             changed: ${{ needs.changes.outputs.tools }}
-    if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
+    if: ${{ github.event_name == 'workflow_dispatch' || matrix.changed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
