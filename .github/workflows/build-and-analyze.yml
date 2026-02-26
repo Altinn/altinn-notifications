@@ -140,7 +140,7 @@ jobs:
         with:
           name: build-output-${{ matrix.component }}
           path: |
-            **/bin/release/
+            **/bin/**/Release/
           retention-days: 1
           
   test-api:
