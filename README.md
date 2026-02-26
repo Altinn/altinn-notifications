@@ -1,101 +1,167 @@
 # Altinn Notifications
 
-Altinn platform microservice for handling notifications (mail, sms, etc)
-This component handles the functionality related to registering and sending notifications.
+[![.NET Analysis](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml)
+[![CodeQL](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-## Architecture
-Detailed architecture documentation can be found in the [docs/architecture](docs/architecture) folder.
+Altinn Notifications is a set of microservices designed to manage and deliver notification messages, including email and SMS. This monorepo contains the following components:
 
-## Project organization
-This is a backend WebAPI solution written in .NET / C# following the clean architecture principles.
-The solution is into four projects, each with their associated test project.
+*   **API** – The primary Notifications API used to register and track notification orders
+*   **Email Service** – Handles the processing and delivery of email notifications
+*   **SMS Service** – Handles the processing and delivery of SMS notifications
 
-### Altinn.Notifications
-The API layer that consumes services provided by _Altinn.Notifications.Core_
+## Table of Contents
 
-Relevant implementations:
-- Controllers
-- Program.cs
+- [Repository Structure](#repository-structure)
+- [Documentation](#documentation)
+- [Runtime Highlights](#runtime-highlights)
+- [API Component](#api-component)
+- [Email Service Component](#email-service-component)
+- [SMS Service Component](#sms-service-component)
+- [Contributing](#contributing)
+- [License](#license)
 
+## Repository Structure
 
-### Altinn.Notifications.Core
-The domain and application layer that implements the business logic of the system.
-
-Relevant implementations:
-- Interfaces for external dependencies implemented by infrastructure and repository layer
-- Domain models
-- Services
-
-### Altinn.Notifications.Integrations
-The infrastructure layer that implements the interfaces defined in _Altinn.Notifications.Core_ for integrations towards 3rd-party libraries and systems.
-
-Relevant implementations:
-- Kafka producer and consumer implementation
-- Clients for communicating with Altinn Platform components
-
-
-### Altinn.Notifications.Persistance
-The persistance layer that implements repository logic.
-
-## Getting started
-
-1. [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
-2. Newest [Git](https://git-scm.com/downloads)
-3. A code editor - we like [Visual Studio Code](https://code.visualstudio.com/download)
-   - Also install [recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) (e.g. [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp))
-4. [Podman](https://podman.io/) or another container tool such as Docker Desktop
-5. [PostgreSQL](https://www.postgresql.org/download/)
-6. [pgAdmin](https://www.pgadmin.org/download/)
-
-### Setting up PostgreSQL
-
-Ensure that both PostgreSQL and pgAdmin have been installed and start pgAdmin.
-
-In pgAdmin
-- Create database _notificationsdb_
-- Create the following users with password: _Password_ (see privileges in parentheses)
-  - platform_notifications_admin (superuser, canlogin)
-  - platform_notifications (canlogin)
-
-A more detailed description of the database setup is available in [our developer handbook](https://docs.altinn.studio/community/contributing/handbook/postgres/)
-
-### Cloning the application
-
-Clone [Altinn Notifications repo](https://github.com/Altinn/altinn-notifications) and navigate to the folder.
-
-```bash
-git clone https://github.com/Altinn/altinn-notifications
-cd altinn-notifications
+```
+altinn-notifications/
+├── Altinn.Notifications.sln
+├── components/           # All components
+│   ├── api/              # Main Notifications API
+│   ├── email-service/    # Email sending service
+│   ├── sms-service/      # SMS sending service
+│   └── shared/           # Shared utilities
+├── docs/                 # Documentation
+├── tools/                # Build scripts
+└── .github/workflows/    # CI/CD workflows
 ```
 
-### Setting up Kafka broker and visualization
-Ensure that Docker has been installed and is running.
+## Documentation
 
-In a terminal navigate to the root of this repository
-and run command `podman compose -f setup-kafka.yml up -d`
+- [getting-started.md](getting-started.md) – setup instructions and development workflow
+- Architecture: [English](docs/architecture/_index.en.md) | [Norwegian](docs/architecture/_index.nb.md) – high-level design, domain models, and integrations
 
-Kafdrop is now available at http://localhost:9000.
+For complete instructions—including PostgreSQL configuration, test collections, and service‑specific setup—refer to [getting-started.md](getting-started.md).
 
-### Running the application with .NET
+## Runtime Highlights
 
-The Notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
+- Kafka is used across components for messaging (producers/consumers).
+- API uses PostgreSQL and supports Azure Key Vault for secrets.
+- Email and SMS services support Azure Key Vault for secrets and can emit telemetry to Application Insights via OpenTelemetry exporters.
 
-- Navigate to _src/Altinn.Notifications_, and build and run the code from there, or run the solution using you selected code editor
+---
 
-  ```cmd
-  cd src/Notifications
-  dotnet run
-  ```
+## API Component
 
-The notifications solution is now available locally at http://localhost:5090/.
-To access swagger use http://localhost:5090/swagger.
+The API component is built on clean architecture principles and structured into the following layers:
 
-### Testing
-There is a Bruno (https://www.usebruno.com/) collection in ```<project root>/test/bruno``` with examples and testcases for the API.
+### Altinn.Notifications
 
-Before running any tests, remember to prepare an ```.env``` file. See ```<project root>/test/bruno/.env.sample``` for an example of how to set it up.
+The API layer responsible for exposing endpoints and consuming services from **Altinn.Notifications.Core**.
 
-### Swagger
+Key elements:
 
-The swagger generated by the application differs from what is published in the documentation and used in APIM. See [transformations](docs/swagger_transforms/transforms.md) for the steps to generate these artifacts.
+*   Controllers
+*   Program.cs
 
+### Altinn.Notifications.Core
+
+The domain and application layer that defines and executes the business logic.
+
+Key elements:
+
+*   Interfaces for external dependencies (implemented by infrastructure and persistence layers)
+*   Domain models
+*   Core services
+
+### Altinn.Notifications.Integrations
+
+The infrastructure layer implementing integration-specific interfaces from **Altinn.Notifications.Core**.
+
+Key elements:
+
+*   Kafka producer and consumer implementations
+*   Clients for communication with Altinn Platform
+
+### Altinn.Notifications.Persistence
+
+The persistence layer responsible for repository logic and data storage operations.
+
+---
+
+## Email Service Component
+
+The email service follows the same clean architecture guidelines and consists of:
+
+### Altinn.Notifications.Email
+
+The API layer that consumes services from **Altinn.Notifications.Email.Core**.
+
+Key elements:
+
+*   Program.cs
+*   Kafka consumer implementation
+
+### Altinn.Notifications.Email.Core
+
+The domain and application layer for email‑specific business logic.
+
+Key elements:
+
+*   Interfaces for infrastructure dependencies
+*   Domain models
+*   Email delivery services
+
+### Altinn.Notifications.Email.Integrations
+
+The infrastructure layer implementing email‑related integrations defined in the core layer.
+
+Key elements:
+
+*   Email service client
+*   Kafka producer implementation
+
+---
+
+## SMS Service Component
+
+The SMS service also adheres to clean architecture and includes:
+
+### Altinn.Notifications.Sms
+
+The API layer consuming services from **Altinn.Notifications.Sms.Core**.
+
+Key elements:
+
+*   Program.cs
+
+### Altinn.Notifications.Sms.Core
+
+The domain and application layer for SMS‑specific business logic.
+
+Key elements:
+
+*   Interfaces for external dependencies
+*   Domain models
+*   SMS delivery services
+
+### Altinn.Notifications.Sms.Integrations
+
+The infrastructure layer implementing SMS service integrations.
+
+Key elements:
+
+*   Client for external SMS delivery service
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Altinn contributing guidelines](https://github.com/Altinn/altinn-studio/blob/main/CONTRIBUTING.md) before submitting a pull request.
+
+For local development setup, see [getting-started.md](getting-started.md).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
