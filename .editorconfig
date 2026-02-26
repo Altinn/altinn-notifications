@@ -85,11 +85,6 @@ dotnet_naming_style.pascal_case.required_prefix =
 dotnet_naming_style.pascal_case.required_suffix = 
 dotnet_naming_style.pascal_case.word_separator = 
 dotnet_naming_style.pascal_case.capitalization = pascal_case
-
-dotnet_naming_style.pascal_case.required_prefix = 
-dotnet_naming_style.pascal_case.required_suffix = 
-dotnet_naming_style.pascal_case.word_separator = 
-dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4
 indent_size = 4
@@ -113,6 +108,7 @@ dotnet_style_namespace_match_folder = true:suggestion
 # StyleCop.Analyzers
 [*.{cs,vb}]
 
+dotnet_diagnostic.CA1873.severity = none
 dotnet_diagnostic.SA0001.severity = error
 dotnet_diagnostic.SA0002.severity = none
 dotnet_diagnostic.SA1000.severity = warning
