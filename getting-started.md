@@ -23,7 +23,7 @@ Ensure you have the following installed:
 
 *   **[.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)** – Required to build and run the code.
 *   **[Podman](https://podman.io/) (Preferred) or [Docker](https://www.docker.com/get-started)** – For running local infrastructure (Kafka, etc.).
-*   **[PostgreSQL](https://www.postgresql.org/download/) & [pgAdmin](https://www.pgadmin.org/download/)** – Database and management tool.
+*   **[PostgreSQL](https://www.postgresql.org/download/) & [pgAdmin](https://www.pgadmin.org/download/)** – Database and management tool (optional if using the containerized setup below).
 *   **IDE:** [Visual Studio](https://visualstudio.microsoft.com/) or [Visual Studio Code](https://code.visualstudio.com/).
 *   **[Git](https://git-scm.com/)** – Version control.
 
@@ -55,6 +55,32 @@ docker compose -f tools/dev-setup/setup-kafka.yml up -d
 > 🎯 **Tip:** You can access the **Kafdrop** UI at `http://localhost:9000` to monitor your topics.
 
 ### 3. Database Setup (PostgreSQL)
+
+#### Option A: Automated Setup (Recommended)
+
+Run the setup script to start a PostgreSQL 17 container with the required database and roles:
+
+**Podman (Preferred):**
+```bash
+bash tools/dev-setup/setup-db.sh
+```
+
+**Docker:** Replace `podman` with `docker` in `tools/dev-setup/setup-db.sh` before running.
+
+This will:
+*   Start a PostgreSQL 17 container on `localhost:5432`
+*   Create the `notificationsdb` database
+*   Create the `platform_notifications_admin` and `platform_notifications` roles
+*   Configure `max_connections` for local development
+
+Database migrations are applied automatically by the application on startup.
+
+To stop the database:
+```bash
+podman compose -f tools/dev-setup/setup-db.yml down
+```
+
+#### Option B: Manual Setup
 
 1.  Ensure PostgreSQL is running.
 2.  Open **pgAdmin** and connect to your local server.
