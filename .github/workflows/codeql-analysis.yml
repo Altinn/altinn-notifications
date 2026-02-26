@@ -4,21 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'tools/src/**'
-      - 'components/*/src/**'
+      - 'src/**'
       - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
-      - 'tools/src/**'
-      - 'components/*/src/**'
+      - 'src/**'
       - '.github/workflows/**'
   schedule:
     - cron: '18 22 * * 3'
-
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   analyze:

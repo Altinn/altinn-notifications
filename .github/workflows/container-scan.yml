@@ -4,111 +4,30 @@ on:
   push:
     branches: [main]
     paths:
-      - 'components/api/src/**'
-      - 'components/api/Dockerfile'
-      - 'components/email-service/src/**'
-      - 'components/email-service/Dockerfile'
-      - 'components/sms-service/src/**'
-      - 'components/sms-service/Dockerfile'
+      - 'src/**'
+      - 'Dockerfile'
   pull_request:
     branches: [main]
     paths:
-      - 'components/*/src/**'
-      - 'components/*/Dockerfile'
+      - 'src/**'
+      - 'Dockerfile'
   schedule:
     - cron: '0 8 * * 1,4'
 
-concurrency:
-  group: container-scan-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  changes:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      api: ${{ steps.filter.outputs.api }}
-      sms: ${{ steps.filter.outputs.sms }}
-      email: ${{ steps.filter.outputs.email }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
-        id: filter
-        with:
-          filters: |
-            api:
-              - 'components/api/**'
-            sms:
-              - 'components/sms-service/**'
-            email:
-              - 'components/email-service/**'
-
-  scan-api:
-    name: "Scan: Notifications API"
-    needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.api == 'true'
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build the Docker image
-        run: docker build . -f components/api/Dockerfile --tag altinn-notifications-api:${{ github.sha }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
-        with:
-          image-ref: 'altinn-notifications-api:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
-          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+        run: docker build . --tag altinn-notifications:${{github.sha}}
 
-  scan-email:
-    name: "Scan: Email Delivery Service"
-    needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.email == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Build the Docker image
-        run: docker build . -f components/email-service/Dockerfile --tag altinn-notifications-email:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
         with:
-          image-ref: 'altinn-notifications-email:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
-          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
-
-  scan-sms:
-    name: "Scan: SMS Delivery Service"
-    needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.sms == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Build the Docker image
-        run: docker build . -f components/sms-service/Dockerfile --tag altinn-notifications-sms:${{ github.sha }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
-        with:
-          image-ref: 'altinn-notifications-sms:${{ github.sha }}'
+          image-ref: 'altinn-notifications:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true

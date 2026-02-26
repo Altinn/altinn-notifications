@@ -3,23 +3,6 @@
   "extends": [
     "local>Altinn/renovate-config"
   ],
-  "packageRules": [
-    {
-      "matchPaths": [ "components/api/**" ],
-      "addLabels": [ "review/component/api" ],
-      "additionalBranchPrefix": "api/"
-    },
-    {
-      "matchPaths": [ "components/email-service/**" ],
-      "addLabels": [ "review/component/email-service" ],
-      "additionalBranchPrefix": "email-service/"
-    },
-    {
-      "matchPaths": [ "components/sms-service/**" ],
-      "addLabels": [ "review/component/sms-service" ],
-      "additionalBranchPrefix": "sms-service/"
-    }
-  ],
   "customManagers": [
     {
       "customType": "regex",

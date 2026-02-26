@@ -5,7 +5,6 @@
 
 # JetBrains Rider
 .idea/
-*.sln.iml
 
 # User-specific files
 *.rsuser
@@ -27,7 +26,6 @@ mono_crash.*
 [Rr]eleases/
 x64/
 x86/
-[Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
@@ -38,12 +36,7 @@ bld/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
+.vscode/
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
 
@@ -72,9 +65,6 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
-# ASP.NET Scaffolding
-ScaffoldingReadMe.txt
-
 # StyleCop
 StyleCopReport.xml
 
@@ -100,7 +90,6 @@ StyleCopReport.xml
 *.tmp_proj
 *_wpftmp.csproj
 *.log
-*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -155,11 +144,6 @@ _TeamCity*
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
-
-# Coverlet is a free, cross platform Code Coverage Tool
-coverage*.json
-coverage*.xml
-coverage*.info
 
 # NCrunch
 _NCrunch_*
@@ -246,7 +230,6 @@ ClientBin/
 *.dbmdl
 *.dbproj.schemaview
 *.jfm
-*.pfx
 *.publishsettings
 orleans.codegen.cs
 
@@ -304,13 +287,6 @@ node_modules/
 # Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
 *.vbw
 
-# Visual Studio 6 auto-generated project file (contains which files were open etc.)
-*.vbp
-
-# Visual Studio 6 workspace and project file (working project files containing files to include in project)
-*.dsw
-*.dsp
-
 # Visual Studio LightSwitch build output
 **/*.HTMLClient/GeneratedArtifacts
 **/*.DesktopClient/GeneratedArtifacts
@@ -367,9 +343,6 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
-# Visual Studio History (VSHistory) files
-.vshistory/
-
 # BeatPulse healthcheck temp database
 healthchecksdb
 
@@ -379,31 +352,5 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
-# Fody - auto-generated XML schema
-FodyWeavers.xsd
-
-# Local History for Visual Studio Code
-.history/
-
-# Windows Installer files from build outputs
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-
 # macOS 
 .DS_Store
-
-# Environment files (may contain secrets)
-.env
-.env.*
-!.env.sample
-!.env.example
-!.env.template
-
-# Secrets & Certificates
-**/secrets/
-*.pem
-*.key
-**/appsettings.Local.json

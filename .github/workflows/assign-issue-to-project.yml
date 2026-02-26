@@ -7,7 +7,7 @@ on:
 
 jobs:
   add-to-project:
-    name: Add issue to Team Core project
+    name: Add issue to Team Platform project
     runs-on: ubuntu-latest
     permissions: {}
     steps:
