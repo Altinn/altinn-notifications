@@ -62,6 +62,7 @@ jobs:
       sms: ${{ steps.filter.outputs.sms }}
       email: ${{ steps.filter.outputs.email }}
       tools: ${{ steps.filter.outputs.tools }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
@@ -81,6 +82,32 @@ jobs:
             tools:
               - 'tools/src/**'
               - 'tools/test/**'
+      - name: Build dynamic matrix
+        id: set-matrix
+        run: |
+          matrix='{"include":['
+
+          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"api","solution":"components/api/Altinn.Notifications.API.sln"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"email","solution":"components/email-service/Altinn.Notifications.Email.sln"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"sms","solution":"components/sms-service/Altinn.Notifications.Sms.sln"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.tools }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"tools","solution":"tools/Altinn.Notifications.Tools.sln"},'
+          fi
+
+          # Remove trailing comma and close JSON
+          matrix="${matrix%,}]}"
+
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $matrix"
       - name: Summary of detected changes
         run: |
           echo "### Detected Changes" >> $GITHUB_STEP_SUMMARY
@@ -90,41 +117,28 @@ jobs:
           echo "| SMS | ${{ steps.filter.outputs.sms }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Email | ${{ steps.filter.outputs.email }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tools | ${{ steps.filter.outputs.tools }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Matrix:** \`${{ steps.set-matrix.outputs.matrix }}\`" >> $GITHUB_STEP_SUMMARY
 
   build:
     name: Build solution
     needs: changes
+    if: needs.changes.outputs.matrix != '{"include":[]}'
     strategy:
-      matrix:
-        include:
-          - component: api
-            solution: components/api/Altinn.Notifications.API.sln
-            changed: ${{ needs.changes.outputs.api }}
-          - component: email
-            solution: components/email-service/Altinn.Notifications.Email.sln
-            changed: ${{ needs.changes.outputs.email }}
-          - component: sms
-            solution: components/sms-service/Altinn.Notifications.Sms.sln
-            changed: ${{ needs.changes.outputs.sms }}
-          - component: tools
-            solution: tools/Altinn.Notifications.Tools.sln
-            changed: ${{ needs.changes.outputs.tools }}
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - name: Setup .NET
-        if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           dotnet-version: |
             10.0.x
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
         with:
           fetch-depth: 0
       - name: Cache NuGet packages
-        if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.nuget/packages
@@ -132,16 +146,7 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
       - name: Build solution
-        if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
         run: dotnet build ${{ matrix.solution }} -c Release -v q
-      - name: Upload build artifacts
-        if: github.event_name == 'workflow_dispatch' || matrix.changed == 'true'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: build-output-${{ matrix.component }}
-          path: |
-            **/bin/**/Release/
-          retention-days: 1
           
   test-api:
     name: "Test: Notifications API"
@@ -193,11 +198,17 @@ jobs:
           dotnet-version: |
             10.0.x
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          name: build-output-api
-          path: .
+      - name: Wait for Kafka readiness
+        run: |
+          echo "Waiting for Kafka to be fully ready..."
+          for i in {1..30}; do
+            if kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; then
+              echo "✅ Kafka is ready"
+              break
+            fi
+            echo "⏳ Attempt $i/30: Kafka not ready yet, waiting..."
+            sleep 2
+          done
       - name: Setup PostgreSQL
         run: |
           chmod +x tools/dev-setup/dbsetup.sh
@@ -209,7 +220,7 @@ jobs:
       - name: Run API unit tests
         run: |
           dotnet test components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/api-unit/ \
           --logger "trx;LogFileName=api-unit.trx" \
@@ -218,7 +229,7 @@ jobs:
       - name: Run API integration tests
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/api-integration/ \
           --logger "trx;LogFileName=api-integration.trx" \
@@ -230,12 +241,22 @@ jobs:
         with:
           name: test-results-api
           path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-api
-          path: '**/coverage.opencover.xml'
+          path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
         uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
@@ -280,15 +301,21 @@ jobs:
           dotnet-version: |
             10.0.x
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          name: build-output-email
-          path: .
+      - name: Wait for Kafka readiness
+        run: |
+          echo "Waiting for Kafka to be fully ready..."
+          for i in {1..30}; do
+            if kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; then
+              echo "✅ Kafka is ready"
+              break
+            fi
+            echo "⏳ Attempt $i/30: Kafka not ready yet, waiting..."
+            sleep 2
+          done
       - name: Run Email unit tests
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/email-unit/ \
           --logger "trx;LogFileName=email-unit.trx" \
@@ -297,7 +324,7 @@ jobs:
       - name: Run Email integration tests
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/email-integration/ \
           --logger "trx;LogFileName=email-integration.trx" \
@@ -309,12 +336,22 @@ jobs:
         with:
           name: test-results-email
           path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-email
-          path: '**/coverage.opencover.xml'
+          path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
         uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
@@ -359,15 +396,21 @@ jobs:
           dotnet-version: |
             10.0.x
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          name: build-output-sms
-          path: .
+      - name: Wait for Kafka readiness
+        run: |
+          echo "Waiting for Kafka to be fully ready..."
+          for i in {1..30}; do
+            if kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; then
+              echo "✅ Kafka is ready"
+              break
+            fi
+            echo "⏳ Attempt $i/30: Kafka not ready yet, waiting..."
+            sleep 2
+          done
       - name: Run SMS unit tests
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/sms-unit/ \
           --logger "trx;LogFileName=sms-unit.trx" \
@@ -376,7 +419,7 @@ jobs:
       - name: Run SMS integration tests
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/sms-integration/ \
           --logger "trx;LogFileName=sms-integration.trx" \
@@ -388,12 +431,22 @@ jobs:
         with:
           name: test-results-sms
           path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-sms
-          path: '**/coverage.opencover.xml'
+          path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
         uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
@@ -430,11 +483,6 @@ jobs:
           dotnet-version: |
             10.0.x
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          name: build-output-tools
-          path: .
       - name: Setup PostgreSQL
         run: |
           chmod +x tools/dev-setup/dbsetup.sh
@@ -444,7 +492,7 @@ jobs:
       - name: Run Tools tests
         run: |
           dotnet test tools/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj \
-          -v q --no-build \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/tools/ \
           --logger "trx;LogFileName=tools.trx" \
@@ -456,12 +504,22 @@ jobs:
         with:
           name: test-results-tools
           path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-tools
-          path: '**/coverage.opencover.xml'
+          path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
         uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
@@ -501,12 +559,6 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             nuget-${{ runner.os }}-
-      - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          pattern: build-output-*
-          merge-multiple: true
-          path: .
       - name: Download API coverage
         if: needs.test-api.result == 'success'
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
@@ -547,7 +599,7 @@ jobs:
             /o:"altinn" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
           if [[ "${{ needs.changes.outputs.api }}" == "true" ]]; then
