@@ -18,6 +18,7 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class ServiceUtil
 {
     private static readonly object _lock = new();
+    private static bool _postgreSqlInitialized;
     private static NpgsqlDataSource? _sharedDataSource;
     private static ServiceProvider? _sharedServiceProvider;
 
@@ -76,12 +77,12 @@ public static class ServiceUtil
             _sharedServiceProvider = null;
             _sharedDataSource?.Dispose();
             _sharedDataSource = null;
+            _postgreSqlInitialized = false;
         }
     }
 
     public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
     {
-        // When env variables are customized (e.g., Kafka topic names), build a one-off provider
         if (envVariables is { Count: > 0 })
         {
             return BuildServiceProvider(envVariables, interfaceTypes);
@@ -96,67 +97,56 @@ public static class ServiceUtil
         List<object> outputServices = [];
         foreach (Type interfaceType in interfaceTypes)
         {
-            var outputServiceObject = _sharedServiceProvider.GetServices(interfaceType)!;
-            outputServices.AddRange(outputServiceObject!);
+            outputServices.AddRange(_sharedServiceProvider.GetServices(interfaceType)!);
         }
 
         return outputServices;
     }
 
+    /// <summary>
+    /// Runs Yuniql database migrations at most once per test run. The
+    /// PostgreSQL settings are identical regardless of Kafka topic overrides,
+    /// so a single invocation is sufficient.
+    /// </summary>
+    private static void EnsurePostgreSqlSetup(IConfiguration config)
+    {
+        if (_postgreSqlInitialized)
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            if (_postgreSqlInitialized)
+            {
+                return;
+            }
+
+            WebApplication.CreateBuilder()
+                           .Build()
+                           .SetUpPostgreSql(true, config);
+
+            _postgreSqlInitialized = true;
+        }
+    }
+
     private static ServiceProvider BuildSharedServiceProvider()
     {
         var config = BuildConfiguration();
-
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
+        EnsurePostgreSqlSetup(config);
 
         IServiceCollection services = new ServiceCollection();
-        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
-        {
-            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
-            ApplicationName = "Altinn.Notifications.IntegrationTests",
-            ContentRootPath = Directory.GetCurrentDirectory()
-        });
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        services.AddLogging();
-
-        var sharedDataSource = GetSharedDataSource();
-        services.AddSingleton(sharedDataSource);
-        RegisterRepositories(services);
-        services.AddCoreServices(config);
-        services.AddKafkaServices(config);
-        services.AddAltinnClients(config);
-        services.AddAuthorizationService(config);
-
+        ConfigureServices(services, config);
         return services.BuildServiceProvider();
     }
 
     private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
     {
         var config = BuildConfiguration(envVariables);
-
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
+        EnsurePostgreSqlSetup(config);
 
         IServiceCollection services = new ServiceCollection();
-        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
-        {
-            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
-            ApplicationName = "Altinn.Notifications.IntegrationTests",
-            ContentRootPath = Directory.GetCurrentDirectory()
-        });
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        services.AddLogging();
-
-        var sharedDataSource = GetSharedDataSource();
-        services.AddSingleton(sharedDataSource);
-        RegisterRepositories(services);
-        services.AddCoreServices(config);
-        services.AddKafkaServices(config);
-        services.AddAltinnClients(config);
-        services.AddAuthorizationService(config);
+        ConfigureServices(services, config);
 
         var sp = services.BuildServiceProvider();
         List<object> outputServices = [];
@@ -166,6 +156,26 @@ public static class ServiceUtil
         }
 
         return outputServices;
+    }
+
+    private static void ConfigureServices(IServiceCollection services, IConfiguration config)
+    {
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
+        {
+            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
+            ApplicationName = "Altinn.Notifications.IntegrationTests",
+            ContentRootPath = Directory.GetCurrentDirectory()
+        });
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddLogging();
+
+        var sharedDataSource = GetSharedDataSource();
+        services.AddSingleton(sharedDataSource);
+        RegisterRepositories(services);
+        services.AddCoreServices(config);
+        services.AddKafkaServices(config);
+        services.AddAltinnClients(config);
+        services.AddAuthorizationService(config);
     }
 
     private static void RegisterRepositories(IServiceCollection services)
