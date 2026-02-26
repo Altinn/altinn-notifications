@@ -1,0 +1,24 @@
+name: Label PR by component
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'components/api/**'
+      - 'components/email-service/**'
+      - 'components/sms-service/**'
+
+jobs:
+  add_component_labels:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
