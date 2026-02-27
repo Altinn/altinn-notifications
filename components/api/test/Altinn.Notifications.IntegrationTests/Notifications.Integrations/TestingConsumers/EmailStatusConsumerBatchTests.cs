@@ -781,7 +781,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await consumer2.StartAsync(CancellationToken.None);
 
         // Give time for initial assignment
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         (_, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification($"{_sendersRef}-leave", simulateCronJob: true);
