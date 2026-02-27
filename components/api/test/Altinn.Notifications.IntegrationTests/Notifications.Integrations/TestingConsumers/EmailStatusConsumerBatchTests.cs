@@ -743,7 +743,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await secondConsumer.StartAsync(CancellationToken.None);
 
         // Give time for rebalance to occur
-        await Task.Delay(300, TestContext.Current.CancellationToken);
+        await Task.Delay(3000, TestContext.Current.CancellationToken);
 
         // Assert - Both consumers should be running without errors (partition revocation handled)
         await firstConsumer.StopAsync(CancellationToken.None);
