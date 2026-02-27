@@ -398,12 +398,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        foreach (var orderId in _ordersToDelete)
-        {
-            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
-            await PostgreUtil.DeleteOrderFromDb(orderId);
-        }
-
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+        
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
     }

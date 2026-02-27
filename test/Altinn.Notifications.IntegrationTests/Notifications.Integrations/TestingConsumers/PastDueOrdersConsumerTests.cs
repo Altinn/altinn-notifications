@@ -184,17 +184,6 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
         Assert.Contains(statusFeedEntry.Recipients, x => x.Status == expectedStatus);
     }
 
-    protected virtual async Task Dispose(bool disposing)
-    {
-        foreach (var orderId in _ordersToDelete)
-        {
-            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
-            await PostgreUtil.DeleteOrderFromDb(orderId);
-        }
-
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
-    }
-
     private static async Task<long> SelectProcessedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Processed' and alternateid='{orderId}'";
@@ -230,8 +219,10 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        return Dispose(true);
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 }
