@@ -799,7 +799,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await consumer2.StopAsync(CancellationToken.None);
 
         // Give time for rebalance
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Verify remaining consumer still processes messages after rebalance
         string status = string.Empty;
