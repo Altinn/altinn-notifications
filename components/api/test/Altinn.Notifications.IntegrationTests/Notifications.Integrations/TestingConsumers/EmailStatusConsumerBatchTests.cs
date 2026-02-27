@@ -644,7 +644,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(100, TestContext.Current.CancellationToken); // Let it poll for a bit with no messages
+        await Task.Delay(1000, TestContext.Current.CancellationToken); // Let it poll for a bit with no messages
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert - No exception means success
