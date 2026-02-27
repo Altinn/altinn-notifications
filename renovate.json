@@ -5,30 +5,18 @@
   ],
   "packageRules": [
     {
-      "matchFileNames": [
-        "components/api/**"
-      ],
-      "addLabels": [
-        "review/component/api"
-      ],
+      "matchPaths": [ "components/api/**" ],
+      "addLabels": [ "review/component/api" ],
       "additionalBranchPrefix": "api/"
     },
     {
-      "matchFileNames": [
-        "components/email-service/**"
-      ],
-      "addLabels": [
-        "review/component/email-service"
-      ],
+      "matchPaths": [ "components/email-service/**" ],
+      "addLabels": [ "review/component/email-service" ],
       "additionalBranchPrefix": "email-service/"
     },
     {
-      "matchFileNames": [
-        "components/sms-service/**"
-      ],
-      "addLabels": [
-        "review/component/sms-service"
-      ],
+      "matchPaths": [ "components/sms-service/**" ],
+      "addLabels": [ "review/component/sms-service" ],
       "additionalBranchPrefix": "sms-service/"
     }
   ],
