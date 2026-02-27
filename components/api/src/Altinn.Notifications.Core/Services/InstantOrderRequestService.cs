@@ -454,7 +454,8 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         var atIndex = email.IndexOf('@');
         if (atIndex <= 0)
         {
-            return email; // Invalid email, return as-is
+            // Invalid email format - mask entirely to avoid leaking potentially sensitive data
+            return new string('*', email.Length);
         }
 
         var localPart = email[..atIndex];
@@ -462,8 +463,8 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         
         if (localPart.Length <= 2)
         {
-            // For very short local parts, mask all but the first character
-            return localPart[0] + new string('*', localPart.Length - 1) + domainPart;
+            // For very short local parts, mask entirely
+            return new string('*', localPart.Length) + domainPart;
         }
 
         // Keep first two characters, mask the rest
