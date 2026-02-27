@@ -1,0 +1,22 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/notifications/email/api/v1/instantemail"
+        }
+      ]
+    },
+    "Methods": ["POST"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "notificationId": "mock-email-id-00000000-0000-0000-0000-000000000001"
+    }
+  }
+}

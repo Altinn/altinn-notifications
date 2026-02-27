@@ -183,8 +183,36 @@ dotnet test components/sms-service/Altinn.Notifications.Sms.sln
 ### API Testing with Bruno
 
 We use [Bruno](https://www.usebruno.com/) for API testing.
+
+#### Local Mock Services
+
+The API depends on several external platform services (Profile, Register, Authorization, SMS, Email, Token Generator).
+To run Bruno tests locally without these, start the mock services:
+
+1.  Start the mock services (requires .NET 10 SDK):
+    ```bash
+    bash tools/dev-setup/start-mock-services.sh
+    ```
+    This starts WireMock-based mocks for Profile (5030), Register (5020), Authorization (5050), SMS/Email (5092), and Conditions (5199), plus a JWT token generator with OpenID discovery on port 5101.
+
+2.  Copy the sample environment file:
+    ```bash
+    cp components/api/test/bruno/.env.local.sample components/api/test/bruno/.env
+    ```
+
+3.  Start the Notifications API:
+    ```bash
+    dotnet run --project components/api/src/Altinn.Notifications
+    ```
+
+4.  Open the Bruno collection at `components/api/test/bruno` and select the **v2 local** environment.
+
+5.  Run the `test-util/new-auth-token` request first to obtain a JWT, then run any test.
+
+#### Testing Against Remote Environments
+
 1.  Navigate to `components/api/test/bruno`.
-2.  Copy `.env.sample` to `.env` and configure your local environment variables.
+2.  Copy `.env.sample` to `.env` and configure your environment variables for the target environment.
 3.  Open the collection in Bruno to run requests.
 
 ---

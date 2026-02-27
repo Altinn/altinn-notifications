@@ -1,0 +1,30 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/profile/api/v1/users/contactpoint/lookup"
+        }
+      ]
+    },
+    "Methods": ["POST"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "contactPointsList": [
+        {
+          "userId": 12345,
+          "nationalIdentityNumber": "12345678901",
+          "isReserved": false,
+          "mobileNumber": "+4799999999",
+          "email": "test@example.com"
+        }
+      ]
+    }
+  }
+}
