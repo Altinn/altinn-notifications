@@ -54,10 +54,11 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         };
 
         // Act
-        await SendPostRequest(request);
+        var response = await SendPostRequest(request);
 
         // Assert
         Assert.NotNull(_factory.SpyService);
+        Assert.True(response.IsSuccessStatusCode, "Expected successful response from API");
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var emailCall = _factory.SpyService.RecordedCalls
@@ -93,10 +94,11 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         };
 
         // Act
-        await SendPostRequest(request);
+        var response = await SendPostRequest(request);
 
         // Assert
         Assert.NotNull(_factory.SpyService);
+        Assert.True(response.IsSuccessStatusCode, "Expected successful response from API");
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var smsCall = _factory.SpyService.RecordedCalls
@@ -139,10 +141,11 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         };
 
         // Act
-        await SendPostRequest(request);
+        var response = await SendPostRequest(request);
 
         // Assert
         Assert.NotNull(_factory.SpyService);
+        Assert.True(response.IsSuccessStatusCode, "Expected successful response from API");
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var emailAndSmsCall = _factory.SpyService.RecordedCalls
@@ -185,10 +188,11 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         };
 
         // Act
-        await SendPostRequest(request);
+        var response = await SendPostRequest(request);
 
         // Assert
         Assert.NotNull(_factory.SpyService);
+        Assert.True(response.IsSuccessStatusCode, "Expected successful response from API");
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var preferredCall = _factory.SpyService.RecordedCalls
@@ -200,6 +204,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
     public Task InitializeAsync()
     {
         _client = _factory.CreateClient();
+        _factory.SpyService?.Reset();
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
