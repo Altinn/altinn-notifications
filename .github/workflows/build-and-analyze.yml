@@ -158,7 +158,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:17.8@sha256:1eada89ec2521ae0f61125f6bdaf83bbbf88a43fecda48d112a83bb92df75c36
+        image: postgres:17.8@sha256:69dddb030ab69d669d8d7c6abf67aeb448178e5270d5f123a21f4f7ac8b46a24
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -464,7 +464,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:17.8@sha256:1eada89ec2521ae0f61125f6bdaf83bbbf88a43fecda48d112a83bb92df75c36
+        image: postgres:17.8@sha256:69dddb030ab69d669d8d7c6abf67aeb448178e5270d5f123a21f4f7ac8b46a24
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
