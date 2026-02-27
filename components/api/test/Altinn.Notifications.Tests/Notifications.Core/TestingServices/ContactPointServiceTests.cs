@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetUserContactPoints", exception.Operation);
             Assert.IsType<TaskCanceledException>(exception.InnerException);
-            Assert.True(exception.IsTransient);
+            Assert.True(exception.IsTransient is true);
 
             profileClientMock.Verify(
                 e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))),
@@ -1710,7 +1710,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetExternalIdentityContactPoints", exception.Operation);
             Assert.IsType<TaskCanceledException>(exception.InnerException);
-            Assert.True(exception.IsTransient);
+            Assert.True(exception.IsTransient is true);
 
             profileClientMock.Verify(
                 e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))),

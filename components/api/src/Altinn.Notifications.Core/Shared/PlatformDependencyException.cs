@@ -22,7 +22,12 @@ public sealed class PlatformDependencyException : Exception
     /// <summary>
     /// Indicates if the failure was due to a timeout or cancellation
     /// </summary>
-    public bool IsTransient => InnerException is OperationCanceledException or HttpRequestException;
+    public bool? IsTransient => InnerException switch
+    {
+        null => null,
+        OperationCanceledException or HttpRequestException => true,
+        _ => false
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformDependencyException"/> class.
