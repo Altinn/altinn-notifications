@@ -31,7 +31,7 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
     public async Task CheckHealthAsync_ReturnsHealthyResult()
     {
         PostgresHealthCheck healthCheck = new(_dataSource);
-        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Healthy, res.Status);
     }
@@ -42,7 +42,7 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
         var tempDataSource = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb").Build();
 
         PostgresHealthCheck healthCheck = new(tempDataSource);
-        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Unhealthy, res.Status);
     }
@@ -50,5 +50,7 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _dataSource.DisposeAsync();
+
+        GC.SuppressFinalize(this);
     }
 }
