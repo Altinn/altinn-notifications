@@ -15,7 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.IntegrationTests.TestUtilities;
+namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
 /// Custom WebApplicationFactory that replaces IContactPointService with a spy implementation

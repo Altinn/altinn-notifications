@@ -1,9 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-
-using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.IntegrationTests.TestUtilities;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
@@ -12,13 +10,13 @@ using Altinn.Notifications.Tests.Notifications.Utils;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications;
+namespace Altinn.Notifications.IntegrationTests.Notifications.OrderPhase;
 
 /// <summary>
 /// Integration tests verifying that the correct <see cref="OrderPhase"/> enum value is used
-/// during order creation (<see cref="OrderPhase.NewOrder"/>) to ensure that the expensive
+/// during order creation (<see cref="Altinn.Notifications.Core.Enums.OrderPhase.NewOrder"/>) to ensure that the expensive
 /// authorization lookup for user-registered contact points is skipped at order acceptance time.
-/// The authorization is deferred to <see cref="OrderPhase.Processing"/> when the order is
+/// The authorization is deferred to <see cref="Altinn.Notifications.Core.Enums.OrderPhase.Processing"/> when the order is
 /// picked up by the consumer for delivery.
 /// </summary>
 public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
@@ -63,7 +61,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var emailCall = _factory.SpyService.RecordedCalls
-            .FirstOrDefault(c => c.Method == "AddEmailContactPoints" && c.Phase == OrderPhase.NewOrder);
+            .FirstOrDefault(c => c.Method == "AddEmailContactPoints" && c.Phase == Altinn.Notifications.Core.Enums.OrderPhase.NewOrder);
 
         Assert.NotEqual(default, emailCall);
     }
@@ -102,7 +100,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var smsCall = _factory.SpyService.RecordedCalls
-            .FirstOrDefault(c => c.Method == "AddSmsContactPoints" && c.Phase == OrderPhase.NewOrder);
+            .FirstOrDefault(c => c.Method == "AddSmsContactPoints" && c.Phase == Altinn.Notifications.Core.Enums.OrderPhase.NewOrder);
 
         Assert.NotEqual(default, smsCall);
     }
@@ -148,7 +146,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var emailAndSmsCall = _factory.SpyService.RecordedCalls
-            .FirstOrDefault(c => c.Method == "AddEmailAndSmsContactPointsAsync" && c.Phase == OrderPhase.NewOrder);
+            .FirstOrDefault(c => c.Method == "AddEmailAndSmsContactPointsAsync" && c.Phase == Altinn.Notifications.Core.Enums.OrderPhase.NewOrder);
 
         Assert.NotEqual(default, emailAndSmsCall);
     }
@@ -194,7 +192,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         Assert.True(_factory.SpyService.RecordedCalls.Count > callCountBefore);
 
         var preferredCall = _factory.SpyService.RecordedCalls
-            .FirstOrDefault(c => c.Method == "AddPreferredContactPoints" && c.Phase == OrderPhase.NewOrder);
+            .FirstOrDefault(c => c.Method == "AddPreferredContactPoints" && c.Phase == Altinn.Notifications.Core.Enums.OrderPhase.NewOrder);
 
         Assert.NotEqual(default, preferredCall);
     }

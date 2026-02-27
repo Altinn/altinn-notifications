@@ -1,10 +1,9 @@
 using System.Collections.Concurrent;
-
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
 
-namespace Altinn.Notifications.IntegrationTests.TestUtilities;
+namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
 /// Test spy that wraps the real ContactPointService and records OrderPhase values used in method calls.
