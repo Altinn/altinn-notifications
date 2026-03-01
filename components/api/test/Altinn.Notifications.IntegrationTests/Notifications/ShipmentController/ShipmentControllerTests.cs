@@ -78,8 +78,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
 
         // Assert
@@ -117,7 +117,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -136,7 +136,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -155,7 +155,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         };
 
         // Act
-        var result = await controller.GetById(Guid.NewGuid());
+        var result = await controller.GetById(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
@@ -176,7 +176,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -192,8 +192,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         request.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
 
         // Assert
@@ -274,7 +274,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         };
 
         // Act
-        var result = await controller.GetById(_shipmentId);
+        var result = await controller.GetById(_shipmentId, TestContext.Current.CancellationToken);
 
         // Assert
         var happyPathResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -323,12 +323,12 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);
@@ -358,12 +358,12 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         HttpRequestMessage request = new(HttpMethod.Get, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode); // 499 Client Closed Request
         
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);

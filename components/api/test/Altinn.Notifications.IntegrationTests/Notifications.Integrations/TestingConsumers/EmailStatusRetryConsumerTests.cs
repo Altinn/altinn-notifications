@@ -72,7 +72,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     return deadDeliveryReportIdentifier != null;
                 },
                 TimeSpan.FromSeconds(10),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -135,7 +136,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 }
             },
             TimeSpan.FromSeconds(10),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -202,7 +204,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     }
                 },
                 TimeSpan.FromSeconds(15),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -274,7 +277,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     }
                 },
                 TimeSpan.FromSeconds(10),
-                TimeSpan.FromMilliseconds(1000));
+                TimeSpan.FromMilliseconds(1000),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -349,7 +353,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     return republishedUpdateStatusRetryMessage is not null;
                 },
                 TimeSpan.FromSeconds(8),
-                TimeSpan.FromMilliseconds(150));
+                TimeSpan.FromMilliseconds(150),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -421,7 +426,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     }
                 },
                 TimeSpan.FromSeconds(10),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -486,7 +492,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     }
                 },
                 TimeSpan.FromSeconds(10),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -555,7 +562,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     return capturedDeadDeliveryReport != null;
                 },
                 TimeSpan.FromSeconds(10),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
@@ -580,12 +588,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await Dispose(true);
+
+            GC.SuppressFinalize(this);
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await KafkaUtil.CreateTopicAsync(_statusUpdatedRetryTopicName);
         }

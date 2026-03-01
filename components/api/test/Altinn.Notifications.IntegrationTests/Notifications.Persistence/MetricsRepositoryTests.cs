@@ -10,12 +10,12 @@ public class MetricsRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete = [];
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdsToDelete.Count == 0)
         {
@@ -27,6 +27,8 @@ public class MetricsRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(id);
             await PostgreUtil.DeleteOrderFromDb(id);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
