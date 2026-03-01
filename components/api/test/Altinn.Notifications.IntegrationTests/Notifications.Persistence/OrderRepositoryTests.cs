@@ -25,12 +25,12 @@ public class OrderRepositoryTests : IAsyncLifetime
         _ordersChainIdsToDelete = [];
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_orderIdsToDelete.Count > 0)
         {
@@ -47,6 +47,8 @@ public class OrderRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -503,7 +505,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null);
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -673,7 +675,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -906,7 +908,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1154,7 +1156,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1271,7 +1273,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null));
+        await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1351,7 +1353,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         string idempotencyId = $"non-existent-id-{Guid.NewGuid():N}";
 
         // Act
-        var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
+        var result = await repo.GetOrderChainTracking(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -1435,10 +1437,10 @@ public class OrderRepositoryTests : IAsyncLifetime
             ]
         };
 
-        await repo.Create(orderChainRequest, notificationOrder, null);
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+        var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1560,10 +1562,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Inserts the order chain with reminder in the database.
-        await repo.Create(orderRequest, mainOrder, reminders);
+        await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+        var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1734,10 +1736,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Insert the order chain with reminders in the database
-        await repo.Create(orderRequest, mainOrder, reminders);
+        await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+        var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1821,10 +1823,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Insert the order chain in the database
-        await repo.Create(orderChainRequest, notificationOrder, null);
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+        var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1988,7 +1990,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1);
+        var result = await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -2088,7 +2090,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Save the first order
-        await orderRepository.Create(firstInstantOrder, firstNotificationOrder, firstSmsNotification, creationDateTime.AddSeconds(7200), 1);
+        await orderRepository.Create(firstInstantOrder, firstNotificationOrder, firstSmsNotification, creationDateTime.AddSeconds(7200), 1, TestContext.Current.CancellationToken);
 
         // Create second order with same idempotency ID
         var secondInstantOrder = new InstantNotificationOrder
@@ -2142,7 +2144,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(async () => await orderRepository.Create(secondInstantOrder, secondNotificationOrder, secondSmsNotification, creationDateTime.AddSeconds(10800), 1));
+        await Assert.ThrowsAnyAsync<Exception>(async () => await orderRepository.Create(secondInstantOrder, secondNotificationOrder, secondSmsNotification, creationDateTime.AddSeconds(10800), 1, TestContext.Current.CancellationToken));
 
         // Verify Orders Chain
         string persistedOrderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{firstOrderChainId}'";
@@ -2246,7 +2248,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1, TestContext.Current.CancellationToken));
 
         // Verify nothing was persisted
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
@@ -2367,7 +2369,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         string idempotencyId = Guid.NewGuid().ToString();
 
         // Act
-        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId);
+        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -2461,10 +2463,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, idempotencyId);
+        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -2544,10 +2546,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(invalidCreator, idempotencyId);
+        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(invalidCreator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -2624,10 +2626,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+        await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, invalidIdempotencyId);
+        var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, invalidIdempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -2737,13 +2739,13 @@ public class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         // Create the normal order
-        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null);
+        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
 
         // Create the instant order
-        var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1);
+        var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1, TestContext.Current.CancellationToken);
 
-        var orderChainTrackingInformation = await sut.GetOrderChainTracking("ttd", idempotencyId);
-        var instantTrackingInformation = await sut.RetrieveInstantOrderTrackingInformation("ttd", instantNotificationOrder.IdempotencyId);
+        var orderChainTrackingInformation = await sut.GetOrderChainTracking("ttd", idempotencyId, TestContext.Current.CancellationToken);
+        var instantTrackingInformation = await sut.RetrieveInstantOrderTrackingInformation("ttd", instantNotificationOrder.IdempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(normalOrderResult);
@@ -2829,7 +2831,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result1 = await sut.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddHours(48), 1);
+        var result1 = await sut.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddHours(48), 1, TestContext.Current.CancellationToken);
 
         // Try to create a second order with the same idempotencyId but a different orderId
         var instantNotificationOrder2 = instantNotificationOrder with { OrderId = secondOrderId };
@@ -2856,7 +2858,7 @@ public class OrderRepositoryTests : IAsyncLifetime
 
         // Assert
         var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
-            await sut.Create(instantNotificationOrder2, notificationOrder2, smsNotification2, creationDateTime.AddHours(48), 1));
+            await sut.Create(instantNotificationOrder2, notificationOrder2, smsNotification2, creationDateTime.AddHours(48), 1, TestContext.Current.CancellationToken));
 
         Assert.Equal("23505", ex.SqlState); // 23505 = unique_violation in PostgreSQL
         Assert.NotNull(result1);
@@ -2956,11 +2958,11 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null);
+        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
 
         // Assert
         var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
-            await sut.Create(notificationOrderRequest2, notificationOrder2, null));
+            await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken));
 
         Assert.Equal("23505", ex.SqlState); // 23505 = unique_violation in PostgreSQL
         Assert.NotNull(result1);
@@ -3022,10 +3024,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await sut.Create(notificationOrderRequest, notificationOrder, null);
+        await sut.Create(notificationOrderRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await sut.RetrieveInstantOrderTrackingInformation(creator, idempotencyId);
+        var result = await sut.RetrieveInstantOrderTrackingInformation(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -3096,10 +3098,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Insert the instant order
-        await sut.Create(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(60), 1);
+        await sut.Create(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(60), 1, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await sut.GetOrderChainTracking(creator, idempotencyId);
+        var result = await sut.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);

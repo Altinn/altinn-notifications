@@ -47,8 +47,8 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string resString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string resString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert
@@ -71,8 +71,8 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string resString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string resString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert
@@ -98,8 +98,8 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string resString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string resString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert

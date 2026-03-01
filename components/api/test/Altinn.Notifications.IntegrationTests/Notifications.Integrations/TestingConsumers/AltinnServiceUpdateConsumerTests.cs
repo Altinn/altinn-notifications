@@ -57,7 +57,8 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
              return actualTimeout.HasValue;
          },
          maximumWaitTime: TimeSpan.FromSeconds(10),
-         checkInterval: TimeSpan.FromMilliseconds(500));
+         checkInterval: TimeSpan.FromMilliseconds(500),
+         TestContext.Current.CancellationToken);
 
         await consumerService.StopAsync(CancellationToken.None);
 
@@ -76,17 +77,19 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
         return await PostgreUtil.RunSqlReturnOutput<DateTime?>(sql);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         string sql = @"UPDATE notifications.resourcelimitlog
                         SET emaillimittimeout = NULL
                         WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
 
         await PostgreUtil.RunSql(sql);
+
+        GC.SuppressFinalize(this);
     }
 }
