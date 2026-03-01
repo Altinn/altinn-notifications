@@ -201,7 +201,7 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
         Assert.NotEqual(default, preferredCall);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
         _client = _factory.CreateClient();
         _factory.SpyService?.Reset();
@@ -210,13 +210,15 @@ public class OrderPhaseIntegrationTests(SpyContactPointServiceFactory factory) :
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        return Task.CompletedTask;
+
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
     }
 
     private async Task<HttpResponseMessage> SendPostRequest(NotificationOrderChainRequestExt request)
