@@ -548,9 +548,9 @@ public class ContactPointService(
         List<OrganizationContactPoints> contactPoints = await GetOfficialOrganizationContactPoints(organizationNumbers);
 
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderPhase == OrderPhase.Processing)
         {
-            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId, orderPhase);
+            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId);
         }
 
         CleanupOrganizationContactPoints(contactPoints);
@@ -586,24 +586,21 @@ public class ContactPointService(
     private async Task EnrichWithUserRegisteredContactPoints(
         List<OrganizationContactPoints> contactPoints,
         List<string> organizationNumbers,
-        string sanitizedResourceId,
-        OrderPhase orderPhase)
+        string sanitizedResourceId)
     {
         List<OrganizationContactPoints> authorizedUserContactPoints;
 
-        if (orderPhase == OrderPhase.Processing)
+        List<OrganizationContactPoints> allUserContactPoints = await GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+
+        if (allUserContactPoints.Count == 0)
         {
-            List<OrganizationContactPoints> allUserContactPoints = await GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
-
-            if (allUserContactPoints.Count == 0)
-            {
-                return;
-            }
-
-            // During the processing phase, only include user-registered contact points that are explicitly authorized for the resource.
-            authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
-            MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
+            return;
         }
+
+        // During the processing phase, only include user-registered contact points that are explicitly authorized for the resource.
+        authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
+        MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
+        
     }
 
     /// <summary>
