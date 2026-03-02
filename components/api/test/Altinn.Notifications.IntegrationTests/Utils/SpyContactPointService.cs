@@ -58,8 +58,18 @@ public class SpyContactPointService : IContactPointService
 
         foreach (var recipient in recipients)
         {
-            recipient.AddressInfo.Add(new EmailAddressPoint("spy@test.local"));
+            if (channel == NotificationChannel.Sms)
+            {
+                recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+            }
+            else
+            {
+                recipient.AddressInfo.Add(new EmailAddressPoint("spy@test.local"));
+            }
         }
+
+        return Task.CompletedTask;
+    }
 
         return Task.CompletedTask;
     }
