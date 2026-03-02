@@ -508,7 +508,7 @@ public class InstantOrderRequestServiceTests
                     FromAddress = "sender@example.com",
                     Subject = "Test Subject",
                     Body = "Test email body content",
-                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                    ContentType = EmailContentType.Plain
                 }
             }
         };
@@ -592,7 +592,7 @@ public class InstantOrderRequestServiceTests
                     FromAddress = "sender@example.com",
                     Subject = "Integration Test Subject",
                     Body = "Integration test email body content",
-                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Html
+                    ContentType = EmailContentType.Html
                 }
             }
         };
@@ -607,7 +607,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal("recipient@example.com", sentEmail.Recipient);
         Assert.Equal("Integration Test Subject", sentEmail.Subject);
         Assert.Equal("Integration test email body content", sentEmail.Body);
-        Assert.Equal(Altinn.Notifications.Core.Enums.EmailContentType.Html, sentEmail.ContentType);
+        Assert.Equal(EmailContentType.Html, sentEmail.ContentType);
         Assert.Equal(emailOrderId, sentEmail.NotificationId);
 
         instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
@@ -675,7 +675,7 @@ public class InstantOrderRequestServiceTests
                     FromAddress = senderEmailAddress,
                     Subject = "Test Subject",
                     Body = "Test email body content",
-                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                    ContentType = EmailContentType.Plain
                 }
             }
         };
@@ -690,7 +690,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal("recipient@example.com", sentEmail.Recipient);
         Assert.Equal("Test Subject", sentEmail.Subject);
         Assert.Equal("Test email body content", sentEmail.Body);
-        Assert.Equal(Altinn.Notifications.Core.Enums.EmailContentType.Plain, sentEmail.ContentType);
+        Assert.Equal(EmailContentType.Plain, sentEmail.ContentType);
         Assert.Equal(emailOrderId, sentEmail.NotificationId);
 
         instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
@@ -755,7 +755,7 @@ public class InstantOrderRequestServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-            async () => await service.PersistInstantEmailNotificationAsync(instantEmailNotificationOrder));
+            async () => await service.PersistInstantEmailNotificationAsync(instantEmailNotificationOrder, TestContext.Current.CancellationToken));
 
         Assert.Equal("InstantEmailServiceClient", exception.DependencyName);
 
@@ -832,7 +832,7 @@ public class InstantOrderRequestServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-            async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder));
+            async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken));
 
         Assert.Equal("ShortMessageServiceClient", exception.DependencyName);
 
