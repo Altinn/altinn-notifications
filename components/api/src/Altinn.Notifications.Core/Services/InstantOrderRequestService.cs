@@ -477,9 +477,14 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// </summary>
     private static string MaskPhoneNumber(string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length <= 4)
+        if (string.IsNullOrWhiteSpace(phoneNumber))
         {
             return phoneNumber;
+        }
+
+        if (phoneNumber.Length <= 4)
+        {
+            return new string('*', phoneNumber.Length);
         }
 
         var visibleStart = phoneNumber[..2];
