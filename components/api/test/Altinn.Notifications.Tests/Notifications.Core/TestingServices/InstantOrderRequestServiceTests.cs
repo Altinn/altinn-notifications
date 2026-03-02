@@ -16,7 +16,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -848,7 +848,164 @@ public class InstantOrderRequestServiceTests
             Times.Never);
     }
 
-    private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null, IInstantEmailServiceClient? instantEmailServiceClient = null)
+    [Theory]
+    [InlineData("+4712345678", "+4*******78")]
+    [InlineData("+4799999999", "+4*******99")]
+    [InlineData("12345", "12*45")]
+    [InlineData("123", "***")]
+    public async Task PersistInstantSmsNotificationAsync_WhenSendFails_LogsMaskedPhoneNumber(string phoneNumber, string expectedMaskedNumber)
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<InstantOrderRequestService>>();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(Guid.NewGuid());
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
+
+        var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
+        shortMessageServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<ShortMessage>()))
+            .ReturnsAsync(new ShortMessageSendResult
+            {
+                Success = false,
+                ErrorDetails = "Gateway timeout",
+                StatusCode = System.Net.HttpStatusCode.GatewayTimeout
+            });
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            shortMessageServiceClient: shortMessageServiceClient.Object,
+            logger: loggerMock.Object);
+
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            SendersReference = "test-ref",
+            Creator = new Creator("test-creator"),
+            IdempotencyId = Guid.NewGuid().ToString(),
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = phoneNumber,
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Altinn",
+                        Message = "Test message"
+                    }
+                }
+            }
+        };
+
+        // Act
+        await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken));
+
+        // Assert — the masked number must appear in the log, the raw number must not
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Critical,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(expectedMaskedNumber, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Critical,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(phoneNumber, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData("john.doe@example.com", "jo******@example.com")]
+    [InlineData("testuser@altinn.no", "te******@altinn.no")]
+    [InlineData("abc@example.com", "ab*@example.com")]
+    [InlineData("te", "**")]
+    [InlineData("testuser", "********")]
+    public async Task PersistInstantEmailNotificationAsync_WhenSendFails_LogsMaskedEmailAddress(string emailAddress, string expectedMaskedEmail)
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<InstantOrderRequestService>>();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(Guid.NewGuid());
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
+
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+        instantEmailServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<InstantEmail>()))
+            .ReturnsAsync(new InstantEmailSendResult
+            {
+                Success = false,
+                ErrorDetails = "Service unavailable",
+                StatusCode = System.Net.HttpStatusCode.ServiceUnavailable
+            });
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object,
+            logger: loggerMock.Object);
+
+        var emailOrder = new InstantEmailNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            SendersReference = "test-ref",
+            Creator = new Creator("test-creator"),
+            IdempotencyId = Guid.NewGuid().ToString(),
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = emailAddress,
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "sender@example.com",
+                    Subject = "Subject",
+                    Body = "Body",
+                    ContentType = EmailContentType.Plain
+                }
+            }
+        };
+
+        // Act
+        await Assert.ThrowsAsync<PlatformDependencyException>(
+            async () => await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken));
+
+        // Assert — the masked email must appear in the log, the raw email must not
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Critical,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(expectedMaskedEmail, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Critical,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(emailAddress, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null, IInstantEmailServiceClient? instantEmailServiceClient = null, ILogger<InstantOrderRequestService>? logger = null)
     {
         guidService ??= Mock.Of<IGuidService>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
@@ -862,6 +1019,6 @@ public class InstantOrderRequestServiceTests
             DefaultEmailFromAddress = "noreply@altinn.no"
         });
 
-        return new InstantOrderRequestService(guidService, dateTimeService, orderRepository, configurationOptions, shortMessageServiceClient, instantEmailServiceClient, NullLogger<InstantOrderRequestService>.Instance);
+        return new InstantOrderRequestService(guidService, dateTimeService, orderRepository, configurationOptions, shortMessageServiceClient, instantEmailServiceClient, logger ?? NullLogger<InstantOrderRequestService>.Instance);
     }
 }

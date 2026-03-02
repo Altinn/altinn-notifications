@@ -473,7 +473,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
     /// <summary>
     /// Masks a phone number for logging purposes, keeping only the first two and last two digits visible.
-    /// Example: "+4712345678" becomes "+47******78"
+    /// Example: "+4712345678" becomes "+4*******78"
     /// </summary>
     private static string MaskPhoneNumber(string phoneNumber)
     {
