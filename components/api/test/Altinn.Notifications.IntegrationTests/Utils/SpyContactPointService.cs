@@ -71,8 +71,6 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-        return Task.CompletedTask;
-    }
 
     public void Reset()
     {
