@@ -64,8 +64,6 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
             // Register the spy service
             services.AddSingleton<IContactPointService>(sp =>
             {
-
-
                 SpyService = new SpyContactPointService();
                 return SpyService;
             });

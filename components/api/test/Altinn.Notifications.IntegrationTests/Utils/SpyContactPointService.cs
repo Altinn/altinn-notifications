@@ -71,7 +71,6 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-
     public void Reset()
     {
         RecordedCalls.Clear();
