@@ -64,12 +64,9 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
             // Register the spy service
             services.AddSingleton<IContactPointService>(sp =>
             {
-                var profileClient = sp.GetRequiredService<IProfileClient>();
-                var authorizationService = sp.GetRequiredService<IAuthorizationService>();
 
-                var realService = new ContactPointService(profileClient, authorizationService);
 
-                SpyService = new SpyContactPointService(realService);
+                SpyService = new SpyContactPointService();
                 return SpyService;
             });
 
