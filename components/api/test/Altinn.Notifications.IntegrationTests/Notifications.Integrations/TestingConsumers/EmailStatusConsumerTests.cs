@@ -375,9 +375,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 
                 return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() 
                        && processedOrderCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            }, 
+            TimeSpan.FromSeconds(15), 
+            TimeSpan.FromMilliseconds(100), 
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
         
