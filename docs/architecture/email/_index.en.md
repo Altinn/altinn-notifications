@@ -23,7 +23,7 @@ The following Kafka consumers are defined:
   
 **Producers:**
 
-A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Producers/CommonProducer.cs) 
+A single producer [_CommonProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Producers/CommonProducer.cs) 
 is implemented and used by all services that publish to Kafka. 
 
 [Please reference the Kafka architecture section for a closer description of the Kafka setup.](../kafka/)
@@ -86,8 +86,8 @@ parts of the solution.
 There is a single dependency for the integration tests. Remaining dependencies such as Azure Communication Services have been mocked. 
 
 - Kafka server. 
-  
-    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/setup-kafka.yml) has been created to easily 
+
+    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/tools/dev-setup/setup-kafka.yml) has been created to easily 
 start all Kafka-related dependencies in a Docker containers.
 
 
