@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 
+using Altinn.Notifications.MockServices.Scheduling;
 using Altinn.Notifications.MockServices.TokenGeneration;
 
 using Microsoft.IdentityModel.Tokens;
@@ -84,6 +85,8 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenLocalhost(5101);
 });
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
+builder.Services.AddHostedService<TriggerScheduler>();
 
 var app = builder.Build();
 
