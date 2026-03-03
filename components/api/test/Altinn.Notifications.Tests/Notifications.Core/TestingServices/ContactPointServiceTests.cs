@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-                async () => await service.AddEmailContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>()));
+                async () => await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration));
 
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetUserContactPoints", exception.Operation);
@@ -90,7 +90,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -145,7 +145,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -224,7 +224,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipients, rawResourceIdWithPrefixAndWhitespace, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailContactPoints(recipients, rawResourceIdWithPrefixAndWhitespace, OrderLifecycleStage.Processing);
 
             // Assert
             var recipient = Assert.Single(recipients);
@@ -278,7 +278,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -335,7 +335,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -387,7 +387,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -442,7 +442,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -496,7 +496,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -548,7 +548,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -601,7 +601,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -751,7 +751,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier, It.IsAny<OrderLifecycleStage>());
+            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -933,7 +933,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, resourceIdentifier, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1031,7 +1031,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1107,7 +1107,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1177,7 +1177,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1249,7 +1249,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1316,7 +1316,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1386,7 +1386,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1454,7 +1454,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClient: profileClientMock.Object, authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1506,7 +1506,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1563,7 +1563,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1615,7 +1615,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1670,7 +1670,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1704,7 +1704,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-                async () => await service.AddSmsContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>()));
+                async () => await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration));
 
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetExternalIdentityContactPoints", exception.Operation);
@@ -1752,7 +1752,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1814,7 +1814,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1866,7 +1866,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1914,7 +1914,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1962,7 +1962,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2015,7 +2015,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2069,7 +2069,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2129,7 +2129,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, It.IsAny<OrderLifecycleStage>());
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
 
             // Assert
             Assert.Equal(4, recipientsToEnrich.Count);

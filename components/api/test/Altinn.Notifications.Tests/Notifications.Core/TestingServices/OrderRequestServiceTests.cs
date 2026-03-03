@@ -2702,7 +2702,7 @@ public class OrderRequestServiceTests
         };
         Mock<IOrderRepository> orderRepositoryMock = new();
         orderRepositoryMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), CancellationToken.None))
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(mockResponse));
 
         var service = GetTestService(orderRepositoryMock.Object, null, orderId, currentTime);
@@ -2726,7 +2726,7 @@ public class OrderRequestServiceTests
             It.IsAny<NotificationOrderChainRequest>(),
             It.Is<NotificationOrder>(o => o.SendingTimePolicy == shouldEqual),
             It.IsAny<List<NotificationOrder>>(),
-            CancellationToken.None),
+            It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
