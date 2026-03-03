@@ -264,4 +264,4 @@ The database is hosted on a PostgreSQL flexible server in Azure.
 
 ## Run on local machine
 Instructions on how to set up the service on local machine for development or testing is covered by 
-[the README in the repository](https://github.com/Altinn/altinn-notifications). 
+[Getting Started](https://github.com/Altinn/altinn-notifications/blob/main/getting-started.md).
