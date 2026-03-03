@@ -47,7 +47,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
         if (recipientsWithoutContactPoint.Count > 0)
         {
-            await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId, OrderPhase.Processing);
+            await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId, OrderLifecycleStage.Processing);
         }
 
         List<Recipient> preferredChannelRecipients;

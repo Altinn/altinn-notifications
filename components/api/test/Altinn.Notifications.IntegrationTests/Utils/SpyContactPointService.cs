@@ -8,16 +8,16 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
-/// Test spy that records OrderPhase values and populates dummy contact points
+/// Test spy that records OrderLifecycleStage values and populates dummy contact points
 /// so the downstream missing-contact validation passes.
 /// </summary>
 public class SpyContactPointService : IContactPointService
 {
-    public ConcurrentBag<(string Method, OrderPhase Phase)> RecordedCalls { get; } = new();
+    public ConcurrentBag<(string Method, OrderLifecycleStage Phase)> RecordedCalls { get; } = new();
 
-    public Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
-        RecordedCalls.Add(("AddEmailContactPoints", orderPhase));
+        RecordedCalls.Add(("AddEmailContactPoints", orderLifecycleStage));
 
         foreach (var recipient in recipients)
         {
@@ -27,9 +27,9 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
-        RecordedCalls.Add(("AddSmsContactPoints", orderPhase));
+        RecordedCalls.Add(("AddSmsContactPoints", orderLifecycleStage));
 
         foreach (var recipient in recipients)
         {
@@ -39,9 +39,9 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
-        RecordedCalls.Add(("AddEmailAndSmsContactPointsAsync", orderPhase));
+        RecordedCalls.Add(("AddEmailAndSmsContactPointsAsync", orderLifecycleStage));
 
         foreach (var recipient in recipients)
         {
@@ -52,9 +52,9 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
-        RecordedCalls.Add(("AddPreferredContactPoints", orderPhase));
+        RecordedCalls.Add(("AddPreferredContactPoints", orderLifecycleStage));
 
         foreach (var recipient in recipients)
         {

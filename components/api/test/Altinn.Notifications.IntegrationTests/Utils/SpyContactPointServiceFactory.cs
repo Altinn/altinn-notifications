@@ -19,7 +19,7 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
 /// Custom WebApplicationFactory that replaces IContactPointService with a spy implementation
-/// to enable verification of OrderPhase values in integration tests.
+/// to enable verification of OrderLifecycleStage values in integration tests.
 /// </summary>
 public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
 {

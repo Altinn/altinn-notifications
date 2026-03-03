@@ -26,7 +26,7 @@ public class ContactPointService(
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
-    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
         await AugmentRecipients(
             recipients,
@@ -34,11 +34,11 @@ public class ContactPointService(
             ApplyEmailForPerson,
             ApplyEmailForOrganization,
             ApplyEmailForExternalIdentity,
-            orderPhase);
+            orderLifecycleStage);
     }
 
     /// <inheritdoc/>
-    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
         await AugmentRecipients(
             recipients,
@@ -46,11 +46,11 @@ public class ContactPointService(
             ApplySmsForPerson,
             ApplySmsForOrganization,
             ApplySmsForExternalIdentity, 
-            orderPhase);
+            orderLifecycleStage);
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
         await AugmentRecipients(
             recipients,
@@ -58,11 +58,11 @@ public class ContactPointService(
             ApplyEmailAndSmsForPerson,
             ApplyEmailAndSmsForOrganization,
             ApplyEmailAndSmsForExternalIdentity,
-            orderPhase);
+            orderLifecycleStage);
     }
 
     /// <inheritdoc/>
-    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
         switch (channel)
         {
@@ -73,7 +73,7 @@ public class ContactPointService(
                     ApplyEmailPreferredForPerson,
                     ApplyEmailPreferredForOrganization,
                     ApplyEmailPreferredForExternalIdentity,
-                    orderPhase);
+                    orderLifecycleStage);
                 break;
             case NotificationChannel.SmsPreferred:
                 await AugmentRecipients(
@@ -82,7 +82,7 @@ public class ContactPointService(
                     ApplySmsPreferredForPerson,
                     ApplySmsPreferredForOrganization,
                     ApplySmsPreferredForExternalIdentity,
-                    orderPhase);
+                    orderLifecycleStage);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(channel), channel, $"Unsupported notification channel: {channel}");
@@ -348,7 +348,7 @@ public class ContactPointService(
     /// An action that applies contact points to the recipient in place. Invoked for recipients with an external identity
     /// and a matching <see cref="ExternalIdentityContactPoints"/> entry.
     /// </param>
-    /// <param name="orderPhase">
+    /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
     /// </param>
     /// <returns>
@@ -360,11 +360,11 @@ public class ContactPointService(
         Action<Recipient, UserContactPoints> applyPersonContactPoints,
         Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
         Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints,
-        OrderPhase orderPhase)
+        OrderLifecycleStage orderLifecycleStage)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
         var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
-        var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderPhase);
+        var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderLifecycleStage);
 
         await Task.WhenAll(personLookupTask, externalIdentityLookupTask, organizationLookupTask);
 
@@ -527,14 +527,14 @@ public class ContactPointService(
     /// The resource identifier used to filter and authorize user-registered contact points for the organizations.
     /// If <c>null</c> or empty, only official organization contact points are returned.
     /// </param>
-    /// <param name="orderPhase">
+    /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
     /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>
     /// corresponding to the provided organization numbers. If no valid organization numbers are found, an empty list is returned.
     /// </returns>
-    private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId, OrderPhase orderPhase = OrderPhase.Processing)
+    private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
     {
         List<string> organizationNumbers = [.. recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
@@ -548,7 +548,7 @@ public class ContactPointService(
         List<OrganizationContactPoints> contactPoints = await GetOfficialOrganizationContactPoints(organizationNumbers);
 
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-        if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderPhase == OrderPhase.Processing)
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderLifecycleStage == OrderLifecycleStage.Processing)
         {
             await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId);
         }

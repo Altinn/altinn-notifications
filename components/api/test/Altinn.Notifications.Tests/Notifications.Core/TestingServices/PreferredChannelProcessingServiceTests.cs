@@ -42,8 +42,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             _contactPointMock
-                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     foreach (var recipient in recipients)
                     {
@@ -111,8 +111,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             _contactPointMock
-                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     foreach (var recipient in recipients)
                     {
@@ -246,8 +246,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             _contactPointMock
-                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     foreach (var recipient in recipients)
                     {
@@ -381,8 +381,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             _contactPointMock
-                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     foreach (var recipient in recipients)
                     {
@@ -476,7 +476,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Assert
             _contactPointMock.Verify(
-                cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+                cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()),
                 Times.Never);
         }
 
@@ -518,8 +518,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     NotificationChannel.EmailPreferred,
                     It.IsAny<List<Recipient>>(),
                     "test-resource",
-                    It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                    It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     capturedRecipients = recipients;
                     recipients[0].AddressInfo.Add(new EmailAddressPoint("user2@altinn.xyz"));
@@ -807,8 +807,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Returns(Task.CompletedTask);
 
             _contactPointMock
-                .Setup(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderPhase>()))
-                .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
+                .Setup(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()))
+                .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage>((_, recipients, _, _) =>
                 {
                     recipients[0].IsReserved = true;
                 })
@@ -854,7 +854,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Assert
             Assert.Null(exception);
             _contactPointMock.Verify(
-                cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()),
+                cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()),
                 Times.Never);
         }
 

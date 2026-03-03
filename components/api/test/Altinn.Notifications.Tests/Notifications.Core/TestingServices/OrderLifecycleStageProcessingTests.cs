@@ -17,12 +17,12 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 /// <summary>
-/// Unit tests verifying that all order processing services pass <see cref="OrderPhase.Processing"/>
+/// Unit tests verifying that all order processing services pass <see cref="OrderLifecycleStage.Processing"/>
 /// to the <see cref="IContactPointService"/> when processing orders picked up by the consumer.
 /// This ensures the expensive authorization lookup for user-registered contact points
 /// is performed during processing, not during order creation.
 /// </summary>
-public class OrderPhaseProcessingTests
+public class OrderLifecycleStageProcessingTests
 {
     private static readonly Guid _orderId = Guid.NewGuid();
     private static readonly DateTime _requestedSendTime = DateTime.UtcNow;
@@ -38,7 +38,7 @@ public class OrderPhaseProcessingTests
             .Setup(c => c.AddEmailContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderPhase>()))
+                It.IsAny<OrderLifecycleStage>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateEmailProcessingService(contactPointMock.Object);
@@ -51,7 +51,7 @@ public class OrderPhaseProcessingTests
             c => c.AddEmailContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderPhase.Processing),
+                OrderLifecycleStage.Processing),
             Times.Once);
     }
 
@@ -67,7 +67,7 @@ public class OrderPhaseProcessingTests
             .Setup(c => c.AddSmsContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderPhase>()))
+                It.IsAny<OrderLifecycleStage>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateSmsProcessingService(contactPointMock.Object);
@@ -80,7 +80,7 @@ public class OrderPhaseProcessingTests
             c => c.AddSmsContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderPhase.Processing),
+                OrderLifecycleStage.Processing),
             Times.Once);
     }
 
@@ -100,7 +100,7 @@ public class OrderPhaseProcessingTests
             .Setup(c => c.AddEmailAndSmsContactPointsAsync(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderPhase>()))
+                It.IsAny<OrderLifecycleStage>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateEmailAndSmsProcessingService(contactPointMock.Object);
@@ -113,7 +113,7 @@ public class OrderPhaseProcessingTests
             c => c.AddEmailAndSmsContactPointsAsync(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderPhase.Processing),
+                OrderLifecycleStage.Processing),
             Times.Once);
     }
 
@@ -134,7 +134,7 @@ public class OrderPhaseProcessingTests
                 It.IsAny<NotificationChannel>(),
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderPhase>()))
+                It.IsAny<OrderLifecycleStage>()))
             .Returns(Task.CompletedTask);
 
         var service = CreatePreferredChannelProcessingService(contactPointMock.Object);
@@ -148,7 +148,7 @@ public class OrderPhaseProcessingTests
                 NotificationChannel.EmailPreferred,
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderPhase.Processing),
+                OrderLifecycleStage.Processing),
             Times.Once);
     }
 
@@ -169,7 +169,7 @@ public class OrderPhaseProcessingTests
                 It.IsAny<NotificationChannel>(),
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderPhase>()))
+                It.IsAny<OrderLifecycleStage>()))
             .Returns(Task.CompletedTask);
 
         var service = CreatePreferredChannelProcessingService(contactPointMock.Object);
@@ -183,7 +183,7 @@ public class OrderPhaseProcessingTests
                 NotificationChannel.SmsPreferred,
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderPhase.Processing),
+                OrderLifecycleStage.Processing),
             Times.Once);
     }
 
