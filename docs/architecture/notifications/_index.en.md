@@ -99,7 +99,7 @@ Secrets are hosted i Azure KeyVault and added to the configuration values during
 The Notification microservice implements multiple API clients for communication with other services.
 The clients are used to retrieve recipient data and to authorize user access.
 
-- [ProfileClient](https://github.com/Altinn/altinn-notifications/tree/main/components/api/src/Altinn.Notifications.Integrations/Profile/ProfileClient.cs) 
+- [ProfileClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Profile/ProfileClient.cs)
   consumes Altinn Profile's internal API to retrieve contact points for individuals.
 - [RegisterClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Register/RegisterClient.cs)
   consumes Altinn Register's internal API to retrieve official and user-registered contact points associated with organizations.
