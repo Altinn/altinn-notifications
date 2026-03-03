@@ -8,9 +8,9 @@ toc: false
 ## API
 
 ### Public API
-- [DeliveryReportController](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms/Controllers/DeliveryReportController.cs)
+- [DeliveryReportController](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms/Controllers/DeliveryReportController.cs)
   Endpoint receiving delivery reports in XML-format from SMS provider.
-  The controller is protected with [basic authentication](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms/Configuration/BasicAuthenticationHandler.cs).
+  The controller is protected with [basic authentication](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms/Configuration/BasicAuthenticationHandler.cs).
 
 ## Integrations
 ### Kafka
@@ -19,18 +19,18 @@ both to publish and consume messages from topics relevant to the microservice.
 
 **Consumers:**
 The following Kafka consumers are defined: 
-- [SendSmsQueueConsumer](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Integrations/Consumers/SendSmsQueueConsumer.cs):
+- [SendSmsQueueConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/Consumers/SendSmsQueueConsumer.cs):
   Consumes SMS objects with recipient data that are ready to be sent
 
 **Producers:**
-A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Integrations/Producers/CommonProducer.cs) 
+A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/Producers/CommonProducer.cs) 
 is implemented and used by all services that publish to Kafka. 
 
 [Please reference the Kafka architecture section for a closer description of the Kafka setup.](../kafka/)
 
 ### Link Mobility
 Link Mobility is used as service provider for sending SMS to the end users.
-A client, [SmsClient](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Integrations/LinkMobility/SmsClient.cs)
+A client, [SmsClient](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/LinkMobility/SmsClient.cs)
 has been implemented based on the SDK made available by Link to interact with their API. 
 
 Delivery reports from Link Mobility are pushed to the delivery report endpoint in our public API.
@@ -57,7 +57,7 @@ Find descriptions of key dependencies below.
 ### Altinn Services
 | Service | Purpose | Resources |
 |-|-|-|
-| Altinn Notifications* | Service that orchestrates the sending of notifications.| [Repository](https://github.com/Altinn/altinn-notifications-sms) |
+| Altinn Notifications* | Service that orchestrates the sending of notifications.| [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service) |
 
 \*Functional dependency to enable the full functionality of Altinn Notifications. Altinn Notifications generates the 
 SMS messages that are to be sent through this SMS service.
@@ -77,10 +77,10 @@ Quality gates implemented for a project require an 80 % code coverage for the un
 parts of the solution.
 
 ### Unit tests
-[The unit test project is available on GitHub](https://github.com/Altinn/altinn-notifications-sms/tree/main/test/Altinn.Notifications.Sms.Tests).
+[The unit test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service/test/Altinn.Notifications.Sms.Tests).
 
 ### Integration tests
-[The integration test project is available on GitHub](https://github.com/Altinn/altinn-notifications-sms/tree/main/test/Altinn.Notifications.Sms.IntegrationTests).
+[The integration test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests).
 
 There is a single dependency for the integration tests. Remaining dependencies such as Link Mobility have been mocked. 
 
@@ -105,15 +105,15 @@ and it is deployed as a Kubernetes deployment with autoscaling capabilities.
 
 The notifications SMS application runs on port 5092. 
 
-See [DockerFile](https://github.com/Altinn/altinn-notifications-sms/blob/main/Dockerfile) for details.
+See [DockerFile](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/Dockerfile) for details.
 
 ## Build & deploy
 
 ### Web API 
-  - Build and Code analysis runs in a [Github workflow](https://github.com/Altinn/altinn-notifications-sms/actions)
+  - Build and Code analysis runs in a [Github workflow](https://github.com/Altinn/altinn-notifications/actions)
   - Build of the image is done in an [Azure Devops Pipeline](https://dev.azure.com/brreg/altinn-studio/_build?definitionId=476)
   - Deploy of the image is enabled with Helm and implemented in an [Azure Devops Release pipeline](https://dev.azure.com/brreg/altinn-studio/_release?_a=releases&view=all&definitionId=52)
 
 ## Run on local machine
 Instructions on how to set up the service on local machine for development or testing is covered by 
-[the README in the repository](https://github.com/Altinn/altinn-notifications-sms). 
+[the README in the repository](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service). 
