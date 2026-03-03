@@ -185,15 +185,15 @@ Quality gates implemented for a project require an 80 % code coverage for the un
 parts of the solution.
 
 ### Unit tests
-[The unit test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/test/Altinn.Notifications.Tests).
+[The unit test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/components/api/test/Altinn.Notifications.Tests).
 
 ### Integration tests
-[The integration test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/test/Altinn.Notifications.IntegrationTests).
+[The integration test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/components/api/test/Altinn.Notifications.IntegrationTests).
 
 There are two dependencies for the integration tests: 
 - Kafka server. 
-  
-    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/setup-kafka.yml) has been created to easily 
+
+    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/tools/dev-setup/setup-kafka.yml) has been created to easily 
     start all Kafka-related dependencies in Docker containers.
 
 - PostgreSQL database
@@ -201,14 +201,14 @@ There are two dependencies for the integration tests:
     A PostgreSQL database needs to be installed wherever the tests are running, either in a Docker container or installed 
     on the machine and exposed on port 5432.
 
-    A [bash script](https://github.com/Altinn/altinn-notifications/blob/main/dbsetup.sh) has been set up to easily 
-    generate all required roles and rights in the database. 
+    A [bash script](https://github.com/Altinn/altinn-notifications/blob/main/tools/dev-setup/dbsetup.sh) has been set up to easily 
+    generate all required roles and rights in the database.
 
     [See section on running the application locally](#run-on-local-machine) if further assistance is required in 
     running the integration tests.
 
 ### Automated tests 
-[The automated test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/test/k6)
+[The automated test project is available on GitHub](https://github.com/Altinn/altinn-notifications/tree/main/components/api/test/k6)
 
 The automated tests for this micro service are implemented through [Grafana's k6](https://k6.io/). 
 The tool is specialized for load tests, but we do use it for automated API tests as well. 
@@ -237,7 +237,7 @@ and it is deployed as a Kubernetes deployment with autoscaling capabilities
 
 The notifications application runs on port 5090. 
 
-See [DockerFile](https://github.com/Altinn/altinn-notifications/blob/main/Dockerfile) for details.
+See [DockerFile](https://github.com/Altinn/altinn-notifications/blob/main/components/api/Dockerfile) for details.
 
 ### Cron jobs
 The cron jobs run in a docker containers hosted in AKS, and is started on a schedule configured in the helm chart.
