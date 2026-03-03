@@ -186,28 +186,135 @@ We use [Bruno](https://www.usebruno.com/) for API testing.
 
 #### Local Mock Services
 
-The API depends on several external platform services (Profile, Register, Authorization, SMS, Email, Token Generator).
-To run Bruno tests locally without these, start the mock services:
+The Notifications API depends on several external platform services. To run Bruno tests locally,
+we provide a mock-services project that replaces all external dependencies with local WireMock stubs
+and a JWT token generator.
 
-1.  Start the mock services (requires .NET 10 SDK):
-    ```bash
-    bash tools/dev-setup/start-mock-services.sh
-    ```
-    This starts WireMock-based mocks for Profile (5030), Register (5020), Authorization (5050), SMS/Email (5092), and Conditions (5199), plus a JWT token generator with OpenID discovery on port 5101.
+**Architecture overview:**
 
-2.  Copy the sample environment file:
-    ```bash
-    cp components/api/test/bruno/.env.local.sample components/api/test/bruno/.env
-    ```
+```
+Bruno tests
+  │
+  ▼
+Notifications API (localhost:5090)
+  ├── Auth/OIDC ──────────► Token Generator + JWKS   (localhost:5101, custom Kestrel)
+  ├── Profile ────────────► WireMock                  (localhost:5030)
+  ├── Register ───────────► WireMock                  (localhost:5020)
+  ├── Authorization PDP ──► WireMock                  (localhost:5050)
+  ├── Condition endpoints ► WireMock                  (localhost:5199)
+  └── Kafka ──────────────► (localhost:9092, required)
+        │
+        ▼
+  PastDueOrdersConsumer (in-process) ──► Profile mock (5030)
+        │
+        ▼
+  [email.queue / sms.queue Kafka topics]
+        │
+        ▼
+  Email Service (localhost:5190)  ──► MockEmailServiceClient (in-process)
+  SMS Service   (localhost:5170)  ──► MockSmsClient (in-process)
+        │
+        ▼
+  [email.status / sms.status Kafka topics] ──► StatusConsumers (in API) ──► Status feed
+```
 
-3.  Start the Notifications API:
-    ```bash
-    dotnet run --project components/api/src/Altinn.Notifications
-    ```
+##### Quick Start
 
-4.  Open the Bruno collection at `components/api/test/bruno` and select the **v2 local** environment.
+```bash
+# 1. Prerequisites: Kafka and PostgreSQL must be running
+podman compose -f tools/dev-setup/setup-kafka.yml up -d
+bash tools/dev-setup/setup-db.sh
 
-5.  Run the `test-util/new-auth-token` request first to obtain a JWT, then run any test.
+# 2. Start all services (mock services + email service + SMS service)
+#    This starts: WireMock stubs, Token/OIDC, TriggerScheduler,
+#    Email service (port 5190, mock ACS client), SMS service (port 5170, mock Link Mobility client)
+bash tools/dev-setup/start-mock-services.sh
+
+# 3. Start the Notifications API (in a separate terminal)
+dotnet run --project components/api/src/Altinn.Notifications
+
+# 4. Set up Bruno environment
+cp components/api/test/bruno/.env.local.sample components/api/test/bruno/.env
+
+# 5. Run a Bruno test (CLI)
+cd components/api/test/bruno
+npx @usebruno/cli run "v2 (future)/create-notifications/Fulfilling eForvaltningsforskriften §8 NIN.bru" --env "v2 local"
+
+# 6. Wait ~10 seconds for TriggerScheduler to process orders, then check the status feed:
+TOKEN=$(curl -s -u mock:mock "http://localhost:5101/api/GetEnterpriseToken?env=local&scopes=altinn:serviceowner/notifications.create&org=ttd")
+curl -H "Authorization: Bearer $TOKEN" "http://localhost:5090/notifications/api/v1/future/shipment/feed?seq=0"
+```
+
+##### Verify the Environment
+
+Check that all services are running before testing:
+
+```bash
+# Token generator + OIDC
+curl http://localhost:5101/authentication/api/v1/openid/.well-known/openid-configuration
+
+# Generate a token
+curl -u mock:mock "http://localhost:5101/api/GetEnterpriseToken?env=local&scopes=altinn:serviceowner/notifications.create&org=ttd"
+
+# Profile mock
+curl -X POST http://localhost:5030/profile/api/v1/users/contactpoint/lookup \
+  -H "Content-Type: application/json" -d '{"nationalIdentityNumbers":["12345678901"]}'
+
+# Register mock
+curl -X POST http://localhost:5020/register/api/v1/parties/nameslookup \
+  -H "Content-Type: application/json" -d '{"parties":[{"ssn":"12345678901"}]}'
+
+# Notifications API health
+curl http://localhost:5090/health
+```
+
+##### Trigger Order Processing
+
+The mock-services startup includes a **TriggerScheduler** that automatically calls the trigger
+endpoints every 5 seconds, so orders are processed without manual intervention.
+
+If you need to trigger manually (e.g., when running services individually), the endpoints are:
+
+```bash
+# Process past-due orders (fetches orders from DB → Kafka → creates notifications)
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/pastdueorders
+
+# Dispatch email and SMS notifications to Kafka queues
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/sendemail
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime
+
+# Other maintenance triggers:
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/terminateexpirednotifications
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/deleteoldstatusfeedrecords
+```
+
+##### What Works End-to-End
+
+The local mock setup provides a **complete end-to-end pipeline**:
+
+- Token generation and JWT validation (OIDC/JWKS)
+- Order creation (201 Created) with full validation
+- Profile contact point lookups (mock data)
+- Register party name lookups (mock data)
+- Authorization decisions (always Permit)
+- Send condition evaluation (true/false/corrupt endpoints)
+- Kafka order processing pipeline (order → notifications in DB)
+- Email/SMS notification creation and publishing to Kafka queues
+- **Email delivery simulation** — the real Email service runs with `MockEmailServiceClient`, which replaces Azure Communication Services and returns `Delivered` for all emails
+- **SMS delivery simulation** — the real SMS service runs with `MockSmsClient`, which replaces Link Mobility and returns a successful gateway reference for all SMS messages
+- **Automatic trigger scheduling** — `TriggerScheduler` calls `/trigger/pastdueorders`, `/trigger/sendemail`, and `/trigger/sendsmsanytime` every 5 seconds
+- **Status feed population** — delivery status flows back through Kafka and populates the shipment status feed
+
+##### How It Works
+
+The `start-mock-services.sh` script launches three processes:
+
+1. **Mock services** — WireMock stubs (Profile, Register, Authorization, SMS/Email, Conditions), Token/OIDC generator, and TriggerScheduler
+2. **Email service** (port 5190) — runs in Development mode with `MockEmailServiceClient` replacing Azure Communication Services
+3. **SMS service** (port 5170) — runs in Development mode with `MockSmsClient` replacing Link Mobility
+
+The mock clients are injected via DI "last wins" semantics: `AddIntegrationServices` registers
+the real client first, then the dev-mode override registers the mock client afterwards.
 
 #### Testing Against Remote Environments
 
