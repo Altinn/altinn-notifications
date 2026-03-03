@@ -446,11 +446,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// </summary>
     private static string MaskEmail(string email)
     {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return email;
-        }
-
         var atIndex = email.IndexOf('@');
         if (atIndex <= 0)
         {
@@ -477,11 +472,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// </summary>
     private static string MaskPhoneNumber(string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            return phoneNumber;
-        }
-
         if (phoneNumber.Length <= 4)
         {
             return new string('*', phoneNumber.Length);

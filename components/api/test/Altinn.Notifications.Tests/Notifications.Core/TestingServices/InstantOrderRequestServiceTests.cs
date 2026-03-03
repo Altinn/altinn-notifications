@@ -775,7 +775,7 @@ public class InstantOrderRequestServiceTests
     [InlineData(System.Net.HttpStatusCode.GatewayTimeout)]
     [InlineData(System.Net.HttpStatusCode.ServiceUnavailable)]
     [InlineData(System.Net.HttpStatusCode.InternalServerError)]
-    public async Task PersistInstantSmsNotificationAsync_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
+    public async Task PersistInstantSmsNotificationAsync_InstantSmsOrder_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -783,7 +783,7 @@ public class InstantOrderRequestServiceTests
         var orderChainId = Guid.NewGuid();
         var orderCreationDateTime = DateTime.UtcNow;
 
-        var instantNotificationOrder = new InstantNotificationOrder
+        var instantSmsNotificationOrder = new InstantSmsNotificationOrder
         {
             OrderId = orderId,
             OrderChainId = orderChainId,
@@ -791,17 +791,14 @@ public class InstantOrderRequestServiceTests
             SendersReference = "test-ref",
             Creator = new Creator("test-creator"),
             IdempotencyId = "test-idempotency",
-            InstantNotificationRecipient = new InstantNotificationRecipient
+            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
             {
-                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                TimeToLiveInSeconds = 3600,
+                PhoneNumber = "+4799999999",
+                ShortMessageContent = new ShortMessageContent
                 {
-                    TimeToLiveInSeconds = 3600,
-                    PhoneNumber = "+4799999999",
-                    ShortMessageContent = new ShortMessageContent
-                    {
-                        Sender = "Sender",
-                        Message = "Message"
-                    }
+                    Sender = "Sender",
+                    Message = "Message"
                 }
             }
         };
@@ -832,14 +829,17 @@ public class InstantOrderRequestServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-            async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken));
+            async () => await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken));
 
         Assert.Equal("ShortMessageServiceClient", exception.DependencyName);
 
-        // Verify no data was persisted
+        // Verify the SMS was attempted
+        shortMessageServiceClient.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Once);
+
+        // Verify no data was persisted after the failure
         orderRepositoryMock.Verify(
             e => e.Create(
-                It.IsAny<InstantNotificationOrder>(),
+                It.IsAny<InstantSmsNotificationOrder>(),
                 It.IsAny<NotificationOrder>(),
                 It.IsAny<SmsNotification>(),
                 It.IsAny<DateTime>(),
@@ -931,6 +931,7 @@ public class InstantOrderRequestServiceTests
     [InlineData("john.doe@example.com", "jo******@example.com")]
     [InlineData("testuser@altinn.no", "te******@altinn.no")]
     [InlineData("abc@example.com", "ab*@example.com")]
+    [InlineData("ab@example.com", "**@example.com")]
     [InlineData("te", "**")]
     [InlineData("testuser", "********")]
     public async Task PersistInstantEmailNotificationAsync_WhenSendFails_LogsMaskedEmailAddress(string emailAddress, string expectedMaskedEmail)
