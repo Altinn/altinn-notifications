@@ -332,7 +332,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
    
     [Fact]
-    public async Task ConsumeSucceededStatus_ShouldNotMarkOrderCompleted_WhenAllNotificationsFinished()
+    public async Task ConsumeSucceededStatus_ShouldNotCallTryMarkOrderCompleted()
     {
         // Arrange
         Dictionary<string, string> kafkaSettings = new()
@@ -344,10 +344,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         using EmailStatusConsumer emailStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], kafkaSettings)
             .OfType<EmailStatusConsumer>()
-            .First();   
-
+            .First();
+        
         (NotificationOrder notificationOrder, EmailNotification emailNotification) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
         
         EmailSendOperationResult deliveryReport = new()
         {
@@ -374,9 +374,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 
                 return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() 
                        && processedOrderCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            }, 
+            TimeSpan.FromSeconds(15), 
+            TimeSpan.FromMilliseconds(100), 
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
         
