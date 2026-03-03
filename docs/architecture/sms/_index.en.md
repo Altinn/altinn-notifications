@@ -85,8 +85,8 @@ parts of the solution.
 There is a single dependency for the integration tests. Remaining dependencies such as Link Mobility have been mocked. 
 
 - Kafka server. 
-  
-    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/setup-kafka.yml) has been created to easily 
+
+    A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/tools/dev-setup/setup-kafka.yml) has been created to easily 
 start all Kafka-related dependencies in a Docker containers.
 
 ### Automated tests 

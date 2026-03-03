@@ -10,27 +10,27 @@ toc: true
 
 ### Public API
 The following API controllers are defined: 
-- [OrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/OrdersController.cs):
+- [OrdersController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/OrdersController.cs):
   API for retrieving one or more orders with or without processing details and notification summaries
-- [EmailNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/EmailNotificationOrdersController.cs):
+- [EmailNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/EmailNotificationOrdersController.cs):
   API for placing new email notification order requests  
-- [EmailNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/EmailNotificationsController.cs):
+- [EmailNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/EmailNotificationsController.cs):
   API for retrieving email notifications related to a single order
-- [SmsNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SmsNotificationOrdersController.cs):
+- [SmsNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/SmsNotificationOrdersController.cs):
   API for placing new SMS notification order requests  
-- [SmsNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SmsNotificationsController.cs):
+- [SmsNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/SmsNotificationsController.cs):
   API for retrieving SMS notifications related to a single order
 
 ### Internal API
 The API controllers listed below are exclusively for use within in the Altinn organization: 
-- [Metrics controller](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/MetricsController.cs)
+- [Metrics controller](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/MetricsController.cs)
   API for retrieving metrics over the use of the service
 
 ### Private API
 The API controllers listed below are exclusively for use within the Notification solution:
-- [Trigger controller](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/TriggerController.cs):
+- [Trigger controller](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/TriggerController.cs):
   Functionality to trigger the start of order and notifications processing flows
-- [SendCondition controller](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SendConditionController.cs):
+- [SendCondition controller](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/SendConditionController.cs):
   Provides end point to support automated testing of send conditions
 
 ## Database
@@ -64,23 +64,23 @@ both to publish and consume messages from topics relevant to the microservice.
 **Consumers:**
 
 The following Kafka consumers are defined: 
-- [AltinnServiceUpdateConsumer](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Consumers/AltinnServiceUpdateConsumer.cs):
+- [AltinnServiceUpdateConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Consumers/AltinnServiceUpdateConsumer.cs):
   Consumes service updates from other Altinn services
-- [PastDueOrdersConsumer](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Consumers/PastDueOrdersConsumer.cs):
+- [PastDueOrdersConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Consumers/PastDueOrdersConsumer.cs):
   Consumes notification orders that are ready to be processed for sending
-- [PastDueOrdersRetryConsumer](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Consumers/PastDueOrdersRetryConsumer.cs):
+- [PastDueOrdersRetryConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Consumers/PastDueOrdersRetryConsumer.cs):
   Consumes notification orders where the first attempt of processing has failed
-- [EmailStatusConsumer](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Consumers/EmailStatusConsumer.cs):
+- [EmailStatusConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Consumers/EmailStatusConsumer.cs):
   Consumes updates on the send state of an email notification
-- [SmsStatusConsumer](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Consumers/SmsStatusConsumer.cs):
+- [SmsStatusConsumer](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Consumers/SmsStatusConsumer.cs):
   Consumes updates on the send state of an SMS notification
 
 </br>
 
 **Producers:**
 
-A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Kafka/Producers/KafkaProducer.cs) 
-is implemented and used by all services that publish to Kafka. 
+A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Kafka/Producers/KafkaProducer.cs) 
+is implemented and used by all services that publish to Kafka.
 
 [Please reference the Kafka architecture section for a closer description of the Kafka setup.](../kafka/)
 
@@ -89,7 +89,7 @@ is implemented and used by all services that publish to Kafka.
 A maskinporten integration has been created to ensure the application can create Maskinporten tokens for the
 API clients to use as required. 
 Each client should have their own integration and their set of configuration values as seen in
-[appsettings.json](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/appsettings.json).
+[appsettings.json](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/appsettings.json).
 Secrets are hosted i Azure KeyVault and added to the configuration values during startup of the application.
 
 ### REST clients
@@ -99,19 +99,19 @@ Secrets are hosted i Azure KeyVault and added to the configuration values during
 The Notification microservice implements multiple API clients for communication with other services.
 The clients are used to retrieve recipient data and to authorize user access.
 
-- [ProfileClient](https://github.com/Altinn/altinn-notifications/tree/main/src/Altinn.Notifications.Integrations/Profile/ProfileClient) 
+- [ProfileClient](https://github.com/Altinn/altinn-notifications/tree/main/components/api/src/Altinn.Notifications.Integrations/Profile/ProfileClient.cs) 
   consumes Altinn Profile's internal API to retrieve contact points for individuals.
-- [RegisterClient](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Register/RegisterClient.cs)
+- [RegisterClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Register/RegisterClient.cs)
   consumes Altinn Register's internal API to retrieve official and user-registered contact points associated with organizations.
   Additionally, it uses the same API to fetch the names of individuals and organizations when keywords are utilized.
-- [AuthorizationService](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/Authorization/AuthorizationService.cs)
+- [AuthorizationService](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Authorization/AuthorizationService.cs)
   consumes Altinn Authorization's Decision API to verify that all users with registered contact points for an organization are authorized. The decision request will ask
   if a given user still have read access to the resource that the notification is about.
 
 **External APIs:**
 
-- [SendConditionClient](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Integrations/SendCondition/SendConditionClient.cs)
-  sends request to condition endpoints provided in notification orders with a maskinporten token representing Digdir. 
+- [SendConditionClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/SendCondition/SendConditionClient.cs)
+  sends request to condition endpoints provided in notification orders with a maskinporten token representing Digdir.
 
 ## Cron jobs
 
@@ -127,7 +127,7 @@ The following cron jobs are defined:
 | send-sms-trigger       | * 7-16 * * * | Sends request to endpoint to start the process of sending all new SMS notifications   |
 
 Each cron job runs in a Docker container [based of the official docker image for curl](https://hub.docker.com/r/curlimages/curl)
-and sends a request to an endpoints in the [Trigger controller](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/TriggerController.cs).
+and sends a request to an endpoints in the [Trigger controller](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/TriggerController.cs).
 
 The specifications of the cron jobs are hosted in a [private repository in Azure DevOps](https://dev.azure.com/brreg/_git/altinn-studio-ops?path=/deploy/altinn-platform/altinn-notifications/templates/jobs)
 (requires login).
@@ -154,8 +154,8 @@ Find descriptions of key dependencies below.
 | Service                     | Purpose                                                                                               | Resources                                                          |
 | --------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Altinn Authorization        | Authorizes access to the API and resources                                                            | [Repository](https://github.com/altinn/altinn-authorization)       |
-| Altinn Notifications Email* | Service for sending emails related to a notification                                                  | [Repository](https://github.com/altinn/altinn-notifications-email) |
-| Altinn Notifications SMS*   | Service for sending SMS related to a notification                                                     | [Repository](https://github.com/altinn/altinn-notifications-sms)   |
+| Altinn Notifications Email* | Service for sending emails related to a notification                                                  | [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/email-service) |
+| Altinn Notifications SMS*   | Service for sending SMS related to a notification                                                     | [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service)   |
 | Altinn Profile              | Provides contact details for individuals                                                              | [Repository](https://github.com/altinn/altinn-profile)             |
 | Altinn Register             | Provides official contact details for organizations and names for both individuals and organizations  | [Repository](https://github.com/altinn/altinn-register)            |
 
