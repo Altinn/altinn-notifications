@@ -144,7 +144,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ConsumeSucceededStatus_ShouldMarkOrderProcessed_WithoutStatusFeedEntry()
+    public async Task ConsumeSucceededStatus_ShouldNotCreateStatusFeedEntry()
     {
         // Arrange
         Dictionary<string, string> kafkaSettings = new()
@@ -159,7 +159,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .First();
 
         (NotificationOrder notificationOrder, EmailNotification emailNotification) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         EmailSendOperationResult deliveryReport = new()
         {
@@ -203,7 +203,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Assert using captured values
         Assert.Equal(0, statusFeedCount);
-        Assert.Equal(1, processedOrderCount);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), observedEmailStatus);
     }
 

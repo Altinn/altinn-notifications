@@ -318,20 +318,17 @@ public abstract class NotificationRepositoryBase
             HandleUpdateResult(resultAlternateId, isExpired, identifierForError, identifierTypeForError, channel);
 
             // Proceed with order completion logic if update was successful
-            if (wasUpdated && resultAlternateId.HasValue)
+            // Skip order completion check for intermediate statuses (Succeeded, Accepted)
+            if (wasUpdated && resultAlternateId.HasValue && !statusIsAcceptedOrSucceeded)
             {
-                // Skip order completion check for intermediate statuses (Succeeded, Accepted)
-                if (!statusIsAcceptedOrSucceeded)
-                {
-                    var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
-                        resultAlternateId.Value,
-                        connection,
-                        transaction);
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
+                    resultAlternateId.Value,
+                    connection,
+                    transaction);
 
-                    if (orderIsSetAsCompleted)
-                    {
-                        await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
-                    }
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
                 }
             }
 
