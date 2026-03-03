@@ -271,7 +271,8 @@ public abstract class NotificationRepositoryBase
     /// <param name="channel">The notification channel (Email or SMS).</param>
     /// <param name="notificationId">The notification ID (takes precedence for error reporting if provided).</param>
     /// <param name="secondaryIdentifier">The secondary identifier (operationId or gatewayReference).</param>
-    /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>
+    /// <param name="statusIsAcceptedOrSucceeded">The current status of the notification</param>
+    /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>    
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
     /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
@@ -281,6 +282,7 @@ public abstract class NotificationRepositoryBase
         Core.Enums.NotificationChannel channel,
         Guid? notificationId,
         string? secondaryIdentifier,
+        bool statusIsAcceptedOrSucceeded,
         Core.Enums.SendStatusIdentifierType secondaryIdentifierType)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -318,11 +320,18 @@ public abstract class NotificationRepositoryBase
             // Proceed with order completion logic if update was successful
             if (wasUpdated && resultAlternateId.HasValue)
             {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
-
-                if (orderIsSetAsCompleted)
+                // Skip order completion check for intermediate statuses (Succeeded, Accepted)
+                if (!statusIsAcceptedOrSucceeded)
                 {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
+                    var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
+                        resultAlternateId.Value,
+                        connection,
+                        transaction);
+
+                    if (orderIsSetAsCompleted)
+                    {
+                        await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
+                    }
                 }
             }
 
@@ -333,5 +342,5 @@ public abstract class NotificationRepositoryBase
             await transaction.RollbackAsync();
             throw;
         }
-    }
+    }   
 }

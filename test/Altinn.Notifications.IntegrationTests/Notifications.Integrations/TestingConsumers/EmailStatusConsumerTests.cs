@@ -326,24 +326,64 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, completedOrdersCount);
         Assert.Equal(resultType.ToString(), observedEmailStatus);
     }
-
-    public Task InitializeAsync()
+   
+    [Fact]
+    public async Task ConsumeSucceededStatus_ShouldNotMarkOrderCompleted_WhenAllNotificationsFinished()
     {
-        return Task.CompletedTask;
-    }
+        // Arrange
+        Dictionary<string, string> kafkaSettings = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
 
-    public async Task DisposeAsync()
-    {
-        await Dispose(true);
-    }
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
+            .GetServices([typeof(IHostedService)], kafkaSettings)
+            .OfType<EmailStatusConsumer>()
+            .First();
 
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
-    }
+        (NotificationOrder notificationOrder, EmailNotification emailNotification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+        
+        EmailSendOperationResult deliveryReport = new()
+        {
+            NotificationId = emailNotification.Id,
+            SendResult = EmailNotificationResultType.Succeeded,
+            OperationId = $"operation-{Guid.NewGuid()}"
+        };
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+
+        // Assert - Order should remain in Processed state, NOT Completed       
+        long processedOrderCount = 0;
+        long completedOrderCount = -1;
+        string observedEmailStatus = string.Empty;
+
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+                completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
+                
+                return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() 
+                       && processedOrderCount == 1;
+            },
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+        
+        Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), observedEmailStatus);
+        
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(0, completedOrderCount);
+        
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+        Assert.Equal(0, statusFeedCount);
+    }   
 
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
     {
@@ -373,5 +413,20 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     {
         string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{orderAlternateid}' and o.processedstatus = '{orderProcessingStatus}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+
+        GC.SuppressFinalize(this);
     }
 }

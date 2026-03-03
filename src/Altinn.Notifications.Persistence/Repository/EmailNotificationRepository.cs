@@ -96,6 +96,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             throw new ArgumentException("The provided Email identifier is invalid.");
         }
 
+        bool orderStatusIsSucceeded = status == EmailNotificationResultType.Succeeded;
+
         await ExecuteUpdateWithTransactionAsync(
             _updateEmailNotificationSql,
             pgcom =>
@@ -107,6 +109,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             NotificationChannel.Email,
             notificationId,
             operationId,
+            orderStatusIsSucceeded,
             SendStatusIdentifierType.OperationId);
     }
 
