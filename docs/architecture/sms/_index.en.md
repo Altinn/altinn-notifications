@@ -23,7 +23,7 @@ The following Kafka consumers are defined:
   Consumes SMS objects with recipient data that are ready to be sent
 
 **Producers:**
-A single producer [_KafkaProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/Producers/CommonProducer.cs) 
+A single producer [_CommonProducer_](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/Producers/CommonProducer.cs) 
 is implemented and used by all services that publish to Kafka. 
 
 [Please reference the Kafka architecture section for a closer description of the Kafka setup.](../kafka/)
