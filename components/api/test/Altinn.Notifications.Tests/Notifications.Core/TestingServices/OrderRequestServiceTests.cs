@@ -310,7 +310,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(e => e.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(e => e.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -339,7 +339,7 @@ public class OrderRequestServiceTests
             cp => cp.AddSmsContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == null),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -431,7 +431,7 @@ public class OrderRequestServiceTests
                 NotificationChannel.EmailPreferred,
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.IsAny<string?>(),
-                OrderPhase.NewOrder))
+                OrderPhase.Registration))
             .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -460,7 +460,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == null),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -511,7 +511,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((_, _, _) =>
             {
                 // Intentionally don't add contact points to simulate missing contact
@@ -529,7 +529,7 @@ public class OrderRequestServiceTests
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString());
 
-        contactPointServiceMock.Verify(cp => cp.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.Is<string?>(s => s == null), OrderPhase.NewOrder), Times.Once);
+        contactPointServiceMock.Verify(cp => cp.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)), It.Is<string?>(s => s == null), OrderPhase.Registration), Times.Once);
         orderRepositoryMock.Verify(repo => repo.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -599,7 +599,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -627,7 +627,7 @@ public class OrderRequestServiceTests
             cp => cp.AddEmailContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == resourceId), 
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -721,7 +721,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddPreferredContactPoints(NotificationChannel.SmsPreferred, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddPreferredContactPoints(NotificationChannel.SmsPreferred, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -750,7 +750,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == resourceId),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -844,7 +844,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -873,7 +873,7 @@ public class OrderRequestServiceTests
             cp => cp.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == resourceId),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -949,7 +949,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // Only add contact for main order, not for reminder
@@ -977,19 +977,19 @@ public class OrderRequestServiceTests
         Assert.Equal(422, (int)result.Problem.StatusCode);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder),
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration),
             Times.AtLeastOnce);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder),
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder),
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder),
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration),
             Times.Never);
 
         orderRepositoryMock.Verify(
@@ -1107,7 +1107,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1122,7 +1122,7 @@ public class OrderRequestServiceTests
             .Returns(Task.CompletedTask);
 
         contactPointServiceMock
-            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1156,7 +1156,7 @@ public class OrderRequestServiceTests
             cp => cp.AddEmailContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == resourceId), 
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         // Verify reminder used SMS lookup
@@ -1164,7 +1164,7 @@ public class OrderRequestServiceTests
             cp => cp.AddSmsContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.ExternalIdentity == externalIdentity)),
                 It.Is<string?>(s => s == resourceId), 
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         contactPointServiceMock.Verify(
@@ -1222,7 +1222,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1294,7 +1294,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1390,7 +1390,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1460,7 +1460,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((_, recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1528,7 +1528,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, resourceId, _) =>
             {
                 foreach (var recipient in recipients)
@@ -1562,7 +1562,7 @@ public class OrderRequestServiceTests
                     recipients.Any(r => r.NationalIdentityNumber == "14210548840") &&
                     recipients.Any(r => r.NationalIdentityNumber == "30286043298")),
                 It.Is<string?>(resourceId => resourceId == null),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
@@ -1604,7 +1604,7 @@ public class OrderRequestServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // no contact information
@@ -1694,7 +1694,7 @@ public class OrderRequestServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // no recipient info for the reminder organization
@@ -1920,7 +1920,7 @@ public class OrderRequestServiceTests
             .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
 
         contactPointServiceMock
-            .Setup(contactService => contactService.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<NotificationChannel, List<Recipient>, string?, OrderPhase>((channel, recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -2003,7 +2003,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
                 It.Is<string?>(s => s == resourceId),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Exactly(2));
 
         // Verify contact point added the expected SMS contact
@@ -2012,7 +2012,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
                 It.Is<string?>(s => s == resourceId),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
     }
 
@@ -2090,7 +2090,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 foreach (var recipient in recipients)
@@ -2137,7 +2137,7 @@ public class OrderRequestServiceTests
             cp => cp.AddEmailAndSmsContactPointsAsync(
             It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
             It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resource-name"),
-            OrderPhase.NewOrder),
+            OrderPhase.Registration),
             Times.Once);
     }
 
@@ -2233,7 +2233,7 @@ public class OrderRequestServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // Intentionally don't add SMS contact point to simulate missing contact
@@ -2257,7 +2257,7 @@ public class OrderRequestServiceTests
             cp => cp.AddSmsContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
                 It.Is<string?>(s => s == "urn:altinn:resource:sms-test"),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         // Verify repository Create was not called when contact information is missing
@@ -2335,7 +2335,7 @@ public class OrderRequestServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // Mark recipient as reserved and don't add contact info
@@ -2366,7 +2366,7 @@ public class OrderRequestServiceTests
             cp => cp.AddEmailContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == nationalIdentityNumber)),
                 It.Is<string?>(s => s == "urn:altinn:resource:test-resource"), 
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         orderRepositoryMock.VerifyAll();
@@ -2617,7 +2617,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.NewOrder))
+            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderPhase.Registration))
             .Callback<List<Recipient>, string?, OrderPhase>((recipients, _, _) =>
             {
                 // Intentionally don't add any address info to simulate missing contact
@@ -2651,7 +2651,7 @@ public class OrderRequestServiceTests
             contactService => contactService.AddEmailContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
                 It.Is<string?>(s => s == "urn:altinn:resource:test"),
-                OrderPhase.NewOrder),
+                OrderPhase.Registration),
             Times.Once);
 
         // Verify repository Create was not called when contact information is missing

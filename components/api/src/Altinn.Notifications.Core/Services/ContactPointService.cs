@@ -600,7 +600,6 @@ public class ContactPointService(
         // During the processing phase, only include user-registered contact points that are explicitly authorized for the resource.
         authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
         MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
-        
     }
 
     /// <summary>

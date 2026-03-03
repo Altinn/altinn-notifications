@@ -441,20 +441,20 @@ public class OrderRequestService : IOrderRequestService
         switch (channel)
         {
             case NotificationChannel.Email:
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderPhase.NewOrder);
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderPhase.Registration);
                 break;
 
             case NotificationChannel.Sms:
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderPhase.NewOrder);
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderPhase.Registration);
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderPhase.NewOrder);
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderPhase.Registration);
                 break;
 
             case NotificationChannel.SmsPreferred:
             case NotificationChannel.EmailPreferred:
-                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderPhase.NewOrder);
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderPhase.Registration);
                 break;
         }
 
