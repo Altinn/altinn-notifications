@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Shared.Configuration;
@@ -41,10 +40,6 @@ public static class WolverineServiceCollectionExtensions
         {
             if (wolverineSettings.EnableServiceBus)
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(
-                    wolverineSettings.ServiceBusConnectionString,
-                    nameof(wolverineSettings.ServiceBusConnectionString));
-
                 opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
             }
 
