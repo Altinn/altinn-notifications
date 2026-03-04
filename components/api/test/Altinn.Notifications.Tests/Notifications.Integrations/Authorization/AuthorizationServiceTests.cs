@@ -437,6 +437,114 @@ public class AuthorizationServiceTests
     }
 
     [Fact]
+    public async Task AuthorizeUsersForResource_NullResourceAction_DefaultsToRead()
+    {
+        // Arrange
+        var target = CreateService();
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints = [new() { UserId = 1 }]
+            }
+        ];
+
+        XacmlJsonRequestRoot? actualRequest = null;
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .Callback((XacmlJsonRequestRoot request) => actualRequest = request)
+            .Returns((XacmlJsonRequestRoot request) =>
+            {
+                var responses = request.Request.MultiRequests.RequestReference
+                    .Select(rr => CreatePermitResult(request, rr))
+                    .ToList();
+
+                return Task.FromResult(new XacmlJsonResponse { Response = responses });
+            });
+
+        // Act
+        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: null);
+
+        // Assert
+        actualRequest.Should().NotBeNull();
+        string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
+        actualAction.Should().Be("read");
+    }
+
+    [Fact]
+    public async Task AuthorizeUsersForResource_ExplicitReadResourceAction_UsesRead()
+    {
+        // Arrange
+        var target = CreateService();
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints = [new() { UserId = 1 }]
+            }
+        ];
+
+        XacmlJsonRequestRoot? actualRequest = null;
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .Callback((XacmlJsonRequestRoot request) => actualRequest = request)
+            .Returns((XacmlJsonRequestRoot request) =>
+            {
+                var responses = request.Request.MultiRequests.RequestReference
+                    .Select(rr => CreatePermitResult(request, rr))
+                    .ToList();
+
+                return Task.FromResult(new XacmlJsonResponse { Response = responses });
+            });
+
+        // Act
+        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: "read");
+
+        // Assert
+        actualRequest.Should().NotBeNull();
+        string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
+        actualAction.Should().Be("read");
+    }
+
+    [Fact]
+    public async Task AuthorizeUsersForResource_ExplicitAccessResourceAction_UsesAccess()
+    {
+        // Arrange
+        var target = CreateService();
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints = [new() { UserId = 1 }]
+            }
+        ];
+
+        XacmlJsonRequestRoot? actualRequest = null;
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .Callback((XacmlJsonRequestRoot request) => actualRequest = request)
+            .Returns((XacmlJsonRequestRoot request) =>
+            {
+                var responses = request.Request.MultiRequests.RequestReference
+                    .Select(rr => CreatePermitResult(request, rr))
+                    .ToList();
+
+                return Task.FromResult(new XacmlJsonResponse { Response = responses });
+            });
+
+        // Act
+        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: "access");
+
+        // Assert
+        actualRequest.Should().NotBeNull();
+        string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
+        actualAction.Should().Be("access");
+    }
+
+    [Fact]
     public async Task AuthorizeUsersForResource_OneOverBatchSize_ExactlyTwoPdpCalls()
     {
         // Arrange: batch size 3, 4 users (batchSize + 1) → exactly 2 PDP calls (3 + 1)
