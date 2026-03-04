@@ -134,7 +134,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         if (!response.Success)
         {
-            HandleNetworkTransientFailure(smsNotification, response);
+            HandleNetworkTransientFailure(smsNotification, response, notificationOrder.Creator.ShortName);
         }
 
         // Create the tracking information for the order.
@@ -271,7 +271,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
       
         if (!response.Success)
         {
-            HandleNetworkTransientFailure(emailNotification, response, notificationOrder);
+            HandleNetworkTransientFailure(emailNotification, response, notificationOrder.Creator.ShortName);
         }
 
         // Create the tracking information for the order.
