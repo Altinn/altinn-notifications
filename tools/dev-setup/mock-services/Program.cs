@@ -61,17 +61,28 @@ foreach (var (name, (port, dir)) in servers)
 
 Console.WriteLine();
 
-// Resolve the certificate path (relative to test project)
-string certPath = Path.GetFullPath(Path.Combine(basePath, "..", "..", "..", "components", "api", "test", "Altinn.Notifications.Tests", "jwtselfsignedcert.pfx"));
-if (!File.Exists(certPath))
-{
-    // Fallback for running from project directory
-    certPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "components", "api", "test", "Altinn.Notifications.Tests", "jwtselfsignedcert.pfx"));
-}
+// Resolve the certificate path — try several candidate locations so the cert is found
+// whether we run from the build output directory, from repo root, or from mock-services/.
+string[] certRelSegments = ["components", "api", "test", "Altinn.Notifications.Tests", "jwtselfsignedcert.pfx"];
+string[] certCandidates =
+[
+    // From build output (bin/Debug/net9.0) → 6 levels up to repo root
+    Path.GetFullPath(Path.Combine([basePath, "..", "..", "..", "..", "..", "..", .. certRelSegments])),
+    // From repo root (start-mock-services.sh sets CWD = repo root)
+    Path.GetFullPath(Path.Combine([Directory.GetCurrentDirectory(), .. certRelSegments])),
+    // From mock-services directory (tools/dev-setup/mock-services → 3 levels up to repo root)
+    Path.GetFullPath(Path.Combine([Directory.GetCurrentDirectory(), "..", "..", "..", .. certRelSegments])),
+];
 
-if (!File.Exists(certPath))
+string? certPath = certCandidates.FirstOrDefault(File.Exists);
+if (certPath is null)
 {
-    Console.Error.WriteLine($"ERROR: Certificate not found at: {certPath}");
+    Console.Error.WriteLine("ERROR: Certificate not found. Searched:");
+    foreach (string candidate in certCandidates)
+    {
+        Console.Error.WriteLine($"  - {candidate}");
+    }
+
     Console.Error.WriteLine("Make sure you run from the repository root or the mock-services project directory.");
     return 1;
 }
@@ -160,7 +171,18 @@ static bool ValidateBasicAuth(HttpContext context, string expectedUser, string e
     }
 
     string encoded = authHeader["Basic ".Length..].Trim();
-    string decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+
+    byte[] bytes;
+    try
+    {
+        bytes = Convert.FromBase64String(encoded);
+    }
+    catch (FormatException)
+    {
+        return false;
+    }
+
+    string decoded = Encoding.UTF8.GetString(bytes);
     string[] parts = decoded.Split(':', 2);
     return parts.Length == 2 && parts[0] == expectedUser && parts[1] == expectedPass;
 }

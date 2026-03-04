@@ -12,9 +12,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DB_NAME=notificationsdb
 DB_ADMIN_USER=platform_notifications_admin
-DB_ADMIN_PASSWORD=Password
+DB_ADMIN_PASSWORD="${DB_ADMIN_PASSWORD:-Password}"
 DB_APP_USER=platform_notifications
-DB_APP_PASSWORD=Password
+DB_APP_PASSWORD="${DB_APP_PASSWORD:-Password}"
 CONTAINER_NAME=altinn-notifications-db
 
 # Helper: run psql inside the container
@@ -23,14 +23,26 @@ run_psql() {
     psql -U "$DB_ADMIN_USER" -d "$DB_NAME" "$@"
 }
 
+# Helper: wait for PostgreSQL to become ready (max 60 seconds)
+wait_for_postgres() {
+  local elapsed=0
+  local timeout=60
+  until podman exec "$CONTAINER_NAME" pg_isready -U "$DB_ADMIN_USER" -d "$DB_NAME" > /dev/null 2>&1; do
+    if [ "$elapsed" -ge "$timeout" ]; then
+      echo "ERROR: PostgreSQL did not become ready within ${timeout}s." >&2
+      exit 1
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+}
+
 # ── 1. Start PostgreSQL container ──────────────────────────────────────────────
 echo "==> Starting PostgreSQL container..."
 podman compose -f "$SCRIPT_DIR/setup-db.yml" up -d
 
 echo "==> Waiting for PostgreSQL to become ready..."
-until podman exec "$CONTAINER_NAME" pg_isready -U "$DB_ADMIN_USER" -d "$DB_NAME" > /dev/null 2>&1; do
-  sleep 1
-done
+wait_for_postgres
 echo "    PostgreSQL is ready."
 
 # ── 2. Configure database ─────────────────────────────────────────────────────
@@ -50,9 +62,7 @@ END \$\$;"
 # Restart container to apply max_connections change
 echo "==> Restarting PostgreSQL to apply settings..."
 podman restart "$CONTAINER_NAME" > /dev/null
-until podman exec "$CONTAINER_NAME" pg_isready -U "$DB_ADMIN_USER" -d "$DB_NAME" > /dev/null 2>&1; do
-  sleep 1
-done
+wait_for_postgres
 
 echo ""
 echo "==> Database setup complete!"

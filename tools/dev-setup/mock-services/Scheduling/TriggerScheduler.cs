@@ -19,7 +19,7 @@ public class TriggerScheduler : BackgroundService
     public TriggerScheduler(ILogger<TriggerScheduler> logger)
     {
         _logger = logger;
-        _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5090") };
+        _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5090"), Timeout = TimeSpan.FromSeconds(10) };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,6 +40,10 @@ public class TriggerScheduler : BackgroundService
                 catch (HttpRequestException ex)
                 {
                     _logger.LogWarning("TriggerScheduler: POST {Path} failed (API not ready?): {Message}", path, ex.Message);
+                }
+                catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning("TriggerScheduler: POST {Path} timed out.", path);
                 }
             }
         }

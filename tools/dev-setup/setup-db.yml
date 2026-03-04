@@ -4,7 +4,7 @@ services:
     image: docker.io/library/postgres:17
     container_name: altinn-notifications-db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: platform_notifications_admin
       POSTGRES_PASSWORD: Password

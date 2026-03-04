@@ -192,7 +192,7 @@ and a JWT token generator.
 
 **Architecture overview:**
 
-```
+```text
 Bruno tests
   │
   ▼
