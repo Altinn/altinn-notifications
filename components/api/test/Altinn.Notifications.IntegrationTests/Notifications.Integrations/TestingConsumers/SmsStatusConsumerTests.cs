@@ -161,7 +161,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             .First();
 
         (NotificationOrder notificationOrder, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
         _ordersToDelete.Add(notificationOrder.Id);
 
         SmsSendOperationResult sendOperationResult = new()
@@ -177,7 +177,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         int statusFeedCount = -1;
         long processedOrderCount = -1;
+        long completedOrderCount = -1;
         string observedSmsStatus = string.Empty;
+        
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
@@ -191,12 +193,20 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                     processedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Processed);
                 }
 
+                if (completedOrderCount != 0)
+                {
+                    completedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
+                }
+
                 if (statusFeedCount != 0)
                 {
                     statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
                 }
 
-                return observedSmsStatus == SmsNotificationResultType.Accepted.ToString() && processedOrderCount == 1 && statusFeedCount == 0;
+                return observedSmsStatus == SmsNotificationResultType.Accepted.ToString() 
+                       && processedOrderCount == 1 
+                       && completedOrderCount == 0
+                       && statusFeedCount == 0;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100),
@@ -205,9 +215,10 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, statusFeedCount);
-        Assert.Equal(1, processedOrderCount);
         Assert.Equal(SmsNotificationResultType.Accepted.ToString(), observedSmsStatus);
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(0, completedOrderCount);
+        Assert.Equal(0, statusFeedCount);
     }
 
     [Fact]

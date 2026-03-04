@@ -330,7 +330,65 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, completedOrdersCount);
         Assert.Equal(resultType.ToString(), observedEmailStatus);
     }
-   
+
+    [Fact]
+    public async Task ConsumeSucceededStatus_ShouldNotMarkOrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> kafkaSettings = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
+            .GetServices([typeof(IHostedService)], kafkaSettings)
+            .OfType<EmailStatusConsumer>()
+            .First();
+
+        (NotificationOrder order, EmailNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
+
+        EmailSendOperationResult deliveryReport = new()
+        {
+            NotificationId = notification.Id,
+            SendResult = EmailNotificationResultType.Succeeded,
+            OperationId = $"operation-{Guid.NewGuid()}"
+        };
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+
+        // Wait for processing
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                var status = await GetEmailNotificationStatus(notification.Id);
+                return status == EmailNotificationResultType.Succeeded.ToString();
+            },
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        // Assert - Order should remain Processed, NOT Completed
+        string orderStatusSql = $@"
+            SELECT processedstatus 
+            FROM notifications.orders o 
+            JOIN notifications.emailnotifications e ON e._orderid = o._id 
+            WHERE e.alternateid = '{notification.Id}'";
+        
+        string orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(orderStatusSql);
+
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), orderStatus);
+
+        // No status feed entry should be created
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
+    }
+
     [Fact]
     public async Task ConsumeSucceededStatus_ShouldNotCallTryMarkOrderCompleted()
     {
