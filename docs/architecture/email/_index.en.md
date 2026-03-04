@@ -54,7 +54,7 @@ Find descriptions of key dependencies below.
 ### Altinn Services
 | Service | Purpose | Resources |
 |-|-|-|
-| Altinn Notifications* | Service that orchestrates the sending of notifications.| [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/email-service) |
+| Altinn Notifications* | Service that sends email notifications.| [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/email-service) |
 
 
 \*Functional dependency to enable the full functionality of Altinn Notifications. Altinn Notifications generates the 
@@ -85,8 +85,7 @@ parts of the solution.
 
 There is a single dependency for the integration tests. Remaining dependencies such as Azure Communication Services have been mocked. 
 
-- Kafka server. 
-
+- Kafka server.
     A [_YAML file_](https://github.com/Altinn/altinn-notifications/blob/main/tools/dev-setup/setup-kafka.yml) has been created to easily 
 start all Kafka-related dependencies in a Docker containers.
 
@@ -113,7 +112,7 @@ See [DockerFile](https://github.com/Altinn/altinn-notifications/blob/main/compon
 ## Build & deploy
 
 ### Web API 
-  - Build and Code analysis runs in a [Github workflow](https://github.com/Altinn/altinn-notifications/actions)
+  - Build and Code analysis runs in a [GitHub workflow](https://github.com/Altinn/altinn-notifications/actions)
   - Build of the image is done in an [Azure Devops Pipeline](https://dev.azure.com/brreg/altinn-studio/_build?definitionId=423)
   - Deploy of the image is enabled with Helm and implemented in an [Azure Devops Release pipeline](https://dev.azure.com/brreg/altinn-studio/_release?_a=releases&view=all&definitionId=48)
 
