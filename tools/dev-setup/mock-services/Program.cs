@@ -63,14 +63,24 @@ foreach (var (name, (port, dir)) in servers)
     });
 
     string serviceDir = Path.Combine(mappingsPath, dir);
-    if (Directory.Exists(serviceDir))
+    if (!Directory.Exists(serviceDir))
     {
-        foreach (string file in Directory.GetFiles(serviceDir, "*.json"))
-        {
-            string json = File.ReadAllText(file);
-            server.WithMapping(json);
-            Console.WriteLine($"  Loaded mapping: {Path.GetFileName(file)}");
-        }
+        Console.Error.WriteLine($"ERROR: Missing mappings directory for {name}: {serviceDir}");
+        return 1;
+    }
+
+    string[] mappingFiles = Directory.GetFiles(serviceDir, "*.json");
+    if (mappingFiles.Length == 0)
+    {
+        Console.Error.WriteLine($"ERROR: No mappings found for {name} in {serviceDir}");
+        return 1;
+    }
+
+    foreach (string file in mappingFiles)
+    {
+        string json = File.ReadAllText(file);
+        server.WithMapping(json);
+        Console.WriteLine($"  Loaded mapping: {Path.GetFileName(file)}");
     }
 
     wireMockServers.Add(server);
