@@ -610,4 +610,77 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithSucceededStatus_ShouldNotCompleteOrder()
+    {
+        // Arrange
+        var sendersRef = $"ref-{Guid.NewGuid()}";
+        (NotificationOrder order, EmailNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true, simulateConsumers: true);
+
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        await repo.UpdateSendStatus(notification.Id, EmailNotificationResultType.Succeeded);
+
+        // Assert - Order should remain Processed, NOT Completed
+        string checkStatusSql = $@"
+            SELECT processedstatus 
+            FROM notifications.orders 
+            WHERE alternateid = '{order.Id}'";
+        string orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(checkStatusSql);
+
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), orderStatus);
+
+        string notificationStatusSql = $@"
+            SELECT result 
+            FROM notifications.emailnotifications 
+            WHERE alternateid = '{notification.Id}'";
+        string notificationStatus = await PostgreUtil.RunSqlReturnOutput<string>(notificationStatusSql);
+
+        Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), notificationStatus);        
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveredStatus_ShouldCompleteOrder()
+    {
+        // Arrange
+        var sendersRef = $"ref-{Guid.NewGuid()}";
+        (NotificationOrder order, EmailNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        await repo.UpdateSendStatus(notification.Id, EmailNotificationResultType.Delivered);
+
+        // Assert - Order should be Completed
+        string checkStatusSql = $@"
+            SELECT processedstatus 
+            FROM notifications.orders 
+            WHERE alternateid = '{order.Id}'";
+        string orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(checkStatusSql);
+
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
+
+        // Verify notification status was updated
+        string notificationStatusSql = $@"
+            SELECT result 
+            FROM notifications.emailnotifications 
+            WHERE alternateid = '{notification.Id}'";
+        string notificationStatus = await PostgreUtil.RunSqlReturnOutput<string>(notificationStatusSql);
+
+        Assert.Equal(EmailNotificationResultType.Delivered.ToString(), notificationStatus);
+
+        // Cleanup
+        await PostgreUtil.DeleteStatusFeedFromDb(order.Id);
+        await PostgreUtil.DeleteOrderFromDb(sendersRef);
+    }
 }
