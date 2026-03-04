@@ -360,7 +360,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        // Assert - Order should remain in Processed state, NOT Completed       
         long processedOrderCount = 0;
         long completedOrderCount = -1;
         string observedEmailStatus = string.Empty;
@@ -373,20 +372,24 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
                 
                 return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() 
-                       && processedOrderCount == 1;
+                       && processedOrderCount == 1
+                       && completedOrderCount == 0;
             }, 
-            TimeSpan.FromSeconds(15), 
-            TimeSpan.FromMilliseconds(100), 
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100),
             TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
         
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), observedEmailStatus);
-        
+
+        processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+        completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(0, completedOrderCount);
-        
-        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
         Assert.Equal(0, statusFeedCount);
     }   
 
