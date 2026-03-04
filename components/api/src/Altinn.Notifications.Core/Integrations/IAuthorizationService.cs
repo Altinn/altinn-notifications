@@ -16,7 +16,8 @@ public interface IAuthorizationService
     /// The contact points of an organization including user registered contact points.
     /// </param>
     /// <param name="resourceId">The id of the resource.</param>
+    /// <param name="resourceAction">The action to authorize against the resource. Defaults to "read" when not specified.</param>
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
     Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(
-        List<OrganizationContactPoints> organizationContactPoints, string resourceId);
+        List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null);
 }

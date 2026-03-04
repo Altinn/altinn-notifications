@@ -227,6 +227,7 @@ public class OrderRequestService : IOrderRequestService
             Templates = templates,
             Channel = recipientPerson.ChannelSchema,
             ResourceId = recipientPerson.ResourceId,
+            ResourceAction = recipientPerson.ResourceAction,
             SmsSendingTimePolicy = smsSendingTimePolicy,
             IgnoreReservation = recipientPerson.IgnoreReservation,
             Recipients = [new([], nationalIdentityNumber: recipientPerson.NationalIdentityNumber)]
@@ -288,6 +289,7 @@ public class OrderRequestService : IOrderRequestService
             SmsSendingTimePolicy = smsSendingTimePolicy,
             Channel = recipientOrganization.ChannelSchema,
             ResourceId = recipientOrganization.ResourceId,
+            ResourceAction = recipientOrganization.ResourceAction,
             Recipients = [new([], organizationNumber: recipientOrganization.OrgNumber)]
         };
     }
@@ -347,6 +349,7 @@ public class OrderRequestService : IOrderRequestService
             SmsSendingTimePolicy = smsSendingTimePolicy,
             Channel = recipientExternalIdentity.ChannelSchema,
             ResourceId = recipientExternalIdentity.ResourceId,
+            ResourceAction = recipientExternalIdentity.ResourceAction,
             Recipients = [new([], externalIdentity: recipientExternalIdentity.ExternalIdentity)]
         };
     }
@@ -387,7 +390,7 @@ public class OrderRequestService : IOrderRequestService
     {
         var deliveryDetails = ExtractDeliveryDetails(orderRequest.Recipient);
 
-        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId);
+        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
@@ -404,6 +407,7 @@ public class OrderRequestService : IOrderRequestService
             Id = orderRequest.OrderId,
             Creator = orderRequest.Creator,
             ResourceId = deliveryDetails.ResourceId,
+            ResourceAction = deliveryDetails.ResourceAction,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
             SendersReference = orderRequest.SendersReference,
@@ -430,7 +434,7 @@ public class OrderRequestService : IOrderRequestService
     /// A <see cref="RecipientLookupResult"/> containing information about reserved recipients and those
     /// with missing contact details, or <c>null</c> if all recipients already have the required contact information.
     /// </returns>
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId, string? resourceAction = null)
     {
         List<Recipient> recipientsWithoutContactPoint = FilterRecipientsWithoutContactPoints(channel, originalRecipients);
         if (recipientsWithoutContactPoint.Count == 0)
@@ -441,20 +445,20 @@ public class OrderRequestService : IOrderRequestService
         switch (channel)
         {
             case NotificationChannel.Email:
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration);
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
                 break;
 
             case NotificationChannel.Sms:
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration);
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration);
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
                 break;
 
             case NotificationChannel.SmsPreferred:
             case NotificationChannel.EmailPreferred:
-                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration);
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
                 break;
         }
 
@@ -559,7 +563,7 @@ public class OrderRequestService : IOrderRequestService
 
             var deliveryDetails = ExtractDeliveryDetails(notificationReminder.Recipient);
 
-            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId);
+            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
@@ -577,6 +581,7 @@ public class OrderRequestService : IOrderRequestService
                 Id = notificationReminder.OrderId,
                 Recipients = deliveryDetails.Recipients,
                 ResourceId = deliveryDetails.ResourceId,
+                ResourceAction = deliveryDetails.ResourceAction,
                 NotificationChannel = deliveryDetails.Channel,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
                 SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,

@@ -26,7 +26,7 @@ public class ContactPointService(
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
-    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -34,23 +34,25 @@ public class ContactPointService(
             ApplyEmailForPerson,
             ApplyEmailForOrganization,
             ApplyEmailForExternalIdentity,
-            orderLifecycleStage);
+            orderLifecycleStage,
+            resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
             resourceId,
             ApplySmsForPerson,
             ApplySmsForOrganization,
-            ApplySmsForExternalIdentity, 
-            orderLifecycleStage);
+            ApplySmsForExternalIdentity,
+            orderLifecycleStage,
+            resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -58,11 +60,12 @@ public class ContactPointService(
             ApplyEmailAndSmsForPerson,
             ApplyEmailAndSmsForOrganization,
             ApplyEmailAndSmsForExternalIdentity,
-            orderLifecycleStage);
+            orderLifecycleStage,
+            resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         switch (channel)
         {
@@ -73,7 +76,8 @@ public class ContactPointService(
                     ApplyEmailPreferredForPerson,
                     ApplyEmailPreferredForOrganization,
                     ApplyEmailPreferredForExternalIdentity,
-                    orderLifecycleStage);
+                    orderLifecycleStage,
+                    resourceAction);
                 break;
             case NotificationChannel.SmsPreferred:
                 await AugmentRecipients(
@@ -82,7 +86,8 @@ public class ContactPointService(
                     ApplySmsPreferredForPerson,
                     ApplySmsPreferredForOrganization,
                     ApplySmsPreferredForExternalIdentity,
-                    orderLifecycleStage);
+                    orderLifecycleStage,
+                    resourceAction);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(channel), channel, $"Unsupported notification channel: {channel}");
@@ -360,11 +365,12 @@ public class ContactPointService(
         Action<Recipient, UserContactPoints> applyPersonContactPoints,
         Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
         Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints,
-        OrderLifecycleStage orderLifecycleStage)
+        OrderLifecycleStage orderLifecycleStage,
+        string? resourceAction = null)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
         var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
-        var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderLifecycleStage);
+        var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderLifecycleStage, resourceAction);
 
         await Task.WhenAll(personLookupTask, externalIdentityLookupTask, organizationLookupTask);
 
@@ -534,7 +540,7 @@ public class ContactPointService(
     /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>
     /// corresponding to the provided organization numbers. If no valid organization numbers are found, an empty list is returned.
     /// </returns>
-    private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         List<string> organizationNumbers = [.. recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
@@ -550,7 +556,7 @@ public class ContactPointService(
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
         if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderLifecycleStage == OrderLifecycleStage.Processing)
         {
-            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId);
+            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId, resourceAction);
         }
 
         CleanupOrganizationContactPoints(contactPoints);
@@ -586,7 +592,8 @@ public class ContactPointService(
     private async Task EnrichWithUserRegisteredContactPoints(
         List<OrganizationContactPoints> contactPoints,
         List<string> organizationNumbers,
-        string sanitizedResourceId)
+        string sanitizedResourceId,
+        string? resourceAction = null)
     {
         List<OrganizationContactPoints> authorizedUserContactPoints;
 
@@ -598,7 +605,7 @@ public class ContactPointService(
         }
 
         // During the processing phase, only include user-registered contact points that are explicitly authorized for the resource.
-        authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId);
+        authorizedUserContactPoints = await AuthorizeUserContactPoints(allUserContactPoints, sanitizedResourceId, resourceAction);
         MergeUserContactPointsIntoOfficial(contactPoints, authorizedUserContactPoints);
     }
 
@@ -624,11 +631,12 @@ public class ContactPointService(
     /// </summary>
     private async Task<List<OrganizationContactPoints>> AuthorizeUserContactPoints(
         List<OrganizationContactPoints> userContactPoints,
-        string sanitizedResourceId)
+        string sanitizedResourceId,
+        string? resourceAction = null)
     {
         try
         {
-            return await _authorizationService.AuthorizeUserContactPointsForResource(userContactPoints, sanitizedResourceId);
+            return await _authorizationService.AuthorizeUserContactPointsForResource(userContactPoints, sanitizedResourceId, resourceAction);
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
