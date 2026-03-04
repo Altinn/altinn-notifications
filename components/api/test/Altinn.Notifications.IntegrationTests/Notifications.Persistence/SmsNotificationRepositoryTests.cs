@@ -714,4 +714,81 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithAcceptedStatus_ShouldNotCompleteOrder()
+    {
+        // Arrange
+        var sendersRef = $"ref-{Guid.NewGuid()}";
+        (NotificationOrder order, SmsNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true, simulateConsumers: true);
+
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        await repo.UpdateSendStatus(notification.Id, SmsNotificationResultType.Accepted);
+
+        // Assert - Order should remain Processed, NOT Completed
+        string checkStatusSql = $@"
+            SELECT processedstatus 
+            FROM notifications.orders 
+            WHERE alternateid = '{order.Id}'";
+        string orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(checkStatusSql);
+
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), orderStatus);
+
+        // Verify notification status was updated
+        string notificationStatusSql = $@"
+            SELECT result 
+            FROM notifications.smsnotifications 
+            WHERE alternateid = '{notification.Id}'";
+        string notificationStatus = await PostgreUtil.RunSqlReturnOutput<string>(notificationStatusSql);
+
+        Assert.Equal(SmsNotificationResultType.Accepted.ToString(), notificationStatus);
+
+        // Cleanup
+        await PostgreUtil.DeleteOrderFromDb(sendersRef);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveredStatus_ShouldCompleteOrder()
+    {
+        // Arrange
+        var sendersRef = $"ref-{Guid.NewGuid()}";
+        (NotificationOrder order, SmsNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        await repo.UpdateSendStatus(notification.Id, SmsNotificationResultType.Delivered);
+
+        // Assert - Order should be Completed
+        string checkStatusSql = $@"
+            SELECT processedstatus 
+            FROM notifications.orders 
+            WHERE alternateid = '{order.Id}'";
+        string orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(checkStatusSql);
+
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
+
+        // Verify notification status was updated
+        string notificationStatusSql = $@"
+            SELECT result 
+            FROM notifications.smsnotifications 
+            WHERE alternateid = '{notification.Id}'";
+        string notificationStatus = await PostgreUtil.RunSqlReturnOutput<string>(notificationStatusSql);
+
+        Assert.Equal(SmsNotificationResultType.Delivered.ToString(), notificationStatus);
+
+        // Cleanup
+        await PostgreUtil.DeleteStatusFeedFromDb(order.Id);
+        await PostgreUtil.DeleteOrderFromDb(sendersRef);
+    }
 }
