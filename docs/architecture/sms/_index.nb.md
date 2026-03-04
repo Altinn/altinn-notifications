@@ -57,7 +57,7 @@ Find descriptions of key dependencies below.
 ### Altinn Services
 | Service | Purpose | Resources |
 |-|-|-|
-| Altinn Notifications* | Service that orchestrates the sending of notifications.| [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service) |
+| Altinn Notifications* | Service that sends SMS notifications.| [Repository](https://github.com/Altinn/altinn-notifications/tree/main/components/sms-service) |
 
 \*Functional dependency to enable the full functionality of Altinn Notifications. Altinn Notifications generates the 
 SMS messages that are to be sent through this SMS service.
@@ -110,7 +110,7 @@ See [DockerFile](https://github.com/Altinn/altinn-notifications/blob/main/compon
 ## Build & deploy
 
 ### Web API 
-  - Build and Code analysis runs in a [Github workflow](https://github.com/Altinn/altinn-notifications/actions)
+  - Build and Code analysis runs in a [GitHub workflow](https://github.com/Altinn/altinn-notifications/actions)
   - Build of the image is done in an [Azure Devops Pipeline](https://dev.azure.com/brreg/altinn-studio/_build?definitionId=476)
   - Deploy of the image is enabled with Helm and implemented in an [Azure Devops Release pipeline](https://dev.azure.com/brreg/altinn-studio/_release?_a=releases&view=all&definitionId=52)
 

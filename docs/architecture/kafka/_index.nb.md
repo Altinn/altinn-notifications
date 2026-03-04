@@ -199,7 +199,7 @@ __Content:__
 - Format: json
 - Data structure: [SendOperationResult](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Status/SendOperationResult.cs)
 - Description: An object containing the [SmsSendResult](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Status/SmsSendResult.cs) 
-     for a given notification and gatewatyreference to Link Mobility for the transaction.
+     for a given notification and gateway reference to Link Mobility for the transaction.
 {{% /expandsmall %}}
 
 ### Platform services

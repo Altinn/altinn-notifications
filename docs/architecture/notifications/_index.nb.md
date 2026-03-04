@@ -126,14 +126,14 @@ The following cron jobs are defined:
 | send-email-trigger     | */1 * * * *  | Sends request to endpoint to start the process of sending all new email notifications |
 | send-sms-trigger       | * 7-16 * * * | Sends request to endpoint to start the process of sending all new SMS notifications   |
 
-Each cron job runs in a Docker container [based of the official docker image for curl](https://hub.docker.com/r/curlimages/curl)
+Each cron job runs in a Docker container [based on the official docker image for curl](https://hub.docker.com/r/curlimages/curl)
 and sends a request to an endpoints in the [Trigger controller](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/TriggerController.cs).
 
 The specifications of the cron jobs are hosted in a [private repository in Azure DevOps](https://dev.azure.com/brreg/_git/altinn-studio-ops?path=/deploy/altinn-platform/altinn-notifications/templates/jobs)
 (requires login).
 
 
-## Dependencies 
+## Dependencies     
 
 The microservice takes use of a range of external and Altinn services as well as .NET libraries to support the provided
 functionality. 
