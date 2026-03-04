@@ -62,19 +62,19 @@ public static class PostgreUtil
         string sql = $@"
         DELETE FROM notifications.statusfeed 
         WHERE orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
         );
         DELETE FROM notifications.emailnotifications 
         WHERE _orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
         );
         DELETE FROM notifications.smsnotifications 
         WHERE _orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
         );
-        DELETE FROM notifications.orders WHERE sendersreference LIKE '{sendersRefPrefix}%';";
+        DELETE FROM notifications.orders WHERE sendersreference LIKE '@prefix';";
 
-        await RunSql(sql);
+        await RunSql(sql, new NpgsqlParameter("@prefix", $"{sendersRefPrefix}%"));
     }
 
     public static async Task<NotificationOrder> PopulateDBWithSmsOrder(string? sendersReference = null)

@@ -404,11 +404,12 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        await PostgreUtil.DeleteOrdersByAlternateIds(_ordersToDelete);
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
-        
+
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
-
+        
         GC.SuppressFinalize(this);
     }
 
