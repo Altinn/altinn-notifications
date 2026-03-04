@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IDisposable
+public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/trigger/pastdueorders";
 
@@ -52,17 +52,12 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
         Assert.Equal(1, actual);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_topicName);
+
+        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()
@@ -89,5 +84,10 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
         }).CreateClient();
 
         return client;
+    }
+
+    public ValueTask InitializeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 }

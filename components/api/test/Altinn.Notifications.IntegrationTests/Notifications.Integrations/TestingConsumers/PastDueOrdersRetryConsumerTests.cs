@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -321,13 +320,6 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         Assert.Equal(1, registeredOrderCount);
     }
 
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-    }
-
     private static async Task<string> SelectProcessStatus(Guid orderId)
     {
         string sql = $"select processedstatus from notifications.orders where alternateid='{orderId}'";
@@ -400,7 +392,8 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        await Dispose(true);
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
 
         GC.SuppressFinalize(this);
     }

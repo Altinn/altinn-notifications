@@ -339,17 +339,12 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+        
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+
+        GC.SuppressFinalize(this);
     }
 
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
