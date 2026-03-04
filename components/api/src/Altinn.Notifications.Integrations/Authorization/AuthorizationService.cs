@@ -209,7 +209,7 @@ public class AuthorizationService : IAuthorizationService
         XacmlJsonRequest request = new()
         {
             AccessSubject = [],
-            Action = [CreateActionCategory(resourceAction ?? "read")],
+            Action = [CreateActionCategory(resourceAction?.Trim() is { Length: > 0 } action ? action : "read")],
             Resource = [],
             MultiRequests = new XacmlJsonMultiRequests { RequestReference = [] }
         };
