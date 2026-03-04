@@ -59,20 +59,20 @@ public static class PostgreUtil
 
     public static async Task DeleteOrdersByRefPrefix(string sendersRefPrefix)
     {
-        string sql = $@"
+        string sql = @"
         DELETE FROM notifications.statusfeed 
         WHERE orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE @prefix
         );
         DELETE FROM notifications.emailnotifications 
         WHERE _orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE @prefix
         );
         DELETE FROM notifications.smsnotifications 
         WHERE _orderid IN (
-            SELECT _id FROM notifications.orders WHERE sendersreference LIKE '@prefix'
+            SELECT _id FROM notifications.orders WHERE sendersreference LIKE @prefix
         );
-        DELETE FROM notifications.orders WHERE sendersreference LIKE '@prefix';";
+        DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix;";
 
         await RunSql(sql, new NpgsqlParameter("@prefix", $"{sendersRefPrefix}%"));
     }
