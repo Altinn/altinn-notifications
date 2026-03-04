@@ -22,6 +22,10 @@ public static class ServiceUtil
     private static NpgsqlDataSource? _sharedDataSource;
     private static ServiceProvider? _sharedServiceProvider;
 
+    // Tracks every ephemeral ServiceProvider created for env-variable overrides.
+    // Disposed together during teardown to avoid leaking IDisposable singletons.
+    private static readonly List<ServiceProvider> _ephemeralProviders = [];
+
     public static NpgsqlDataSource GetSharedDataSource()
     {
         lock (_lock)
@@ -73,6 +77,14 @@ public static class ServiceUtil
     {
         lock (_lock)
         {
+            // Dispose ephemeral providers first — they may hold scoped resources.
+            foreach (var sp in _ephemeralProviders)
+            {
+                sp.Dispose();
+            }
+
+            _ephemeralProviders.Clear();
+
             _sharedServiceProvider?.Dispose();
             _sharedServiceProvider = null;
             _sharedDataSource?.Dispose();
@@ -140,7 +152,7 @@ public static class ServiceUtil
         return services.BuildServiceProvider();
     }
 
-    private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
+    private static List<object> BuildServiceProvider(Dictionary<string, string?> envVariables, List<Type> interfaceTypes)
     {
         var config = BuildConfiguration(envVariables);
         EnsurePostgreSqlSetup(config);
@@ -149,6 +161,12 @@ public static class ServiceUtil
         ConfigureServices(services, config);
 
         var sp = services.BuildServiceProvider();
+
+        lock (_lock)
+        {
+            _ephemeralProviders.Add(sp);
+        }
+
         List<object> outputServices = [];
         foreach (Type interfaceType in interfaceTypes)
         {
