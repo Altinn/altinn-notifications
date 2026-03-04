@@ -51,12 +51,17 @@ echo "==> Configuring database..."
 # Increase max connections
 run_psql -c "ALTER SYSTEM SET max_connections TO '200';"
 
-# Create application role (idempotent)
+# Create or update application role (idempotent, injection-safe)
 run_psql -c "DO \$\$
+DECLARE
+  app_user text := '$DB_APP_USER';
+  app_pwd  text := '$DB_APP_PASSWORD';
 BEGIN
-  CREATE ROLE $DB_APP_USER WITH LOGIN PASSWORD '$DB_APP_PASSWORD';
-EXCEPTION WHEN duplicate_object THEN
-  RAISE NOTICE 'Role $DB_APP_USER already exists, skipping.';
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_user) THEN
+    EXECUTE format('ALTER ROLE %I WITH LOGIN PASSWORD %L', app_user, app_pwd);
+  ELSE
+    EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', app_user, app_pwd);
+  END IF;
 END \$\$;"
 
 # Restart container to apply max_connections change

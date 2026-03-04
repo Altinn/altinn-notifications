@@ -16,13 +16,31 @@ using WireMock.Settings;
 Console.WriteLine("Starting Altinn Notifications Mock Services...");
 Console.WriteLine();
 
-// Determine base path for mappings (works both from project root and output directory)
+// Determine base path for mappings — try several candidate locations so mappings are found
+// whether we run from the build output directory, from repo root, or from mock-services/.
 string basePath = AppContext.BaseDirectory;
-string mappingsPath = Path.Combine(basePath, "mappings");
-if (!Directory.Exists(mappingsPath))
+string[] mappingsCandidates =
+[
+    // From build output (bin/Debug/net9.0) — mappings are copied to output
+    Path.GetFullPath(Path.Combine(basePath, "mappings")),
+    // From mock-services directory (dotnet run from project dir)
+    Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "mappings")),
+    // From repo root (start-mock-services.sh sets CWD = repo root)
+    Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "tools", "dev-setup", "mock-services", "mappings")),
+    // From build output → 6 levels up to repo root → into project
+    Path.GetFullPath(Path.Combine(basePath, "..", "..", "..", "..", "..", "..", "tools", "dev-setup", "mock-services", "mappings")),
+];
+
+string? mappingsPath = mappingsCandidates.FirstOrDefault(Directory.Exists);
+if (mappingsPath is null)
 {
-    // Fallback: running from project directory
-    mappingsPath = Path.Combine(Directory.GetCurrentDirectory(), "mappings");
+    Console.Error.WriteLine("ERROR: Mappings directory not found. Searched:");
+    foreach (string candidate in mappingsCandidates)
+    {
+        Console.Error.WriteLine($"  - {candidate}");
+    }
+
+    return 1;
 }
 
 // Start WireMock servers
