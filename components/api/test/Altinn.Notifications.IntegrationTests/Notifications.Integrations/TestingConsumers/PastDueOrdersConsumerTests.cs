@@ -228,5 +228,7 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
 
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+
+        GC.SuppressFinalize(this);
     }
 }

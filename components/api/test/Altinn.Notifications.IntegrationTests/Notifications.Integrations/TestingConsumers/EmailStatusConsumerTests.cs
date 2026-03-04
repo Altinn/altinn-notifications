@@ -343,6 +343,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+
+        GC.SuppressFinalize(this);
     }
 
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
