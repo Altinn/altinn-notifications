@@ -38,7 +38,9 @@ git clone https://github.com/Altinn/altinn-notifications.git
 cd altinn-notifications
 ```
 
-### 2. Infrastructure Setup (Kafka)
+### 2. Infrastructure Setup
+
+#### Kafka
 
 Altinn Notifications uses Kafka for message queuing. Start the local Kafka instance using Podman or Docker.
 
@@ -53,6 +55,24 @@ docker compose -f tools/dev-setup/setup-kafka.yml up -d
 ```
 
 > 🎯 **Tip:** You can access the **Kafdrop** UI at `http://localhost:9000` to monitor your topics.
+
+#### Azure Service Bus Emulator
+
+Altinn Notifications is being migrated from Kafka to Azure Service Bus. A local ASB emulator is available for development. The `tools/asb-emulator/.env` file is pre-configured with local dev defaults.
+
+**Podman (Preferred):**
+```bash
+podman compose -f tools/asb-emulator/docker-compose.yaml up -d
+```
+
+**Docker:**
+```bash
+docker compose -f tools/asb-emulator/docker-compose.yaml up -d
+```
+
+> **Note:** The emulator exposes AMQP on port `5672` and an HTTP management endpoint on port `5300`. Connection string for local development is pre-configured in `appsettings.Development.json` of each service.
+
+> 🎯 **Tip:** Use [PurpleExplorer](https://github.com/philipmat/PurpleExplorer) to browse queues and messages. It supports the `UseDevelopmentEmulator=true` flag for the local emulator connection string.
 
 ### 3. Database Setup (PostgreSQL)
 
