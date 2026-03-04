@@ -93,7 +93,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         var response = await _shortMessageServiceClient.SendAsync(shortMessage);
         if (!response.Success)
         {
-            HandleNetworkTransientFailure(smsNotification, response);
+            HandleNetworkTransientFailure(smsNotification, response, notificationOrder.Creator.ShortName);
         }
         
         // Create the tracking information for the order.
@@ -271,7 +271,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
       
         if (!response.Success)
         {
-            HandleNetworkTransientFailure(emailNotification, response);
+            HandleNetworkTransientFailure(emailNotification, response, notificationOrder);
         }
 
         // Create the tracking information for the order.
@@ -408,14 +408,14 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         };
     }
 
-    private void HandleNetworkTransientFailure(SmsNotification smsNotification, ShortMessageSendResult response)
+    private void HandleNetworkTransientFailure(SmsNotification smsNotification, ShortMessageSendResult response, string creatorShortName)
     {
         const string noDetailsMessage = "No error details provided";
-        
+
         _logger.LogCritical(
-            "Short message service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
-            smsNotification.Id,
-            MaskPhoneNumber(smsNotification.Recipient.MobileNumber),
+            "Instant SMS service client http call failed. Creator: {Creator}, RequestedSendTime: {RequestedSendTime}, Error: {ErrorDetails}",
+            creatorShortName,
+            smsNotification.RequestedSendTime,
             response.ErrorDetails ?? noDetailsMessage);
 
         throw new PlatformDependencyException(
@@ -424,63 +424,19 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             response.ErrorDetails ?? noDetailsMessage);
     }
 
-    private void HandleNetworkTransientFailure(EmailNotification emailNotification, InstantEmailSendResult response)
+    private void HandleNetworkTransientFailure(EmailNotification emailNotification, InstantEmailSendResult response, string creatorShortName)
     {
         const string noDetailsMessage = "No error details provided";
 
         _logger.LogCritical(
-            "Instant email service failed for notification {NotificationId}. Recipient: {Recipient}, Error: {ErrorDetails}",
-            emailNotification.Id,
-            MaskEmail(emailNotification.Recipient.ToAddress),
+            "Instant email service client http call failed. Creator: {Creator}, RequestedSendTime: {RequestedSendTime}, Error: {ErrorDetails}",
+            creatorShortName,
+            emailNotification.RequestedSendTime, 
             response.ErrorDetails ?? noDetailsMessage);
 
         throw new PlatformDependencyException(
             "InstantEmailServiceClient",
             "PersistInstantEmailNotificationAsync",
             response.ErrorDetails ?? noDetailsMessage);
-    }
-
-    /// <summary>
-    /// Masks an email address for logging purposes, keeping only the first two characters
-    /// of the local part visible. Example: "john.doe@example.com" becomes "jo******@example.com"
-    /// </summary>
-    private static string MaskEmail(string email)
-    {
-        var atIndex = email.IndexOf('@');
-        if (atIndex <= 0)
-        {
-            // Invalid email format - mask entirely to avoid leaking potentially sensitive data
-            return new string('*', email.Length);
-        }
-
-        var localPart = email[..atIndex];
-        var domainPart = email[atIndex..];
-        
-        if (localPart.Length <= 2)
-        {
-            // For very short local parts, mask entirely
-            return new string('*', localPart.Length) + domainPart;
-        }
-
-        // Keep first two characters, mask the rest
-        return localPart[..2] + new string('*', localPart.Length - 2) + domainPart;
-    }
-
-    /// <summary>
-    /// Masks a phone number for logging purposes, keeping only the first two and last two digits visible.
-    /// Example: "+4712345678" becomes "+4*******78"
-    /// </summary>
-    private static string MaskPhoneNumber(string phoneNumber)
-    {
-        if (phoneNumber.Length <= 4)
-        {
-            return new string('*', phoneNumber.Length);
-        }
-
-        var visibleStart = phoneNumber[..2];
-        var visibleEnd = phoneNumber[^2..];
-        var maskedMiddle = new string('*', phoneNumber.Length - 4);
-
-        return visibleStart + maskedMiddle + visibleEnd;
     }
 }
