@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using System.Runtime.InteropServices;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
@@ -64,7 +62,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
              emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
              return processedOrderCount == 1 && emailNotificationCount == 1;
          },
-         TimeSpan.FromSeconds(15));
+         TimeSpan.FromSeconds(15), 
+         null,
+         TestContext.Current.CancellationToken);
         
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -107,7 +107,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
              processedStatus = await SelectProcessStatus(persistedOrder.Id);
              return processedStatus == "Processed";
          },
-         TimeSpan.FromSeconds(15));
+         TimeSpan.FromSeconds(15),
+         null, 
+         TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -194,7 +196,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(10),
+            null,
+            TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -290,7 +294,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(10),
+            null,
+            TestContext.Current.CancellationToken);
 
         await consumerRetryService.StopAsync(CancellationToken.None);
 
@@ -379,12 +385,12 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             logger);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
         

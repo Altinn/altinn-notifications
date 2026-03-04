@@ -17,15 +17,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
-            await Task.CompletedTask;
+            await ValueTask.CompletedTask;
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]
@@ -71,7 +72,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete.Add(smsOrder.Id);
 
             // Act
-            var actual = await service.GetDailySmsMetrics(CancellationToken.None);
+            var actual = await service.GetDailySmsMetrics(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.NotEmpty(actual.Metrics);

@@ -19,18 +19,20 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await Task.CompletedTask;
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_orderIdsToDelete.Count != 0)
             {
                 string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
             }
+
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

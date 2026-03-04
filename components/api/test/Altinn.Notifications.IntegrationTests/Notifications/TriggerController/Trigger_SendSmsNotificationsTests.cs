@@ -39,15 +39,16 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
         _factory = factory;
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_topicName);
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -65,7 +66,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsDaytimePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
@@ -90,7 +91,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         long actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);

@@ -47,7 +47,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -90,8 +90,8 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string resString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string resString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderExt? actual = JsonSerializer.Deserialize<NotificationOrderExt>(resString, JsonSerializerOptionsProvider.Options);
 
         // Assert
@@ -136,8 +136,8 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string resString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string resString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         NotificationOrderExt? actual = JsonSerializer.Deserialize<NotificationOrderExt>(resString, JsonSerializerOptionsProvider.Options);
 
         // Assert

@@ -69,7 +69,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return observedEmailStatus == EmailNotificationResultType.New.ToString() && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -131,7 +132,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return observedEmailStatus == EmailNotificationResultType.Delivered.ToString() && statusFeedCount == 1 && completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -194,7 +196,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() && statusFeedCount == 0 && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -257,7 +260,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 }
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -316,9 +320,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 }
 
                 return observedEmailStatus == resultType.ToString() && completedOrdersCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            }, 
+            TimeSpan.FromSeconds(15), 
+            TimeSpan.FromMilliseconds(100), 
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -327,12 +332,12 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(resultType.ToString(), observedEmailStatus);
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
         

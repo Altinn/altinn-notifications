@@ -73,7 +73,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return observedEmailStatus == EmailNotificationResultType.Delivered.ToString();
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -121,7 +122,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return observedEmailStatus == EmailNotificationResultType.New.ToString() && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -184,7 +186,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return processedCount == messageCount;
             },
             TimeSpan.FromSeconds(20),
-            TimeSpan.FromMilliseconds(200));
+            TimeSpan.FromMilliseconds(200),
+            TestContext.Current.CancellationToken);
 
         stopwatch.Stop();
         await emailStatusConsumer.StopAsync(CancellationToken.None);
@@ -253,7 +256,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 }
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -335,7 +339,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 }
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -398,7 +403,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return status1 == EmailNotificationResultType.Delivered.ToString();
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         // Ensure first message was processed before shutdown
         Assert.Equal(EmailNotificationResultType.Delivered.ToString(), status1);
@@ -478,7 +484,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return processedCount == messageCount;
             },
             TimeSpan.FromSeconds(30),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(500),
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -523,7 +530,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
         // Give the consumer a moment to start processing
-        await Task.Delay(500);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
 
         var stopwatch = Stopwatch.StartNew();
         await emailStatusConsumer.StopAsync(CancellationToken.None);
@@ -579,11 +586,12 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                     return status1 == EmailNotificationResultType.Delivered.ToString();
                 },
                 TimeSpan.FromSeconds(15),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             // Publish second message but stop consumer before processing
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, report2.Serialize());
-            await Task.Delay(500); // Small delay to ensure message is in topic
+            await Task.Delay(500, TestContext.Current.CancellationToken); // Small delay to ensure message is in topic
             await firstConsumer.StopAsync(CancellationToken.None);
         }
 
@@ -603,7 +611,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                     return status2 == EmailNotificationResultType.Delivered.ToString();
                 },
                 TimeSpan.FromSeconds(15),
-                TimeSpan.FromMilliseconds(100));
+                TimeSpan.FromMilliseconds(100),
+                TestContext.Current.CancellationToken);
 
             await secondConsumer.StopAsync(CancellationToken.None);
 
@@ -635,19 +644,19 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(1000); // Let it poll for a bit with no messages
+        await Task.Delay(1000, TestContext.Current.CancellationToken); // Let it poll for a bit with no messages
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert - No exception means success
         Assert.True(true, "Consumer handled empty batch scenario without errors");
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
 
@@ -713,7 +722,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return status == EmailNotificationResultType.Delivered.ToString();
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(EmailNotificationResultType.Delivered.ToString(), status);
 
@@ -726,7 +736,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await secondConsumer.StartAsync(CancellationToken.None);
 
         // Give time for rebalance to occur
-        await Task.Delay(3000);
+        await Task.Delay(3000, TestContext.Current.CancellationToken);
 
         // Assert - Both consumers should be running without errors (partition revocation handled)
         await firstConsumer.StopAsync(CancellationToken.None);
@@ -764,7 +774,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await consumer2.StartAsync(CancellationToken.None);
 
         // Give time for initial assignment
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         (_, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification($"{_sendersRef}-leave", simulateCronJob: true);
@@ -782,7 +792,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         await consumer2.StopAsync(CancellationToken.None);
 
         // Give time for rebalance
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Verify remaining consumer still processes messages after rebalance
         string status = string.Empty;
@@ -793,7 +803,8 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 return status == EmailNotificationResultType.Delivered.ToString();
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(EmailNotificationResultType.Delivered.ToString(), status);
