@@ -151,6 +151,7 @@ dotnet test Altinn.Notifications.slnx
 **Per Component:**
 ```bash
 dotnet test components/api/Altinn.Notifications.API.slnx
+dotnet test components/shared/Altinn.Notifications.Shared.slnx
 dotnet test components/email-service/Altinn.Notifications.Email.slnx
 dotnet test components/sms-service/Altinn.Notifications.Sms.slnx
 ```
