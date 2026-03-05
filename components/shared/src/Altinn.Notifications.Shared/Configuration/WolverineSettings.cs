@@ -21,29 +21,29 @@ public class WolverineSettings
     /// <summary>
     /// Number of listeners per queue per pod.
     /// </summary>
-    public int ListenerCount { get; set; } = 1;
+    public int ListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// ASB queue name for email delivery status updates.
+    /// ASB queue name for receiving email delivery reports.
     /// Consumed by the API service; produced by the email service and Event Grid.
     /// </summary>
-    public string? EmailStatusQueueName { get; set; }
+    public string EmailDeliveryReportQueueName { get; set; }
 
     /// <summary>
-    /// Retry policy for the email status queue.
+    /// Retry policy for the email delivery report queue.
     /// </summary>
-    public QueueRetryPolicy EmailStatusQueuePolicy { get; set; } = new();
+    public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// ASB queue name for SMS delivery status updates.
+    /// ASB queue name for receiving SMS delivery reports.
     /// Consumed by the API service; produced by the SMS service delivery report controller.
     /// </summary>
-    public string? SmsStatusQueueName { get; set; }
+    public string SmsDeliveryReportQueueName { get; set; }
 
     /// <summary>
-    /// Retry policy for the SMS status queue.
+    /// Retry policy for the SMS delivery report queue.
     /// </summary>
-    public QueueRetryPolicy SmsStatusQueuePolicy { get; set; } = new();
+    public QueueRetryPolicy SmsDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
     /// ASB queue name for accepted email send operations (polling loop).

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
+using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -41,6 +42,10 @@ public static class WolverineServiceCollectionExtensions
             if (wolverineSettings.EnableServiceBus)
             {
                 opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
+
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                .ListenerCount(wolverineSettings.ListenerCount)
+                .ProcessInline();
             }
 
             opts.Policies.AllListeners(x => x.ProcessInline());

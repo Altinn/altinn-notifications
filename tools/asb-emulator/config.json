@@ -5,7 +5,7 @@
         "Name": "sbemulatorns",
         "Queues": [
           {
-            "Name": "altinn.notifications.email.status",
+            "Name": "altinn.notifications.email.deliveryreports",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,
               "DefaultMessageTimeToLive": "PT1H",
@@ -19,7 +19,7 @@
             }
           },
           {
-            "Name": "altinn.notifications.sms.status",
+            "Name": "altinn.notifications.sms.deliveryreports",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,
               "DefaultMessageTimeToLive": "PT1H",
