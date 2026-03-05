@@ -1,3 +1,5 @@
+using Xunit;
+
 namespace Altinn.Notifications.Shared.Tests;
 
 public class SmokeTest
