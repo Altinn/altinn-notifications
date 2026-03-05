@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -37,6 +38,9 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(config.GetSection(nameof(WolverineSettings)));
 
+        // Set static settings on handlers before Wolverine discovers and configures them.
+        EmailDeliveryReportHandler.Settings = wolverineSettings;
+
         services.AddWolverine(opts =>
         {
             if (wolverineSettings.EnableServiceBus)
@@ -45,6 +49,9 @@ public static class WolverineServiceCollectionExtensions
 
                 if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
                 {
+                    opts.PublishMessage<EmailDeliveryReportCommand>()
+                    .ToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName!);
+
                     opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount)
                     .ProcessInline();
