@@ -74,18 +74,23 @@ jobs:
               - 'components/api/src/**'
               - 'components/api/test/Altinn.Notifications.Tests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+              - 'components/api/Altinn.Notifications.API.slnx'
             shared:
               - 'components/shared/src/**'
               - 'components/shared/test/**'
+              - 'components/shared/Altinn.Notifications.Shared.slnx'
             sms:
               - 'components/sms-service/src/**'
               - 'components/sms-service/test/**'
+              - 'components/sms-service/Altinn.Notifications.Sms.slnx'
             email:
               - 'components/email-service/src/**'
               - 'components/email-service/test/**'
+              - 'components/email-service/Altinn.Notifications.Email.slnx'
             tools:
               - 'tools/src/**'
               - 'tools/test/**'
+              - 'tools/Altinn.Notifications.Tools.slnx'
       - name: Build dynamic matrix
         id: set-matrix
         run: |
