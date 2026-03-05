@@ -96,7 +96,7 @@ jobs:
         run: |
           matrix='{"include":['
 
-          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"api","solution":"components/api/Altinn.Notifications.API.slnx"},'
           fi
 
@@ -104,11 +104,11 @@ jobs:
             matrix+='{"component":"shared","solution":"components/shared/Altinn.Notifications.Shared.slnx"},'
           fi
 
-          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"email","solution":"components/email-service/Altinn.Notifications.Email.slnx"},'
           fi
 
-          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"sms","solution":"components/sms-service/Altinn.Notifications.Sms.slnx"},'
           fi
 
@@ -142,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -169,7 +169,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -186,14 +186,14 @@ jobs:
   test-api:
     name: "Test: Notifications API"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     services:
       postgres:
-        image: postgres:18.1@sha256:1090bc3a8ccfb0b55f78a494d76f8d603434f7e4553543d6e807bc7bd6bbd17f
+        image: postgres:18.3@sha256:69e8582b781cb44fa4557b98ed586fe68361e320d9b12f9707494335634f4f3d
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -229,7 +229,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -310,7 +310,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -355,7 +355,7 @@ jobs:
   test-email:
     name: "Test: Email Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -385,7 +385,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -450,7 +450,7 @@ jobs:
   test-sms:
     name: "Test: SMS Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -480,7 +480,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -552,7 +552,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:18.1@sha256:1090bc3a8ccfb0b55f78a494d76f8d603434f7e4553543d6e807bc7bd6bbd17f
+        image: postgres:18.3@sha256:69e8582b781cb44fa4557b98ed586fe68361e320d9b12f9707494335634f4f3d
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -567,7 +567,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -632,7 +632,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: |
             10.0.x
@@ -693,7 +693,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          if [[ "${{ needs.changes.outputs.api }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.api }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/api/Altinn.Notifications.API.slnx -c Release -v q
           fi
 
@@ -701,11 +701,11 @@ jobs:
             dotnet build components/shared/Altinn.Notifications.Shared.slnx -c Release -v q
           fi
 
-          if [[ "${{ needs.changes.outputs.email }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.email }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/email-service/Altinn.Notifications.Email.slnx -c Release -v q
           fi
 
-          if [[ "${{ needs.changes.outputs.sms }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.sms }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/sms-service/Altinn.Notifications.Sms.slnx -c Release -v q
           fi
 
