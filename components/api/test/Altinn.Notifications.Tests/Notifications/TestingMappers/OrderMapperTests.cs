@@ -43,7 +43,9 @@ public class OrderMapperTests
             Creator = new Creator("ttd"),
             Created = created,
             Recipients = [],
-            IgnoreReservation = true
+            IgnoreReservation = true,
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write"
         };
 
         NotificationOrderExt expected = new()
@@ -72,7 +74,9 @@ public class OrderMapperTests
                 Self = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}",
                 Status = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}/status"
             },
-            IgnoreReservation = true
+            IgnoreReservation = true,
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write"
         };
 
         // Act
@@ -358,6 +362,8 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannel.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write",
             ProcessingStatus = new()
             {
                 LastUpdate = lastUpdated,
@@ -378,6 +384,8 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannelExt.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write",
             ProcessingStatus = new()
             {
                 Status = "Registered",

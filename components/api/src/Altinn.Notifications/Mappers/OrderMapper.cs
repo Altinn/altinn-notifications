@@ -332,6 +332,7 @@ public static partial class OrderMapper
         orderExt.RequestedSendTime = order.RequestedSendTime;
         orderExt.IgnoreReservation = order.IgnoreReservation;
         orderExt.ResourceId = order.ResourceId;
+        orderExt.ResourceAction = order.ResourceAction;
         orderExt.ConditionEndpoint = order.ConditionEndpoint;
 
         return orderExt;
