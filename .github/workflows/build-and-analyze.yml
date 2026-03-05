@@ -96,7 +96,7 @@ jobs:
         run: |
           matrix='{"include":['
 
-          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"api","solution":"components/api/Altinn.Notifications.API.slnx"},'
           fi
 
@@ -104,11 +104,11 @@ jobs:
             matrix+='{"component":"shared","solution":"components/shared/Altinn.Notifications.Shared.slnx"},'
           fi
 
-          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"email","solution":"components/email-service/Altinn.Notifications.Email.slnx"},'
           fi
 
-          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"sms","solution":"components/sms-service/Altinn.Notifications.Sms.slnx"},'
           fi
 
@@ -186,7 +186,7 @@ jobs:
   test-api:
     name: "Test: Notifications API"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -355,7 +355,7 @@ jobs:
   test-email:
     name: "Test: Email Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -450,7 +450,7 @@ jobs:
   test-sms:
     name: "Test: SMS Delivery Service"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
