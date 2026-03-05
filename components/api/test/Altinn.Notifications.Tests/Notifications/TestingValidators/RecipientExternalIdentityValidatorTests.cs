@@ -282,4 +282,80 @@ public class RecipientExternalIdentityValidatorTests
         // Assert
         actual.ShouldNotHaveValidationErrorFor(r => r.ResourceId);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_ResourceActionWithoutResourceId_ReturnsError(string? resourceId)
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = resourceId,
+            ResourceAction = "read",
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(r => r.ResourceAction)
+            .WithErrorMessage("ResourceAction cannot be specified without a ResourceId.");
+    }
+
+    [Fact]
+    public void Validate_ResourceActionWithResourceId_NoError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = "urn:altinn:resource:some-resource",
+            ResourceAction = "read",
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveValidationErrorFor(r => r.ResourceAction);
+    }
+
+    [Fact]
+    public void Validate_NullResourceActionWithoutResourceId_NoError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = null,
+            ResourceAction = null,
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveValidationErrorFor(r => r.ResourceAction);
+    }
 }
