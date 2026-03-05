@@ -58,7 +58,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             [],
             SendingTimePolicy.Daytime,
             [],
-            NotificationChannel.Email);
+            NotificationChannel.Email,
+            null);
 
         _orderWithStatus = new(
             _orderId,

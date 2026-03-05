@@ -436,8 +436,15 @@ public class AuthorizationServiceTests
         result.Find(o => o.PartyId == 1002)!.UserContactPoints.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task AuthorizeUsersForResource_NullResourceAction_DefaultsToRead()
+    [Theory]
+    [InlineData(null, "read")]
+    [InlineData("", "read")]
+    [InlineData("   ", "read")]
+    [InlineData(" read", "read")]
+    [InlineData("read", "read")]
+    [InlineData("access", "access")]
+    [InlineData("write", "write")]
+    public async Task AuthorizeUsersForResource_ResourceAction_ResolvesExpectedAction(string? resourceAction, string expectedAction)
     {
         // Arrange
         var target = CreateService();
@@ -464,84 +471,12 @@ public class AuthorizationServiceTests
             });
 
         // Act
-        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: null);
+        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: resourceAction);
 
         // Assert
         actualRequest.Should().NotBeNull();
         string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
-        actualAction.Should().Be("read");
-    }
-
-    [Fact]
-    public async Task AuthorizeUsersForResource_ExplicitReadResourceAction_UsesRead()
-    {
-        // Arrange
-        var target = CreateService();
-
-        List<OrganizationContactPoints> organizationContactPoints =
-        [
-            new OrganizationContactPoints
-            {
-                PartyId = 1001,
-                UserContactPoints = [new() { UserId = 1 }]
-            }
-        ];
-
-        XacmlJsonRequestRoot? actualRequest = null;
-        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
-            .Callback((XacmlJsonRequestRoot request) => actualRequest = request)
-            .Returns((XacmlJsonRequestRoot request) =>
-            {
-                var responses = request.Request.MultiRequests.RequestReference
-                    .Select(rr => CreatePermitResult(request, rr))
-                    .ToList();
-
-                return Task.FromResult(new XacmlJsonResponse { Response = responses });
-            });
-
-        // Act
-        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: "read");
-
-        // Assert
-        actualRequest.Should().NotBeNull();
-        string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
-        actualAction.Should().Be("read");
-    }
-
-    [Fact]
-    public async Task AuthorizeUsersForResource_ExplicitAccessResourceAction_UsesAccess()
-    {
-        // Arrange
-        var target = CreateService();
-
-        List<OrganizationContactPoints> organizationContactPoints =
-        [
-            new OrganizationContactPoints
-            {
-                PartyId = 1001,
-                UserContactPoints = [new() { UserId = 1 }]
-            }
-        ];
-
-        XacmlJsonRequestRoot? actualRequest = null;
-        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
-            .Callback((XacmlJsonRequestRoot request) => actualRequest = request)
-            .Returns((XacmlJsonRequestRoot request) =>
-            {
-                var responses = request.Request.MultiRequests.RequestReference
-                    .Select(rr => CreatePermitResult(request, rr))
-                    .ToList();
-
-                return Task.FromResult(new XacmlJsonResponse { Response = responses });
-            });
-
-        // Act
-        await target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:test", resourceAction: "access");
-
-        // Assert
-        actualRequest.Should().NotBeNull();
-        string actualAction = actualRequest!.Request.Action[0].Attribute[0].Value;
-        actualAction.Should().Be("access");
+        actualAction.Should().Be(expectedAction);
     }
 
     [Fact]

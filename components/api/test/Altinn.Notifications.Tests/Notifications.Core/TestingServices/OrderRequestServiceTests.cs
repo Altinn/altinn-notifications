@@ -1740,11 +1740,13 @@ public class OrderRequestServiceTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("tax-2025")]
-    [InlineData("urn:altinn:resource:tax-2025")]
-    public async Task RegisterNotificationOrderChain_RecipientPersonWithMultipleReminders_OrderChainCreated(string resourceId)
+    [InlineData("", null)]
+    [InlineData("   ", "")]
+    [InlineData("tax-2025", "   ")]
+    [InlineData("urn:altinn:resource:tax-2025", "read")]
+    [InlineData("urn:altinn:resource:tax-2025", "access")]
+    [InlineData("urn:altinn:resource:tax-2025", "write")]
+    public async Task RegisterNotificationOrderChain_RecipientPersonWithMultipleReminders_OrderChainCreated(string resourceId, string? resourceAction)
     {
         // Arrange
         Guid mainOrderId = Guid.NewGuid();
@@ -1768,6 +1770,7 @@ public class OrderRequestServiceTests
                 RecipientPerson = new RecipientPerson
                 {
                     ResourceId = resourceId,
+                    ResourceAction = resourceAction,
                     IgnoreReservation = true,
                     NationalIdentityNumber = "29105573746",
                     ChannelSchema = NotificationChannel.EmailPreferred,
@@ -1805,6 +1808,7 @@ public class OrderRequestServiceTests
                             IgnoreReservation = true,
                             NationalIdentityNumber = "29105573746",
                             ResourceId = resourceId,
+                            ResourceAction = resourceAction,
                             ChannelSchema = NotificationChannel.EmailPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
@@ -1838,6 +1842,7 @@ public class OrderRequestServiceTests
                             IgnoreReservation = true,
                             NationalIdentityNumber = "29105573746",
                             ResourceId = resourceId,
+                            ResourceAction = resourceAction,
                             ChannelSchema = NotificationChannel.SmsPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
@@ -1876,7 +1881,8 @@ public class OrderRequestServiceTests
                 new SmsTemplate("Skatteetaten", "Tax filing due: Visit Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>", EmailContentType.Html)
             ],
-            NotificationChannel.EmailPreferred);
+            NotificationChannel.EmailPreferred,
+            resourceAction);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -1894,7 +1900,8 @@ public class OrderRequestServiceTests
                 new SmsTemplate("Skatteetaten", "Reminder: File your tax return at Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Reminder: Tax 2025", "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>", EmailContentType.Html)
             ],
-            NotificationChannel.EmailPreferred);
+            NotificationChannel.EmailPreferred,
+            resourceAction);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -1912,7 +1919,8 @@ public class OrderRequestServiceTests
                 new SmsTemplate("Skatteetaten", "Urgent: File your tax return now at Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Final Reminder: Tax 2025", "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>", EmailContentType.Html)
             ],
-            NotificationChannel.SmsPreferred);
+            NotificationChannel.SmsPreferred,
+            resourceAction);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -2090,7 +2098,8 @@ public class OrderRequestServiceTests
                 new SmsTemplate("Brønnøysund", "Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it."),
                 new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
-            NotificationChannel.EmailAndSms);
+            NotificationChannel.EmailAndSms,
+            resourceAction: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(

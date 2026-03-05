@@ -73,7 +73,7 @@ public class NotificationOrder : IBaseNotificationOrder
         SendingTimePolicy? sendingTimePolicy,
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
-        string? resourceAction = null)
+        string? resourceAction)
     {
         Id = id;
         Type = type;
