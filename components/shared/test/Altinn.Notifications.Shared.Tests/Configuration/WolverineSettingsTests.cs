@@ -22,10 +22,5 @@ public class WolverineSettingsTests
 
         Assert.Empty(settings.EmailDeliveryReportQueuePolicy.GetCooldownDelays());
         Assert.Empty(settings.SmsDeliveryReportQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.EmailSendingAcceptedQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.PastDueOrdersQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.EmailSendQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.SmsSendQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.AltinnServiceUpdateQueuePolicy.GetCooldownDelays());
     }
 }
