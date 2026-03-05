@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+</Solution>
