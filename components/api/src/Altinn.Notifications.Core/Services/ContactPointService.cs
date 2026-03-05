@@ -356,6 +356,9 @@ public class ContactPointService(
     /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
     /// </param>
+    /// <param name="resourceAction">
+    /// An optional action to authorize against the resource. Defaults to "read" when not specified.
+    /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
     /// </returns>
@@ -535,6 +538,9 @@ public class ContactPointService(
     /// </param>
     /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
+    /// </param>
+    /// <param name="resourceAction">
+    /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>

@@ -49,6 +49,7 @@ public class AuthorizationService : IAuthorizationService
     /// </summary>
     /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
+    /// <param name="resourceAction">The action to authorize against the resource. Defaults to "read" when not specified.</param>
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
     public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
     {

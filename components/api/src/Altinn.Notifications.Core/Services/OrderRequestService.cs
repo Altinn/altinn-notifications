@@ -430,6 +430,9 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="resourceId">
     /// An optional resource identifier used for authorization during contact point lookup.
     /// </param>
+    /// <param name="resourceAction">
+    /// An optional action to authorize against the resource. Defaults to "read" when not specified.
+    /// </param>
     /// <returns>
     /// A <see cref="RecipientLookupResult"/> containing information about reserved recipients and those
     /// with missing contact details, or <c>null</c> if all recipients already have the required contact information.
