@@ -27,7 +27,7 @@ public class WolverineSettings
     /// ASB queue name for receiving email delivery reports.
     /// Consumed by the API service; produced by the email service and Event Grid.
     /// </summary>
-    public string EmailDeliveryReportQueueName { get; set; }
+    public string? EmailDeliveryReportQueueName { get; set; }
 
     /// <summary>
     /// Retry policy for the email delivery report queue.
@@ -38,7 +38,7 @@ public class WolverineSettings
     /// ASB queue name for receiving SMS delivery reports.
     /// Consumed by the API service; produced by the SMS service delivery report controller.
     /// </summary>
-    public string SmsDeliveryReportQueueName { get; set; }
+    public string? SmsDeliveryReportQueueName { get; set; }
 
     /// <summary>
     /// Retry policy for the SMS delivery report queue.

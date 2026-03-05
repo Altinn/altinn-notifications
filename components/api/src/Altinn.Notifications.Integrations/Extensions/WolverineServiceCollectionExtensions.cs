@@ -43,9 +43,12 @@ public static class WolverineServiceCollectionExtensions
             {
                 opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
 
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
-                .ListenerCount(wolverineSettings.ListenerCount)
-                .ProcessInline();
+                if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
+                {
+                    opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                    .ListenerCount(wolverineSettings.ListenerCount)
+                    .ProcessInline();
+                }
             }
 
             opts.Policies.AllListeners(x => x.ProcessInline());
