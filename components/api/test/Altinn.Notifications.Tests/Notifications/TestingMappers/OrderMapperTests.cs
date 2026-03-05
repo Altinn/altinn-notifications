@@ -301,7 +301,8 @@ public class OrderMapperTests
             RequestedSendTime = sendTime,
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test"
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write"
         };
 
         NotificationOrderRequest expected = new()
@@ -328,7 +329,8 @@ public class OrderMapperTests
             },
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test"
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "write"
         };
 
         expected.NotificationChannel = expectedChannel;

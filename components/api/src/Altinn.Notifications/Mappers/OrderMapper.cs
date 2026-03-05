@@ -73,7 +73,8 @@ public static partial class OrderMapper
             recipients,
             extRequest.IgnoreReservation,
             extRequest.ResourceId,
-            extRequest.ConditionEndpoint);
+            extRequest.ConditionEndpoint,
+            extRequest.ResourceAction);
     }
 
     /// <summary>
@@ -111,7 +112,8 @@ public static partial class OrderMapper
             recipients,
             extRequest.IgnoreReservation,
             extRequest.ResourceId,
-            extRequest.ConditionEndpoint);
+            extRequest.ConditionEndpoint,
+            extRequest.ResourceAction);
     }
 
     /// <summary>
@@ -145,7 +147,8 @@ public static partial class OrderMapper
             recipients,
             extRequest.IgnoreReservation,
             extRequest.ResourceId,
-            extRequest.ConditionEndpoint);
+            extRequest.ConditionEndpoint,
+            extRequest.ResourceAction);
     }
 
     /// <summary>
