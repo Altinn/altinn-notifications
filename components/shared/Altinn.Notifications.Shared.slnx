@@ -2,5 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
   </Folder>
-  <Folder Name="/test/" />
+  <Folder Name="/test/">
+    <Project Path="test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -25,7 +25,9 @@
   <Folder Name="/Shared/src/">
     <Project Path="components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
   </Folder>
-  <Folder Name="/Shared/test/" />
+  <Folder Name="/Shared/test/">
+    <Project Path="components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj" />
+  </Folder>
   <Folder Name="/SMS/" />
   <Folder Name="/SMS/src/">
     <Project Path="components/sms-service/src/Altinn.Notifications.Sms.Core/Altinn.Notifications.Sms.Core.csproj" />
