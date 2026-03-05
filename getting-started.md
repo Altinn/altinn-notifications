@@ -9,11 +9,12 @@ You can work on the entire system using the root solution or focus on individual
 
 | Solution | File Path | Purpose |
 | :--- | :--- | :--- |
-| **Full Stack** | `Altinn.Notifications.sln` | Work on API, Email, SMS, and Tools simultaneously. |
-| **API** | `components/api/Altinn.Notifications.API.sln` | Core Notification API logic. |
-| **Email Service** | `components/email-service/Altinn.Notifications.Email.sln` | Email sending and processing. |
-| **SMS Service** | `components/sms-service/Altinn.Notifications.Sms.sln` | SMS sending and processing. |
-| **Tools** | `tools/Altinn.Notifications.Tools.sln` | Utility and maintenance tools. |
+| **Full Stack** | `Altinn.Notifications.slnx` | Work on API, Email, SMS, and Tools simultaneously. |
+| **API** | `components/api/Altinn.Notifications.API.slnx` | Core Notification API logic. |
+| **Shared** | `components/shared/Altinn.Notifications.Shared.slnx` | Shared library used across components. |
+| **Email Service** | `components/email-service/Altinn.Notifications.Email.slnx` | Email sending and processing. |
+| **SMS Service** | `components/sms-service/Altinn.Notifications.Sms.slnx` | SMS sending and processing. |
+| **Tools** | `tools/Altinn.Notifications.Tools.slnx` | Utility and maintenance tools. |
 
 ---
 
@@ -69,7 +70,7 @@ docker compose -f tools/dev-setup/setup-kafka.yml up -d
 
 ### Option A: Run Everything (Visual Studio)
 
-1.  Open `Altinn.Notifications.sln` in Visual Studio.
+1.  Open `Altinn.Notifications.slnx` in Visual Studio.
 2.  Set the **Startup Projects** to multiple:
     *   `Altinn.Notifications` (API)
     *   `Altinn.Notifications.Email` (Email Worker)
@@ -144,14 +145,14 @@ You can run tests for the entire solution or per component.
 
 **Full Suite:**
 ```bash
-dotnet test Altinn.Notifications.sln
+dotnet test Altinn.Notifications.slnx
 ```
 
 **Per Component:**
 ```bash
-dotnet test components/api/Altinn.Notifications.API.sln
-dotnet test components/email-service/Altinn.Notifications.Email.sln
-dotnet test components/sms-service/Altinn.Notifications.Sms.sln
+dotnet test components/api/Altinn.Notifications.API.slnx
+dotnet test components/email-service/Altinn.Notifications.Email.slnx
+dotnet test components/sms-service/Altinn.Notifications.Sms.slnx
 ```
 
 ### API Testing with Bruno
