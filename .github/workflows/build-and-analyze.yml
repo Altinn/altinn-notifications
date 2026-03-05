@@ -693,7 +693,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
 
-          if [[ "${{ needs.changes.outputs.api }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.api }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/api/Altinn.Notifications.API.slnx -c Release -v q
           fi
 
@@ -701,11 +701,11 @@ jobs:
             dotnet build components/shared/Altinn.Notifications.Shared.slnx -c Release -v q
           fi
 
-          if [[ "${{ needs.changes.outputs.email }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.email }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/email-service/Altinn.Notifications.Email.slnx -c Release -v q
           fi
 
-          if [[ "${{ needs.changes.outputs.sms }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.sms }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build components/sms-service/Altinn.Notifications.Sms.slnx -c Release -v q
           fi
 
