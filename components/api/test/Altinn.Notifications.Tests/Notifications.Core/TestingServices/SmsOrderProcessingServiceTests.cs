@@ -275,6 +275,53 @@ public class SmsOrderProcessingServiceTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProcessOrderRetry_WhenIgnoreReservationIsSet_NotificationServiceIsCalledWithCorrectValue(bool ignoreReservation)
+    {
+        // Arrange
+        var order = new NotificationOrder()
+        {
+            Id = Guid.NewGuid(),
+            IgnoreReservation = ignoreReservation,
+            NotificationChannel = NotificationChannel.Sms,
+            Templates = [new SmsTemplate("Altinn", "this is the body")],
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint("+4799999999")], nationalIdentityNumber: "23273936483")
+            ]
+        };
+
+        bool? capturedIgnoreReservation = null;
+
+        var notificationServiceMock = new Mock<ISmsNotificationService>();
+        notificationServiceMock.Setup(s => s.CreateNotification(
+            It.IsAny<Guid>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<List<SmsAddressPoint>>(),
+            It.IsAny<SmsRecipient>(),
+            It.IsAny<int>(),
+            It.IsAny<bool>()))
+            .Callback<Guid, DateTime, DateTime, List<SmsAddressPoint>, SmsRecipient, int, bool>(
+                (orderId, req, exp, addresses, recipient, segmentCount, ignoreRes) =>
+                {
+                    capturedIgnoreReservation = ignoreRes;
+                });
+
+        var smsRepoMock = new Mock<ISmsNotificationRepository>();
+        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync([]);
+
+        var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderRetry(order);
+
+        // Assert
+        Assert.Equal(ignoreReservation, capturedIgnoreReservation);
+    }
+
+    [Theory]
     [InlineData(160, 1)]
     [InlineData(161, 2)]
     [InlineData(18685, 16)]
