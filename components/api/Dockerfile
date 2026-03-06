@@ -13,6 +13,7 @@ RUN dotnet restore ./components/api/src/Altinn.Notifications/Altinn.Notification
 # Copy everything else and build
 COPY components/api/src ./components/api/src
 COPY components/shared/src ./components/shared/src
+RUN dotnet build ./src/DbTools/DbTools.csproj -c Release -o /app_tools
 RUN dotnet publish -c Release -o out ./components/api/src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
