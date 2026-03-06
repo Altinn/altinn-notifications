@@ -2316,6 +2316,7 @@ public class OrderRequestServiceTests
                     NationalIdentityNumber = nationalIdentityNumber,
                     ChannelSchema = NotificationChannel.Email,
                     ResourceId = "urn:altinn:resource:test-resource",
+                    ResourceAction = "sign",
                     IgnoreReservation = false,
                     EmailSettings = new EmailSendingOptions
                     {
@@ -2338,6 +2339,7 @@ public class OrderRequestServiceTests
             NotificationChannel = NotificationChannel.Email,
             RequestedSendTime = currentTime.AddMinutes(10),
             ResourceId = "urn:altinn:resource:test-resource",
+            ResourceAction = "sign",
             Recipients = [new Recipient([], nationalIdentityNumber: nationalIdentityNumber)],
             Templates = [new EmailTemplate("noreply@altinn.no", "Test Subject", "Test Body", EmailContentType.Plain)]
         };
@@ -2349,6 +2351,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrder>(o =>
                     o.Id == orderId &&
                     o.IgnoreReservation == false &&
+                    o.ResourceAction == "sign" &&
                     o.NotificationChannel == NotificationChannel.Email &&
                     o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber)),
                 It.IsAny<List<NotificationOrder>?>(),
@@ -2389,7 +2392,7 @@ public class OrderRequestServiceTests
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == nationalIdentityNumber)),
                 It.Is<string?>(s => s == "urn:altinn:resource:test-resource"),
                 OrderLifecycleStage.Registration,
-                It.IsAny<string?>()),
+                It.Is<string?>(s => s == "sign")),
             Times.Once);
 
         orderRepositoryMock.VerifyAll();
