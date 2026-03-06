@@ -276,7 +276,7 @@ public abstract class NotificationRepositoryBase
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
     /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
-    protected async Task ExecuteUpdateWithTransactionAsync(
+    protected virtual async Task ExecuteUpdateWithTransactionAsync(
         string sqlCommand,
         Action<NpgsqlCommand> parameters,
         Core.Enums.NotificationChannel channel,
