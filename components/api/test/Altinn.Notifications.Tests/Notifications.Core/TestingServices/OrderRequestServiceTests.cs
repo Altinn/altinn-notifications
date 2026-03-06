@@ -2003,6 +2003,7 @@ public class OrderRequestServiceTests
                     o.Type == OrderType.Notification &&
                     o.SendersReference == "TAX-REMINDER-2025" &&
                     o.ResourceId == resourceId &&
+                    o.ResourceAction == resourceAction &&
                     o.NotificationChannel == NotificationChannel.EmailPreferred &&
                     o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746")),
                 It.Is<List<NotificationOrder>>(list =>
@@ -2010,29 +2011,31 @@ public class OrderRequestServiceTests
                     list[0].Id == firstReminderId &&
                     list[1].Id == secondReminderId &&
                     list[0].Type == OrderType.Reminder &&
-                    list[1].Type == OrderType.Reminder),
+                    list[1].Type == OrderType.Reminder &&
+                    list[0].ResourceAction == resourceAction &&
+                    list[1].ResourceAction == resourceAction),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify contact point interactions
         contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(
-                It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
-                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == resourceId),
-                OrderLifecycleStage.Registration,
-                It.IsAny<string?>()),
-            Times.Exactly(2));
+           cp => cp.AddPreferredContactPoints(
+               It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
+               It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+               It.Is<string?>(s => s == resourceId),
+               OrderLifecycleStage.Registration,
+               It.Is<string?>(s => s == resourceAction)),  // Changed from It.IsAny<string?>()
+           Times.Exactly(2));
 
         // Verify contact point added the expected SMS contact
         contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(
-                It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
-                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == resourceId),
-                OrderLifecycleStage.Registration,
-                It.IsAny<string?>()),
-            Times.Once);
+           cp => cp.AddPreferredContactPoints(
+               It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
+               It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+               It.Is<string?>(s => s == resourceId),
+               OrderLifecycleStage.Registration,
+               It.Is<string?>(s => s == resourceAction)),  // Changed from It.IsAny<string?>()
+           Times.Once);
     }
 
     [Fact]
