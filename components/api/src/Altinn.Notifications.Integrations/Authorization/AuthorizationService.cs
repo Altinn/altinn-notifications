@@ -49,8 +49,9 @@ public class AuthorizationService : IAuthorizationService
     /// </summary>
     /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
+    /// <param name="resourceAction">The action to authorize against the resource. Defaults to "read" when not specified.</param>
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
-    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
     {
         int totalUsers = organizationContactPoints.Sum(o => o.UserContactPoints.Select(u => u.UserId).Distinct().Count());
 
@@ -61,13 +62,13 @@ public class AuthorizationService : IAuthorizationService
 
         if (totalUsers <= _authorizationBatchSize)
         {
-            return await AuthorizeSingleBatch(organizationContactPoints, resourceId);
+            return await AuthorizeSingleBatch(organizationContactPoints, resourceId, resourceAction);
         }
 
         List<List<OrganizationContactPoints>> batches = CreateBatches(organizationContactPoints);
 
         Task<List<OrganizationContactPoints>>[] batchTasks = batches
-            .Select(batch => AuthorizeSingleBatch(batch, resourceId))
+            .Select(batch => AuthorizeSingleBatch(batch, resourceId, resourceAction))
             .ToArray();
 
         List<OrganizationContactPoints>[] batchResults = await Task.WhenAll(batchTasks);
@@ -75,9 +76,9 @@ public class AuthorizationService : IAuthorizationService
         return MergeBatchResults(organizationContactPoints, batchResults);
     }
 
-    private async Task<List<OrganizationContactPoints>> AuthorizeSingleBatch(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    private async Task<List<OrganizationContactPoints>> AuthorizeSingleBatch(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
     {
-        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
+        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId, resourceAction);
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
@@ -204,12 +205,12 @@ public class AuthorizationService : IAuthorizationService
         return merged;
     }
 
-    private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
     {
         XacmlJsonRequest request = new()
         {
             AccessSubject = [],
-            Action = [CreateActionCategory()],
+            Action = [CreateActionCategory(resourceAction?.Trim() is { Length: > 0 } action ? action : "read")],
             Resource = [],
             MultiRequests = new XacmlJsonMultiRequests { RequestReference = [] }
         };
@@ -240,11 +241,11 @@ public class AuthorizationService : IAuthorizationService
         return jsonRequest;
     }
 
-    private static XacmlJsonCategory CreateActionCategory()
+    private static XacmlJsonCategory CreateActionCategory(string action)
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                MatchAttributeIdentifiers.ActionId, "read", "string", _defaultIssuer);
+                MatchAttributeIdentifiers.ActionId, action, "string", _defaultIssuer);
 
         return new XacmlJsonCategory()
         {

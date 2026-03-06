@@ -1754,7 +1754,8 @@ public class OrderProcessingServiceTests
                 recipients: [new Recipient([], nationalIdentityNumber: $"1234567890{i % 10}")],
                 sendingTimePolicy: SendingTimePolicy.Daytime,
                 templates: isEvenIndex ? [new SmsTemplate("TestSender", "Test SMS body")] : [new EmailTemplate("noreply@ttd.no", "Test Subject", "Test email body", EmailContentType.Plain)],
-                notificationChannel: isEvenIndex ? NotificationChannel.Sms : NotificationChannel.Email));
+                notificationChannel: isEvenIndex ? NotificationChannel.Sms : NotificationChannel.Email,
+                resourceAction: null));
         }
 
         return orders;

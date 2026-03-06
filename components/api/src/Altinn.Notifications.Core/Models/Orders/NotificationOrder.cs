@@ -28,6 +28,9 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
 
+    /// <inheritdoc/>
+    public string? ResourceAction { get; internal set; }
+
     /// <inheritdoc/>>
     public Uri? ConditionEndpoint { get; set; }
 
@@ -69,7 +72,8 @@ public class NotificationOrder : IBaseNotificationOrder
         List<Recipient> recipients,
         SendingTimePolicy? sendingTimePolicy,
         List<INotificationTemplate> templates,
-        NotificationChannel notificationChannel)
+        NotificationChannel notificationChannel,
+        string? resourceAction)
     {
         Id = id;
         Type = type;
@@ -78,6 +82,7 @@ public class NotificationOrder : IBaseNotificationOrder
         Templates = templates;
         Recipients = recipients;
         ResourceId = resourceId;
+        ResourceAction = resourceAction;
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;

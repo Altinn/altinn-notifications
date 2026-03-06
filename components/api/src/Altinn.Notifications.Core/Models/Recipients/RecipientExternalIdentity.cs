@@ -52,6 +52,11 @@ public record RecipientExternalIdentity
     public string? ResourceId { get; init; }
 
     /// <summary>
+    /// The action to authorize against the resource. Defaults to "read" when not specified.
+    /// </summary>
+    public string? ResourceAction { get; init; }
+
+    /// <summary>
     /// Email-specific configuration for the notification.
     /// </summary>
     /// <value>

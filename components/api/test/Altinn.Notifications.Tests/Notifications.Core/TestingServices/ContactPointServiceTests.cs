@@ -218,8 +218,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var authorizationServiceMock = new Mock<IAuthorizationService>();
             authorizationServiceMock
-                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized))
-                .ReturnsAsync((List<OrganizationContactPoints> cps, string _) => cps);
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized, It.IsAny<string?>()))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _s, string? _a) => cps);
 
             var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
@@ -236,7 +236,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(e => e.StartsWith("urn:altinn:resource:", StringComparison.Ordinal))), Times.Never);
 
-            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized), Times.Once);
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized, It.IsAny<string?>()), Times.Once);
 
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
