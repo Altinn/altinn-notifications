@@ -34,6 +34,11 @@ internal sealed record RecipientDeliveryDetails
     public string? ResourceId { get; init; }
 
     /// <summary>
+    /// Gets the action to authorize against the resource. Defaults to "read" when not specified.
+    /// </summary>
+    public string? ResourceAction { get; init; }
+
+    /// <summary>
     /// Gets the sending time policy associated with the SMS configuration.
     /// </summary>
     public SendingTimePolicy? SmsSendingTimePolicy { get; init; }

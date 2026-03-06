@@ -32,6 +32,11 @@ internal sealed partial class RecipientExternalIdentityValidator : AbstractValid
                 .Must(resourceId => RecipientRules.BeValidResourceId(resourceId!))
                 .When(options => options!.ResourceId != null)
                 .WithMessage("ResourceId must have a valid syntax.");
+
+            RuleFor(options => options!.ResourceAction)
+                .Empty()
+                .When(options => string.IsNullOrWhiteSpace(options!.ResourceId))
+                .WithMessage("ResourceAction cannot be specified without a ResourceId.");
         });
     }
 
