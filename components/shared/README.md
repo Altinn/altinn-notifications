@@ -7,10 +7,9 @@ This folder contains shared contracts and utilities used across multiple Altinn 
 ```
 components/shared/
 ├── src/
-│   ├── Altinn.Shared.Contracts/        # DTOs, interfaces
-│   └── Altinn.Shared.Infrastructure/   # Common middleware, utils
+│   └── Altinn.Notifications.Shared/
 ├── test/
-│   └── Altinn.Shared.Tests/
+│   └── Altinn.Notifications.Shared.Tests/
 └── Altinn.Notifications.Shared.slnx
 ```
 
