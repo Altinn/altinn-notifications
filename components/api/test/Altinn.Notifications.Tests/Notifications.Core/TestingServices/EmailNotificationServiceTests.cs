@@ -31,7 +31,7 @@ public class EmailNotificationServiceTests
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
     [Fact]
-    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldNotCallTryMarkOrderAsCompleted()
+    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldNotCallTryMarkOrderAsCompleted()
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();
