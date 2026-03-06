@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Shared.Configuration;
+using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
@@ -53,23 +54,22 @@ public static class EmailDeliveryReportHandler
             throw new InvalidOperationException("Simulated failure for testing purposes.");
         }
 
-        var eventgridevent = command.Event;
+        // 1. Parse the envelope
+        EventGridEvent eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
-        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
-        if (eventgridevent.TryGetSystemEventData(out object systemEvent))
+        // 2. Filter for the specific Email Delivery Report event type
+        if (eventGridEvent.EventType == SystemEventNames.AcsEmailDeliveryReportReceived)
         {
-            switch (systemEvent)
-            {
-                // To complete the validation handshake from Azure Event Grid, the subscriber must respond with validation code
-                case SubscriptionValidationEventData _:
-                    break;
-                case AcsEmailDeliveryReportReceivedEventData deliveryReport:
-                    logger.LogInformation(
-                            "Email delivery report received — MessageId: {MessageId}, Status: {Status}",
-                            deliveryReport.MessageId,
-                            deliveryReport.Status);
-                    break;
-            }
+            // 3. Extract the ACS-specific data using the built-in system model
+            var data = eventGridEvent.Data.ToObjectFromJson<AcsEmailDeliveryReportReceivedEventData>();
+
+            var status = data?.Status;                    // "Delivered"
+            var messageId = data?.MessageId;              // "5df03b6a-230c-4dc1..."
+            logger.LogInformation("Received email delivery report: MessageId={MessageId}, Status={Status}", messageId, status);    
+        }
+        else
+        {
+            logger.LogWarning("Received unsupported event type: {EventType}", eventGridEvent.EventType);
         }
 
         return Task.CompletedTask;
