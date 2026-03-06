@@ -271,7 +271,7 @@ public abstract class NotificationRepositoryBase
     /// <param name="channel">The notification channel (Email or SMS).</param>
     /// <param name="notificationId">The notification ID (takes precedence for error reporting if provided).</param>
     /// <param name="secondaryIdentifier">The secondary identifier (operationId or gatewayReference).</param>
-    /// <param name="statusIsAcceptedOrSucceeded">The current status of the notification</param>
+    /// <param name="statusIsAcceptedOrSucceeded">The current status of the notification indicating whether the status is accepted or succeeded.</param>
     /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>    
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
