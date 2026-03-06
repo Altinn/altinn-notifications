@@ -54,23 +54,7 @@ public static class EmailDeliveryReportHandler
             throw new InvalidOperationException("Simulated failure for testing purposes.");
         }
 
-        // 1. Parse the envelope
-        EventGridEvent eventGridEvent = EventGridEvent.Parse(command.Message.Body);
-
-        // 2. Filter for the specific Email Delivery Report event type
-        if (eventGridEvent.EventType == SystemEventNames.AcsEmailDeliveryReportReceived)
-        {
-            // 3. Extract the ACS-specific data using the built-in system model
-            var data = eventGridEvent.Data.ToObjectFromJson<AcsEmailDeliveryReportReceivedEventData>();
-
-            var status = data?.Status;                    // "Delivered"
-            var messageId = data?.MessageId;              // "5df03b6a-230c-4dc1..."
-            logger.LogInformation("Received email delivery report: MessageId={MessageId}, Status={Status}", messageId, status);    
-        }
-        else
-        {
-            logger.LogWarning("Received unsupported event type: {EventType}", eventGridEvent.EventType);
-        }
+        logger.LogInformation("Received email delivery report: {Message}", command.Message);
 
         return Task.CompletedTask;
     }
