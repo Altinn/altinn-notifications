@@ -60,7 +60,7 @@ __Producer:__ Altinn Notifications, OrderProcessingService
 __Content:__ 
 
 - Format: json
-- Data structure: [NotificationOrder](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Core/Models/Orders/NotificationOrder.cs)
+- Data structure: [NotificationOrder](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Orders/NotificationOrder.cs)
 - Description: An order containing notification templates along with complete or partial recipient data.
 {{% /expandsmall %}}
 
@@ -77,7 +77,7 @@ __Producer:__ Altinn Notifications, PastDueOrdersConsumer
 __Content:__ 
 
 - Format: json
-- Data structure: [NotificationOrder](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Core/Models/Orders/NotificationOrder.cs)
+- Data structure: [NotificationOrder](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Orders/NotificationOrder.cs)
 - Description: An order containing notification templates along with complete or partial recipient data.
 {{% /expandsmall %}}
 
@@ -95,7 +95,7 @@ __Producer:__ Altinn Notifications, EmailNotificationService
 __Content:__ 
 
 - Format: json
-- Data structure: [Email](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Core/Models/Email.cs)
+- Data structure: [Email](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Email.cs)
 - Description: An email with all required properties present
 {{% /expandsmall %}}
 
@@ -112,7 +112,7 @@ __Producer:__ Altinn Notifications Email, SendEmailQueueConsumer
 __Content:__ 
 
 - Format: json
-- Data structure: [Email](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Core/Models/Email.cs)
+- Data structure: [Email](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Email.cs)
 - Description: An email with all required properties present.
 {{% /expandsmall %}}
 
@@ -128,7 +128,7 @@ __Producer:__ Altinn Notifications Email, SendingService and StatusService
 __Content:__ 
 
 - Format: json
-- Data structure: [SendNotificationOperationIdentifier](https://github.com/Altinn/altinn-notifications-email/blob/main/src/Altinn.Notifications.Email.Core/SendNotificationOperationIdentifier.cs)
+- Data structure: [SendNotificationOperationIdentifier](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Core/SendNotificationOperationIdentifier.cs)
 - Description: An object grouping notification id, Azure Communication Services operation Id, and the date and time
   for the last status check.
 {{% /expandsmall %}}
@@ -145,8 +145,8 @@ __Producer:__ Altinn Notifications Email, StatusService
 __Content:__ 
 
 - Format: json
-- Data structure: [SendOperationResult](https://github.com/Altinn/altinn-notifications-email/blob/main/src/Altinn.Notifications.Email.Core/Status/SendOperationResult.cs)
-- Description: An object containing the [EmailSendResult](https://github.com/Altinn/altinn-notifications-email/blob/main/src/Altinn.Notifications.Email.Core/Status/EmailSendResult.cs) 
+- Data structure: [SendOperationResult](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Core/Status/SendOperationResult.cs)
+- Description: An object containing the [EmailSendResult](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Core/Status/EmailSendResult.cs)
      for a given notification and operation id for the last status check.
 {{% /expandsmall %}}
 
@@ -164,7 +164,7 @@ __Producer:__ Altinn Notifications, SmsNotificationService
 __Content:__ 
 
 - Format: json
-- Data structure: [SMS](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Core/Sending/Sms.cs)
+- Data structure: [SMS](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Sending/Sms.cs)
 - Description: An SMS with all required properties present
 {{% /expandsmall %}}
 
@@ -181,7 +181,7 @@ __Producer:__ Altinn Notifications SMS, SendSmsQueueConsumer
 __Content:__ 
 
 - Format: json
-- Data structure: [SMS](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Core/Sending/Sms.cs)
+- Data structure: [SMS](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Sending/Sms.cs)
 - Description: An SMS with all required properties present.
 {{% /expandsmall %}}
 
@@ -197,9 +197,9 @@ __Producer:__ Altinn Notifications SMS, StatusService
 __Content:__ 
 
 - Format: json
-- Data structure: [SendOperationResult](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Core/Status/SendOperationResult.cs)
-- Description: An object containing the [SmsSendResult](https://github.com/Altinn/altinn-notifications-sms/blob/main/src/Altinn.Notifications.Sms.Core/Status/SmsSendResult.cs) 
-     for a given notification and gatewatyreference to Link Mobility for the transaction.
+- Data structure: [SendOperationResult](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Status/SendOperationResult.cs)
+- Description: An object containing the [SmsSendResult](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Core/Status/SmsSendResult.cs) 
+     for a given notification and gateway reference to Link Mobility for the transaction.
 {{% /expandsmall %}}
 
 ### Platform services
@@ -217,7 +217,7 @@ __Producer:__
 __Content:__ 
 
 - Format: json
-- Data structure: [GenericServiceUpdate](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications.Core\Models/AltinnServiceUpdate/GenericServiceUpdate.cs)
+- Data structure: [GenericServiceUpdate](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/AltinnServiceUpdate/GenericServiceUpdate.cs)
 - Description: An object containing an Altinn service update of a schema specified in the payload.
 {{% /expandsmall %}}
 

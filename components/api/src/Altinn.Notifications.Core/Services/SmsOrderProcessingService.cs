@@ -96,7 +96,8 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expirationDateTime,
                 smsAddresses,
                 smsRecipient,
-                segmentsCount);
+                segmentsCount,
+                order.IgnoreReservation ?? false);
         }
     }
 

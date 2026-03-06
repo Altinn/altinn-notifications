@@ -26,7 +26,7 @@ Altinn Notifications is a set of microservices designed to manage and deliver no
 
 ```
 altinn-notifications/
-├── Altinn.Notifications.sln
+├── Altinn.Notifications.slnx
 ├── components/           # All components
 │   ├── api/              # Main Notifications API
 │   ├── email-service/    # Email sending service
