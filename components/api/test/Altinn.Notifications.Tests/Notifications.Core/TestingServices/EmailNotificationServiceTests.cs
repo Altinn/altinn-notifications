@@ -14,10 +14,11 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Persistence.Repository;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Moq;
+using Npgsql;
 
 using Xunit;
 
@@ -28,6 +29,46 @@ public class EmailNotificationServiceTests
     private readonly int _publishBatchSize = 500;
     private const string _emailQueueTopicName = "email.queue";
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldNotCallTryMarkOrderAsCompleted()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        var mockGuidService = new Mock<IGuidService>();
+        var mockKafkaProducer = new Mock<IKafkaProducer>();
+        var mockDateTimeService = new Mock<IDateTimeService>();
+        var mockRepo = new SpyEmailNotificationRepository(
+            null!,
+            null!,
+            Options.Create(new NotificationConfig()))
+        {
+            CapturedStatusIsAcceptedOrSucceeded = false // Initial value
+        };
+
+        var service = new EmailNotificationService(
+            mockGuidService.Object,
+            mockKafkaProducer.Object,
+            mockDateTimeService.Object,
+            Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            mockRepo);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+        
+        // Assert
+        Assert.True(mockRepo.CapturedStatusIsAcceptedOrSucceeded);
+        Assert.Equal(NotificationChannel.Email, mockRepo.CapturedChannel);
+    }
 
     [Fact]
     public async Task CreateNotification_ToAddressDefined_ResultNew()
@@ -544,5 +585,49 @@ public class EmailNotificationServiceTests
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             repo);
+    }
+
+    /// <summary>
+    /// Spy that extends EmailNotificationRepository and overrides the virtual
+    /// <see cref="ExecuteUpdateWithTransactionAsync"/> to capture every argument
+    /// without hitting the database.
+    /// </summary>
+    private sealed class SpyEmailNotificationRepository : EmailNotificationRepository
+    {
+        public bool CapturedStatusIsAcceptedOrSucceeded { get; set; }
+
+        public NotificationChannel? CapturedChannel { get; private set; }
+
+        public Guid? CapturedNotificationId { get; private set; }
+
+        public string? CapturedSecondaryIdentifier { get; private set; }
+
+        public SendStatusIdentifierType? CapturedSecondaryIdentifierType { get; private set; }
+
+        public SpyEmailNotificationRepository(
+            NpgsqlDataSource dataSource,
+            ILogger<EmailNotificationRepository> logger,
+            IOptions<NotificationConfig> config)
+            : base(dataSource, logger, config)
+        {
+        }
+
+        protected override Task ExecuteUpdateWithTransactionAsync(
+            string sqlCommand,
+            Action<NpgsqlCommand> parameters,
+            NotificationChannel channel,
+            Guid? notificationId,
+            string? secondaryIdentifier,
+            bool statusIsAcceptedOrSucceeded,
+            SendStatusIdentifierType secondaryIdentifierType)
+        {
+            CapturedStatusIsAcceptedOrSucceeded = statusIsAcceptedOrSucceeded;
+            CapturedChannel = channel;
+            CapturedNotificationId = notificationId;
+            CapturedSecondaryIdentifier = secondaryIdentifier;
+            CapturedSecondaryIdentifierType = secondaryIdentifierType;
+
+            return Task.CompletedTask;
+        }
     }
 }

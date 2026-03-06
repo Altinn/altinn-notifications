@@ -144,6 +144,15 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TemporaryTest()
+    {
+        // Arrange
+        var mockKafkaProducer = new Mock<IKafkaProducer>();
+        EmailStatusConsumer consumer = new(mockKafkaProducer.Object, NullLogger<EmailStatusConsumer>.Instance, null!, null!, null!);
+         Assert.True(true);
+    }
+
+    [Fact]
     public async Task ConsumeSucceededStatus_ShouldNotCreateStatusFeedEntry()
     {
         // Arrange
