@@ -53,15 +53,13 @@ public static class WolverineServiceCollectionExtensions
                     .ToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName!);
 
                     opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount)
-                    .ProcessInline();
+                    .ListenerCount(wolverineSettings.ListenerCount);
                 }
 
                 if (!string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
                 {
                     opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount)
-                    .ProcessInline();
+                    .ListenerCount(wolverineSettings.ListenerCount);
                 }
             }
 

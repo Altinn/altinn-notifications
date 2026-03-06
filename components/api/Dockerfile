@@ -8,6 +8,7 @@ COPY components/api/src/Altinn.Notifications.Core/*.csproj ./components/api/src/
 COPY components/api/src/Altinn.Notifications.Integrations/*.csproj ./components/api/src/Altinn.Notifications.Integrations/
 COPY components/api/src/Altinn.Notifications.Persistence/*.csproj ./components/api/src/Altinn.Notifications.Persistence/
 COPY components/shared/src/Altinn.Notifications.Shared/*.csproj ./components/shared/src/Altinn.Notifications.Shared/
+COPY components/api/src/DbTools/*.csproj ./components/api/src/DbTools/
 RUN dotnet restore ./components/api/src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Copy everything else and build

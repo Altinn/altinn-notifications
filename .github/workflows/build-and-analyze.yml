@@ -3,7 +3,7 @@ name: .NET Analysis
 on:
   push:
     branches: [main]
-    paths-ignore:
+    paths-ignore: &paths-ignore
       - 'docs/**'
       - '**/*.md'
       - 'LICENSE'
@@ -25,25 +25,7 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - 'LICENSE'
-      - '**/*.svg'
-      - '**/*.png'
-      - '.gitignore'
-      - '.editorconfig'
-      - 'renovate.json'
-      - 'stylecop.json'
-      - '.dockerignore'
-      - '.gitattributes'
-      - '.github/CODEOWNERS'
-      - '.github/labeler.yml'
-      - 'components/api/test/k6/**'
-      - 'components/api/test/bruno/**'
-      - '.github/workflows/pr-label-*.yml'
-      - '.github/workflows/send-slack-warning.yml'
-      - '.github/workflows/assign-issue-to-project.yml'
+    paths-ignore: *paths-ignore
   workflow_dispatch:
 
 concurrency:
@@ -51,9 +33,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-solutions:
+    name: Validate Solution Structure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Validate all solutions
+        run: |
+          echo "Validating solution files..."
+          for sln in $(find . -name "*.slnx" -type f); do
+            echo "Checking: $sln"
+            dotnet sln "$sln" list || { echo "❌ Invalid solution: $sln"; exit 1; }
+          done
+          echo "✅ All solutions valid"
+
   changes:
     name: Detect changes
-    needs: [validate-solutions]
+    needs: validate-solutions
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -135,30 +138,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Matrix:** \`${{ steps.set-matrix.outputs.matrix }}\`" >> $GITHUB_STEP_SUMMARY
 
-  validate-solutions:
-    name: Validate Solution Structure
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Setup .NET
-        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
-        with:
-          dotnet-version: |
-            10.0.x
-      - name: Validate all solutions
-        run: |
-          echo "Validating solution files..."
-          for sln in $(find . -name "*.slnx" -type f); do
-            echo "Checking: $sln"
-            dotnet sln "$sln" list || { echo "❌ Invalid solution: $sln"; exit 1; }
-          done
-          echo "✅ All solutions valid"
-
   build:
     name: Build solution
-    needs: [changes]
+    needs: changes
     if: needs.changes.outputs.matrix != '{"include":[]}'
     strategy:
       matrix: ${{ fromJson(needs.changes.outputs.matrix) }}

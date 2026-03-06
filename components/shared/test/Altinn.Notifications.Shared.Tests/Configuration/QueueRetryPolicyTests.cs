@@ -36,6 +36,13 @@ public class QueueRetryPolicyTests
         var policy = new QueueRetryPolicy();
 
         Assert.Empty(policy.GetCooldownDelays());
+    }
+
+    [Fact]
+    public void GetScheduleDelays_ReturnsEmpty_WhenNoDelaysConfigured()
+    {
+        var policy = new QueueRetryPolicy();
+
         Assert.Empty(policy.GetScheduleDelays());
     }
 }
