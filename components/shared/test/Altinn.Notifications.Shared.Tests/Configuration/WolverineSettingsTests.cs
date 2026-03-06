@@ -21,6 +21,8 @@ public class WolverineSettingsTests
         var settings = new WolverineSettings();
 
         Assert.Empty(settings.EmailDeliveryReportQueuePolicy.GetCooldownDelays());
+        Assert.Empty(settings.EmailDeliveryReportQueuePolicy.GetScheduleDelays());
         Assert.Empty(settings.SmsDeliveryReportQueuePolicy.GetCooldownDelays());
+        Assert.Empty(settings.SmsDeliveryReportQueuePolicy.GetScheduleDelays());
     }
 }
