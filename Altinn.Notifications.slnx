@@ -1,0 +1,49 @@
+<Solution>
+  <Folder Name="/API/" />
+  <Folder Name="/API/src/">
+    <Project Path="components/api/src/Altinn.Notifications.Core/Altinn.Notifications.Core.csproj" />
+    <Project Path="components/api/src/Altinn.Notifications.Integrations/Altinn.Notifications.Integrations.csproj" />
+    <Project Path="components/api/src/Altinn.Notifications.Persistence/Altinn.Notifications.Persistence.csproj" />
+    <Project Path="components/api/src/Altinn.Notifications/Altinn.Notifications.csproj" />
+    <Project Path="components/api/src/DbTools/DbTools.csproj" />
+  </Folder>
+  <Folder Name="/API/test/">
+    <Project Path="components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj" />
+    <Project Path="components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Email/" />
+  <Folder Name="/Email/src/">
+    <Project Path="components/email-service/src/Altinn.Notifications.Email.Core/Altinn.Notifications.Email.Core.csproj" />
+    <Project Path="components/email-service/src/Altinn.Notifications.Email.Integrations/Altinn.Notifications.Email.Integrations.csproj" />
+    <Project Path="components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj" />
+  </Folder>
+  <Folder Name="/Email/test/">
+    <Project Path="components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj" />
+    <Project Path="components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Shared/" />
+  <Folder Name="/Shared/src/">
+    <Project Path="components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
+  </Folder>
+  <Folder Name="/Shared/test/">
+    <Project Path="components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj" />
+  </Folder>
+  <Folder Name="/SMS/" />
+  <Folder Name="/SMS/src/">
+    <Project Path="components/sms-service/src/Altinn.Notifications.Sms.Core/Altinn.Notifications.Sms.Core.csproj" />
+    <Project Path="components/sms-service/src/Altinn.Notifications.Sms.Integrations/Altinn.Notifications.Sms.Integrations.csproj" />
+    <Project Path="components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj" />
+  </Folder>
+  <Folder Name="/SMS/test/">
+    <Project Path="components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj" />
+    <Project Path="components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tools/" />
+  <Folder Name="/Tools/src/">
+    <Project Path="tools/src/Altinn.Notifications.Tools.RetryDeadDeliveryReports/Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
+    <Project Path="tools/src/Altinn.Notifications.Tools.StatusFeedBackfillTool/Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
+  </Folder>
+  <Folder Name="/Tools/test/">
+    <Project Path="tools/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj" />
+  </Folder>
+</Solution>

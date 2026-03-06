@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Altinn.Notifications.Core/Altinn.Notifications.Core.csproj" />
+    <Project Path="src/Altinn.Notifications.Integrations/Altinn.Notifications.Integrations.csproj" />
+    <Project Path="src/Altinn.Notifications.Persistence/Altinn.Notifications.Persistence.csproj" />
+    <Project Path="src/Altinn.Notifications/Altinn.Notifications.csproj" />
+    <Project Path="src/DbTools/DbTools.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj" />
+    <Project Path="test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj" />
+  </Folder>
+</Solution>
