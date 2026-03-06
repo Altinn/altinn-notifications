@@ -25,18 +25,18 @@ public class WolverineTestController : ControllerBase
         _bus = bus;
     }
 
-    /// <summary>
-    /// Publishes a test email delivery report command to the ASB queue.
-    /// </summary>
-    [HttpPost("email-delivery-report")]
-    public async Task<IActionResult> PublishEmailDeliveryReport(CancellationToken cancellationToken)
-    {
-        var command = new EmailDeliveryReportCommand(
-            NotificationId: Guid.NewGuid(),
-            OperationId: $"test-op-{Guid.NewGuid():N}",
-            SendResult: EmailNotificationResultType.Succeeded);
+    ///// <summary>
+    ///// Publishes a test email delivery report command to the ASB queue.
+    ///// </summary>
+    //[HttpPost("email-delivery-report")]
+    //public async Task<IActionResult> PublishEmailDeliveryReport(CancellationToken cancellationToken)
+    //{
+    //    var command = new EmailDeliveryReportCommand(
+    //        NotificationId: Guid.NewGuid(),
+    //        OperationId: $"test-op-{Guid.NewGuid():N}",
+    //        SendResult: EmailNotificationResultType.Succeeded);
 
-        await _bus.PublishAsync(command);
-        return Ok(command);
-    }
+    //    await _bus.PublishAsync(command);
+    //    return Ok(command);
+    //}
 }

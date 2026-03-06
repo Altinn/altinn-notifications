@@ -1,14 +1,9 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Shared.Configuration;
-
+using Azure.Messaging.EventGrid.SystemEvents;
 using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.Logging;
-
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
 
@@ -58,11 +53,24 @@ public static class EmailDeliveryReportHandler
             throw new InvalidOperationException("Simulated failure for testing purposes.");
         }
 
-        logger.LogInformation(
-            "Email delivery report received — NotificationId: {NotificationId}, OperationId: {OperationId}, Result: {SendResult}",
-            command.NotificationId,
-            command.OperationId,
-            command.SendResult);
+        var eventgridevent = command.Event;
+
+        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
+        if (eventgridevent.TryGetSystemEventData(out object systemEvent))
+        {
+            switch (systemEvent)
+            {
+                // To complete the validation handshake from Azure Event Grid, the subscriber must respond with validation code
+                case SubscriptionValidationEventData _:
+                    break;
+                case AcsEmailDeliveryReportReceivedEventData deliveryReport:
+                    logger.LogInformation(
+                            "Email delivery report received — MessageId: {MessageId}, Status: {Status}",
+                            deliveryReport.MessageId,
+                            deliveryReport.Status);
+                    break;
+            }
+        }
 
         return Task.CompletedTask;
     }
