@@ -3,7 +3,7 @@ name: .NET Analysis
 on:
   push:
     branches: [main]
-    paths-ignore:
+    paths-ignore: &paths-ignore
       - 'docs/**'
       - '**/*.md'
       - 'LICENSE'
@@ -25,25 +25,7 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - 'LICENSE'
-      - '**/*.svg'
-      - '**/*.png'
-      - '.gitignore'
-      - '.editorconfig'
-      - 'renovate.json'
-      - 'stylecop.json'
-      - '.dockerignore'
-      - '.gitattributes'
-      - '.github/CODEOWNERS'
-      - '.github/labeler.yml'
-      - 'components/api/test/k6/**'
-      - 'components/api/test/bruno/**'
-      - '.github/workflows/pr-label-*.yml'
-      - '.github/workflows/send-slack-warning.yml'
-      - '.github/workflows/assign-issue-to-project.yml'
+    paths-ignore: *paths-ignore
   workflow_dispatch:
 
 concurrency:
