@@ -2,8 +2,10 @@ using System.Reflection;
 
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
+using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 using Altinn.Notifications.Sms.Telemetry;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
@@ -174,6 +176,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
+
+    if (appBuilder.Environment.IsDevelopment())
+    {
+        // Override Link Mobility client with a mock for local dev.
+        services.AddSingleton<ISmsClient, MockSmsClient>();
+    }
 
     services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 }
