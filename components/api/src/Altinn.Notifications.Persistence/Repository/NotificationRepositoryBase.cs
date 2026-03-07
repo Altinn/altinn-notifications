@@ -271,16 +271,18 @@ public abstract class NotificationRepositoryBase
     /// <param name="channel">The notification channel (Email or SMS).</param>
     /// <param name="notificationId">The notification ID (takes precedence for error reporting if provided).</param>
     /// <param name="secondaryIdentifier">The secondary identifier (operationId or gatewayReference).</param>
-    /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>
+    /// <param name="statusIsAcceptedOrSucceeded">The current status of the notification indicating whether the status is accepted or succeeded.</param>
+    /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>    
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
     /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
-    protected async Task ExecuteUpdateWithTransactionAsync(
+    protected virtual async Task ExecuteUpdateWithTransactionAsync(
         string sqlCommand,
         Action<NpgsqlCommand> parameters,
         Core.Enums.NotificationChannel channel,
         Guid? notificationId,
         string? secondaryIdentifier,
+        bool statusIsAcceptedOrSucceeded,
         Core.Enums.SendStatusIdentifierType secondaryIdentifierType)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -316,9 +318,13 @@ public abstract class NotificationRepositoryBase
             HandleUpdateResult(resultAlternateId, isExpired, identifierForError, identifierTypeForError, channel);
 
             // Proceed with order completion logic if update was successful
-            if (wasUpdated && resultAlternateId.HasValue)
+            // Skip order completion check for intermediate statuses (Succeeded, Accepted)
+            if (wasUpdated && resultAlternateId.HasValue && !statusIsAcceptedOrSucceeded)
             {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
+                    resultAlternateId.Value,
+                    connection,
+                    transaction);
 
                 if (orderIsSetAsCompleted)
                 {
@@ -333,5 +339,5 @@ public abstract class NotificationRepositoryBase
             await transaction.RollbackAsync();
             throw;
         }
-    }
+    }   
 }

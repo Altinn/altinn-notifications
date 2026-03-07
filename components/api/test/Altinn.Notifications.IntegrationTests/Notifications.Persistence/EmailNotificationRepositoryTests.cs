@@ -609,5 +609,5 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
+    }    
 }
