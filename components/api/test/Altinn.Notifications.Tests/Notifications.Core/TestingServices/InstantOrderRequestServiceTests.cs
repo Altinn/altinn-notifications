@@ -771,11 +771,11 @@ public class InstantOrderRequestServiceTests
     }
 
     [Theory]
-    [InlineData(System.Net.HttpStatusCode.BadGateway)]
-    [InlineData(System.Net.HttpStatusCode.GatewayTimeout)]
-    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable)]
-    [InlineData(System.Net.HttpStatusCode.InternalServerError)]
-    public async Task PersistInstantSmsNotificationAsync_InstantSmsOrder_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
+    [InlineData(System.Net.HttpStatusCode.BadGateway, true)]
+    [InlineData(System.Net.HttpStatusCode.GatewayTimeout, false)]
+    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable, false)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError, false)]
+    public async Task PersistInstantSmsNotificationAsync_InstantSmsOrder_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode, bool errorDetailsIsNull)
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -817,7 +817,7 @@ public class InstantOrderRequestServiceTests
             .ReturnsAsync(new ShortMessageSendResult
             {
                 Success = false,
-                ErrorDetails = $"Error with status code {statusCode}",
+                ErrorDetails = errorDetailsIsNull ? null : $"Error with status code {statusCode}",
                 StatusCode = statusCode
             });
 
@@ -849,11 +849,11 @@ public class InstantOrderRequestServiceTests
     }
 
     [Theory]
-    [InlineData(System.Net.HttpStatusCode.BadGateway)]
-    [InlineData(System.Net.HttpStatusCode.GatewayTimeout)]
-    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable)]
-    [InlineData(System.Net.HttpStatusCode.InternalServerError)]
-    public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrder_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode)
+    [InlineData(System.Net.HttpStatusCode.BadGateway, true)]
+    [InlineData(System.Net.HttpStatusCode.GatewayTimeout, false)]
+    [InlineData(System.Net.HttpStatusCode.ServiceUnavailable, false)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError, false)]
+    public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrder_VariousHttpErrorCodes_AllThrowPlatformDependencyException(System.Net.HttpStatusCode statusCode, bool errorDetailsIsNull)
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -898,7 +898,7 @@ public class InstantOrderRequestServiceTests
             .ReturnsAsync(new ShortMessageSendResult
             {
                 Success = false,
-                ErrorDetails = $"Error with status code {statusCode}",
+                ErrorDetails = errorDetailsIsNull ? null : $"Error with status code {statusCode}",
                 StatusCode = statusCode
             });
 
