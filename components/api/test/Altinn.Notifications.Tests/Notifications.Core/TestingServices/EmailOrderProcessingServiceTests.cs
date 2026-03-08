@@ -151,7 +151,7 @@ public class EmailOrderProcessingServiceTests
                 It.IsAny<bool>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
-        contactPointServiceMock.Setup(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing));
+        contactPointServiceMock.Setup(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing, It.IsAny<string?>()));
 
         var service = GetTestService(emailService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
 
@@ -159,7 +159,7 @@ public class EmailOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        contactPointServiceMock.Verify(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing), Times.Once);
+        contactPointServiceMock.Verify(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing, It.IsAny<string?>()), Times.Once);
         notificationServiceMock.VerifyAll();
     }
 
@@ -222,7 +222,7 @@ public class EmailOrderProcessingServiceTests
         {
             var contactPointServiceMock = new Mock<IContactPointService>();
             contactPointServiceMock
-               .Setup(e => e.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()));
+               .Setup(e => e.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<string?>()));
             contactPointService = contactPointServiceMock.Object;
         }
 

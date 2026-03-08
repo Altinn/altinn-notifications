@@ -378,6 +378,7 @@ public class NotificationOrderChainMapperTests
                 RecipientOrganization = new RecipientOrganizationExt
                 {
                     OrgNumber = "910150804",
+                    ResourceAction = "write",
                     ResourceId = "urn:altinn:resource:7890",
                     ChannelSchema = NotificationChannelExt.Email,
 
@@ -411,6 +412,7 @@ public class NotificationOrderChainMapperTests
         // Organization recipient validation
         Assert.NotNull(result.Recipient.RecipientOrganization);
         Assert.Equal("910150804", result.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("write", result.Recipient.RecipientOrganization.ResourceAction);
         Assert.Equal("urn:altinn:resource:7890", result.Recipient.RecipientOrganization.ResourceId);
         Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientOrganization.ChannelSchema);
 
@@ -706,6 +708,7 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientExternalIdentity = new RecipientExternalIdentityExt
                 {
+                    ResourceAction = "read",
                     ChannelSchema = NotificationChannelExt.Email,
                     ResourceId = "urn:altinn:resource:test-resource",
                     ExternalIdentity = "urn:altinn:person:legacy-selfidentified:johndoe",
@@ -729,6 +732,7 @@ public class NotificationOrderChainMapperTests
 
         Assert.NotNull(result.Recipient);
         Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal("read", result.Recipient.RecipientExternalIdentity.ResourceAction);
         Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientExternalIdentity.ChannelSchema);
         Assert.Equal("urn:altinn:resource:test-resource", result.Recipient.RecipientExternalIdentity.ResourceId);
         Assert.Equal("urn:altinn:person:legacy-selfidentified:johndoe", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
@@ -760,6 +764,7 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientExternalIdentity = new RecipientExternalIdentityExt
                 {
+                    ResourceAction = "confirm",
                     ChannelSchema = NotificationChannelExt.SmsPreferred,
                     ExternalIdentity = "urn:altinn:username:test-user123",
                     ResourceId = "urn:altinn:resource:username-resource",
@@ -788,6 +793,7 @@ public class NotificationOrderChainMapperTests
 
         Assert.NotNull(result.Recipient);
         Assert.NotNull(result.Recipient.RecipientExternalIdentity);
+        Assert.Equal("confirm", result.Recipient.RecipientExternalIdentity.ResourceAction);
         Assert.Equal(NotificationChannel.SmsPreferred, result.Recipient.RecipientExternalIdentity.ChannelSchema);
         Assert.Equal("urn:altinn:username:test-user123", result.Recipient.RecipientExternalIdentity.ExternalIdentity);
         Assert.Equal("urn:altinn:resource:username-resource", result.Recipient.RecipientExternalIdentity.ResourceId);
@@ -1709,6 +1715,7 @@ public class NotificationOrderChainMapperTests
                 RecipientPerson = new RecipientPersonExt
                 {
                     IgnoreReservation = true,
+                    ResourceAction = "sign",
                     NationalIdentityNumber = "18874198354",
                     ResourceId = "urn:altinn:resource:7890",
                     ChannelSchema = NotificationChannelExt.Email,
@@ -1742,6 +1749,7 @@ public class NotificationOrderChainMapperTests
 
         // Person recipient validation
         Assert.NotNull(result.Recipient.RecipientPerson);
+        Assert.Equal("sign", result.Recipient.RecipientPerson.ResourceAction);
         Assert.Equal("18874198354", result.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:7890", result.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientPerson.ChannelSchema);
