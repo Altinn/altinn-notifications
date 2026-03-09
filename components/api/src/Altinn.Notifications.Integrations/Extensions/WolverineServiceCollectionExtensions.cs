@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-using Altinn.Notifications.Shared.Configuration;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
@@ -20,7 +20,7 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine and configures Azure Service Bus transport when
-    /// <see cref="WolverineSettings.EnableServiceBus"/> is <c>true</c>.
+    /// <see cref="Shared.Configuration.WolverineSettings.EnableServiceBus"/> is <c>true</c>.
     /// When disabled, Wolverine is still registered with inline policies so that
     /// <see cref="IMessageBus"/> can be resolved by future handlers and publishers.
     /// </summary>
@@ -32,8 +32,7 @@ public static class WolverineServiceCollectionExtensions
         IConfiguration config,
         IHostEnvironment env)
     {
-        WolverineSettings wolverineSettings =
-            config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+        WolverineSettings wolverineSettings = config.GetSection("WolverineSettings").Get<WolverineSettings>() ?? new WolverineSettings();
 
         services.Configure<WolverineSettings>(config.GetSection(nameof(WolverineSettings)));
 
@@ -41,19 +40,21 @@ public static class WolverineServiceCollectionExtensions
         {
             if (wolverineSettings.EnableServiceBus)
             {
+                // Defaults
                 opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
 
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                // Listeners (ASB queues will be auto-provisioned in production)
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
-                }
 
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
-                }
+
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusUpdatedQueueName)
+                    .ListenerCount(wolverineSettings.ListenerCount);
+
+                // Publishers
+                // Note: the API currently does not publish any messages to ASB.
             }
 
             opts.Policies.AllListeners(x => x.ProcessInline());
