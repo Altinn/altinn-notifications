@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Email.Shared.Status;
 
-namespace Altinn.Notifications.Email.Mappers;
+namespace Altinn.Notifications.Email.Core.Mappers;
 
 /// <summary>
 /// Mapper handling parsing to EmailSendResult

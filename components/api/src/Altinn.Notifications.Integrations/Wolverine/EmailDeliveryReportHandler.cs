@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-
+using Altinn.Notifications.Email.Core.Mappers;
+using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Shared.Configuration;
 
 using Azure.Messaging.EventGrid;
@@ -48,7 +49,7 @@ public static class EmailDeliveryReportHandler
     /// <summary>
     /// Handles an email delivery report command by logging the received status update.
     /// </summary>
-    public static Task Handle(EmailDeliveryReportCommand command, ILogger logger)
+    public static async Task Handle(EmailDeliveryReportCommand command, IStatusService statusService, ILogger logger)
     {
         if (SimulateFailure)
         {
@@ -63,14 +64,14 @@ public static class EmailDeliveryReportHandler
             switch (systemEvent)
             {
                 case AcsEmailDeliveryReportReceivedEventData deliveryReport:
-
-                    var sendResult = deliveryReport.Status?.ToString();
-                    logger.LogInformation("Received email delivery report: {OperationId} {SendResult}", deliveryReport.MessageId, sendResult);
-                   
+                    var operationResult = new SendOperationResult()
+                    {
+                        OperationId = deliveryReport.MessageId,
+                        SendResult = EmailSendResultMapper.ParseDeliveryStatus(deliveryReport.Status?.ToString())
+                    };
+                    await statusService.UpdateSendStatus(operationResult);
                     break;
             }
         }
-
-        return Task.CompletedTask;
     }
 }

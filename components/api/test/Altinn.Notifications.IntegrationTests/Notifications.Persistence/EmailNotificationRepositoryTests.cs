@@ -97,7 +97,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None);
+        List<Altinn.Notifications.Core.Models.Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None);
 
         // Assert
         Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);
@@ -143,8 +143,8 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
-        Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        List<Altinn.Notifications.Core.Models.Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Altinn.Notifications.Core.Models.Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
 
         // Assert
         Assert.NotNull(interpolatedContent);
@@ -170,8 +170,8 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
-        Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        List<Altinn.Notifications.Core.Models.Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Altinn.Notifications.Core.Models.Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
 
         // Assert
         Assert.NotNull(result);

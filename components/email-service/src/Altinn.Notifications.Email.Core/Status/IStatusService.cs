@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Email.Shared.Status;
-
-namespace Altinn.Notifications.Email.Core;
+﻿namespace Altinn.Notifications.Email.Core.Status;
 
 /// <summary>
 /// Describes the required public method of the status service

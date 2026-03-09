@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Email.Attributes;
-using Altinn.Notifications.Email.Core;
-using Altinn.Notifications.Email.Mappers;
+using Altinn.Notifications.Email.Core.Mappers;
+using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Shared.Status;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;

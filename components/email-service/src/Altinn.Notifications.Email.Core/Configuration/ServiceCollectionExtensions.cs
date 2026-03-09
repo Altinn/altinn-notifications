@@ -1,5 +1,5 @@
 ﻿using Altinn.Notifications.Email.Core.Sending;
-
+using Altinn.Notifications.Email.Core.Status;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

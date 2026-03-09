@@ -3,8 +3,8 @@ using System.Text;
 using System.Text.Json;
 
 using Altinn.Notifications.Email.Configuration;
-using Altinn.Notifications.Email.Mappers;
-using Altinn.Notifications.Email.Shared.Status;
+using Altinn.Notifications.Email.Core.Mappers;
+using Altinn.Notifications.Email.Core.Status;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 

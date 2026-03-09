@@ -2,7 +2,7 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Shared.Status;
 
-namespace Altinn.Notifications.Email.Core;
+namespace Altinn.Notifications.Email.Core.Status;
 
 /// <summary>
 /// A service implementation of the <see cref="IStatusService"/> class

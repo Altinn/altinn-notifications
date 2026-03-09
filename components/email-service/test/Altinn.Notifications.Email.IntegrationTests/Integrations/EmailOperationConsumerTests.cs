@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Producers;

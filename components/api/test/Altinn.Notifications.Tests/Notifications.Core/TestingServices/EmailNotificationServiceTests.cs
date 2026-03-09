@@ -27,7 +27,7 @@ public class EmailNotificationServiceTests
 {
     private readonly int _publishBatchSize = 500;
     private const string _emailQueueTopicName = "email.queue";
-    private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
+    private readonly Altinn.Notifications.Core.Models.Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
     [Fact]
     public async Task CreateNotification_ToAddressDefined_ResultNew()
@@ -295,11 +295,11 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_ProducerReturnsAllUnpublished_AllEmailsResetToNew()
     {
         // Arrange
-        var firstEmailNotification = new Email(Guid.NewGuid(), "a", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var secondEmailNotification = new Email(Guid.NewGuid(), "b", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var thirdEmailNotification = new Email(Guid.NewGuid(), "c", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var firstEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "a", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "b", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "c", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
 
-        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+        var batch = new List<Altinn.Notifications.Core.Models.Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
@@ -331,7 +331,7 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_ProducerThrowsOperationCanceled_StatusResetForBatch()
     {
         // Arrange
-        List<Email> emails = [_email, _email, _email];
+        List<Altinn.Notifications.Core.Models.Email> emails = [_email, _email, _email];
 
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
         emailNotificationRepositoryMock
@@ -356,7 +356,7 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_CancellationAfterFetchBeforeProduce_StatusResetForBatch()
     {
         // Arrange
-        List<Email> emails = [_email, _email];
+        List<Altinn.Notifications.Core.Models.Email> emails = [_email, _email];
 
         using var cancellationTokenSource = new CancellationTokenSource();
 
@@ -400,11 +400,11 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_ProducerReturnsSubsetUnpublished_OnlyFailedEmailsResetToNew()
     {
         // Arrange
-        var firstEmailNotification = new Email(Guid.NewGuid(), "s1", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var secondEmailNotification = new Email(Guid.NewGuid(), "s2", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var thirdEmailNotification = new Email(Guid.NewGuid(), "s3", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var firstEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "s1", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "s2", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "s3", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
 
-        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+        var batch = new List<Altinn.Notifications.Core.Models.Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
@@ -437,11 +437,11 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_ProducerReturnsInvalidAndValidUnpublished_OnlyValidEmailsResetToNew()
     {
         // Arrange
-        var firstEmailNotification = new Email(Guid.NewGuid(), "x", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var secondEmailNotification = new Email(Guid.NewGuid(), "y", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
-        var thirdEmailNotification = new Email(Guid.NewGuid(), "z", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var firstEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "x", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "y", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Altinn.Notifications.Core.Models.Email(Guid.NewGuid(), "z", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
 
-        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+        var batch = new List<Altinn.Notifications.Core.Models.Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
@@ -475,8 +475,8 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_PublishesSingleBatchContainingAllRetrievedEmails_StopsAfterEmptyFetch()
     {
         // Arrange
-        var emptyEmailNotificationsBatch = new List<Email>();
-        var filledEmailNotificationsBatch = new List<Email>() { _email, _email, _email };
+        var emptyEmailNotificationsBatch = new List<Altinn.Notifications.Core.Models.Email>();
+        var filledEmailNotificationsBatch = new List<Altinn.Notifications.Core.Models.Email>() { _email, _email, _email };
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
 
         emailNotificationRepositoryMock

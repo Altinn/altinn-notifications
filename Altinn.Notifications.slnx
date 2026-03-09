@@ -23,7 +23,6 @@
   </Folder>
   <Folder Name="/Shared/" />
   <Folder Name="/Shared/src/">
-    <Project Path="Altinn.Notifications.Email.Shared/Altinn.Notifications.Email.Shared.csproj" Id="c4b3ddc9-4dd6-4f99-826a-a85035524cee" />
     <Project Path="components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
   </Folder>
   <Folder Name="/Shared/test/">
