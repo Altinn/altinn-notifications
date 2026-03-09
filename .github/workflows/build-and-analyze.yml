@@ -30,7 +30,7 @@ on:
 
 concurrency:
   group: dotnet-analysis-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate-solutions:
@@ -216,17 +216,6 @@ jobs:
         with:
           dotnet-version: |
             10.0.x
-      - name: Wait for Kafka readiness
-        run: |
-          echo "Waiting for Kafka to be fully ready..."
-          for i in {1..30}; do
-            if kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; then
-              echo "✅ Kafka is ready"
-              break
-            fi
-            echo "⏳ Attempt $i/30: Kafka not ready yet, waiting..."
-            sleep 2
-          done
       - name: Setup PostgreSQL
         run: |
           chmod +x tools/dev-setup/dbsetup.sh
