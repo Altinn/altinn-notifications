@@ -43,9 +43,7 @@ public class OrderMapperTests
             Creator = new Creator("ttd"),
             Created = created,
             Recipients = [],
-            IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write"
+            IgnoreReservation = true
         };
 
         NotificationOrderExt expected = new()
@@ -74,9 +72,7 @@ public class OrderMapperTests
                 Self = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}",
                 Status = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}/status"
             },
-            IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write"
+            IgnoreReservation = true
         };
 
         // Act
@@ -305,8 +301,7 @@ public class OrderMapperTests
             RequestedSendTime = sendTime,
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write"
+            ResourceId = "urn:altinn:resource:test"
         };
 
         NotificationOrderRequest expected = new()
@@ -333,8 +328,7 @@ public class OrderMapperTests
             },
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write"
+            ResourceId = "urn:altinn:resource:test"
         };
 
         expected.NotificationChannel = expectedChannel;
@@ -362,8 +356,6 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannel.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write",
             ProcessingStatus = new()
             {
                 LastUpdate = lastUpdated,
@@ -384,8 +376,6 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannelExt.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write",
             ProcessingStatus = new()
             {
                 Status = "Registered",

@@ -212,40 +212,6 @@ public class EmailNotificationOrderRequestValidatorTests
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The condition endpoint must be a valid URL."));
     }
 
-    [Fact]
-    public void Validate_ResourceActionWithoutResourceId_ReturnsFalse()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
-            Body = "This is an email body",
-            ResourceAction = "write"
-        };
-
-        var actual = _validator.Validate(order);
-
-        Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("ResourceAction cannot be specified without a ResourceId."));
-    }
-
-    [Fact]
-    public void Validate_ResourceActionWithResourceId_ReturnsTrue()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
-            Body = "This is an email body",
-            ResourceId = "urn:altinn:resource:test",
-            ResourceAction = "write"
-        };
-
-        var actual = _validator.Validate(order);
-
-        Assert.True(actual.IsValid);
-    }
-
     [Theory]
     [InlineData("æge_sjøåsen@domain.com", true)]
     [InlineData("stephanie@kul.no", true)]
