@@ -1,0 +1,25 @@
+meta {
+  name: v1-get-order-by-id
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{v1OrderId}}
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has id property", function() {
+    expect(res.body).to.have.property("id");
+  });
+}

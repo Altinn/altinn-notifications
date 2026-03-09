@@ -1,0 +1,25 @@
+meta {
+  name: status-feed-seq-zero
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq=0
+  body: none
+  auth: inherit
+}
+
+params:query {
+  seq: 0
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is array", function() {
+    expect(res.body).to.be.an("array");
+  });
+}

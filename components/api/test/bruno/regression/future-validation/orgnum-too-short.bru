@@ -1,0 +1,40 @@
+meta {
+  name: orgnum-too-short
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientOrganization": {
+        "orgNumber": "12345678",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "Email",
+        "emailSettings": {
+          "subject": "test",
+          "body": "test",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions 9 digits", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("9 digits");
+  });
+}

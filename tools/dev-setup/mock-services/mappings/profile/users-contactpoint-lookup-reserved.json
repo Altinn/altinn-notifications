@@ -1,0 +1,39 @@
+{
+  "Priority": 1,
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/profile/api/v1/users/contactpoint/lookup"
+        }
+      ]
+    },
+    "Methods": ["POST"],
+    "Body": {
+      "Matchers": [
+        {
+          "Name": "ContainsMatcher",
+          "Pattern": "99999999901"
+        }
+      ]
+    }
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "contactPointsList": [
+        {
+          "userId": 99901,
+          "nationalIdentityNumber": "99999999901",
+          "isReserved": true,
+          "mobileNumber": "+4799999999",
+          "email": "reserved@example.com"
+        }
+      ]
+    }
+  }
+}

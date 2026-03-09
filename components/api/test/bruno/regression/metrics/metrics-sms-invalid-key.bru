@@ -1,0 +1,26 @@
+meta {
+  name: Metrics SMS Invalid Key
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/metrics/sms
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: wrong-key-value
+}
+
+tests {
+  test("returns 401 Unauthorized", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("mentions Invalid API key", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("invalid api key");
+  });
+}

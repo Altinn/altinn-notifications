@@ -1,0 +1,21 @@
+meta {
+  name: shipment-get-by-id
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{instantEmailShipmentId}}
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

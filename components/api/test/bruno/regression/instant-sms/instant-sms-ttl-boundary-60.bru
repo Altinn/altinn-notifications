@@ -1,0 +1,32 @@
+meta {
+  name: instant-sms-ttl-boundary-60
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-sms-ttl-boundary-60",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 60,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) TTL boundary 60 test"
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 201 Created (TTL=60 is valid boundary)", function() {
+    expect(res.status).to.equal(201);
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Metrics SMS Valid Key
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/metrics/sms
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{process.env.TESTDATA_METRICS_API_KEY}}
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,36 @@
+meta {
+  name: instant-sms-empty-body
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-sms-empty-body",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 120,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": ""
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("should mention body is required", function() {
+    expect(JSON.stringify(res.body).toLowerCase()).to.include("body");
+  });
+}

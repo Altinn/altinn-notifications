@@ -1,0 +1,37 @@
+meta {
+  name: v1-sms-validation-failure
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "Sms",
+    "smsTemplate": {
+      "body": ""
+    },
+    "recipients": [
+      {
+        "mobileNumber": "+4799999999"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("mentions body", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("body");
+  });
+}

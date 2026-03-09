@@ -1,0 +1,22 @@
+meta {
+  name: Metrics SMS Missing Key
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/metrics/sms
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 401 Unauthorized", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("mentions API key required", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("api key required");
+  });
+}

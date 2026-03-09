@@ -1,0 +1,46 @@
+meta {
+  name: v1-create-email-order
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "sendersReference": "regression-v1-ref",
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "Email",
+    "emailTemplate": {
+      "fromAddress": "noreply@altinn.no",
+      "subject": "(REGRESSION) V1 Email Order",
+      "body": "(REGRESSION) V1 email order test",
+      "contentType": "Plain"
+    },
+    "recipients": [
+      {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 202) {
+    const location = res.headers["location"];
+    if (location) {
+      const parts = location.split("/");
+      bru.setVar("v1OrderId", parts[parts.length - 1]);
+    }
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+}

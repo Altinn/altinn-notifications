@@ -1,0 +1,36 @@
+meta {
+  name: instant-sms-invalid-phone
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-sms-invalid-phone",
+    "recipientSms": {
+      "phoneNumber": "12345",
+      "timeToLiveInSeconds": 120,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) Invalid phone test"
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("should mention not a valid mobile number", function() {
+    expect(JSON.stringify(res.body)).to.include("not a valid mobile number");
+  });
+}

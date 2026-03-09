@@ -1,0 +1,24 @@
+meta {
+  name: future-missing-recipient
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-{{senders_reference_guid}}"
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+}

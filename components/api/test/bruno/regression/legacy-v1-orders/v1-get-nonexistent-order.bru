@@ -1,0 +1,21 @@
+meta {
+  name: v1-get-nonexistent-order
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 00000000-0000-0000-0000-000000000000
+}
+
+tests {
+  test("returns 404 Not Found", function() {
+    expect(res.status).to.equal(404);
+  });
+}

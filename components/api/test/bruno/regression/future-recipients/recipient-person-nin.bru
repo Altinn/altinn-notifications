@@ -1,0 +1,36 @@
+meta {
+  name: recipient-person-nin
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-recip-nin-{{senders_reference_guid}}",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "Email",
+        "emailSettings": {
+          "subject": "(REGRESSION) NIN Recipient",
+          "body": "(REGRESSION) NIN recipient test",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.status).to.equal(201);
+  });
+}

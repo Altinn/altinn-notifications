@@ -1,0 +1,42 @@
+meta {
+  name: v1-create-sms-order
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "Sms",
+    "smsTemplate": {
+      "body": "(REGRESSION) V1 SMS order test"
+    },
+    "recipients": [
+      {
+        "mobileNumber": "{{process.env.TESTDATA_MY_PHONE}}"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 202) {
+    const location = res.headers["location"];
+    if (location) {
+      const parts = location.split("/");
+      bru.setVar("v1SmsOrderId", parts[parts.length - 1]);
+    }
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+}

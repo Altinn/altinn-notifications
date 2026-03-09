@@ -1,0 +1,36 @@
+meta {
+  name: condition-true-sends
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-cond-true-{{senders_reference_guid}}",
+    "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_TRUE}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(REGRESSION) Condition True",
+          "body": "(REGRESSION) Should be sent - condition returns true",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.status).to.equal(201);
+  });
+}

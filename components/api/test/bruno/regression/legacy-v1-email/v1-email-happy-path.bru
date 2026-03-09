@@ -1,0 +1,35 @@
+meta {
+  name: v1-email-happy-path
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "Email",
+    "emailTemplate": {
+      "fromAddress": "noreply@altinn.no",
+      "subject": "(REGRESSION) V1 Email Direct",
+      "body": "(REGRESSION) V1 direct email test",
+      "contentType": "Plain"
+    },
+    "recipients": [
+      {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+}
