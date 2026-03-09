@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Altinn.Notifications.Email.Shared\Altinn.Notifications.Email.Shared.csproj" />
     <ProjectReference Include="..\Altinn.Notifications.Email.Core\Altinn.Notifications.Email.Core.csproj" />
     <ProjectReference Include="..\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj" />
   </ItemGroup>

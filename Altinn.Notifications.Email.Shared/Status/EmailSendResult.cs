@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Email.Core.Status;
+﻿namespace Altinn.Notifications.Email.Shared.Status;
 
 /// <summary>
 /// Enum describing email send result types

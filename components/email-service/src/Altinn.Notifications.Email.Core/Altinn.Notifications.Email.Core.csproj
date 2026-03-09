@@ -23,4 +23,8 @@
       <Link>stylecop.json</Link>
     </AdditionalFiles>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Altinn.Notifications.Email.Shared\Altinn.Notifications.Email.Shared.csproj" />
+  </ItemGroup>
 </Project>

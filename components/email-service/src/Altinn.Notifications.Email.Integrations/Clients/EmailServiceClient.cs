@@ -75,7 +75,7 @@ public class EmailServiceClient : IEmailServiceClient
                 SendResult = GetEmailSendResult(e)
             };
 
-            if (emailSendFailResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
+            if (emailSendFailResponse.SendResult == Shared.Status.EmailSendResult.Failed_TransientError)
             {
                 emailSendFailResponse.IntermittentErrorDelay = GetDelayFromString(e.Message);
             }
@@ -88,7 +88,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// Check the email sending operation status
     /// </summary>
     /// <returns>An email send result</returns>
-    public async Task<Core.Status.EmailSendResult> GetOperationUpdate(string operationId)
+    public async Task<Shared.Status.EmailSendResult> GetOperationUpdate(string operationId)
     {
         var operation = new EmailSendOperation(operationId, _emailClient);
         try
@@ -100,7 +100,7 @@ public class EmailServiceClient : IEmailServiceClient
                 var status = operation.Value.Status;
                 if (status == EmailSendStatus.Succeeded)
                 {
-                    return Core.Status.EmailSendResult.Succeeded;
+                    return Shared.Status.EmailSendResult.Succeeded;
                 }
 
                 var response = await operation.WaitForCompletionResponseAsync();
@@ -109,7 +109,7 @@ public class EmailServiceClient : IEmailServiceClient
                     operationId,
                     status,
                     response.ReasonPhrase);
-                return Core.Status.EmailSendResult.Failed;
+                return Shared.Status.EmailSendResult.Failed;
             }
         }
         catch (RequestFailedException e)
@@ -126,7 +126,7 @@ public class EmailServiceClient : IEmailServiceClient
             return GetEmailSendResult(e);
         }
 
-        return Core.Status.EmailSendResult.Sending;
+        return Shared.Status.EmailSendResult.Sending;
     }
 
     /// <summary>
@@ -134,30 +134,30 @@ public class EmailServiceClient : IEmailServiceClient
     /// </summary>
     /// <param name="e">The request failed exception thrown by Azure Communication Services.</param>
     /// <returns>The email send result indicating the type of failure.</returns>
-    internal static Core.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
+    internal static Shared.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
     {
-        Core.Status.EmailSendResult emailSendResult;
+        Shared.Status.EmailSendResult emailSendResult;
 
         if (e.ErrorCode == ErrorTypes.ExcessiveCallVolumeErrorCode)
         {
-            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
+            emailSendResult = Shared.Status.EmailSendResult.Failed_TransientError;
         }
         else if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
         {
-            emailSendResult = Core.Status.EmailSendResult.Failed_SupressedRecipient;
+            emailSendResult = Shared.Status.EmailSendResult.Failed_SupressedRecipient;
         }
         else if (e.Message.Contains(ErrorTypes.InvalidEmailFormatErrorMessage))
         {
-            emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
+            emailSendResult = Shared.Status.EmailSendResult.Failed_InvalidEmailFormat;
         }
         else if ((e.Status >= 500 && e.Status < 600) || e.Status == 0)
         {
             // Handle all 5xx errors and status 0 (network/no response) as transient errors
-            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
+            emailSendResult = Shared.Status.EmailSendResult.Failed_TransientError;
         }
         else
         {
-            emailSendResult = Core.Status.EmailSendResult.Failed;
+            emailSendResult = Shared.Status.EmailSendResult.Failed;
         }
 
         return emailSendResult;
