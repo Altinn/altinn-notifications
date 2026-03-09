@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Shared.Configuration;
+
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Azure.Messaging.ServiceBus;
@@ -56,7 +57,19 @@ public static class EmailDeliveryReportHandler
 
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
-        logger.LogInformation("Received email delivery report: {EventType}", eventGridEvent.EventType);
+        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
+        if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
+        {
+            switch (systemEvent)
+            {
+                case AcsEmailDeliveryReportReceivedEventData deliveryReport:
+
+                    var sendResult = deliveryReport.Status?.ToString();
+                    logger.LogInformation("Received email delivery report: {OperationId} {SendResult}", deliveryReport.MessageId, sendResult);
+                   
+                    break;
+            }
+        }
 
         return Task.CompletedTask;
     }
