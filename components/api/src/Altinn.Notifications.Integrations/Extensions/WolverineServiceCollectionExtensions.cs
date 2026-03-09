@@ -49,10 +49,8 @@ public static class WolverineServiceCollectionExtensions
 
                 if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
                 {
-                    opts.PublishMessage<EmailDeliveryReportCommand>()
-                    .ToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName!);
-
                     opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                    .InteropWith(new EventGridEnvelopeMapper())
                     .ListenerCount(wolverineSettings.ListenerCount);
                 }
 

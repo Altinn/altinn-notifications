@@ -25,7 +25,7 @@ public static class EmailDeliveryReportHandler
     /// When true, the handler throws to simulate a failure.
     /// Use in development to test retry and dead-letter behavior.
     /// </summary>
-    public static bool SimulateFailure { get; set; } = true;
+    public static bool SimulateFailure { get; set; } = false;
 
     /// <summary>
     /// Configures error handling for the email delivery report queue handler.
@@ -54,7 +54,9 @@ public static class EmailDeliveryReportHandler
             throw new InvalidOperationException("Simulated failure for testing purposes.");
         }
 
-        logger.LogInformation("Received email delivery report: {Message}", command.Message);
+        var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
+
+        logger.LogInformation("Received email delivery report: {EventType}", eventGridEvent.EventType);
 
         return Task.CompletedTask;
     }

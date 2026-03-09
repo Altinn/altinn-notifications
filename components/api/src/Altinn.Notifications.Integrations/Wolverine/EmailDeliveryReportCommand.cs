@@ -8,4 +8,4 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// Command representing an email delivery report received from the ASB queue.
 /// </summary>
 public record EmailDeliveryReportCommand(
-    string Message);
+    ServiceBusReceivedMessage Message);
