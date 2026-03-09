@@ -5,16 +5,19 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.23@sha256:d17d8d6511aee3dd54b
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
-COPY components/email-service/src/Altinn.Notifications.Email/*.csproj ./src/Altinn.Notifications.Email/
-COPY components/email-service/src/Altinn.Notifications.Email.Core/*.csproj ./src/Altinn.Notifications.Email.Core/
-COPY components/email-service/src/Altinn.Notifications.Email.Integrations/*.csproj ./src/Altinn.Notifications.Email.Integrations/
+# Paths mirror the repo structure so cross-component project references resolve correctly
+COPY components/email-service/src/Altinn.Notifications.Email/*.csproj ./components/email-service/src/Altinn.Notifications.Email/
+COPY components/email-service/src/Altinn.Notifications.Email.Core/*.csproj ./components/email-service/src/Altinn.Notifications.Email.Core/
+COPY components/email-service/src/Altinn.Notifications.Email.Integrations/*.csproj ./components/email-service/src/Altinn.Notifications.Email.Integrations/
+COPY components/shared/src/Altinn.Notifications.Shared/*.csproj ./components/shared/src/Altinn.Notifications.Shared/
 
-RUN dotnet restore ./src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
+RUN dotnet restore ./components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Copy the remaining source code and build the application
-COPY components/email-service/src ./src
-RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
-
+COPY components/email-service/src ./components/email-service/src
+COPY components/shared/src ./components/shared/src
+RUN dotnet publish -c Release -o out \
+    ./components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Use the official .NET runtime image with Alpine Linux as a base image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.2-alpine3.23@sha256:8e21337e482e353c958681789872b3451e966e07c259b9a6f9a8b7902749a785 AS final
