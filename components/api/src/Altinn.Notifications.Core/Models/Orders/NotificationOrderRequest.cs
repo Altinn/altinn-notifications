@@ -49,11 +49,6 @@ public class NotificationOrderRequest
     public string? ResourceId { get; internal set; }
 
     /// <summary>
-    /// Gets the action to authorize against the resource
-    /// </summary>
-    public string? ResourceAction { get; internal set; }
-
-    /// <summary>
     /// Gets or sets the condition endpoint used to check the send condition
     /// </summary>
     public Uri? ConditionEndpoint { get; set; }
@@ -70,8 +65,7 @@ public class NotificationOrderRequest
         List<Recipient> recipients,
         bool? ignoreReservation,
         string? resourceId,
-        Uri? conditionEndpoint,
-        string? resourceAction)
+        Uri? conditionEndpoint)
     {
         SendersReference = sendersReference;
         Creator = new(creatorShortName);
@@ -81,7 +75,6 @@ public class NotificationOrderRequest
         Recipients = recipients;
         IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
-        ResourceAction = resourceAction;
         ConditionEndpoint = conditionEndpoint;
     }
 
