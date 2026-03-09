@@ -52,7 +52,7 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
 
         if (recipientsWithoutContactPoint.Count > 0)
         {
-            await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, order.ResourceId);
+            await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, order.ResourceId, OrderLifecycleStage.Processing, order.ResourceAction);
         }
 
         var (smsRecipients, emailRecipients) = OrganizeRecipientsByChannel(recipients);

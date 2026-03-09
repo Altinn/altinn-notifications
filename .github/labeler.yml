@@ -1,4 +1,9 @@
 # Labels for pull requests
+review/component/shared:
+  - changed-files:
+      - any-glob-to-any-file:
+          - components/shared/**
+
 review/component/api:
   - changed-files:
       - any-glob-to-any-file:

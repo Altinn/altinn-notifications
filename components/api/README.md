@@ -13,7 +13,7 @@ The main API component for Altinn Notifications, providing endpoints for creatin
 
 **Build:**
 ```bash
-dotnet build Altinn.Notifications.API.sln
+dotnet build Altinn.Notifications.API.slnx
 ```
 
 **Run:**
@@ -26,7 +26,7 @@ dotnet run
 
 **Test:**
 ```bash
-dotnet test Altinn.Notifications.API.sln
+dotnet test Altinn.Notifications.API.slnx
 ```
 
 ## 🐳 Containerization

@@ -34,6 +34,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>
+    public string? ResourceAction { get; internal set; }
+
+    /// <inheritdoc/>
     public OrderType Type { get; internal set; }
 
     /// <inheritdoc/>>

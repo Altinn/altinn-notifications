@@ -8,18 +8,20 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class ResourceLimitRepositoryTests : IAsyncLifetime
 {
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         // Clean up: Reset the email timeout to NULL after tests
         string cleanupSql = @"UPDATE notifications.resourcelimitlog
                               SET emaillimittimeout = NULL
                               WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
         await PostgreUtil.RunSql(cleanupSql);
+
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

@@ -61,7 +61,8 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
                 return deserializationErrorLogged;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.FromMilliseconds(100),
+            TestContext.Current.CancellationToken);
 
         // Assert
         emailNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
@@ -139,7 +140,9 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
@@ -209,7 +212,9 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
                     return false;
                 }
             },
-            TimeSpan.FromSeconds(15));
+            TimeSpan.FromSeconds(15),
+            null,
+            TestContext.Current.CancellationToken);
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -228,15 +233,17 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
     /// <summary>
     /// Called when an object is no longer needed.
     /// </summary>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await Dispose(true);
+
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
     /// Called immediately after the class has been created, before it is used.
     /// </summary>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await KafkaUtil.CreateTopicAsync(_emailStatusUpdatedRetryTopicName);
 

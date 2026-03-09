@@ -31,7 +31,7 @@ Relevant implementations:
 
 **Build:**
 ```bash
-dotnet build Altinn.Notifications.Sms.sln
+dotnet build Altinn.Notifications.Sms.slnx
 ```
 
 **Run:**
@@ -42,7 +42,7 @@ dotnet run
 
 **Test:**
 ```bash
-dotnet test Altinn.Notifications.Sms.sln
+dotnet test Altinn.Notifications.Sms.slnx
 ```
 
 ## 🐳 Containerization

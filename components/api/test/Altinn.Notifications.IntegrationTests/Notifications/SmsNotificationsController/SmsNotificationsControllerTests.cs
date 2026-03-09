@@ -51,7 +51,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -66,7 +66,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -81,7 +81,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -99,9 +99,9 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -123,7 +123,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -153,8 +153,8 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -190,8 +190,8 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

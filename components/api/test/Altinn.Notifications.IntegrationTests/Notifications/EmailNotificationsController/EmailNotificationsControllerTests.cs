@@ -53,7 +53,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -68,7 +68,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -86,9 +86,9 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         };
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
-        string content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
         // Assert
@@ -110,7 +110,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -140,13 +140,13 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(respoonseString);
+        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
         Assert.NotNull(summaryExt);
         Assert.Equal(id, summaryExt.OrderId);
 
@@ -177,13 +177,13 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(respoonseString);
+        EmailNotificationSummaryExt? summaryExt = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
         Assert.NotNull(summaryExt);
         Assert.Equal(id, summaryExt.OrderId);
 

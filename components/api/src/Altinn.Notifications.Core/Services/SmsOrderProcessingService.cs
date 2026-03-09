@@ -96,7 +96,8 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expirationDateTime,
                 smsAddresses,
                 smsRecipient,
-                segmentsCount);
+                segmentsCount,
+                order.IgnoreReservation ?? false);
         }
     }
 
@@ -224,7 +225,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         if (recipientsMissingSmsContact.Count > 0)
         {
-            await _contactPointService.AddSmsContactPoints(recipientsMissingSmsContact, order.ResourceId);
+            await _contactPointService.AddSmsContactPoints(recipientsMissingSmsContact, order.ResourceId, OrderLifecycleStage.Processing, order.ResourceAction);
         }
 
         return order.Recipients;

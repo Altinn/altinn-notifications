@@ -10,15 +10,18 @@
 
   <ItemGroup>
     <PackageReference Include="Altinn.ApiClients.Maskinporten" Version="10.0.1" />
-    <PackageReference Include="Altinn.Common.AccessTokenClient" Version="3.2.0" />
+    <PackageReference Include="Altinn.Common.AccessTokenClient" Version="3.2.1" />
     <PackageReference Include="Altinn.Common.PEP" Version="4.2.3" />
-    <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
+    <PackageReference Include="Confluent.Kafka" Version="2.13.1" />
     <PackageReference Include="Confluent.Kafka.Extensions.OpenTelemetry" Version="0.4.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.3" />
+    <PackageReference Include="WolverineFx" Version="5.16.2" />
+    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.16.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+    <ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">

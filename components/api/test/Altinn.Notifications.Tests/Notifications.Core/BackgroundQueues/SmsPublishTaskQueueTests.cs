@@ -52,7 +52,7 @@ public class SmsPublishTaskQueueTests
         var waitTask = queue.WaitAsync(SendingTimePolicy.Daytime, cancellationTokenSource.Token);
 
         // Small delay to ensure waiter is registered
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         var enqueued = queue.TryEnqueue(SendingTimePolicy.Daytime);
 

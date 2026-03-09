@@ -37,7 +37,7 @@ public class InstantOrderRequestServiceTests
         var service = GetTestService(orderRepository: orderRepositoryMock.Object);
 
         // Act
-        var result = await service.RetrieveTrackingInformation(creatorName, idempotencyId);
+        var result = await service.RetrieveTrackingInformation(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -72,7 +72,7 @@ public class InstantOrderRequestServiceTests
         var service = GetTestService(orderRepository: orderRepositoryMock.Object);
 
         // Act
-        var result = await service.RetrieveTrackingInformation(creatorName, idempotencyId);
+        var result = await service.RetrieveTrackingInformation(creatorName, idempotencyId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -187,10 +187,10 @@ public class InstantOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder);
+        var result = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the short message to be sent.
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -387,10 +387,10 @@ public class InstantOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        await service.PersistInstantSmsNotificationAsync(instantNotificationOrder);
+        await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the short message to be sent.
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(16, initiatedSmsMessageCount);
@@ -505,7 +505,7 @@ public class InstantOrderRequestServiceTests
         };
 
         // Act
-        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -585,8 +585,8 @@ public class InstantOrderRequestServiceTests
         };
 
         // Act
-        await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(sentEmail);
@@ -664,8 +664,8 @@ public class InstantOrderRequestServiceTests
         };
 
         // Act
-        await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(sentEmail);

@@ -46,7 +46,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -69,7 +69,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -92,7 +92,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -123,7 +123,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -151,7 +151,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -83,7 +83,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             await using (summary.FileStream)
             {
                 using var ms = new MemoryStream();
-                await summary.FileStream.CopyToAsync(ms);
+                await summary.FileStream.CopyToAsync(ms, TestContext.Current.CancellationToken);
                 byte[] bytes = ms.ToArray();
 
                 string expectedHash = Convert.ToBase64String(MD5.HashData(bytes));
@@ -125,7 +125,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             await using (summary.FileStream)
             {
                 using var ms = new MemoryStream();
-                await summary.FileStream.CopyToAsync(ms);
+                await summary.FileStream.CopyToAsync(ms, TestContext.Current.CancellationToken);
                 byte[] bytes = ms.ToArray();
 
                 string expectedHash = Convert.ToBase64String(MD5.HashData(bytes));

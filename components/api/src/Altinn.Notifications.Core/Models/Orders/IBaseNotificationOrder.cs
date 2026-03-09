@@ -38,6 +38,11 @@ public interface IBaseNotificationOrder
     public string? ResourceId { get; }
 
     /// <summary>
+    /// Gets the action to authorize against the resource. Defaults to "read" when not specified.
+    /// </summary>
+    public string? ResourceAction { get; }
+
+    /// <summary>
     /// Gets the creator of the notification
     /// </summary>
     public Creator Creator { get; }

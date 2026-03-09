@@ -57,7 +57,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         httpRequestMessage.Headers.Add("x-api-key", "valid-api-key");
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -90,11 +90,11 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        Assert.Contains("API key required", await response.Content.ReadAsStringAsync());
+        Assert.Contains("API key required", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         httpRequestMessage.Headers.Add("x-api-key", "invalid-api-key");
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -157,7 +157,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

@@ -96,10 +96,10 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the background Task.Run to complete
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -260,10 +260,10 @@ public class InstantSmsOrderRequestServiceTests
             defaultSmsSender: defaultSmsSenderIdentifier);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the background Task.Run to complete
-        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -354,7 +354,7 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -442,7 +442,7 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
