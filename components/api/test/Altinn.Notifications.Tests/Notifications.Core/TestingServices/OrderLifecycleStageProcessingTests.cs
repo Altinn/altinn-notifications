@@ -38,7 +38,8 @@ public class OrderLifecycleStageProcessingTests
             .Setup(c => c.AddEmailContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderLifecycleStage>()))
+                It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateEmailProcessingService(contactPointMock.Object);
@@ -51,7 +52,8 @@ public class OrderLifecycleStageProcessingTests
             c => c.AddEmailContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderLifecycleStage.Processing),
+                OrderLifecycleStage.Processing,
+                It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -67,7 +69,8 @@ public class OrderLifecycleStageProcessingTests
             .Setup(c => c.AddSmsContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderLifecycleStage>()))
+                It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateSmsProcessingService(contactPointMock.Object);
@@ -80,7 +83,8 @@ public class OrderLifecycleStageProcessingTests
             c => c.AddSmsContactPoints(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderLifecycleStage.Processing),
+                OrderLifecycleStage.Processing,
+                It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -100,7 +104,8 @@ public class OrderLifecycleStageProcessingTests
             .Setup(c => c.AddEmailAndSmsContactPointsAsync(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderLifecycleStage>()))
+                It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var service = CreateEmailAndSmsProcessingService(contactPointMock.Object);
@@ -113,7 +118,8 @@ public class OrderLifecycleStageProcessingTests
             c => c.AddEmailAndSmsContactPointsAsync(
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderLifecycleStage.Processing),
+                OrderLifecycleStage.Processing,
+                It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -134,7 +140,8 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<NotificationChannel>(),
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderLifecycleStage>()))
+                It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var service = CreatePreferredChannelProcessingService(contactPointMock.Object);
@@ -148,7 +155,8 @@ public class OrderLifecycleStageProcessingTests
                 NotificationChannel.EmailPreferred,
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderLifecycleStage.Processing),
+                OrderLifecycleStage.Processing,
+                It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -169,7 +177,8 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<NotificationChannel>(),
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                It.IsAny<OrderLifecycleStage>()))
+                It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var service = CreatePreferredChannelProcessingService(contactPointMock.Object);
@@ -183,7 +192,8 @@ public class OrderLifecycleStageProcessingTests
                 NotificationChannel.SmsPreferred,
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
-                OrderLifecycleStage.Processing),
+                OrderLifecycleStage.Processing,
+                It.IsAny<string?>()),
             Times.Once);
     }
 

@@ -151,6 +151,7 @@ public static partial class NotificationOrderChainMapper
         {
             OrgNumber = recipientOrganizationExt.OrgNumber,
             ResourceId = recipientOrganizationExt.ResourceId,
+            ResourceAction = recipientOrganizationExt.ResourceAction,
             ChannelSchema = (NotificationChannel)recipientOrganizationExt.ChannelSchema,
             SmsSettings = recipientOrganizationExt.SmsSettings?.MapToSmsSendingOptions(),
             EmailSettings = recipientOrganizationExt.EmailSettings?.MapToEmailSendingOptions()
@@ -170,6 +171,7 @@ public static partial class NotificationOrderChainMapper
             SmsSettings = smsSettings,
             EmailSettings = emailSettings,
             ResourceId = recipientPersonExt.ResourceId,
+            ResourceAction = recipientPersonExt.ResourceAction,
             IgnoreReservation = recipientPersonExt.IgnoreReservation,
             NationalIdentityNumber = recipientPersonExt.NationalIdentityNumber,
             ChannelSchema = (NotificationChannel)recipientPersonExt.ChannelSchema
@@ -189,6 +191,7 @@ public static partial class NotificationOrderChainMapper
             SmsSettings = smsSettings,
             EmailSettings = emailSettings,
             ResourceId = recipientExternalIdentityExt.ResourceId,
+            ResourceAction = recipientExternalIdentityExt.ResourceAction,
             ExternalIdentity = recipientExternalIdentityExt.ExternalIdentity,
             ChannelSchema = (NotificationChannel)recipientExternalIdentityExt.ChannelSchema
         };

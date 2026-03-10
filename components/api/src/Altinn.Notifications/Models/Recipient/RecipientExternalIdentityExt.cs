@@ -26,6 +26,12 @@ public class RecipientExternalIdentityExt : RecipientBaseExt
     public string? ResourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the action to authorize against the resource. Defaults to "read" when not specified.
+    /// </summary>
+    [JsonPropertyName("resourceAction")]
+    public string? ResourceAction { get; set; }
+
+    /// <summary>
     /// The channel scheme for delivering the notification.
     /// </summary>
     /// <seealso cref="NotificationChannelExt"/>
