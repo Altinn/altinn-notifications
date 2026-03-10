@@ -12,10 +12,13 @@
     <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />
     <PackageReference Include="Confluent.Kafka" Version="2.13.1" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.3" />
+    <PackageReference Include="WolverineFx" Version="5.16.2" />
+    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.16.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Altinn.Notifications.Email.Core\Altinn.Notifications.Email.Core.csproj" />
+    <ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
