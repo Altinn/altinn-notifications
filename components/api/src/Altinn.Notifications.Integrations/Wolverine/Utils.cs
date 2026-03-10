@@ -22,6 +22,7 @@ internal static class Utils
             null => EmailNotificationResultType.Failed,
             "Bounced" => EmailNotificationResultType.Failed_Bounced,
             "Delivered" => EmailNotificationResultType.Delivered,
+            "Expanded" => EmailNotificationResultType.Failed,
             "Failed" => EmailNotificationResultType.Failed,
             "FilteredSpam" => EmailNotificationResultType.Failed_FilteredSpam,
             "Quarantined" => EmailNotificationResultType.Failed_Quarantined,
