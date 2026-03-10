@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Shared.Configuration;
 
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -66,6 +65,12 @@ public static class EmailDeliveryReportHandler
             switch (systemEvent)
             {
                 case AcsEmailDeliveryReportReceivedEventData deliveryReport:
+                    if (string.IsNullOrWhiteSpace(deliveryReport.MessageId))
+                    {
+                        logger.LogError("Received delivery report with missing MessageId. Subject: {Subject}", eventGridEvent.Subject);
+                        return;
+                    }
+
                     var operationResult = new EmailSendOperationResult()
                     {
                         OperationId = deliveryReport.MessageId,
