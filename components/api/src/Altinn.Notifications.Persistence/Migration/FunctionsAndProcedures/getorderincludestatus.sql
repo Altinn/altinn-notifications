@@ -101,7 +101,7 @@ RETURNS TABLE(
 LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
-    _target_orderid INTEGER;
+    _target_orderid BIGINT;
     _succeededEmailCount BIGINT;
     _generatedEmailCount BIGINT;
     _succeededSmsCount BIGINT;
