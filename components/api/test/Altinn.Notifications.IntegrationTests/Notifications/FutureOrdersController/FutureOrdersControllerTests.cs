@@ -773,7 +773,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(499, objectResult.StatusCode);
         Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(objectResult.StatusCode, problemDetails.Status);
-        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("client disconnected", problemDetails.Title, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -804,7 +804,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(422, objectResult.StatusCode);
         Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(objectResult.StatusCode, problemDetails.Status);
-        Assert.Equal("Missing contact information for recipient(s)", problemDetails.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", problemDetails.Title);
     }
 
     [Fact]
