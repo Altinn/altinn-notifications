@@ -36,9 +36,19 @@ namespace Altinn.Notifications.Validators.Recipient
                     .WithMessage("ResourceId must have a valid syntax.");
 
                 RuleFor(options => options!.ResourceAction)
-                    .Empty()
-                    .When(options => string.IsNullOrWhiteSpace(options!.ResourceId))
-                    .WithMessage("ResourceAction cannot be specified without a ResourceId.");
+                    .Must((recipient, resourceAction) =>
+                    {
+                        if (string.IsNullOrWhiteSpace(recipient!.ResourceId))
+                        {
+                            return string.IsNullOrEmpty(resourceAction);
+                        }
+
+                        return string.IsNullOrEmpty(resourceAction) || !string.IsNullOrWhiteSpace(resourceAction);
+                    })
+                    .WithMessage((recipient, _) =>
+                        string.IsNullOrWhiteSpace(recipient!.ResourceId)
+                        ? "ResourceAction cannot be specified without a ResourceId."
+                        : "ResourceAction cannot be blank or whitespace.");
             });
         }
     }
