@@ -1,0 +1,48 @@
+meta {
+  name: v1-sms-ep-happy-path
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "sendersReference": "regression-v1-sms-ep-{{senders_reference_guid}}",
+    "body": "(REGRESSION) V1 SMS Endpoint Happy Path",
+    "recipients": [
+      {
+        "mobileNumber": "{{process.env.TESTDATA_MY_PHONE}}"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 202) {
+    const location = res.headers["location"];
+    if (location) {
+      const parts = location.split("/");
+      bru.setVar("v1SmsEpOrderId", parts[parts.length - 1]);
+    }
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+
+  test("response has orderId", function() {
+    expect(res.body).to.have.property("orderId");
+  });
+
+  test("Location header is set", function() {
+    expect(res.headers).to.have.property("location");
+  });
+}

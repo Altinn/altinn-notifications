@@ -1,0 +1,22 @@
+meta {
+  name: health-check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200 Healthy", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response indicates healthy", function() {
+    const body = (typeof res.body === "string" ? res.body : JSON.stringify(res.body)).toLowerCase();
+    expect(body).to.include("healthy");
+  });
+}
