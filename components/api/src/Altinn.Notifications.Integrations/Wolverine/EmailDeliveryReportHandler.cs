@@ -73,7 +73,14 @@ public static class EmailDeliveryReportHandler
                     };
                     await emailNotificationService.UpdateSendStatus(operationResult);
                     break;
+                default:
+                    logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
+                    break;
             }
+        }
+        else
+        {
+            logger.LogWarning("Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}", eventGridEvent.Subject, eventGridEvent.EventType);
         }
     }
 }
