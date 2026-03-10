@@ -16,13 +16,11 @@ public class WolverineSettingsTests
     }
 
     [Fact]
-    public void WolverineSettings_QueuePolicies_DefaultToEmptyDelays()
+    public void QueueRetryPolicy_DefaultsToEmptyDelays()
     {
-        var settings = new WolverineSettings();
+        var policy = new QueueRetryPolicy();
 
-        Assert.Empty(settings.EmailDeliveryReportQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.EmailDeliveryReportQueuePolicy.GetScheduleDelays());
-        Assert.Empty(settings.SmsDeliveryReportQueuePolicy.GetCooldownDelays());
-        Assert.Empty(settings.SmsDeliveryReportQueuePolicy.GetScheduleDelays());
+        Assert.Empty(policy.GetCooldownDelays());
+        Assert.Empty(policy.GetScheduleDelays());
     }
 }
