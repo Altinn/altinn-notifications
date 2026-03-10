@@ -15,7 +15,8 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Persistence.Repository;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -26,8 +27,47 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class SmsNotificationServiceTests
 {
+    private readonly int _publishBatchSize = 3;
     private const string _smsQueueTopicName = "test.sms.queue";
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldNotCallTryMarkOrderAsCompleted()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            SendResult = SmsNotificationResultType.Accepted,
+            GatewayReference = Guid.NewGuid().ToString()
+        };
+
+        var mockGuidService = new Mock<IGuidService>();
+        var mockKafkaProducer = new Mock<IKafkaProducer>();
+        var mockDateTimeService = new Mock<IDateTimeService>();
+        var mockRepo = new Mock<ISmsNotificationRepository>();
+
+        var service = new SmsNotificationService(
+            mockGuidService.Object,
+            mockKafkaProducer.Object,
+            mockDateTimeService.Object,
+            mockRepo.Object,
+            Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
+            Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        mockRepo.Verify(
+        r => r.UpdateSendStatus(
+            sendOperationResult.NotificationId,
+            SmsNotificationResultType.Accepted,
+            sendOperationResult.GatewayReference),
+        Times.Once);
+    }
 
     [Fact]
     public async Task CreateNotification_RecipientNumberIsDefined_ResultNew()
@@ -653,5 +693,49 @@ public class SmsNotificationServiceTests
         mock.Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
         return mock.Object;
+    }
+
+    /// <summary>
+    /// Spy that extends SmsNotificationRepository and overrides the virtual
+    /// <see cref="ExecuteUpdateWithTransactionAsync"/> to capture every argument
+    /// without hitting the database.
+    /// </summary>
+    private sealed class SpySmsNotificationRepository : SmsNotificationRepository
+    {
+        public bool CapturedStatusIsAcceptedOrSucceeded { get; set; }
+
+        public NotificationChannel? CapturedChannel { get; private set; }
+
+        public Guid? CapturedNotificationId { get; private set; }
+
+        public string? CapturedSecondaryIdentifier { get; private set; }
+
+        public SendStatusIdentifierType? CapturedSecondaryIdentifierType { get; private set; }
+
+        public SpySmsNotificationRepository(
+            Npgsql.NpgsqlDataSource dataSource,
+            ILogger<SmsNotificationRepository> logger,
+            IOptions<NotificationConfig> config)
+            : base(dataSource, logger, config)
+        {
+        }
+
+        protected override Task ExecuteUpdateWithTransactionAsync(
+            string sqlCommand,
+            Action<Npgsql.NpgsqlCommand> parameters,
+            NotificationChannel channel,
+            Guid? notificationId,
+            string? secondaryIdentifier,
+            bool statusIsAcceptedOrSucceeded,
+            SendStatusIdentifierType secondaryIdentifierType)
+        {
+            CapturedStatusIsAcceptedOrSucceeded = statusIsAcceptedOrSucceeded;
+            CapturedChannel = channel;
+            CapturedNotificationId = notificationId;
+            CapturedSecondaryIdentifier = secondaryIdentifier;
+            CapturedSecondaryIdentifierType = secondaryIdentifierType;
+
+            return Task.CompletedTask;
+        }
     }
 }
