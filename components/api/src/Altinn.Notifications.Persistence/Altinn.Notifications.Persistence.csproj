@@ -46,10 +46,6 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Migration\v0.75\" />
-  </ItemGroup>
-
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
       <DbToolsExecuted>false</DbToolsExecuted>

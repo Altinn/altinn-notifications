@@ -38,17 +38,17 @@ BEGIN
     IF NOT FOUND THEN
         RETURN;
     END IF;
-    
-     -- Check if order is already cancelled
-     IF order_record.processedstatus = 'Cancelled' THEN
+
+    -- Check if order is already cancelled
+    IF order_record.processedstatus = 'Cancelled' THEN
         RETURN QUERY 
         SELECT TRUE AS cancelallowed,
-           order_details.*
+               order_details.*
         FROM notifications.getorder_includestatus_v4(_alternateid, _creatorname) AS order_details;
-     ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
+    ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
         RETURN QUERY 
         SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
-     ELSE 
+    ELSE 
         -- Cancel the order by updating its status
         UPDATE notifications.orders o
         SET processedstatus = 'Cancelled', processed = NOW()
@@ -63,7 +63,7 @@ BEGIN
 END;
 $$;
 
--- New version v5 introduced in https://github.com/Altinn/altinn-notifications/issues/1311
+-- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1311
 
 CREATE OR REPLACE FUNCTION notifications.cancelorder_v2(
     _alternateid uuid,
@@ -91,40 +91,40 @@ RETURNS TABLE(
 LANGUAGE plpgsql
 AS $$
 DECLARE
-order_record RECORD;
+    order_record RECORD;
 BEGIN
     -- Retrieve the order and its status
-SELECT o.requestedsendtime, o.processedstatus
-INTO order_record
-FROM notifications.orders o
-WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+    SELECT o.requestedsendtime, o.processedstatus
+    INTO order_record
+    FROM notifications.orders o
+    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
 
--- If no order is found, return an empty result set
-IF NOT FOUND THEN
+    -- If no order is found, return an empty result set
+    IF NOT FOUND THEN
         RETURN;
-END IF;
-    
-     -- Check if order is already cancelled
-     IF order_record.processedstatus = 'Cancelled' THEN
-        RETURN QUERY
-SELECT TRUE AS cancelallowed,
-       order_details.*
-FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
-ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
-        RETURN QUERY
-SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
-ELSE 
-        -- Cancel the order by updating its status
-UPDATE notifications.orders o
-SET processedstatus = 'Cancelled', processed = NOW()
-WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+    END IF;
 
--- Retrieve the updated order details
-RETURN QUERY
-SELECT TRUE AS cancelallowed,
-       order_details.*
-FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
-END IF;
+    -- Check if order is already cancelled
+    IF order_record.processedstatus = 'Cancelled' THEN
+        RETURN QUERY 
+        SELECT TRUE AS cancelallowed,
+               order_details.*
+        FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
+    ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
+        RETURN QUERY 
+        SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
+    ELSE 
+        -- Cancel the order by updating its status
+        UPDATE notifications.orders o
+        SET processedstatus = 'Cancelled', processed = NOW()
+        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+
+        -- Retrieve the updated order details
+        RETURN QUERY 
+        SELECT TRUE AS cancelallowed,
+               order_details.*
+        FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
+    END IF;
 END;
 $$;
 
@@ -762,45 +762,45 @@ RETURNS TABLE(
 LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
-_target_orderid INTEGER;
+    _target_orderid INTEGER;
     _succeededEmailCount BIGINT;
     _generatedEmailCount BIGINT;
     _succeededSmsCount BIGINT;
     _generatedSmsCount BIGINT;
 BEGIN
-SELECT _id INTO _target_orderid
-FROM notifications.orders
-WHERE orders.alternateid = _alternateid
-  AND orders.creatorname = _creatorname;
+    SELECT _id INTO _target_orderid
+    FROM notifications.orders
+    WHERE orders.alternateid = _alternateid
+    AND orders.creatorname = _creatorname;
 
-SELECT
-    SUM(CASE WHEN result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END),
-    COUNT(1) AS generatedEmailCount
-INTO _succeededEmailCount, _generatedEmailCount
-FROM notifications.emailnotifications
-WHERE emailnotifications._orderid = _target_orderid;
+    SELECT
+        SUM(CASE WHEN result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END),
+        COUNT(1) AS generatedEmailCount
+    INTO _succeededEmailCount, _generatedEmailCount
+    FROM notifications.emailnotifications
+    WHERE emailnotifications._orderid = _target_orderid;
 
-SELECT
-    SUM(CASE WHEN result = 'Accepted' THEN 1 ELSE 0 END),
-    COUNT(1) AS generatedSmsCount
-INTO _succeededSmsCount, _generatedSmsCount
-FROM notifications.smsnotifications
-WHERE smsnotifications._orderid = _target_orderid;
+    SELECT
+        SUM(CASE WHEN result = 'Accepted' THEN 1 ELSE 0 END),
+        COUNT(1) AS generatedSmsCount
+    INTO _succeededSmsCount, _generatedSmsCount
+    FROM notifications.smsnotifications
+    WHERE smsnotifications._orderid = _target_orderid;
 
-RETURN QUERY
-SELECT
-    orders.alternateid,
-    orders.creatorname,
-    orders.sendersreference,
-    orders.created,
-    orders.requestedsendtime,
-    orders.processed,
-    orders.processedstatus,
-    orders.notificationorder->>'NotificationChannel',
-    CASE
-    WHEN orders.notificationorder->>'IgnoreReservation' IS NULL THEN NULL
-    ELSE (orders.notificationorder->>'IgnoreReservation')::BOOLEAN
-END AS IgnoreReservation,
+    RETURN QUERY
+    SELECT
+        orders.alternateid,
+        orders.creatorname,
+        orders.sendersreference,
+        orders.created,
+        orders.requestedsendtime,
+        orders.processed,
+        orders.processedstatus,
+        orders.notificationorder->>'NotificationChannel',
+        CASE 
+            WHEN orders.notificationorder->>'IgnoreReservation' IS NULL THEN NULL
+            ELSE (orders.notificationorder->>'IgnoreReservation')::BOOLEAN
+        END AS IgnoreReservation,
         orders.notificationorder->>'ResourceId',
         orders.notificationorder->>'ResourceAction',
         orders.notificationorder->>'ConditionEndpoint',
