@@ -27,7 +27,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class SmsNotificationServiceTests
 {
-    private readonly int _publishBatchSize = 3;
+    private readonly int _publishBatchSize = 500;
     private const string _smsQueueTopicName = "test.sms.queue";
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
 
@@ -36,7 +36,6 @@ public class SmsNotificationServiceTests
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();
-        string operationId = Guid.NewGuid().ToString();
         SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notificationid,

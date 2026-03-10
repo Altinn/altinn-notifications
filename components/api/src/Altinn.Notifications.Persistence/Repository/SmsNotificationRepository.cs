@@ -133,8 +133,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
-        var statusIsAccepted = result == SmsNotificationResultType.Accepted;
-
         await ExecuteUpdateWithTransactionAsync(
             _updateSmsNotificationSql,
             pgcom =>
@@ -146,7 +144,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             NotificationChannel.Sms,
             notificationId,
             gatewayReference,
-            statusIsAccepted,
+            statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
             SendStatusIdentifierType.GatewayReference);
     }
 }

@@ -144,16 +144,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TemporaryTest()
-    {
-        // Arrange
-        var mockKafkaProducer = new Mock<IKafkaProducer>();
-        EmailStatusConsumer consumer = new(mockKafkaProducer.Object, NullLogger<EmailStatusConsumer>.Instance, null!, null!, null!);
-         Assert.True(true);
-    }
-
-    [Fact]
-    public async Task ConsumeSucceededStatus_ShouldNotCreateStatusFeedEntry()
+    public async Task ConsumeSucceededStatus_ShouldMarkOrderProcessed_WithoutStatusFeedEntry()
     {
         // Arrange
         Dictionary<string, string> kafkaSettings = new()
@@ -212,6 +203,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Assert using captured values
         Assert.Equal(0, statusFeedCount);
+        Assert.Equal(1, processedOrderCount);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), observedEmailStatus);
     }
 
@@ -338,8 +330,28 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Assert
         Assert.Equal(1, completedOrdersCount);
         Assert.Equal(resultType.ToString(), observedEmailStatus);
-    }   
-   
+    }
+
+    public ValueTask InitializeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+    }
+
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -368,20 +380,5 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     {
         string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{orderAlternateid}' and o.processedstatus = '{orderProcessingStatus}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
-    }
-
-    public ValueTask InitializeAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
-
-        GC.SuppressFinalize(this);
     }
 }

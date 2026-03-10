@@ -713,5 +713,5 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }      
+    }
 }
