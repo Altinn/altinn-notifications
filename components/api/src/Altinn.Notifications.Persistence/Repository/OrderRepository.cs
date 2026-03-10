@@ -490,8 +490,7 @@ public class OrderRepository : IOrderRepository
              reader.GetValue<string?>("resourceid"),
              conditionEndpoint,
              new ProcessingStatus(reader.GetValue<OrderProcessingStatus>("processedstatus"), reader.GetValue<DateTime>("processed")),
-             OrderType.Notification,
-             null);
+             OrderType.Notification);
 
         int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
         int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
