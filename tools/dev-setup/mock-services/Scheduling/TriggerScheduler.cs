@@ -16,10 +16,11 @@ public class TriggerScheduler : BackgroundService
     private readonly ILogger<TriggerScheduler> _logger;
     private readonly HttpClient _httpClient;
 
-    public TriggerScheduler(ILogger<TriggerScheduler> logger)
+    public TriggerScheduler(ILogger<TriggerScheduler> logger, IConfiguration configuration)
     {
         _logger = logger;
-        _httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5090"), Timeout = TimeSpan.FromSeconds(10) };
+        string baseUrl = configuration["TriggerScheduler:ApiBaseUrl"] ?? "http://localhost:5090";
+        _httpClient = new HttpClient { BaseAddress = new Uri(baseUrl), Timeout = TimeSpan.FromSeconds(10) };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

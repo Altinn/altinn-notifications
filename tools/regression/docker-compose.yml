@@ -1,0 +1,116 @@
+# Regression test stack with code coverage collection.
+#
+# Usage:
+#   cd tools/regression
+#   ./run-regression.sh
+#
+# Or manually:
+#   podman-compose up --build -d
+#   # wait for services, run Bruno tests from host
+#   podman-compose down
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: platform_notifications_admin
+      POSTGRES_PASSWORD: Password
+      POSTGRES_DB: notificationsdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform_notifications_admin -d notificationsdb"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data  # RAM-backed for speed
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  mock-services:
+    build:
+      context: ../..
+      dockerfile: tools/regression/Dockerfile.mock-services
+    environment:
+      TriggerScheduler__ApiBaseUrl: http://api:5090
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../..
+      dockerfile: tools/regression/Dockerfile.api
+    ports:
+      - "5090:5090"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5090
+      GeneralSettings__OpenIdWellKnownEndpoint: http://mock-services:5101/authentication/api/v1/openid/
+      PostgreSQLSettings__AdminConnectionString: Host=postgres;Port=5432;Username=platform_notifications_admin;Password=Password;Database=notificationsdb
+      PostgreSQLSettings__ConnectionString: Host=postgres;Port=5432;Username=platform_notifications_admin;Password=Password;Database=notificationsdb
+      PostgreSQLSettings__NotificationsDbAdminPwd: Password
+      PostgreSQLSettings__NotificationsDbPwd: Password
+      KafkaSettings__BrokerAddress: kafka:29092
+      PlatformSettings__ApiProfileEndpoint: http://mock-services:5030/profile/api/v1/
+      PlatformSettings__ApiRegisterEndpoint: http://mock-services:5020/register/api/v1/
+      PlatformSettings__ApiAuthorizationEndpoint: http://mock-services:5050/authorization/api/v1/
+      PlatformSettings__ApiShortMessageServiceEndpoint: http://sms-service:5170/notifications/sms/api/v1/
+      PlatformSettings__ApiInstantEmailServiceEndpoint: http://email-service:5190/notifications/email/api/v1/
+    volumes:
+      - coverage-data:/coverage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mock-services:
+        condition: service_started
+
+  email-service:
+    build:
+      context: ../..
+      dockerfile: tools/regression/Dockerfile.email
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5190
+      KafkaSettings__BrokerAddress: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  sms-service:
+    build:
+      context: ../..
+      dockerfile: tools/regression/Dockerfile.sms
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5170
+      KafkaSettings__BrokerAddress: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  coverage-data:

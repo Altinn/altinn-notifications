@@ -1,0 +1,22 @@
+# SMS service for regression testing (dev mode activates MockSmsClient).
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+
+WORKDIR /src
+
+# Restore
+COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj              components/sms-service/src/Altinn.Notifications.Sms/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Core/*.csproj         components/sms-service/src/Altinn.Notifications.Sms.Core/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Integrations/*.csproj components/sms-service/src/Altinn.Notifications.Sms.Integrations/
+RUN dotnet restore components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
+
+# Build
+COPY components/sms-service/src/ components/sms-service/src/
+RUN dotnet publish components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj \
+    -c Release -o /app --no-restore
+
+# Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 5170
+ENTRYPOINT ["dotnet", "Altinn.Notifications.Sms.dll"]

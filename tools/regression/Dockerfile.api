@@ -1,0 +1,43 @@
+# API with dotnet-coverage for regression test coverage collection.
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+
+WORKDIR /src
+
+# Restore
+COPY components/api/src/Altinn.Notifications/*.csproj                components/api/src/Altinn.Notifications/
+COPY components/api/src/Altinn.Notifications.Core/*.csproj           components/api/src/Altinn.Notifications.Core/
+COPY components/api/src/Altinn.Notifications.Integrations/*.csproj   components/api/src/Altinn.Notifications.Integrations/
+COPY components/api/src/Altinn.Notifications.Persistence/*.csproj    components/api/src/Altinn.Notifications.Persistence/
+COPY components/api/src/Altinn.Notifications.Shared/*.csproj         components/api/src/Altinn.Notifications.Shared/
+RUN dotnet restore components/api/src/Altinn.Notifications/Altinn.Notifications.csproj
+
+# Build
+COPY components/api/src/ components/api/src/
+RUN dotnet publish components/api/src/Altinn.Notifications/Altinn.Notifications.csproj \
+    -c Release -o /app --no-restore
+
+# Runtime with coverage tool
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS final
+
+# Install coverage tool
+RUN dotnet tool install --global dotnet-coverage
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+WORKDIR /app
+COPY --from=build /app .
+
+# Copy migration scripts (needed by Yuniql on startup)
+COPY components/api/src/Altinn.Notifications.Persistence/Migration/ \
+     Altinn.Notifications.Persistence/Migration/
+
+# Copy Razor views for metrics page
+COPY components/api/src/Altinn.Notifications/Views/ Views/
+
+EXPOSE 5090
+
+# Entrypoint: run with coverage collection, output to /coverage volume
+ENTRYPOINT ["dotnet-coverage", "collect", \
+    "--output", "/coverage/api.cobertura.xml", \
+    "--output-format", "cobertura", \
+    "--", \
+    "dotnet", "Altinn.Notifications.dll"]

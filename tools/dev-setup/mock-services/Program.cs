@@ -117,12 +117,16 @@ if (certPath is null)
 
 var tokenGenerator = new MockJwtTokenGenerator(certPath, "qwer1234");
 
-// Start Kestrel for token and OpenID endpoints
+// Start Kestrel for token and OpenID endpoints.
+// In containers, ASPNETCORE_URLS overrides this; locally it defaults to localhost:5101.
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.ConfigureKestrel(options =>
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
-    options.ListenLocalhost(5101);
-});
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenLocalhost(5101);
+    });
+}
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
 builder.Services.AddHostedService<TriggerScheduler>();

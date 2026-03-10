@@ -1,0 +1,30 @@
+# Regression-specific .dockerignore — more permissive than production.
+# This file is copied to repo root during regression builds.
+
+.git/
+.github/
+**/*.csproj.user
+*.suo
+*.user
+.idea/
+.vs/
+.vscode/
+**/bin/
+**/obj/
+**/out/
+**/publish/
+**/TestResults/
+**/coverage/
+docs/
+.DS_Store
+Thumbs.db
+**/secrets/
+**/.env
+**/Dockerfile*
+docker-compose*.yml
+*.cache
+*.log
+*.temp
+*.tmp
+**/*.nupkg
+**/packages/
