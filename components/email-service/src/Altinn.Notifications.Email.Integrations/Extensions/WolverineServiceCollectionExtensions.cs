@@ -32,9 +32,10 @@ public static class WolverineServiceCollectionExtensions
         IConfiguration config,
         IHostEnvironment env)
     {
-        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
 
-        services.Configure<WolverineSettings>(config.GetSection(nameof(WolverineSettings)));
+        services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
@@ -44,11 +45,17 @@ public static class WolverineServiceCollectionExtensions
                 opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
 
                 // Listeners (ASB queues will be auto-provisioned in production)
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.SendEmailQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount);
+                if (!string.IsNullOrWhiteSpace(wolverineSettings.SendEmailQueueName))
+                {
+                    opts.ListenToAzureServiceBusQueue(wolverineSettings.SendEmailQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+                }
 
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendingAcceptedQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount);
+                if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailSendingAcceptedQueueName))
+                {
+                    opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendingAcceptedQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+                }
 
                 // Publishers
                 // Note: the email service currently does not publish any messages to ASB.
