@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Altinn.Notifications.Email.Shared.Status;
 
 namespace Altinn.Notifications.Email.Core.Status;
 

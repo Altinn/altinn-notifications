@@ -1,6 +1,7 @@
-﻿using Altinn.Notifications.Email.Integrations.Clients;
+﻿using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Email.Shared.Status;
+
 using Azure;
 
 using Microsoft.Extensions.Logging;

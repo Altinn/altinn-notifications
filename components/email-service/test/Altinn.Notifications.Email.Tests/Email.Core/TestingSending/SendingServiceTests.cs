@@ -2,7 +2,7 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
-using Altinn.Notifications.Email.Shared.Status;
+using Altinn.Notifications.Email.Core.Status;
 using Moq;
 
 using Xunit;

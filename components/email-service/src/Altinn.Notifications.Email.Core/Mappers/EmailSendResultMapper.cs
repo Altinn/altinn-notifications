@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Email.Shared.Status;
+﻿using Altinn.Notifications.Email.Core.Status;
 
 namespace Altinn.Notifications.Email.Core.Mappers;
 

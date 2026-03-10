@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Nodes;
+
 using Altinn.Notifications.Email.Core.Status;
-using Altinn.Notifications.Email.Shared.Status;
+
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Core.Status;

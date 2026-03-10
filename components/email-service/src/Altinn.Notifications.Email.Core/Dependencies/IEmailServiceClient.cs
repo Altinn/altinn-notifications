@@ -1,5 +1,5 @@
 ﻿using Altinn.Notifications.Email.Core.Models;
-using Altinn.Notifications.Email.Shared.Status;
+using Altinn.Notifications.Email.Core.Status;
 
 namespace Altinn.Notifications.Email.Core.Dependencies;
 

@@ -2,7 +2,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
-using Altinn.Notifications.Email.Shared.Status;
 
 namespace Altinn.Notifications.Email.Core.Sending;
 

@@ -1,5 +1,5 @@
 ﻿using Altinn.Notifications.Email.Core.Mappers;
-using Altinn.Notifications.Email.Shared.Status;
+using Altinn.Notifications.Email.Core.Status;
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Core.TestingStatus;
