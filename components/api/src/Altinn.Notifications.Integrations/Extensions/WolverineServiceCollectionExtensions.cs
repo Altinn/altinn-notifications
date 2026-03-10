@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
@@ -20,7 +21,7 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine and configures Azure Service Bus transport when
-    /// <see cref="WolverineSettings.EnableServiceBus"/> is <c>true</c>.
+    /// <see cref="WolverineSettingsBase.EnableServiceBus"/> is <c>true</c>.
     /// When disabled, Wolverine is still registered with inline policies so that
     /// <see cref="IMessageBus"/> can be resolved by future handlers and publishers.
     /// </summary>

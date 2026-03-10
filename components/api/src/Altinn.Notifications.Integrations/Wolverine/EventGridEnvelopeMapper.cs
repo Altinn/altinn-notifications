@@ -43,10 +43,4 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
     {
         throw new NotSupportedException("This mapper only supports incoming Event Grid messages.");
     }
-
-    /// <summary>
-    /// List of headers to be included in the envelope when mapping from an incoming message. This implementation does not include any headers.
-    /// </summary>
-    /// <returns></returns>
-    public static IEnumerable<string> AllHeaders() => [];
 }
