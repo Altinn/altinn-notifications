@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -87,7 +88,7 @@ public class InstantSmsOrderRequestServiceTests
         shortMessageServiceClient
             .Setup(e => e.SendAsync(It.Is<ShortMessage>(m => m.NotificationId == smsOrderId)))
             .Callback(() => taskCompletionSource.SetResult())
-            .ReturnsAsync(new ShortMessageSendResult());
+            .ReturnsAsync(new ShortMessageSendResult() { Success = true, StatusCode = System.Net.HttpStatusCode.OK });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -250,7 +251,11 @@ public class InstantSmsOrderRequestServiceTests
         shortMessageServiceClient
             .Setup(e => e.SendAsync(It.Is<ShortMessage>(m => m.NotificationId == smsOrderId)))
             .Callback(() => taskCompletionSource.SetResult())
-            .ReturnsAsync(new ShortMessageSendResult());
+            .ReturnsAsync(new ShortMessageSendResult()
+            {
+                Success = true,
+                StatusCode = System.Net.HttpStatusCode.OK
+            });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -345,7 +350,11 @@ public class InstantSmsOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
-        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync((ShortMessageSendResult?)null!);
+        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync(new ShortMessageSendResult()
+        {
+            Success = true, 
+            StatusCode = System.Net.HttpStatusCode.OK
+        });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -433,7 +442,11 @@ public class InstantSmsOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
-        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync((ShortMessageSendResult?)null!);
+        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync(new ShortMessageSendResult()
+        {
+            Success = true,
+            StatusCode = System.Net.HttpStatusCode.OK
+        });
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -497,6 +510,7 @@ public class InstantSmsOrderRequestServiceTests
             orderRepository,
             configurationOptions,
             shortMessageServiceClient,
-            instantEmailServiceClient);
+            instantEmailServiceClient,
+            NullLogger<InstantOrderRequestService>.Instance);
     }
 }

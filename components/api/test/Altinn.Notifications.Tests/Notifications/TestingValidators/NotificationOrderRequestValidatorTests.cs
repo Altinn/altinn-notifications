@@ -215,5 +215,93 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, a => a.ErrorMessage.Equals("Mobile number can contain only '+' and numeric characters, and it must adhere to the E.164 standard."));
         }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Validate_ResourceActionWithoutResourceId_IsNotValid(string? resourceId)
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt
+            {
+                NotificationChannel = NotificationChannelExt.Email,
+                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+                Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+                ResourceId = resourceId,
+                ResourceAction = "read"
+            };
+
+            // Act
+            var result = _validator.TestValidate(model);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, a => a.ErrorMessage.Equals("ResourceAction cannot be specified without a ResourceId."));
+        }
+
+        [Fact]
+        public void Validate_ResourceActionWithResourceId_IsValid()
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt
+            {
+                NotificationChannel = NotificationChannelExt.Email,
+                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+                Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+                ResourceId = "urn:altinn:resource:test",
+                ResourceAction = "read"
+            };
+
+            // Act
+            var result = _validator.TestValidate(model);
+
+            // Assert
+            result.ShouldNotHaveValidationErrorFor(o => o.ResourceAction);
+        }
+
+        [Theory]
+        [InlineData("   ")]
+        [InlineData("\t")]
+        [InlineData("\n")]
+        public void Validate_BlankOrWhitespaceResourceAction_IsNotValid(string resourceAction)
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt
+            {
+                NotificationChannel = NotificationChannelExt.Email,
+                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+                Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+                ResourceId = "urn:altinn:resource:test",
+                ResourceAction = resourceAction
+            };
+
+            // Act
+            var result = _validator.TestValidate(model);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, a => a.ErrorMessage.Equals("ResourceAction cannot be blank or whitespace."));
+        }
+
+        [Fact]
+        public void Validate_NullResourceActionWithoutResourceId_IsValid()
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt
+            {
+                NotificationChannel = NotificationChannelExt.Email,
+                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+                Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+                ResourceId = null,
+                ResourceAction = null
+            };
+
+            // Act
+            var result = _validator.TestValidate(model);
+
+            // Assert
+            result.ShouldNotHaveValidationErrorFor(o => o.ResourceAction);
+        }
     }
 }

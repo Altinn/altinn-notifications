@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Models.Recipient;
-using Altinn.Notifications.Validators.Rules;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Recipient
@@ -29,16 +28,6 @@ namespace Altinn.Notifications.Validators.Recipient
                     .Must(on => on?.Length == _organizationNumberLength && on.All(char.IsDigit))
                     .When(options => !string.IsNullOrEmpty(options!.OrgNumber))
                     .WithMessage($"Organization number must be {_organizationNumberLength} digits long.");
-
-                RuleFor(options => options!.ResourceId)
-                    .Must(arg => RecipientRules.BeValidResourceId(arg!))
-                    .When(options => options!.ResourceId != null)
-                    .WithMessage("ResourceId must have a valid syntax.");
-
-                RuleFor(options => options!.ResourceAction)
-                    .Empty()
-                    .When(options => string.IsNullOrWhiteSpace(options!.ResourceId))
-                    .WithMessage("ResourceAction cannot be specified without a ResourceId.");
             });
         }
     }

@@ -22,7 +22,12 @@ public sealed class PlatformDependencyException : Exception
     /// <summary>
     /// Indicates if the failure was due to a timeout or cancellation
     /// </summary>
-    public bool IsTransient => InnerException is OperationCanceledException or HttpRequestException;
+    public bool? IsTransient => InnerException switch
+    {
+        null => null,
+        OperationCanceledException or HttpRequestException => true,
+        _ => false
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformDependencyException"/> class.
@@ -32,6 +37,19 @@ public sealed class PlatformDependencyException : Exception
     /// <param name="innerException">The original exception that was thrown</param>
     public PlatformDependencyException(string dependencyName, string operation, Exception innerException)
         : base($"Platform dependency '{dependencyName}' failed during '{operation}': {innerException.Message}", innerException)
+    {
+        DependencyName = dependencyName;
+        Operation = operation;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlatformDependencyException"/> class.
+    /// </summary>
+    /// <param name="dependencyName">The name of the dependency that failed</param>
+    /// <param name="operation">The operation that was being performed when the failure occurred</param>
+    /// <param name="message">The error message that describes the failure</param>
+    public PlatformDependencyException(string dependencyName, string operation, string message)
+        : base($"Platform dependency '{dependencyName}' failed during '{operation}': {message}")
     {
         DependencyName = dependencyName;
         Operation = operation;

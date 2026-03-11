@@ -112,7 +112,7 @@ public class NotificationDeliveryManifestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal(404, (int)result.Problem.StatusCode);
-        Assert.Equal("Shipment not found", result.Problem.Detail);
+        Assert.Equal("Shipment not found", result.Problem.Title);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class NotificationDeliveryManifestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal(404, (int)result.Problem.StatusCode);
-        Assert.Equal("Shipment not found", result.Problem.Detail);
+        Assert.Equal("Shipment not found", result.Problem.Title);
     }
 
     [Fact]
@@ -239,6 +239,6 @@ public class NotificationDeliveryManifestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal(404, (int)result.Problem.StatusCode);
-        Assert.Equal("Shipment not found", result.Problem.Detail);
+        Assert.Equal("Shipment not found", result.Problem.Title);
     }
 }
