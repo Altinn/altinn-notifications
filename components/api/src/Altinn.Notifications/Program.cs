@@ -226,7 +226,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
-    services.AddWolverineServices(config, builder.Environment);
+    if (config.GetValue<bool>("WolverineSettings:EnableWolverine"))
+    {
+        services.AddWolverineServices(config, builder.Environment);
+    }
+    
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }

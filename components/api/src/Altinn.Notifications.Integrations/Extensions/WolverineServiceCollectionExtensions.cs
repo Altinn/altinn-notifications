@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -19,10 +20,9 @@ namespace Altinn.Notifications.Integrations.Extensions;
 public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds Wolverine and configures Azure Service Bus transport when
-    /// <see cref="WolverineSettings.EnableServiceBus"/> is <c>true</c>.
-    /// When disabled, Wolverine is still registered with inline policies so that
-    /// <see cref="IMessageBus"/> can be resolved by future handlers and publishers.
+    /// Adds Wolverine with Azure Service Bus transport.
+    /// Only called when <see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c>
+    /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="config">The application configuration.</param>
@@ -32,32 +32,25 @@ public static class WolverineServiceCollectionExtensions
         IConfiguration config,
         IHostEnvironment env)
     {
-        WolverineSettings wolverineSettings =
-            config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
 
-        services.Configure<WolverineSettings>(config.GetSection(nameof(WolverineSettings)));
+        services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
-            if (wolverineSettings.EnableServiceBus)
-            {
-                opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
-
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount);
-                }
-
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
-                    .ListenerCount(wolverineSettings.ListenerCount);
-                }
-            }
-
+            opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
+
+            // Listeners (ASB queues will be auto-provisioned in production)
+            if (wolverineSettings.EnableEmailDeliveryReportListener && !string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
+            {
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                    .ListenerCount(wolverineSettings.ListenerCount);
+            }
+
+            // Publishers: none configured yet.
         });
     }
 }
