@@ -334,7 +334,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
-        Assert.Equal("Shipment not found", problemDetails.Detail);
+        Assert.Equal("Shipment not found", problemDetails.Title);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
-        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("client disconnected", problemDetails.Title, StringComparison.OrdinalIgnoreCase);
     }
 
     private HttpClient GetTestClient(INotificationDeliveryManifestService? service = null)

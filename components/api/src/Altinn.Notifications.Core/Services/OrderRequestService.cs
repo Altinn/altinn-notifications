@@ -51,7 +51,7 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime currentTime = _dateTime.UtcNow();
 
-        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId);
+        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId, orderRequest.ResourceAction);
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
@@ -63,6 +63,7 @@ public class OrderRequestService : IOrderRequestService
             Creator = orderRequest.Creator,
             Recipients = orderRequest.Recipients,
             ResourceId = orderRequest.ResourceId,
+            ResourceAction = orderRequest.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             IgnoreReservation = orderRequest.IgnoreReservation,
             ConditionEndpoint = orderRequest.ConditionEndpoint,

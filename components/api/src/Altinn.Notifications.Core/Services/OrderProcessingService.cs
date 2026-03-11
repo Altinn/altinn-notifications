@@ -168,7 +168,7 @@ public class OrderProcessingService : IOrderProcessingService
            e.DependencyName,
            e.Operation,
            order!.Id,
-           e.IsTransient);
+           e.IsTransient?.ToString() ?? "Not available");
 
             await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
         }
