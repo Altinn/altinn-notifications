@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -42,6 +44,7 @@ public static class EmailDeliveryReportHandler
             .Or<TaskCanceledException>()
             .Or<TimeoutException>()
             .Or<ServiceBusException>()
+            .Or<NotificationNotFoundException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
@@ -50,7 +53,11 @@ public static class EmailDeliveryReportHandler
     /// <summary>
     /// Handles an email delivery report command by logging the received status update.
     /// </summary>
-    public static async Task Handle(EmailDeliveryReportCommand command, IEmailNotificationService emailNotificationService, ILogger logger)
+    public static async Task Handle(
+        EmailDeliveryReportCommand command, 
+        IEmailNotificationService emailNotificationService, 
+        IDeadDeliveryReportService deadDeliveryReportService,
+        ILogger logger)
     {
         if (SimulateFailure)
         {
@@ -71,12 +78,7 @@ public static class EmailDeliveryReportHandler
                         return;
                     }
 
-                    var operationResult = new EmailSendOperationResult()
-                    {
-                        OperationId = deliveryReport.MessageId,
-                        SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString())
-                    };
-                    await emailNotificationService.UpdateSendStatus(operationResult);
+                    await HandleDeliveryReport(emailNotificationService, deliveryReport, deadDeliveryReportService, logger);
                     break;
                 default:
                     logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
@@ -87,5 +89,55 @@ public static class EmailDeliveryReportHandler
         {
             logger.LogWarning("Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}", eventGridEvent.Subject, eventGridEvent.EventType);
         }
+    }
+
+    private static async Task HandleDeliveryReport(
+        IEmailNotificationService emailNotificationService, 
+        AcsEmailDeliveryReportReceivedEventData deliveryReport,
+        IDeadDeliveryReportService deadDeliveryReportService,
+        ILogger logger)
+    {
+        var operationResult = new EmailSendOperationResult()
+        {
+            OperationId = deliveryReport.MessageId,
+            SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString())
+        };
+
+        try
+        {
+            await emailNotificationService.UpdateSendStatus(operationResult);
+        }
+        catch (NotificationExpiredException ex)
+        {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            logger.LogInformation(
+                ex,
+                "// {Class} // ProcessStatusUpdateWithRetry // {Message}",
+                nameof(EmailDeliveryReportHandler),
+                ex.Message);
+
+            await SaveDeadDeliveryReportForExpired(deliveryReport, deadDeliveryReportService);
+        }
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
+    private static async Task SaveDeadDeliveryReportForExpired(AcsEmailDeliveryReportReceivedEventData deliveryReport, IDeadDeliveryReportService deadDeliveryReportService)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
+            FirstSeen = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
+            LastAttempt = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
+            AttemptCount = 0,
+            Resolved = false,
+            DeliveryReport = deliveryReport.ToString() ?? string.Empty,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 }
