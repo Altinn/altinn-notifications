@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
-using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Email.Integrations.Extensions;
 
@@ -20,10 +19,9 @@ namespace Altinn.Notifications.Email.Integrations.Extensions;
 public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds Wolverine and configures Azure Service Bus transport when
-    /// <see cref="WolverineSettingsBase.EnableServiceBus"/> is <c>true</c>.
-    /// When disabled, Wolverine is still registered with inline policies so that
-    /// <see cref="IMessageBus"/> can be resolved by future handlers and publishers.
+    /// Adds Wolverine with Azure Service Bus transport.
+    /// Only called when <see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c>
+    /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="config">The application configuration.</param>
@@ -40,30 +38,12 @@ public static class WolverineServiceCollectionExtensions
 
         services.AddWolverine(opts =>
         {
-            if (wolverineSettings.EnableServiceBus)
-            {
-                // Defaults
-                opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
-
-                // Listeners (ASB queues will be auto-provisioned in production)
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.SendEmailQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.SendEmailQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
-                }
-
-                if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailSendingAcceptedQueueName))
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendingAcceptedQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
-                }
-
-                // Publishers
-                // Note: the email service currently does not publish any messages to ASB.
-            }
-
+            opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
+
+            // Listeners: none configured yet.
+            // Publishers: none configured yet.
         });
     }
 }
