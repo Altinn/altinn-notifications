@@ -26,4 +26,10 @@ public class NotificationOrderRequestBaseExt : NotificationOrderBaseExt
     /// </summary>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the action to authorize against the resource.
+    /// </summary>
+    [JsonPropertyName("resourceAction")]
+    public string? ResourceAction { get; set; }
 }

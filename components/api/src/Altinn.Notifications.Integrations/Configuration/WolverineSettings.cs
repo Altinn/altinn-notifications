@@ -9,6 +9,11 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// Whether to enable the email delivery report queue listener.
+    /// </summary>
+    public bool EnableEmailDeliveryReportListener { get; set; } = false;
+
+    /// <summary>
     /// ASB queue name for receiving email delivery reports.
     /// Produced by the email service and Event Grid.
     /// </summary>
@@ -19,25 +24,4 @@ public class WolverineSettings : WolverineSettingsBase
     /// </summary>
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
 
-    /// <summary>
-    /// ASB queue name for receiving SMS delivery reports.
-    /// Produced by the SMS service delivery report controller.
-    /// </summary>
-    public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Retry policy for the SMS delivery report queue.
-    /// </summary>
-    public QueueRetryPolicy SmsDeliveryReportQueuePolicy { get; set; } = new();
-
-    /// <summary>
-    /// ASB queue name for receiving email status updates.
-    /// Produced by the email service after the ACS polling loop completes.
-    /// </summary>
-    public string EmailStatusUpdatedQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Retry policy for the email status updated queue.
-    /// </summary>
-    public QueueRetryPolicy EmailStatusUpdatedQueuePolicy { get; set; } = new();
 }

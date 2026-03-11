@@ -358,4 +358,32 @@ public class RecipientExternalIdentityValidatorTests
         // Assert
         actual.ShouldNotHaveValidationErrorFor(r => r.ResourceAction);
     }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void Validate_BlankOrWhitespaceResourceAction_ReturnsError(string resourceAction)
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = "urn:altinn:resource:some-resource",
+            ResourceAction = resourceAction,
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(r => r.ResourceAction)
+            .WithErrorMessage("ResourceAction cannot be blank or whitespace.");
+    }
 }

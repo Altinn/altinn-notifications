@@ -2,6 +2,7 @@
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Validators.Email;
 using Altinn.Notifications.Validators.Extensions;
+using Altinn.Notifications.Validators.Rules;
 using Altinn.Notifications.Validators.Sms;
 
 using FluentValidation;
@@ -69,5 +70,25 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
             RuleFor(options => options!.SmsSettings)
                 .SetValidator(new SmsSendingOptionsValidator());
         });
+
+        RuleFor(options => options!.ResourceId)
+            .Must(resourceId => RecipientRules.BeValidResourceId(resourceId!))
+            .When(options => options!.ResourceId != null)
+            .WithMessage("ResourceId must have a valid syntax.");
+
+        RuleFor(options => options!.ResourceAction)
+            .Must((recipient, resourceAction) =>
+            {
+                if (string.IsNullOrWhiteSpace(recipient!.ResourceId))
+                {
+                    return string.IsNullOrEmpty(resourceAction);
+                }
+
+                return string.IsNullOrEmpty(resourceAction) || !string.IsNullOrWhiteSpace(resourceAction);
+            })
+            .WithMessage((recipient, _) =>
+                string.IsNullOrWhiteSpace(recipient!.ResourceId)
+                    ? "ResourceAction cannot be specified without a ResourceId."
+                    : "ResourceAction cannot be blank or whitespace.");
     }
 }

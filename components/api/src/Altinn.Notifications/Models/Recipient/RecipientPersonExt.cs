@@ -24,18 +24,6 @@ public class RecipientPersonExt : RecipientBaseExt
     public required string NationalIdentityNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
-    /// </summary>
-    [JsonPropertyName("resourceId")]
-    public string? ResourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the action to authorize against the resource. Defaults to "read" when not specified.
-    /// </summary>
-    [JsonPropertyName("resourceAction")]
-    public string? ResourceAction { get; set; }
-
-    /// <summary>
     /// Gets or sets the required channel scheme for delivering the notification.
     /// </summary>
     /// <remarks>

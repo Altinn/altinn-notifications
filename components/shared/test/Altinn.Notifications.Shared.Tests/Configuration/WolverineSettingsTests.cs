@@ -10,7 +10,7 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettingsBase();
 
-        Assert.False(settings.EnableServiceBus);
+        Assert.False(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
         Assert.Equal(10, settings.ListenerCount);
     }

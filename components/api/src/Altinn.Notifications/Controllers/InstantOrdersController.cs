@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Orders;
@@ -177,6 +178,11 @@ public class InstantOrdersController : ControllerBase
         catch (OperationCanceledException)
         {
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+        catch (PlatformDependencyException)
+        {
+            var problemDetails = Problems.PlatformDependencyError.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
