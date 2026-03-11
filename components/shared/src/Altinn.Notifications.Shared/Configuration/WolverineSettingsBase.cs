@@ -7,10 +7,10 @@ namespace Altinn.Notifications.Shared.Configuration;
 public class WolverineSettingsBase
 {
     /// <summary>
-    /// Indicates whether Azure Service Bus should be configured.
+    /// Indicates whether Wolverine and Azure Service Bus should be configured.
     /// Defaults to false — Kafka remains active when this is false.
     /// </summary>
-    public bool EnableServiceBus { get; set; } = false;
+    public bool EnableWolverine { get; set; } = false;
 
     /// <summary>
     /// Connection string for Azure Service Bus.
