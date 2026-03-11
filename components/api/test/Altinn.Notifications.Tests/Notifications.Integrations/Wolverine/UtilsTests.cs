@@ -12,6 +12,7 @@ public class UtilsTests
     [InlineData(null, EmailNotificationResultType.Failed)]
     [InlineData("Bounced", EmailNotificationResultType.Failed_Bounced)]
     [InlineData("Delivered", EmailNotificationResultType.Delivered)]
+    [InlineData("Expanded", EmailNotificationResultType.Failed)]
     [InlineData("Failed", EmailNotificationResultType.Failed)]
     [InlineData("FilteredSpam", EmailNotificationResultType.Failed_FilteredSpam)]
     [InlineData("Quarantined", EmailNotificationResultType.Failed_Quarantined)]
