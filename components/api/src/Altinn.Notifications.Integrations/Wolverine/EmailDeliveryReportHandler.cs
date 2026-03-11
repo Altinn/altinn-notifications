@@ -78,6 +78,11 @@ public static class EmailDeliveryReportHandler
                         return;
                     }
 
+                    logger.LogInformation(
+                        "Received email delivery report for MessageId: {MessageId}, Status: {Status}", 
+                        deliveryReport.MessageId, 
+                        deliveryReport.Status);
+
                     await HandleDeliveryReport(emailNotificationService, deliveryReport, deadDeliveryReportService, logger);
                     break;
                 default:
