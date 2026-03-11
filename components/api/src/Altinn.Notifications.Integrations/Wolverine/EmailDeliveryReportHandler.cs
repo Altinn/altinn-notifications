@@ -27,12 +27,6 @@ public static class EmailDeliveryReportHandler
     public static WolverineSettings Settings { get; set; } = null!;
 
     /// <summary>
-    /// When true, the handler throws to simulate a failure.
-    /// Use in development to test retry and dead-letter behavior.
-    /// </summary>
-    public static bool SimulateFailure { get; set; } = false;
-
-    /// <summary>
     /// Configures error handling for the email delivery report queue handler.
     /// </summary>
     public static void Configure(HandlerChain chain)
@@ -59,11 +53,6 @@ public static class EmailDeliveryReportHandler
         IDeadDeliveryReportService deadDeliveryReportService,
         ILogger logger)
     {
-        if (SimulateFailure)
-        {
-            throw new InvalidOperationException("Simulated failure for testing purposes.");
-        }
-
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
         // If the event is a system event, TryGetSystemEventData will return the deserialized system event
@@ -136,7 +125,7 @@ public static class EmailDeliveryReportHandler
             Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
             FirstSeen = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
             LastAttempt = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
-            AttemptCount = 0,
+            AttemptCount = 1,
             Resolved = false,
             DeliveryReport = deliveryReport.ToString() ?? string.Empty,
             Reason = "NOTIFICATION_EXPIRED",
