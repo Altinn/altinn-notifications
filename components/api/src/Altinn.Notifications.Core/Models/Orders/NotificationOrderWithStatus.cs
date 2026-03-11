@@ -43,12 +43,12 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
-    /// Gets the processing status of the notication order
+    /// Gets the processing status of the notification order
     /// </summary>
     public ProcessingStatus ProcessingStatus { get; internal set; } = new();
 
     /// <summary>
-    /// Gets the summary of the notifiications statuses
+    /// Gets the summary of the notification statuses
     /// </summary>
     public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
 
