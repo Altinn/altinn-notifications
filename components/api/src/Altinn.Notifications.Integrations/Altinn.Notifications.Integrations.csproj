@@ -15,8 +15,9 @@
     <PackageReference Include="Confluent.Kafka" Version="2.13.2" />
     <PackageReference Include="Confluent.Kafka.Extensions.OpenTelemetry" Version="0.4.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.3" />
-    <PackageReference Include="WolverineFx" Version="5.17.0" />
-    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.17.0" />
+    <PackageReference Include="WolverineFx" Version="5.18.2" />
+    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.18.2" />
+
   </ItemGroup>
 
   <ItemGroup>
