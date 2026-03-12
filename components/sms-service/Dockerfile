@@ -5,15 +5,19 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.23@sha256:d17d8d6511aee3dd54b
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
-COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj ./src/Altinn.Notifications.Sms/
-COPY components/sms-service/src/Altinn.Notifications.Sms.Core/*.csproj ./src/Altinn.Notifications.Sms.Core/
-COPY components/sms-service/src/Altinn.Notifications.Sms.Integrations/*.csproj ./src/Altinn.Notifications.Sms.Integrations/
+# Paths mirror the repo structure so cross-component project references resolve correctly
+COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj ./components/sms-service/src/Altinn.Notifications.Sms/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Core/*.csproj ./components/sms-service/src/Altinn.Notifications.Sms.Core/
+COPY components/sms-service/src/Altinn.Notifications.Sms.Integrations/*.csproj ./components/sms-service/src/Altinn.Notifications.Sms.Integrations/
+COPY components/shared/src/Altinn.Notifications.Shared/*.csproj ./components/shared/src/Altinn.Notifications.Shared/
 
-RUN dotnet restore ./src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
+RUN dotnet restore ./components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 # Copy the remaining source code and build the application
-COPY components/sms-service/src ./src
-RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
+COPY components/sms-service/src ./components/sms-service/src
+COPY components/shared/src ./components/shared/src
+RUN dotnet publish -c Release -o out \
+    ./components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 
 # Use the official .NET runtime image with Alpine Linux as a base image
@@ -25,7 +29,7 @@ COPY --from=build /app/out ./
 # setup the user and group
 # the user will have no password, using shell /bin/false and using the group dotnet
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
-# update permissions of files if neccessary before becoming dotnet user
+# update permissions of files if necessary before becoming dotnet user
 USER dotnet
 RUN mkdir /tmp/logtelemetry
 
