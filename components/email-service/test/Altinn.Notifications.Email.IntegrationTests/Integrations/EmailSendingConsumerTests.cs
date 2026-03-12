@@ -32,7 +32,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             BrokerAddress = "localhost:9092",
             Consumer = new()
             {
-                GroupId = "email-sending-consumer"
+                GroupId = $"email-sending-consumer-{Guid.NewGuid}"
             },
             SendEmailQueueTopicName = _emailSendingConsumerTopic,
             EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
@@ -51,7 +51,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Task.CompletedTask;
+        await KafkaUtil.CreateTopicAsync(_emailSendingConsumerTopic);
+        await KafkaUtil.CreateTopicAsync(_emailSendingAcceptedProducerTopic);
     }
 
     [Fact]
