@@ -20,6 +20,7 @@
   </Folder>
   <Folder Name="/Email/test/">
     <Project Path="components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj" />
+    <Project Path="components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj" />
     <Project Path="components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj" />
   </Folder>
   <Folder Name="/Shared/" />
