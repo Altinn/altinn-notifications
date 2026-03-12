@@ -65,7 +65,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenValidEmailMessage_WhenConsumed_ThenSendingServiceIsCalledOnce()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -87,7 +87,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenInvalidEmailMessage_WhenConsumed_ThenSendingServiceIsNotCalled()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -197,7 +197,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         var concurrentExecutions = 0;
         var processedMessagesCount = 0;
         var maxConcurrentExecutions = 0;
-        var allMessagesProcessedSignal = new ManualResetEventSlim(false);
+        using var allMessagesProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
@@ -256,7 +256,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenStartedConsumer_WhenMessageProduced_ThenConfiguredTopicIsSubscribed()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -277,7 +277,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenKafkaMessageWithNullValue_WhenConsumed_ThenOffsetAdvancedAndNoProcessing()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -299,7 +299,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithRebalanceInProgress_ThenWarningLoggedAndCommitSkipped()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
@@ -337,7 +337,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenCancellationBeforeProcessingStarts_WhenMessageProduced_ThenNoProcessingOccurs()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -363,7 +363,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithLastBatchButNoMatchingPartitions_ThenNoCommitAttempted()
     {
         // Arrange
-        var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
@@ -416,7 +416,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenActiveConsumerProcessingMessages_WhenStopAsyncCalled_ThenStopCompletesPromptly()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
 
         var semaphoreSlim = new SemaphoreSlim(0, 1);
         var sendingServiceMock = new Mock<ISendingService>();
@@ -472,7 +472,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         };
 
         var sendingServiceMock = new Mock<ISendingService>();
-        var retryProducedSignal = new ManualResetEventSlim(false);
+        using var retryProducedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         sendingServiceMock
@@ -536,11 +536,11 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         // Arrange
         var firstEmailNotificationIdentifer = Guid.NewGuid();
         var firstRunSemaphoreSlim = new SemaphoreSlim(0, 1);
-        var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
         var firstEmail = new Core.Sending.Email(firstEmailNotificationIdentifer, "first", "body-1", "from", "to", EmailContentType.Plain);
 
         var secondEmailNotificationIdentifer = Guid.NewGuid();
-        var secondProcessedSignal = new ManualResetEventSlim(false);
+        using var secondProcessedSignal = new ManualResetEventSlim(false);
         var secondEmail = new Core.Sending.Email(secondEmailNotificationIdentifer, "second", "body-2", "from", "to", EmailContentType.Plain);
 
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
@@ -612,7 +612,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenShutdownInitiated_ThenNoFurtherMessagesAreProcessed_IncludingMessagesProducedDuringStop()
     {
         // Arrange
-        var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(firstProcessedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -642,9 +642,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         // Arrange
         var processedCount = 0;
-        var reached100Signal = new ManualResetEventSlim(false);
-        var allProcessedSignal = new ManualResetEventSlim(false);
-        var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
+        using var reached100Signal = new ManualResetEventSlim(false);
+        using var allProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
@@ -696,8 +695,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         // Arrange
         var processedCount = 0;
-        var firstProcessedSignal = new ManualResetEventSlim(false);
-        var blockingSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var blockingSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
