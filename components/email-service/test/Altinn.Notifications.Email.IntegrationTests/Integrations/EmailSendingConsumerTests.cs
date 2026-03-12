@@ -24,6 +24,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
     private readonly string _emailSendingConsumerTopic = Guid.NewGuid().ToString();
     private readonly string _emailSendingAcceptedProducerTopic = Guid.NewGuid().ToString();
+    private readonly string _firstTopicName = Guid.NewGuid().ToString();
+    private readonly string _secondTopicName = Guid.NewGuid().ToString();
 
     public EmailSendingConsumerTests()
     {
@@ -47,12 +49,16 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         await KafkaUtil.DeleteTopicAsync(_emailSendingConsumerTopic);
         await KafkaUtil.DeleteTopicAsync(_emailSendingAcceptedProducerTopic);
+        await KafkaUtil.DeleteTopicAsync(_firstTopicName);
+        await KafkaUtil.DeleteTopicAsync(_secondTopicName);
     }
 
     public async Task InitializeAsync()
     {
         await KafkaUtil.CreateTopicAsync(_emailSendingConsumerTopic);
         await KafkaUtil.CreateTopicAsync(_emailSendingAcceptedProducerTopic);
+        await KafkaUtil.CreateTopicAsync(_firstTopicName);
+        await KafkaUtil.CreateTopicAsync(_secondTopicName);
     }
 
     [Fact]
@@ -101,36 +107,59 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithValidBatch_ThenContiguousOffsetsCommitted()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
-        var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
+        var messageCount = 0;
+        var firstProcessedSignal = new ManualResetEventSlim(false);
+        var sentinelProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
             .Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>()))
-            .Callback(processedSignal.Set)
+            .Callback(() =>
+            {
+                if (Interlocked.Increment(ref messageCount) == 1)
+                {
+                    firstProcessedSignal.Set();
+                }
+                else
+                {
+                    sentinelProcessedSignal.Set();
+                }
+            })
             .Returns(Task.CompletedTask);
 
-        await using var testFixture = CreateTestFixture(sendingServiceMock.Object, loggerMock.Object);
+        await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
         var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
+        var sentinel = new Core.Sending.Email(Guid.NewGuid(), "sentinel", "body", "from", "to", EmailContentType.Plain);
 
         // Act
         await testFixture.Consumer.StartAsync(CancellationToken.None);
         await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(email));
 
-        var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+
+        // Produce a sentinel AFTER the first message is processed.
+        // The sentinel arrives in a new batch, so when it's processed
+        // the previous batch (with the first message) has been committed.
+        await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(sentinel));
+        var sentinelProcessed = await WaitForConditionAsync(() => sentinelProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+
         await testFixture.Consumer.StopAsync(CancellationToken.None);
+
+        // Assert – start a second consumer with the same group; it should NOT re-consume either message
+        var reprocessedSignal = new ManualResetEventSlim(false);
+        var secondSendingServiceMock = CreateSendingServiceMock(reprocessedSignal);
+        await using var verifyFixture = CreateTestFixture(secondSendingServiceMock.Object);
+
+        await verifyFixture.Consumer.StartAsync(CancellationToken.None);
+        bool reprocessed = await WaitForConditionAsync(() => reprocessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        await verifyFixture.Consumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.True(processed, "Message should have been processed");
-        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
-
-        var loggerInvocations = loggerMock.Invocations
-            .Where(i => i.Arguments.Count >= 3)
-            .Where(i => i.Arguments[2]?.ToString()?.Contains("Commit") == true || i.Arguments[2]?.ToString()?.Contains("last batch safe offsets") == true)
-            .ToList();
-
-        Assert.True(loggerInvocations.Count > 0, "Expected commit-related logging during shutdown");
+        Assert.True(sentinelProcessed, "Sentinel should have been processed, confirming the batch cycle completed");
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Exactly(2));
+        Assert.False(reprocessed, "Message should not be re-consumed, indicating offsets were committed before shutdown");
     }
 
     [Fact]
@@ -343,55 +372,44 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             .Callback(firstProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
-        var firstTopicName = Guid.NewGuid().ToString();
-        var secondTopicName = Guid.NewGuid().ToString();
-
         var kafkaSettings = new KafkaSettings
         {
             BrokerAddress = "localhost:9092",
-            SendEmailQueueTopicName = firstTopicName,
-            EmailSendingAcceptedTopicName = secondTopicName,
-            Consumer = new() { GroupId = "test-partition-mismatch" },
-            Admin = new() { TopicList = [firstTopicName, secondTopicName, _emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic] }
+            SendEmailQueueTopicName = _firstTopicName,
+            EmailSendingAcceptedTopicName = _secondTopicName,
+            Consumer = new() { GroupId = $"test-partition-mismatch-{Guid.NewGuid()}" },
+            Admin = new() { TopicList = [_firstTopicName, _secondTopicName, _emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic] }
         };
 
         var serviceProvider = CreateServiceProvider(sendingServiceMock.Object, loggerMock.Object, kafkaSettings);
         var producer = KafkaUtil.GetKafkaProducer(serviceProvider);
 
-        try
-        {
-            await using var firstTestFixture = new EmailConsumerTestFixture(
-                producer,
-                serviceProvider.GetServices<IHostedService>().OfType<SendEmailQueueConsumer>().Single(),
-                serviceProvider);
+        await using var firstTestFixture = new EmailConsumerTestFixture(
+            producer,
+            serviceProvider.GetServices<IHostedService>().OfType<SendEmailQueueConsumer>().Single(),
+            serviceProvider);
 
-            var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
+        var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
 
-            // Act - Process a message on first topic, then quickly stop to trigger revocation
-            await firstTestFixture.Consumer.StartAsync(CancellationToken.None);
-            await producer.ProduceAsync(firstTopicName, JsonSerializer.Serialize(email));
+        // Act - Process a message on first topic, then quickly stop to trigger revocation
+        await firstTestFixture.Consumer.StartAsync(CancellationToken.None);
+        await producer.ProduceAsync(_firstTopicName, JsonSerializer.Serialize(email));
 
-            var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
-            await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(processed, "Message should have been processed");
+        // Assert
+        Assert.True(processed, "Message should have been processed");
 
-            // No revocation commit warnings should occur since partitions won't match
-            loggerMock.Verify(
-                x => x.Log(
-                    It.Is<LogLevel>(l => l == LogLevel.Warning),
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Commit on revocation")),
-                    It.IsAny<Exception?>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Never);
-        }
-        finally
-        {
-            await KafkaUtil.DeleteTopicAsync(firstTopicName);
-            await KafkaUtil.DeleteTopicAsync(secondTopicName);
-        }
+        // No revocation commit warnings should occur since partitions won't match
+        loggerMock.Verify(
+            x => x.Log(
+                It.Is<LogLevel>(l => l == LogLevel.Warning),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Commit on revocation")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
     }
 
     [Fact]
@@ -448,7 +466,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             BrokerAddress = "localhost:9092",
             SendEmailQueueRetryTopicName = retryTopicName,
             SendEmailQueueTopicName = _emailSendingConsumerTopic,
-            Consumer = new() { GroupId = "email-sending-consumer" },
+            Consumer = new() { GroupId = $"email-sending-consumer-{Guid.NewGuid()}" },
             EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
             Admin = new() { TopicList = [_emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic, retryTopicName] }
         };
