@@ -9,9 +9,9 @@ namespace Altinn.Notifications.Email.Health
     public class HealthCheck : IHealthCheck
     {
         /// <summary>
-        /// Verifies the healht status
+        /// Verifies the health status
         /// </summary>
-        /// <param name="context">The healtcheck context</param>
+        /// <param name="context">The health check context</param>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns>A health result</returns>
         public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
