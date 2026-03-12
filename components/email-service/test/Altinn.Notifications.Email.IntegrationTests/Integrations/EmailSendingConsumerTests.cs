@@ -32,7 +32,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             BrokerAddress = "localhost:9092",
             Consumer = new()
             {
-                GroupId = $"email-sending-consumer-{Guid.NewGuid}"
+                GroupId = $"email-sending-consumer-{Guid.NewGuid()}"
             },
             SendEmailQueueTopicName = _emailSendingConsumerTopic,
             EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
