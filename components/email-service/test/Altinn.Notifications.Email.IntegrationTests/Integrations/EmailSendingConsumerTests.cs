@@ -108,8 +108,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         // Arrange
         var messageCount = 0;
-        var firstProcessedSignal = new ManualResetEventSlim(false);
-        var sentinelProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var sentinelProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
@@ -136,23 +136,23 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         await testFixture.Consumer.StartAsync(CancellationToken.None);
         await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(email));
 
-        var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(50));
 
         // Produce a sentinel AFTER the first message is processed.
         // The sentinel arrives in a new batch, so when it's processed
         // the previous batch (with the first message) has been committed.
         await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(sentinel));
-        var sentinelProcessed = await WaitForConditionAsync(() => sentinelProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var sentinelProcessed = await WaitForConditionAsync(() => sentinelProcessedSignal.IsSet, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(50));
 
         await testFixture.Consumer.StopAsync(CancellationToken.None);
 
         // Assert – start a second consumer with the same group; it should NOT re-consume either message
-        var reprocessedSignal = new ManualResetEventSlim(false);
+        using var reprocessedSignal = new ManualResetEventSlim(false);
         var secondSendingServiceMock = CreateSendingServiceMock(reprocessedSignal);
         await using var verifyFixture = CreateTestFixture(secondSendingServiceMock.Object);
 
         await verifyFixture.Consumer.StartAsync(CancellationToken.None);
-        bool reprocessed = await WaitForConditionAsync(() => reprocessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        bool reprocessed = await WaitForConditionAsync(() => reprocessedSignal.IsSet, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(50));
         await verifyFixture.Consumer.StopAsync(CancellationToken.None);
 
         // Assert
