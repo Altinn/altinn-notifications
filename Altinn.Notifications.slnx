@@ -39,6 +39,7 @@
   </Folder>
   <Folder Name="/SMS/test/">
     <Project Path="components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj" />
+    <Project Path="components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj" />
     <Project Path="components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj" />
   </Folder>
   <Folder Name="/Tools/" />
