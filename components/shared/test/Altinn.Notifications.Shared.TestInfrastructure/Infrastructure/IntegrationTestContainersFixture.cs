@@ -86,7 +86,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 await _postgresContainer.StartAsync();
 
                 PostgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                PostgresConnectionString = $"Host=localhost;Port={PostgresPort};Database={postgresSettings.Database};Username={postgresSettings.Username};Password={postgresSettings.Password}";
+                PostgresConnectionString = $"Host=localhost;Port={PostgresPort};Database={postgresSettings.Database};Username={postgresSettings.Username};Password={postgresSettings.Password};SSL Mode=Disable";
 
                 await WaitForPostgresAsync();
 
