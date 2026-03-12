@@ -13,7 +13,8 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Core.Shared;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -31,6 +32,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     private readonly IOrderRepository _orderRepository;
     private readonly IShortMessageServiceClient _shortMessageServiceClient;
     private readonly IInstantEmailServiceClient _instantEmailServiceClient;
+    private readonly ILogger<InstantOrderRequestService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantOrderRequestService"/> class.
@@ -41,13 +43,15 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         IOrderRepository instantOrderRepository,
         IOptions<NotificationConfig> configurationOptions,
         IShortMessageServiceClient shortMessageServiceClient,
-        IInstantEmailServiceClient instantEmailServiceClient)
+        IInstantEmailServiceClient instantEmailServiceClient,
+        ILogger<InstantOrderRequestService> logger)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _orderRepository = instantOrderRepository;
         _shortMessageServiceClient = shortMessageServiceClient;
         _instantEmailServiceClient = instantEmailServiceClient;
+        _logger = logger;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
         _defaultEmailFromAddress = configurationOptions.Value.DefaultEmailFromAddress;
     }
@@ -77,24 +81,23 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        var shortMessage = new ShortMessage
+        {
+            Message = messageContent.Message,
+            NotificationId = smsNotification.Id,
+            TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+            Recipient = smsNotification.Recipient.MobileNumber,
+            Sender = senderIdentifier
+        };
+
+        var response = await _shortMessageServiceClient.SendAsync(shortMessage);
+        if (!response.Success)
+        {
+            HandleNetworkTransientFailure(smsNotification, response, notificationOrder.Creator.ShortName);
+        }
+        
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        
-        _ = Task.Run(
-            async () =>
-            {
-                var shortMessage = new ShortMessage
-                {
-                    Message = messageContent.Message,
-                    NotificationId = smsNotification.Id,
-                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                    Recipient = smsNotification.Recipient.MobileNumber,
-                    Sender = senderIdentifier
-                };
-
-                await _shortMessageServiceClient.SendAsync(shortMessage);
-            },
-            CancellationToken.None);
 
         return trackingInformation;
     }
@@ -118,24 +121,24 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        var shortMessage = new ShortMessage
+        {
+            Message = messageContent.Message,
+            NotificationId = smsNotification.Id,
+            TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+            Recipient = smsNotification.Recipient.MobileNumber,
+            Sender = senderIdentifier
+        };
+
+        var response = await _shortMessageServiceClient.SendAsync(shortMessage);
+
+        if (!response.Success)
+        {
+            HandleNetworkTransientFailure(smsNotification, response, notificationOrder.Creator.ShortName);
+        }
+
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        
-        _ = Task.Run(
-            async () =>
-            {
-                var shortMessage = new ShortMessage
-                {
-                    Message = messageContent.Message,
-                    NotificationId = smsNotification.Id,
-                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                    Recipient = smsNotification.Recipient.MobileNumber,
-                    Sender = senderIdentifier
-                };
-
-                await _shortMessageServiceClient.SendAsync(shortMessage);
-            },
-            CancellationToken.None);
 
         return trackingInformation;
     }
@@ -255,26 +258,25 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        var instantEmail = new InstantEmail
+        {
+            Subject = emailContent.Subject,
+            Body = emailContent.Body,
+            ContentType = emailContent.ContentType,
+            Sender = senderEmailAddress,
+            Recipient = emailNotification.Recipient.ToAddress,
+            NotificationId = emailNotification.Id
+        };
+        var response = await _instantEmailServiceClient.SendAsync(instantEmail);
+      
+        if (!response.Success)
+        {
+            HandleNetworkTransientFailure(emailNotification, response, notificationOrder.Creator.ShortName);
+        }
+
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
         
-        _ = Task.Run(
-            async () =>
-            {
-                var instantEmail = new InstantEmail
-                {
-                    Subject = emailContent.Subject,
-                    Body = emailContent.Body,
-                    ContentType = emailContent.ContentType,
-                    Sender = senderEmailAddress,
-                    Recipient = emailNotification.Recipient.ToAddress,
-                    NotificationId = emailNotification.Id
-                };
-
-                await _instantEmailServiceClient.SendAsync(instantEmail);
-            },
-            CancellationToken.None);
-
         return trackingInformation;
     }
 
@@ -404,5 +406,37 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             Recipients = [new([new EmailAddressPoint(deliveryDetails.EmailAddress)])],
             Templates = [new EmailTemplate(senderEmailAddress, emailContent.Subject, emailContent.Body, emailContent.ContentType)]
         };
+    }
+
+    private void HandleNetworkTransientFailure(SmsNotification smsNotification, ShortMessageSendResult response, string creatorShortName)
+    {
+        const string noDetailsMessage = "No error details provided";
+
+        _logger.LogCritical(
+            "Instant SMS service client http call failed. Creator: {Creator}, RequestedSendTime: {RequestedSendTime}, Error: {ErrorDetails}",
+            creatorShortName,
+            smsNotification.RequestedSendTime,
+            response.ErrorDetails ?? noDetailsMessage);
+
+        throw new PlatformDependencyException(
+            "ShortMessageServiceClient", 
+            "PersistInstantSmsNotificationAsync", 
+            response.ErrorDetails ?? noDetailsMessage);
+    }
+
+    private void HandleNetworkTransientFailure(EmailNotification emailNotification, InstantEmailSendResult response, string creatorShortName)
+    {
+        const string noDetailsMessage = "No error details provided";
+
+        _logger.LogCritical(
+            "Instant email service client http call failed. Creator: {Creator}, RequestedSendTime: {RequestedSendTime}, Error: {ErrorDetails}",
+            creatorShortName,
+            emailNotification.RequestedSendTime, 
+            response.ErrorDetails ?? noDetailsMessage);
+
+        throw new PlatformDependencyException(
+            "InstantEmailServiceClient",
+            "PersistInstantEmailNotificationAsync",
+            response.ErrorDetails ?? noDetailsMessage);
     }
 }

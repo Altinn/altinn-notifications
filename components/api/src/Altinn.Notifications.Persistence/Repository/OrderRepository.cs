@@ -38,8 +38,8 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
-    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
-    private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
+    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
+    private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
     private const string _insertOrderChainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
@@ -490,7 +490,8 @@ public class OrderRepository : IOrderRepository
              reader.GetValue<string?>("resourceid"),
              conditionEndpoint,
              new ProcessingStatus(reader.GetValue<OrderProcessingStatus>("processedstatus"), reader.GetValue<DateTime>("processed")),
-             OrderType.Notification);
+             OrderType.Notification,
+             reader.GetValue<string?>("resourceaction"));
 
         int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
         int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");

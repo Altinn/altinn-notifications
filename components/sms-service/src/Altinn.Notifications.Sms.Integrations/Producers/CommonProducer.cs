@@ -83,8 +83,8 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
         var topicsNotExisting = _kafkaSettings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
         foreach (string topic in topicsNotExisting)
         { 
-            adminClient.CreateTopicsAsync(new TopicSpecification[]
-            {
+            adminClient.CreateTopicsAsync(
+            [
                 new TopicSpecification()
                 {
                     Name = topic,
@@ -92,7 +92,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                     ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
                     Configs = _sharedClientConfig.TopicSpecification.Configs
                 }
-            }).Wait();
+            ]).Wait();
             _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
         }
     }
