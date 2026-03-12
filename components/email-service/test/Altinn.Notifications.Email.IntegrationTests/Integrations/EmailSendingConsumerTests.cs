@@ -163,6 +163,42 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GivenPartitionRevocationWithValidBatch_ThenContiguousOffsetsCommitted_Old()
+    {
+        // Arrange
+        using var processedSignal = new ManualResetEventSlim(false);
+        var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
+
+        var sendingServiceMock = new Mock<ISendingService>();
+        sendingServiceMock
+            .Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>()))
+            .Callback(processedSignal.Set)
+            .Returns(Task.CompletedTask);
+
+        await using var testFixture = CreateTestFixture(sendingServiceMock.Object, loggerMock.Object);
+
+        var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
+
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(email));
+
+        var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(50));
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.True(processed, "Message should have been processed");
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+
+        var loggerInvocations = loggerMock.Invocations
+            .Where(i => i.Arguments.Count >= 3)
+            .Where(i => i.Arguments[2]?.ToString()?.Contains("Commit") == true || i.Arguments[2]?.ToString()?.Contains("last batch safe offsets") == true)
+            .ToList();
+
+        Assert.True(loggerInvocations.Count > 0, "Expected commit-related logging during shutdown");
+    }
+
+    [Fact]
     public async Task GivenPartitionRevocationWithNoLastProcessedBatch_ThenNoCommitAttempted()
     {
         // Arrange
