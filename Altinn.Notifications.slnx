@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/API/test/">
     <Project Path="components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj" />
+    <Project Path="components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj" />
     <Project Path="components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj" />
   </Folder>
   <Folder Name="/Email/" />
