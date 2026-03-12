@@ -58,7 +58,7 @@ jobs:
       - name: Build the Docker image
         run: docker build . -f components/api/Dockerfile --tag altinn-notifications-api:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: 'altinn-notifications-api:${{ github.sha }}'
           format: 'table'
@@ -82,7 +82,7 @@ jobs:
       - name: Build the Docker image
         run: docker build . -f components/email-service/Dockerfile --tag altinn-notifications-email:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: 'altinn-notifications-email:${{ github.sha }}'
           format: 'table'
@@ -106,7 +106,7 @@ jobs:
       - name: Build the Docker image
         run: docker build . -f components/sms-service/Dockerfile --tag altinn-notifications-sms:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: 'altinn-notifications-sms:${{ github.sha }}'
           format: 'table'
