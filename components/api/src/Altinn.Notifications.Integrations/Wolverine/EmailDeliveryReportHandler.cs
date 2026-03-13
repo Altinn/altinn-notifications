@@ -1,0 +1,138 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
+
+using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid.SystemEvents;
+using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Logging;
+using Wolverine.ErrorHandling;
+using Wolverine.Runtime.Handlers;
+
+namespace Altinn.Notifications.Integrations.Wolverine;
+
+/// <summary>
+/// Handles email delivery status updates received from the Azure Service Bus queue.
+/// </summary>
+[ExcludeFromCodeCoverage]
+public static class EmailDeliveryReportHandler
+{
+    /// <summary>
+    /// Gets or sets the Wolverine settings used for configuring error handling policies.
+    /// </summary>
+    public static WolverineSettings Settings { get; set; } = null!;
+
+    /// <summary>
+    /// Configures error handling for the email delivery report queue handler.
+    /// </summary>
+    public static void Configure(HandlerChain chain)
+    {
+        var policy = Settings.EmailDeliveryReportQueuePolicy;
+
+        chain
+            .OnException<InvalidOperationException>()
+            .Or<TaskCanceledException>()
+            .Or<TimeoutException>()
+            .Or<ServiceBusException>()
+            .Or<NotificationNotFoundException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
+            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.MoveToErrorQueue();
+    }
+
+    /// <summary>
+    /// Handles an email delivery report command by logging the received status update.
+    /// </summary>
+    public static async Task Handle(
+        EmailDeliveryReportCommand command, 
+        IEmailNotificationService emailNotificationService, 
+        IDeadDeliveryReportService deadDeliveryReportService,
+        ILogger logger)
+    {
+        var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
+
+        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
+        if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
+        {
+            switch (systemEvent)
+            {
+                case AcsEmailDeliveryReportReceivedEventData deliveryReport:
+                    if (string.IsNullOrWhiteSpace(deliveryReport.MessageId))
+                    {
+                        logger.LogError("Received delivery report with missing MessageId. Subject: {Subject}", eventGridEvent.Subject);
+                        return;
+                    }
+
+                    logger.LogInformation(
+                        "Received email delivery report for MessageId: {MessageId}, Status: {Status}", 
+                        deliveryReport.MessageId, 
+                        deliveryReport.Status);
+
+                    await HandleDeliveryReport(emailNotificationService, deliveryReport, deadDeliveryReportService, logger);
+                    break;
+                default:
+                    logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
+                    break;
+            }
+        }
+        else
+        {
+            logger.LogWarning("Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}", eventGridEvent.Subject, eventGridEvent.EventType);
+        }
+    }
+
+    private static async Task HandleDeliveryReport(
+        IEmailNotificationService emailNotificationService, 
+        AcsEmailDeliveryReportReceivedEventData deliveryReport,
+        IDeadDeliveryReportService deadDeliveryReportService,
+        ILogger logger)
+    {
+        var operationResult = new EmailSendOperationResult()
+        {
+            OperationId = deliveryReport.MessageId,
+            SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString())
+        };
+
+        try
+        {
+            await emailNotificationService.UpdateSendStatus(operationResult);
+        }
+        catch (NotificationExpiredException ex)
+        {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            logger.LogInformation(
+                ex,
+                "// {Class} // ProcessStatusUpdateWithRetry // {Message}",
+                nameof(EmailDeliveryReportHandler),
+                ex.Message);
+
+            await SaveDeadDeliveryReportForExpired(deliveryReport, deadDeliveryReportService);
+        }
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
+    private static async Task SaveDeadDeliveryReportForExpired(AcsEmailDeliveryReportReceivedEventData deliveryReport, IDeadDeliveryReportService deadDeliveryReportService)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
+            FirstSeen = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
+            LastAttempt = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
+            AttemptCount = 1,
+            Resolved = false,
+            DeliveryReport = JsonSerializer.Serialize(deliveryReport),
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+    }
+}
