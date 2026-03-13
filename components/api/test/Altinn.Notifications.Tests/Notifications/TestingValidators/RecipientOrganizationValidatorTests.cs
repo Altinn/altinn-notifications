@@ -167,4 +167,92 @@ public class RecipientOrganizationValidatorTests
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Should_Have_Validation_Error_When_ResourceAction_Set_Without_ResourceId(string? resourceId)
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ChannelSchema = NotificationChannelExt.Sms,
+            ResourceId = resourceId,
+            ResourceAction = "read",
+            SmsSettings = new SmsSendingOptionsExt { Sender = "Test", Body = "Test" }
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceAction)
+            .WithErrorMessage("ResourceAction cannot be specified without a ResourceId.");
+    }
+
+    [Fact]
+    public void Should_Not_Have_Validation_Error_When_ResourceAction_Set_With_ResourceId()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ChannelSchema = NotificationChannelExt.Sms,
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "read",
+            SmsSettings = new SmsSendingOptionsExt { Sender = "Test", Body = "Test" }
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceAction);
+    }
+
+    [Fact]
+    public void Should_Not_Have_Validation_Error_When_ResourceAction_Is_Null()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ChannelSchema = NotificationChannelExt.Sms,
+            ResourceId = null,
+            ResourceAction = null,
+            SmsSettings = new SmsSendingOptionsExt { Sender = "Test", Body = "Test" }
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceAction);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void Should_Have_Validation_Error_When_ResourceAction_Is_Blank_Or_Whitespace(string resourceAction)
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ChannelSchema = NotificationChannelExt.Sms,
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = resourceAction,
+            SmsSettings = new SmsSendingOptionsExt { Sender = "Test", Body = "Test" }
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceAction)
+            .WithErrorMessage("ResourceAction cannot be blank or whitespace.");
+    }
 }

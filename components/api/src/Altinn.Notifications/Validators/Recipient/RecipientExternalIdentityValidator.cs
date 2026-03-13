@@ -27,11 +27,6 @@ internal sealed partial class RecipientExternalIdentityValidator : AbstractValid
                 .Must(BeValidExternalIdentity)
                 .When(options => !string.IsNullOrEmpty(options!.ExternalIdentity))
                 .WithMessage("Invalid external identity URN format.");
-
-            RuleFor(options => options!.ResourceId)
-                .Must(resourceId => RecipientRules.BeValidResourceId(resourceId!))
-                .When(options => options!.ResourceId != null)
-                .WithMessage("ResourceId must have a valid syntax.");
         });
     }
 

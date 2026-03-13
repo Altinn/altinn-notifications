@@ -161,7 +161,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             .First();
 
         (NotificationOrder notificationOrder, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
         _ordersToDelete.Add(notificationOrder.Id);
 
         SmsSendOperationResult sendOperationResult = new()

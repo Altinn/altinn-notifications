@@ -11,6 +11,7 @@ on:
       - 'components/api/**'
       - 'components/email-service/**'
       - 'components/sms-service/**'
+      - 'components/shared/**'
 
 jobs:
   add_component_labels:

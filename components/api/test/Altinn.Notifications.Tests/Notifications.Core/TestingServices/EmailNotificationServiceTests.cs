@@ -14,11 +14,12 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Persistence.Repository;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Moq;
-
+using Moq.Protected;
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -28,6 +29,64 @@ public class EmailNotificationServiceTests
     private readonly int _publishBatchSize = 500;
     private const string _emailQueueTopicName = "email.queue";
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        var mockRepo = new Mock<EmailNotificationRepository>(
+            (null as NpgsqlDataSource)!,
+            (null as ILogger<EmailNotificationRepository>)!,
+            Options.Create(new NotificationConfig()))
+        {
+            CallBase = true
+        };
+
+        mockRepo.Protected()
+            .Setup<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.IsAny<NotificationChannel>(),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.IsAny<bool>(),
+                ItExpr.IsAny<SendStatusIdentifierType>())
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailNotificationService(
+            new Mock<IGuidService>().Object,
+            new Mock<IKafkaProducer>().Object,
+            new Mock<IDateTimeService>().Object,
+            Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            mockRepo.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
+        mockRepo.Protected()
+            .Verify<Task>(
+                "ExecuteUpdateWithTransactionAsync", 
+                Times.Once(),
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Email),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.Is<bool>(b => b),
+                ItExpr.IsAny<SendStatusIdentifierType>());
+    }
 
     [Fact]
     public async Task CreateNotification_ToAddressDefined_ResultNew()

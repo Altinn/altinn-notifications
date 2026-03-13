@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Altinn.Notifications.Email.Core/Altinn.Notifications.Email.Core.csproj" />
+    <Project Path="src/Altinn.Notifications.Email.Integrations/Altinn.Notifications.Email.Integrations.csproj" />
+    <Project Path="src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj" />
+    <Project Path="test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj" />
+  </Folder>
+</Solution>

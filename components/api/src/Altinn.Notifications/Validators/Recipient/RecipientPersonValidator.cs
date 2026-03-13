@@ -22,11 +22,6 @@ internal sealed class RecipientPersonValidator : AbstractValidator<RecipientPers
             RuleFor(options => options!.NationalIdentityNumber)
                 .NotEmpty()
                 .MustBeValidNationalIdentityNumber();
-
-            RuleFor(options => options!.ResourceId)
-                .Must(arg => RecipientRules.BeValidResourceId(arg!))
-                .When(options => options!.ResourceId != null)
-                .WithMessage("ResourceId must have a valid syntax.");
         });
     }
 }

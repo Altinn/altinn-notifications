@@ -32,6 +32,21 @@ public static class NotificationOrderRequestBaseRules
                 order.RuleFor(o => o.ConditionEndpoint)
                     .Must(uri => uri == null || uri.IsValidUrl())
                     .WithMessage("The condition endpoint must be a valid URL.");
+
+                order.RuleFor(o => o.ResourceAction)
+                    .Must((order, resourceAction) =>
+                    {
+                        if (string.IsNullOrWhiteSpace(order.ResourceId))
+                        {
+                            return string.IsNullOrEmpty(resourceAction);
+                        }
+
+                        return string.IsNullOrEmpty(resourceAction) || !string.IsNullOrWhiteSpace(resourceAction);
+                    })
+                    .WithMessage((order, _) =>
+                        string.IsNullOrWhiteSpace(order.ResourceId)
+                        ? "ResourceAction cannot be specified without a ResourceId."
+                        : "ResourceAction cannot be blank or whitespace.");
             });
     }
 }

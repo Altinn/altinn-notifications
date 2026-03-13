@@ -25,12 +25,6 @@ public class RecipientOrganizationExt : RecipientBaseExt
     public required string OrgNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
-    /// </summary>
-    [JsonPropertyName("resourceId")]
-    public string? ResourceId { get; set; }
-
-    /// <summary>
     /// Gets or sets the required channel scheme for delivering the notification.
     /// </summary>
     /// <remarks>

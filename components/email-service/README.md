@@ -33,7 +33,7 @@ Relevant implementations:
 
 **Build:**
 ```bash
-dotnet build Altinn.Notifications.Email.sln
+dotnet build Altinn.Notifications.Email.slnx
 ```
 
 **Run:**
@@ -44,7 +44,7 @@ dotnet run
 
 **Test:**
 ```bash
-dotnet test Altinn.Notifications.Email.sln
+dotnet test Altinn.Notifications.Email.slnx
 ```
 
 ## 🐳 Containerization
@@ -68,12 +68,12 @@ For full setup instructions including Kafka, database configuration, and user se
 ## Building
 
 ```bash
-dotnet restore Altinn.Notifications.Email.sln
-dotnet build Altinn.Notifications.Email.sln
+dotnet restore Altinn.Notifications.Email.slnx
+dotnet build Altinn.Notifications.Email.slnx
 ```
 
 ## Testing
 
 ```bash
-dotnet test Altinn.Notifications.Email.sln
+dotnet test Altinn.Notifications.Email.slnx
 ```

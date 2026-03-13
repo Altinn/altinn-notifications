@@ -9,11 +9,12 @@ You can work on the entire system using the root solution or focus on individual
 
 | Solution | File Path | Purpose |
 | :--- | :--- | :--- |
-| **Full Stack** | `Altinn.Notifications.sln` | Work on API, Email, SMS, and Tools simultaneously. |
-| **API** | `components/api/Altinn.Notifications.API.sln` | Core Notification API logic. |
-| **Email Service** | `components/email-service/Altinn.Notifications.Email.sln` | Email sending and processing. |
-| **SMS Service** | `components/sms-service/Altinn.Notifications.Sms.sln` | SMS sending and processing. |
-| **Tools** | `tools/Altinn.Notifications.Tools.sln` | Utility and maintenance tools. |
+| **Full Stack** | `Altinn.Notifications.slnx` | Work on API, Email, SMS, and Tools simultaneously. |
+| **API** | `components/api/Altinn.Notifications.API.slnx` | Core Notification API logic. |
+| **Shared** | `components/shared/Altinn.Notifications.Shared.slnx` | Shared library used across components. |
+| **Email Service** | `components/email-service/Altinn.Notifications.Email.slnx` | Email sending and processing. |
+| **SMS Service** | `components/sms-service/Altinn.Notifications.Sms.slnx` | SMS sending and processing. |
+| **Tools** | `tools/Altinn.Notifications.Tools.slnx` | Utility and maintenance tools. |
 
 ---
 
@@ -38,7 +39,7 @@ git clone https://github.com/Altinn/altinn-notifications.git
 cd altinn-notifications
 ```
 
-### 2. Infrastructure Setup (Kafka)
+### 2. Kafka Setup
 
 Altinn Notifications uses Kafka for message queuing. Start the local Kafka instance using Podman or Docker.
 
@@ -54,7 +55,25 @@ docker compose -f tools/dev-setup/setup-kafka.yml up -d
 
 > 🎯 **Tip:** You can access the **Kafdrop** UI at `http://localhost:9000` to monitor your topics.
 
-### 3. Database Setup (PostgreSQL)
+### 3. Azure Service Bus Emulator Setup
+
+Altinn Notifications is being migrated from Kafka to Azure Service Bus. A local ASB emulator is available for development. The `tools/asb-emulator/.env` file is pre-configured with local dev defaults. Note that the emulator exposes AMQP on port `5672` and an HTTP management endpoint on port `5300`. The connection string for local development is pre-configured in `appsettings.Development.json` of each service.
+
+**Podman (Preferred):**
+```bash
+cd tools/asb-emulator
+podman compose up -d
+```
+
+**Docker:**
+```bash
+cd tools/asb-emulator
+docker compose up -d
+```
+
+> 🎯 **Tip:** Use [PurpleExplorer](https://github.com/philipmat/PurpleExplorer) to browse queues and messages. It supports the `UseDevelopmentEmulator=true` flag for the local emulator connection string.
+
+### 4. Database Setup (PostgreSQL)
 
 1.  Ensure PostgreSQL is running.
 2.  Open **pgAdmin** and connect to your local server.
@@ -69,7 +88,7 @@ docker compose -f tools/dev-setup/setup-kafka.yml up -d
 
 ### Option A: Run Everything (Visual Studio)
 
-1.  Open `Altinn.Notifications.sln` in Visual Studio.
+1.  Open `Altinn.Notifications.slnx` in Visual Studio.
 2.  Set the **Startup Projects** to multiple:
     *   `Altinn.Notifications` (API)
     *   `Altinn.Notifications.Email` (Email Worker)
@@ -144,14 +163,15 @@ You can run tests for the entire solution or per component.
 
 **Full Suite:**
 ```bash
-dotnet test Altinn.Notifications.sln
+dotnet test Altinn.Notifications.slnx
 ```
 
 **Per Component:**
 ```bash
-dotnet test components/api/Altinn.Notifications.API.sln
-dotnet test components/email-service/Altinn.Notifications.Email.sln
-dotnet test components/sms-service/Altinn.Notifications.Sms.sln
+dotnet test components/api/Altinn.Notifications.API.slnx
+dotnet test components/shared/Altinn.Notifications.Shared.slnx
+dotnet test components/email-service/Altinn.Notifications.Email.slnx
+dotnet test components/sms-service/Altinn.Notifications.Sms.slnx
 ```
 
 ### API Testing with Bruno

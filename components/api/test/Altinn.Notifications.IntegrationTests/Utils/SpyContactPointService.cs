@@ -15,7 +15,7 @@ public class SpyContactPointService : IContactPointService
 {
     public ConcurrentBag<(string Method, OrderLifecycleStage Phase)> RecordedCalls { get; } = new();
 
-    public Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         RecordedCalls.Add(("AddEmailContactPoints", orderLifecycleStage));
 
@@ -27,7 +27,7 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         RecordedCalls.Add(("AddSmsContactPoints", orderLifecycleStage));
 
@@ -39,7 +39,7 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         RecordedCalls.Add(("AddEmailAndSmsContactPointsAsync", orderLifecycleStage));
 
@@ -52,7 +52,7 @@ public class SpyContactPointService : IContactPointService
         return Task.CompletedTask;
     }
 
-    public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage)
+    public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
         RecordedCalls.Add(("AddPreferredContactPoints", orderLifecycleStage));
 

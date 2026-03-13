@@ -181,8 +181,8 @@ public class SmsOrderProcessingServiceTests
                 It.IsAny<bool>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
-        contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage>((r, _, _) =>
+        contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing, It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((r, _, _, resourceAction) =>
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
@@ -195,7 +195,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        contactPointServiceMock.Verify(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing), Times.Once);
+        contactPointServiceMock.Verify(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>(), OrderLifecycleStage.Processing, It.IsAny<string?>()), Times.Once);
         notificationServiceMock.VerifyAll();
     }
 
@@ -272,6 +272,53 @@ public class SmsOrderProcessingServiceTests
 
         // Assert
         notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProcessOrderRetry_WhenIgnoreReservationIsSet_NotificationServiceIsCalledWithCorrectValue(bool ignoreReservation)
+    {
+        // Arrange
+        var order = new NotificationOrder()
+        {
+            Id = Guid.NewGuid(),
+            IgnoreReservation = ignoreReservation,
+            NotificationChannel = NotificationChannel.Sms,
+            Templates = [new SmsTemplate("Altinn", "this is the body")],
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint("+4799999999")], nationalIdentityNumber: "23273936483")
+            ]
+        };
+
+        bool? capturedIgnoreReservation = null;
+
+        var notificationServiceMock = new Mock<ISmsNotificationService>();
+        notificationServiceMock.Setup(s => s.CreateNotification(
+            It.IsAny<Guid>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<List<SmsAddressPoint>>(),
+            It.IsAny<SmsRecipient>(),
+            It.IsAny<int>(),
+            It.IsAny<bool>()))
+            .Callback<Guid, DateTime, DateTime, List<SmsAddressPoint>, SmsRecipient, int, bool>(
+                (orderId, req, exp, addresses, recipient, segmentCount, ignoreRes) =>
+                {
+                    capturedIgnoreReservation = ignoreRes;
+                });
+
+        var smsRepoMock = new Mock<ISmsNotificationRepository>();
+        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync([]);
+
+        var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderRetry(order);
+
+        // Assert
+        Assert.Equal(ignoreReservation, capturedIgnoreReservation);
     }
 
     [Theory]
@@ -366,7 +413,7 @@ public class SmsOrderProcessingServiceTests
         if (contactPointService == null)
         {
             var contactPointServiceMock = new Mock<IContactPointService>();
-            contactPointServiceMock.Setup(e => e.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>()));
+            contactPointServiceMock.Setup(e => e.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<string?>()));
 
             contactPointService = contactPointServiceMock.Object;
         }

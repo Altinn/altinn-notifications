@@ -34,18 +34,21 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>
+    public string? ResourceAction { get; internal set; }
+
+    /// <inheritdoc/>
     public OrderType Type { get; internal set; }
 
     /// <inheritdoc/>>
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
-    /// Gets the processing status of the notication order
+    /// Gets the processing status of the notification order
     /// </summary>
     public ProcessingStatus ProcessingStatus { get; internal set; } = new();
 
     /// <summary>
-    /// Gets the summary of the notifiications statuses
+    /// Gets the summary of the notification statuses
     /// </summary>
     public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
 
@@ -68,7 +71,8 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         string? resourceId,
         Uri? conditionEndpoint,
         ProcessingStatus processingStatus, 
-        OrderType type)
+        OrderType type,
+        string? resourceAction)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -78,6 +82,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         NotificationChannel = notificationChannel;
         IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
+        ResourceAction = resourceAction;
         ConditionEndpoint = conditionEndpoint;
         ProcessingStatus = processingStatus;
         Type = type;
