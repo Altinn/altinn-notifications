@@ -22,9 +22,9 @@ public static class ServiceUtil
     private static NpgsqlDataSource? _sharedDataSource;
     private static ServiceProvider? _sharedServiceProvider;
 
-    // Tracks every ephemeral ServiceProvider created for env-variable overrides.
+    // Tracks every custom config ServiceProvider created for env-variable overrides.
     // Disposed together during teardown to avoid leaking IDisposable singletons.
-    private static readonly List<ServiceProvider> _ephemeralProviders = [];
+    private static readonly List<ServiceProvider> _customConfigProviders = [];
 
     public static NpgsqlDataSource GetSharedDataSource()
     {
@@ -77,13 +77,13 @@ public static class ServiceUtil
     {
         lock (_lock)
         {
-            // Dispose ephemeral providers first — they may hold scoped resources.
-            foreach (var sp in _ephemeralProviders)
+            // Dispose custom config providers first — they may hold scoped resources.
+            foreach (var sp in _customConfigProviders)
             {
                 sp.Dispose();
             }
 
-            _ephemeralProviders.Clear();
+            _customConfigProviders.Clear();
 
             _sharedServiceProvider?.Dispose();
             _sharedServiceProvider = null;
@@ -164,7 +164,7 @@ public static class ServiceUtil
 
         lock (_lock)
         {
-            _ephemeralProviders.Add(sp);
+            _customConfigProviders.Add(sp);
         }
 
         List<object> outputServices = [];
