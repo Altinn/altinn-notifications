@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
@@ -127,7 +128,7 @@ public static class EmailDeliveryReportHandler
             LastAttempt = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
             AttemptCount = 1,
             Resolved = false,
-            DeliveryReport = deliveryReport.ToString() ?? string.Empty,
+            DeliveryReport = JsonSerializer.Serialize(deliveryReport),
             Reason = "NOTIFICATION_EXPIRED",
             Message = "Notification expiry time has passed"
         };
