@@ -21,7 +21,8 @@ public static class PostgreUtil
     /// </summary>
     public static async Task<(NotificationOrder Order, EmailNotification Notification)> PopulateDBWithOrderAndEmailNotification(
         IntegrationTestWebApplicationFactory factory,
-        string? toAddress = null)
+        string? toAddress = null,
+        DateTime? expiry = null)
     {
         (NotificationOrder order, EmailNotification notification) = TestdataUtil.GetOrderAndEmailNotification();
 
@@ -36,7 +37,7 @@ public static class PostgreUtil
 
         await orderRepo.Create(order);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await emailRepo.AddNotification(notification, DateTime.UtcNow.AddDays(1));
+        await emailRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1));
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
         return (order, notification);

@@ -3,6 +3,7 @@ using Altinn.Notifications.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
+using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Azure.Messaging.ServiceBus;
 
@@ -43,30 +44,30 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
     }
 
     /// <summary>
-    /// Verifies that a message can be sent to the email delivery report queue
-    /// and that the queue receives it via the ASB emulator.
+    /// Verifies that a message can be sent to and received from the smoke-test queue
+    /// via the ASB emulator, proving the transport layer works.
     /// </summary>
     [Fact]
-    public async Task ServiceBus_CanSendAndReceiveMessage_OnDeliveryReportQueue()
+    public async Task ServiceBus_CanSendAndReceiveMessage_OnSmokeTestQueue()
     {
+        const string queueName = "smoke-test";
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
-
-            // Send a test message directly to the queue
             await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
             await using var sender = client.CreateSender(queueName);
 
-            string testBody = "{\"test\": \"message\"}";
+            string testBody = $"{{\"smokeTest\": \"{Guid.NewGuid()}\"}}";
             await sender.SendMessageAsync(new ServiceBusMessage(testBody));
 
-            // Wolverine's listener will pick up the message. Since the handler
-            // doesn't exist on this branch, the message will eventually end up
-            // in the dead letter queue or be processed with an error.
-            // For the smoke test, we just verify the send succeeded without throwing.
-            Assert.True(true, "Message was sent to the queue successfully");
+            var received = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(10));
+
+            Assert.NotNull(received);
+            Assert.Equal(testBody, received.Body.ToString());
         }
     }
 
