@@ -13,8 +13,8 @@
     "Body": {
       "Matchers": [
         {
-          "Name": "ContainsMatcher",
-          "Pattern": "999999999"
+          "Name": "WildcardMatcher",
+          "Pattern": "*999999999*"
         }
       ]
     }
