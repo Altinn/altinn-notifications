@@ -18,9 +18,15 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class ServiceUtil
 {
     private static readonly object _lock = new();
+    private static bool _postgreSqlInitialized;
     private static NpgsqlDataSource? _sharedDataSource;
+    private static ServiceProvider? _sharedServiceProvider;
 
-    private static NpgsqlDataSource GetOrCreateDataSource(IConfiguration config)
+    // Tracks every custom config ServiceProvider created for env-variable overrides.
+    // Disposed together during teardown to avoid leaking IDisposable singletons.
+    private static readonly List<ServiceProvider> _customConfigProviders = [];
+
+    public static NpgsqlDataSource GetSharedDataSource()
     {
         lock (_lock)
         {
@@ -29,34 +35,28 @@ public static class ServiceUtil
                 return _sharedDataSource;
             }
 
-            PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
-                .Get<PostgreSqlSettings>()
-                ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
-
-            string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
-
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-            dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
-            dataSourceBuilder.EnableDynamicJson();
-
-            // Note: Tracing configuration (ConfigureTracing) is intentionally omitted in tests
-            // to reduce noise and overhead. Tests focus on functional correctness rather than observability.
-            _sharedDataSource = dataSourceBuilder.Build();
-
+            var config = BuildConfiguration();
+            _sharedDataSource = CreateDataSource(config);
             return _sharedDataSource;
         }
     }
 
-    public static void DisposeSharedDataSource()
+    private static NpgsqlDataSource CreateDataSource(IConfiguration config)
     {
-        lock (_lock)
-        {
-            _sharedDataSource?.Dispose();
-            _sharedDataSource = null;
-        }
+        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
+            .Get<PostgreSqlSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
+
+        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
+        dataSourceBuilder.EnableDynamicJson();
+
+        return dataSourceBuilder.Build();
     }
 
-    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    private static IConfiguration BuildConfiguration(Dictionary<string, string>? envVariables = null)
     {
         if (envVariables != null)
         {
@@ -66,19 +66,118 @@ public static class ServiceUtil
             }
         }
 
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
+        return new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();
-        
-        var config = builder.Build();
+            .AddEnvironmentVariables()
+            .Build();
+    }
 
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
+    public static void DisposeSharedDataSource()
+    {
+        lock (_lock)
+        {
+            // Dispose custom config providers first — they may hold scoped resources.
+            foreach (var sp in _customConfigProviders)
+            {
+                sp.Dispose();
+            }
+
+            _customConfigProviders.Clear();
+
+            _sharedServiceProvider?.Dispose();
+            _sharedServiceProvider = null;
+            _sharedDataSource?.Dispose();
+            _sharedDataSource = null;
+            _postgreSqlInitialized = false;
+        }
+    }
+
+    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    {
+        if (envVariables is { Count: > 0 })
+        {
+            return BuildServiceProvider(envVariables, interfaceTypes);
+        }
+
+        // Otherwise, reuse the shared provider
+        lock (_lock)
+        {
+            _sharedServiceProvider ??= BuildSharedServiceProvider();
+        }
+
+        List<object> outputServices = [];
+        foreach (Type interfaceType in interfaceTypes)
+        {
+            outputServices.AddRange(_sharedServiceProvider.GetServices(interfaceType)!);
+        }
+
+        return outputServices;
+    }
+
+    /// <summary>
+    /// Runs Yuniql database migrations at most once per test run. The
+    /// PostgreSQL settings are identical regardless of Kafka topic overrides,
+    /// so a single invocation is sufficient.
+    /// </summary>
+    private static void EnsurePostgreSqlSetup(IConfiguration config)
+    {
+        if (_postgreSqlInitialized)
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            if (_postgreSqlInitialized)
+            {
+                return;
+            }
+
+            WebApplication.CreateBuilder()
+                           .Build()
+                           .SetUpPostgreSql(true, config);
+
+            _postgreSqlInitialized = true;
+        }
+    }
+
+    private static ServiceProvider BuildSharedServiceProvider()
+    {
+        var config = BuildConfiguration();
+        EnsurePostgreSqlSetup(config);
 
         IServiceCollection services = new ServiceCollection();
+        ConfigureServices(services, config);
+        return services.BuildServiceProvider();
+    }
 
+    private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
+    {
+        var config = BuildConfiguration(envVariables);
+        EnsurePostgreSqlSetup(config);
+
+        IServiceCollection services = new ServiceCollection();
+        ConfigureServices(services, config);
+
+        var sp = services.BuildServiceProvider();
+
+        lock (_lock)
+        {
+            _customConfigProviders.Add(sp);
+        }
+
+        List<object> outputServices = [];
+        foreach (Type interfaceType in interfaceTypes)
+        {
+            outputServices.AddRange(sp.GetServices(interfaceType)!);
+        }
+
+        return outputServices;
+    }
+
+    private static void ConfigureServices(IServiceCollection services, IConfiguration config)
+    {
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
         {
             EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
@@ -88,34 +187,17 @@ public static class ServiceUtil
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddLogging();
 
-        // Register the shared data source as a singleton
-        var sharedDataSource = GetOrCreateDataSource(config);
+        var sharedDataSource = GetSharedDataSource();
         services.AddSingleton(sharedDataSource);
-
-        // Register all repository implementations using the shared data source
         RegisterRepositories(services);
-
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
-
-        var serviceProvider = services.BuildServiceProvider();
-        List<object> outputServices = new();
-
-        foreach (Type interfaceType in interfaceTypes)
-        {
-            var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
-            outputServices.AddRange(outputServiceObject!);
-        }
-
-        return outputServices;
     }
 
     private static void RegisterRepositories(IServiceCollection services)
     {
-        // Explicitly register repositories to match production configuration.
-        // This provides compile-time safety and avoids fragility of reflection-based registration.
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
