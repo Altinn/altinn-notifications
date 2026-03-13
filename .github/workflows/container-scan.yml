@@ -36,11 +36,17 @@ jobs:
         with:
           filters: |
             api:
-              - 'components/api/**'
+              - 'components/api/src/**'
+              - 'components/api/Dockerfile'
+              - 'components/shared/src/**'
             sms:
-              - 'components/sms-service/**'
+              - 'components/shared/src/**'
+              - 'components/sms-service/src/**'
+              - 'components/sms-service/Dockerfile'
             email:
-              - 'components/email-service/**'
+              - 'components/shared/src/**'
+              - 'components/email-service/src/**'
+              - 'components/email-service/Dockerfile'
 
   scan-api:
     name: "Scan: Notifications API"
