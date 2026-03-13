@@ -59,6 +59,11 @@ public static class PostgreUtil
 
     public static async Task DeleteOrdersByRefPrefix(string sendersRefPrefix)
     {
+        if (string.IsNullOrWhiteSpace(sendersRefPrefix))
+        {
+            throw new ArgumentException("sendersRefPrefix must be non-empty.", nameof(sendersRefPrefix));
+        }
+
         string sql = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix;";
 
         await RunSql(sql, new NpgsqlParameter("@prefix", $"{sendersRefPrefix}%"));
