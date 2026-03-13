@@ -4,12 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'components/api/src/**'
-      - 'components/api/Dockerfile'
-      - 'components/email-service/src/**'
-      - 'components/email-service/Dockerfile'
-      - 'components/sms-service/src/**'
-      - 'components/sms-service/Dockerfile'
+      - 'components/*/src/**'
+      - 'components/*/Dockerfile'
   pull_request:
     branches: [main]
     paths:
