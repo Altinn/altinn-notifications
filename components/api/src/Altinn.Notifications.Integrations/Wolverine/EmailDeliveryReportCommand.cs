@@ -1,5 +1,3 @@
-using Altinn.Notifications.Core.Enums;
-using Azure.Messaging.EventGrid;
 using Azure.Messaging.ServiceBus;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
