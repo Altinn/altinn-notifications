@@ -15,19 +15,78 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Altinn.Notifications.Persistence.Repository;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Moq;
-
+using Moq.Protected;
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class SmsNotificationServiceTests
 {
+    private readonly int _publishBatchSize = 500;
     private const string _smsQueueTopicName = "test.sms.queue";
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            SendResult = SmsNotificationResultType.Accepted,
+            GatewayReference = Guid.NewGuid().ToString()
+        };
+
+        var mockRepo = new Mock<SmsNotificationRepository>(
+            (null as NpgsqlDataSource)!,
+            (null as ILogger<SmsNotificationRepository>)!,
+            Options.Create(new NotificationConfig()))
+        {
+            CallBase = true
+        };
+
+        mockRepo.Protected()
+            .Setup<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.IsAny<NotificationChannel>(),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.IsAny<bool>(),
+                ItExpr.IsAny<SendStatusIdentifierType>())
+            .Returns(Task.CompletedTask);
+
+        var service = new SmsNotificationService(
+            new Mock<IGuidService>().Object,
+            new Mock<IKafkaProducer>().Object,
+            new Mock<IDateTimeService>().Object,
+            mockRepo.Object,
+            Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
+            Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
+        mockRepo.Protected()
+            .Verify<Task>(
+                "ExecuteUpdateWithTransactionAsync", 
+                Times.Once(),
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Sms),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.Is<bool>(b => b),
+                ItExpr.IsAny<SendStatusIdentifierType>());
+    }
 
     [Fact]
     public async Task CreateNotification_RecipientNumberIsDefined_ResultNew()

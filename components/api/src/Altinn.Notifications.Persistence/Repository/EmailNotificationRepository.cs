@@ -2,7 +2,6 @@ using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -107,6 +106,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             NotificationChannel.Email,
             notificationId,
             operationId,
+            statusIsAcceptedOrSucceeded: status == EmailNotificationResultType.Succeeded,
             SendStatusIdentifierType.OperationId);
     }
 
