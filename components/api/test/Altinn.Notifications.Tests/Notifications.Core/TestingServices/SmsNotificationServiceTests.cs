@@ -18,9 +18,9 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Moq;
-
+using Moq.Protected;
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -32,7 +32,7 @@ public class SmsNotificationServiceTests
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
 
     [Fact]
-    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldNotCallTryMarkOrderAsCompleted()
+    public async Task UpdateStatus_WhenStatusIsAccepted_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();
@@ -43,15 +43,30 @@ public class SmsNotificationServiceTests
             GatewayReference = Guid.NewGuid().ToString()
         };
 
-        var mockGuidService = new Mock<IGuidService>();
-        var mockKafkaProducer = new Mock<IKafkaProducer>();
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        var mockRepo = new Mock<ISmsNotificationRepository>();
+        var mockRepo = new Mock<SmsNotificationRepository>(
+            (null as NpgsqlDataSource)!,
+            (null as ILogger<SmsNotificationRepository>)!,
+            Options.Create(new NotificationConfig()))
+        {
+            CallBase = true
+        };
+
+        mockRepo.Protected()
+            .Setup<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.IsAny<NotificationChannel>(),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.IsAny<bool>(),
+                ItExpr.IsAny<SendStatusIdentifierType>())
+            .Returns(Task.CompletedTask);
 
         var service = new SmsNotificationService(
-            mockGuidService.Object,
-            mockKafkaProducer.Object,
-            mockDateTimeService.Object,
+            new Mock<IGuidService>().Object,
+            new Mock<IKafkaProducer>().Object,
+            new Mock<IDateTimeService>().Object,
             mockRepo.Object,
             Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
@@ -59,13 +74,18 @@ public class SmsNotificationServiceTests
         // Act
         await service.UpdateSendStatus(sendOperationResult);
 
-        // Assert
-        mockRepo.Verify(
-        r => r.UpdateSendStatus(
-            sendOperationResult.NotificationId,
-            SmsNotificationResultType.Accepted,
-            sendOperationResult.GatewayReference),
-        Times.Once);
+        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
+        mockRepo.Protected()
+            .Verify<Task>(
+                "ExecuteUpdateWithTransactionAsync", 
+                Times.Once(),
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Sms),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.Is<bool>(b => b),
+                ItExpr.IsAny<SendStatusIdentifierType>());
     }
 
     [Fact]
@@ -692,49 +712,5 @@ public class SmsNotificationServiceTests
         mock.Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
         return mock.Object;
-    }
-
-    /// <summary>
-    /// Spy that extends SmsNotificationRepository and overrides the virtual
-    /// <see cref="ExecuteUpdateWithTransactionAsync"/> to capture every argument
-    /// without hitting the database.
-    /// </summary>
-    private sealed class SpySmsNotificationRepository : SmsNotificationRepository
-    {
-        public bool CapturedStatusIsAcceptedOrSucceeded { get; set; }
-
-        public NotificationChannel? CapturedChannel { get; private set; }
-
-        public Guid? CapturedNotificationId { get; private set; }
-
-        public string? CapturedSecondaryIdentifier { get; private set; }
-
-        public SendStatusIdentifierType? CapturedSecondaryIdentifierType { get; private set; }
-
-        public SpySmsNotificationRepository(
-            Npgsql.NpgsqlDataSource dataSource,
-            ILogger<SmsNotificationRepository> logger,
-            IOptions<NotificationConfig> config)
-            : base(dataSource, logger, config)
-        {
-        }
-
-        protected override Task ExecuteUpdateWithTransactionAsync(
-            string sqlCommand,
-            Action<Npgsql.NpgsqlCommand> parameters,
-            NotificationChannel channel,
-            Guid? notificationId,
-            string? secondaryIdentifier,
-            bool statusIsAcceptedOrSucceeded,
-            SendStatusIdentifierType secondaryIdentifierType)
-        {
-            CapturedStatusIsAcceptedOrSucceeded = statusIsAcceptedOrSucceeded;
-            CapturedChannel = channel;
-            CapturedNotificationId = notificationId;
-            CapturedSecondaryIdentifier = secondaryIdentifier;
-            CapturedSecondaryIdentifierType = secondaryIdentifierType;
-
-            return Task.CompletedTask;
-        }
     }
 }

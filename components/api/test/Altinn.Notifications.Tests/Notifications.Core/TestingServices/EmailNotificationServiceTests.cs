@@ -18,8 +18,8 @@ using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using Moq.Protected;
 using Npgsql;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -31,7 +31,7 @@ public class EmailNotificationServiceTests
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
     [Fact]
-    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldNotCallTryMarkOrderAsCompleted()
+    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();
@@ -43,31 +43,49 @@ public class EmailNotificationServiceTests
             SendResult = EmailNotificationResultType.Succeeded
         };
 
-        var mockGuidService = new Mock<IGuidService>();
-        var mockKafkaProducer = new Mock<IKafkaProducer>();
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        var mockRepo = new SpyEmailNotificationRepository(
-            null!,
-            null!,
+        var mockRepo = new Mock<EmailNotificationRepository>(
+            (null as NpgsqlDataSource)!,
+            (null as ILogger<EmailNotificationRepository>)!,
             Options.Create(new NotificationConfig()))
         {
-            CapturedStatusIsAcceptedOrSucceeded = false // Initial value
+            CallBase = true
         };
 
+        mockRepo.Protected()
+            .Setup<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.IsAny<NotificationChannel>(),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.IsAny<bool>(),
+                ItExpr.IsAny<SendStatusIdentifierType>())
+            .Returns(Task.CompletedTask);
+
         var service = new EmailNotificationService(
-            mockGuidService.Object,
-            mockKafkaProducer.Object,
-            mockDateTimeService.Object,
+            new Mock<IGuidService>().Object,
+            new Mock<IKafkaProducer>().Object,
+            new Mock<IDateTimeService>().Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
-            mockRepo);
+            mockRepo.Object);
 
         // Act
         await service.UpdateSendStatus(sendOperationResult);
-        
-        // Assert
-        Assert.True(mockRepo.CapturedStatusIsAcceptedOrSucceeded);
-        Assert.Equal(NotificationChannel.Email, mockRepo.CapturedChannel);
+
+        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
+        mockRepo.Protected()
+            .Verify<Task>(
+                "ExecuteUpdateWithTransactionAsync", 
+                Times.Once(),
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Email),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.Is<bool>(b => b),
+                ItExpr.IsAny<SendStatusIdentifierType>());
     }
 
     [Fact]
@@ -585,49 +603,5 @@ public class EmailNotificationServiceTests
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             repo);
-    }
-
-    /// <summary>
-    /// Spy that extends EmailNotificationRepository and overrides the virtual
-    /// <see cref="ExecuteUpdateWithTransactionAsync"/> to capture every argument
-    /// without hitting the database.
-    /// </summary>
-    private sealed class SpyEmailNotificationRepository : EmailNotificationRepository
-    {
-        public bool CapturedStatusIsAcceptedOrSucceeded { get; set; }
-
-        public NotificationChannel? CapturedChannel { get; private set; }
-
-        public Guid? CapturedNotificationId { get; private set; }
-
-        public string? CapturedSecondaryIdentifier { get; private set; }
-
-        public SendStatusIdentifierType? CapturedSecondaryIdentifierType { get; private set; }
-
-        public SpyEmailNotificationRepository(
-            NpgsqlDataSource dataSource,
-            ILogger<EmailNotificationRepository> logger,
-            IOptions<NotificationConfig> config)
-            : base(dataSource, logger, config)
-        {
-        }
-
-        protected override Task ExecuteUpdateWithTransactionAsync(
-            string sqlCommand,
-            Action<NpgsqlCommand> parameters,
-            NotificationChannel channel,
-            Guid? notificationId,
-            string? secondaryIdentifier,
-            bool statusIsAcceptedOrSucceeded,
-            SendStatusIdentifierType secondaryIdentifierType)
-        {
-            CapturedStatusIsAcceptedOrSucceeded = statusIsAcceptedOrSucceeded;
-            CapturedChannel = channel;
-            CapturedNotificationId = notificationId;
-            CapturedSecondaryIdentifier = secondaryIdentifier;
-            CapturedSecondaryIdentifierType = secondaryIdentifierType;
-
-            return Task.CompletedTask;
-        }
     }
 }
