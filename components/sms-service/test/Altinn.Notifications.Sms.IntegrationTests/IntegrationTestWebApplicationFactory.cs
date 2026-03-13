@@ -16,10 +16,12 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration(config =>
+        builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
-            config.AddConfiguration(new ConfigurationBuilder()
-                .Build());
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "WolverineSettings:EnableWolverine", "false" }
+            });
         });
 
         builder.ConfigureTestServices(services =>

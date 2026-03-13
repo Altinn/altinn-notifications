@@ -5,6 +5,7 @@ using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Extensions;
 using Altinn.Notifications.Email.Telemetry;
 
 using Azure.Identity;
@@ -167,6 +168,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
+    if (configuration.GetValue<bool>("WolverineSettings:EnableWolverine"))
+    {
+        services.AddWolverineServices(configuration, appBuilder.Environment);
+    }
+
 }
 
 static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
