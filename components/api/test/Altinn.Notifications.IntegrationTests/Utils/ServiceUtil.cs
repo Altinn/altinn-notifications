@@ -152,7 +152,7 @@ public static class ServiceUtil
         return services.BuildServiceProvider();
     }
 
-    private static List<object> BuildServiceProvider(Dictionary<string, string?> envVariables, List<Type> interfaceTypes)
+    private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
     {
         var config = BuildConfiguration(envVariables);
         EnsurePostgreSqlSetup(config);
