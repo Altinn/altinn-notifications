@@ -28,6 +28,16 @@ public static class EmailDeliveryReportHandler
     public static WolverineSettings Settings { get; set; } = null!;
 
     /// <summary>
+    /// Gets the reason code that indicates the retry threshold has been exceeded.
+    /// </summary>
+    public static string RetryExceededReason => "RETRY_THRESHOLD_EXCEEDED";
+
+    /// <summary>
+    /// Gets the reason code indicating that a notification has expired.
+    /// </summary>
+    public static string NotificationExpiredReason => "NOTIFICATION_EXPIRED";
+
+    /// <summary>
     /// Configures error handling for the email delivery report queue handler.
     /// </summary>
     public static void Configure(HandlerChain chain)
@@ -39,25 +49,27 @@ public static class EmailDeliveryReportHandler
             .Or<TaskCanceledException>()
             .Or<TimeoutException>()
             .Or<ServiceBusException>()
-            .Or<NotificationNotFoundException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
 
-        chain.
-            OnException<NotificationNotFoundException>()
+        chain
+            .OnException<NotificationNotFoundException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
-            .Then.SaveDeadDeliveryReport();
+            .Then.SaveDeadDeliveryReport(RetryExceededReason);
+
+        chain
+            .OnException<NotificationExpiredException>()
+            .SaveDeadDeliveryReport(NotificationExpiredReason);
     }
 
     /// <summary>
     /// Handles an email delivery report command by logging the received status update.
     /// </summary>
     public static async Task Handle(
-        EmailDeliveryReportCommand command, 
-        IEmailNotificationService emailNotificationService, 
-        IDeadDeliveryReportService deadDeliveryReportService,
+        EmailDeliveryReportCommand command,
+        IEmailNotificationService emailNotificationService,
         ILogger logger)
     {
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
@@ -75,11 +87,11 @@ public static class EmailDeliveryReportHandler
                     }
 
                     logger.LogInformation(
-                        "Received email delivery report for MessageId: {MessageId}, Status: {Status}", 
-                        deliveryReport.MessageId, 
+                        "Received email delivery report for MessageId: {MessageId}, Status: {Status}",
+                        deliveryReport.MessageId,
                         deliveryReport.Status);
 
-                    await HandleDeliveryReport(emailNotificationService, deliveryReport, deadDeliveryReportService, logger);
+                    await HandleDeliveryReport(emailNotificationService, deliveryReport);
                     break;
                 default:
                     logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
@@ -93,10 +105,8 @@ public static class EmailDeliveryReportHandler
     }
 
     private static async Task HandleDeliveryReport(
-        IEmailNotificationService emailNotificationService, 
-        AcsEmailDeliveryReportReceivedEventData deliveryReport,
-        IDeadDeliveryReportService deadDeliveryReportService,
-        ILogger logger)
+        IEmailNotificationService emailNotificationService,
+        AcsEmailDeliveryReportReceivedEventData deliveryReport)
     {
         var operationResult = new EmailSendOperationResult()
         {
@@ -104,21 +114,7 @@ public static class EmailDeliveryReportHandler
             SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString())
         };
 
-        try
-        {
-            await emailNotificationService.UpdateSendStatus(operationResult);
-        }
-        catch (NotificationExpiredException ex)
-        {
-            // Notification has expired - save to dead delivery reports immediately, don't retry
-            logger.LogInformation(
-                ex,
-                "// {Class} // ProcessStatusUpdateWithRetry // {Message}",
-                nameof(EmailDeliveryReportHandler),
-                ex.Message);
-
-            await SaveDeadDeliveryReportForExpired(deliveryReport, deadDeliveryReportService);
-        }
+        await emailNotificationService.UpdateSendStatus(operationResult);
     }
 
     /// <summary>

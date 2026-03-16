@@ -18,7 +18,7 @@ public static class FailureActionsExtensions
     /// <summary>
     /// Configures the failure policy to save a dead delivery report when all retries are exhausted.
     /// </summary>
-    public static IAdditionalActions SaveDeadDeliveryReport(this IFailureActions failureActions)
+    public static IAdditionalActions SaveDeadDeliveryReport(this IFailureActions failureActions, string reason)
     {
         return failureActions.CustomAction(
             async (runtime, envelope, exception) =>
@@ -37,12 +37,12 @@ public static class FailureActionsExtensions
                         var deadDeliveryReport = new DeadDeliveryReport
                         {
                             Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
-                            FirstSeen = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
+                            FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
                             LastAttempt = DateTime.UtcNow,
-                            AttemptCount = envelope.Envelope != null ? envelope.Envelope.Attempts : 0,
+                            AttemptCount = envelope.Envelope.Attempts,
                             Resolved = false,
                             DeliveryReport = JsonSerializer.Serialize(deliveryReport),
-                            Reason = exception.GetType().Name,
+                            Reason = reason,
                             Message = exception.Message
                         };
 
