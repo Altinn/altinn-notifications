@@ -7,14 +7,12 @@ on:
       - 'tools/src/**'
       - 'components/*/src/**'
       - '.github/workflows/**'
-      - 'components/*/Dockerfile'
   pull_request:
     branches: [main]
     paths:
       - 'tools/src/**'
       - 'components/*/src/**'
       - '.github/workflows/**'
-      - 'components/*/Dockerfile'
   schedule:
     - cron: '18 22 * * 3'
 
