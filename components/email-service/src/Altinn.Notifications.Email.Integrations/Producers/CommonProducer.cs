@@ -66,7 +66,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
             return false;
         }
-        catch (ProduceException<long, string> ex)
+        catch (ProduceException<Null, string> ex)
         {
             _logger.LogError(ex, "// CommonProducer // ProduceAsync // Permanent error on topic '{Topic}': {ErrorReason}", topic, ex.Error.Reason);
 
