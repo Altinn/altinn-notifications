@@ -20,7 +20,7 @@ public static class KafkaUtil
         await adminClient.DeleteTopicsAsync(new string[] { topic });
     }
 
-    public static async Task CreateTopicsAsync(string topic)
+    public static async Task CreateTopicAsync(string topic)
     {
         using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _brokerAddress } }).Build();
 
