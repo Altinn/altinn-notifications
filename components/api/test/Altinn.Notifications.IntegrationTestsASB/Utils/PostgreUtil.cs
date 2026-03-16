@@ -89,6 +89,6 @@ public static class PostgreUtil
         await using var reader = await cmd.ExecuteReaderAsync();
         await reader.ReadAsync();
 
-        return reader.GetFieldValue<T>(0);
+        return await reader.GetFieldValueAsync<T>(0);
     }
 }

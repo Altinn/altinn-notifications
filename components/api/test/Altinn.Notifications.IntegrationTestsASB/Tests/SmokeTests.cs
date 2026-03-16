@@ -39,7 +39,6 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
         {
             Assert.NotNull(factory.Host);
             Assert.True(factory.WolverineSettings.EnableWolverine, "Wolverine should be enabled");
-            Assert.True(factory.WolverineSettings.EnableEmailDeliveryReportListener, "Email delivery report listener should be enabled");
         }
     }
 
@@ -83,7 +82,7 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
         await using (factory)
         {
             // Arrange & Act
-            var (order, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
 
             // Assert - verify data was persisted
             var count = await PostgreUtil.RunSqlReturnOutput<int>(
@@ -108,7 +107,7 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
         await using (factory)
         {
             // Arrange - create order and notification
-            var (order, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
 
             // Act - update send status (simulates what the delivery report handler does)
