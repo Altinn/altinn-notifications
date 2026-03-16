@@ -4,8 +4,6 @@ using System.Text.Json;
 
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
-using Azure.Messaging.ServiceBus;
-
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -102,21 +100,20 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 Console.WriteLine("PostgreSQLSettings not found in appsettings — skipping PostgreSQL container");
             }
 
-            // Start MSSQL (required by Service Bus Emulator)
+            // Start MSSQL (required by Service Bus Emulator).
+            // Wait for the "ready for client connections" log message — TCP open alone is not enough,
+            // especially on Windows/WSL2 where MSSQL initialization can take several minutes.
             _mssqlContainer = new ContainerBuilder(ContainerImageUtils.GetImage("mssql"))
                 .WithNetwork(_network)
                 .WithNetworkAliases("mssql")
                 .WithEnvironment("ACCEPT_EULA", "Y")
                 .WithEnvironment("MSSQL_SA_PASSWORD", _mssqlSaPassword)
-                .WithPortBinding(1433, true)
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("SQL Server is now ready for client connections"))
                 .WithAutoRemove(true)
                 .Build();
 
             await _mssqlContainer.StartAsync();
-
-            int mssqlPort = _mssqlContainer.GetMappedPublicPort(1433);
-            await WaitForTcpPortAsync("MSSQL", "127.0.0.1", mssqlPort);
-            Console.WriteLine($"MSSQL started on port {mssqlPort}");
+            Console.WriteLine("MSSQL started and ready");
 
             string configPath = Path.Combine(AppContext.BaseDirectory, "Infrastructure", "config.json");
 
@@ -125,6 +122,9 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 throw new FileNotFoundException($"Emulator config file not found at: {configPath}");
             }
 
+            // Wait for the emulator's own "successfully up" log message instead of probing
+            // AMQP externally — the emulator only logs this after connecting to MSSQL and
+            // setting up its schema, which is exactly the readiness signal we need.
             _serviceBusEmulatorContainer = new ContainerBuilder(ContainerImageUtils.GetImage("serviceBusEmulator"))
                 .WithNetwork(_network)
                 .WithEnvironment("SQL_SERVER", "mssql")
@@ -133,6 +133,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 .WithEnvironment("SQL_WAIT_INTERVAL", "5")
                 .WithBindMount(configPath, "/ServiceBus_Emulator/ConfigFiles/Config.json", AccessMode.ReadOnly)
                 .WithPortBinding(5672, true)
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Emulator Service is Successfully Up!"))
                 .WithAutoRemove(true)
                 .Build();
 
@@ -242,40 +243,12 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
         Console.WriteLine("PostgreSQL accepting connections");
     }
 
-    private async Task WaitForServiceBusAsync()
+    private Task WaitForServiceBusAsync()
     {
+        // The container's UntilMessageIsLogged wait strategy already confirmed the emulator
+        // is fully up. This TCP check is a final sanity-guard for the host-mapped port.
         int hostPort = _serviceBusEmulatorContainer!.GetMappedPublicPort(5672);
-        await WaitForTcpPortAsync("Service Bus Emulator", "127.0.0.1", hostPort);
-
-        // TCP port open is not enough — the AMQP layer needs additional time to initialize.
-        // Probe with a real ServiceBusClient until the emulator accepts connections.
-        const int maxRetries = 30;
-        const int delayMs = 1000;
-
-        bool ready = await WaitForUtils.WaitForAsync(
-            async () =>
-            {
-                try
-                {
-                    await using var client = new ServiceBusClient(ServiceBusConnectionString);
-                    await using var receiver = client.CreateReceiver("smoke-test");
-                    await receiver.PeekMessageAsync();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            },
-            maxRetries,
-            delayMs);
-
-        if (!ready)
-        {
-            throw new TimeoutException("Service Bus Emulator AMQP layer did not become ready after TCP port opened");
-        }
-
-        Console.WriteLine("Service Bus Emulator AMQP layer is ready");
+        return WaitForTcpPortAsync("Service Bus Emulator", "127.0.0.1", hostPort);
     }
 
     private static PostgreSqlSettings? LoadPostgreSqlSettings()
