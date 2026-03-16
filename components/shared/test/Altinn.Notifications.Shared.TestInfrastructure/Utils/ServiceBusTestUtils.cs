@@ -59,7 +59,9 @@ public static class ServiceBusTestUtils
     {
         var actualTimeout = timeout ?? TimeSpan.FromSeconds(10);
         var pollInterval = TimeSpan.FromMilliseconds(100);
-        var maxAttempts = (int)(actualTimeout.TotalMilliseconds / pollInterval.TotalMilliseconds);
+        var maxAttempts = Math.Max(
+            1,
+            (int)Math.Ceiling(actualTimeout.TotalMilliseconds / pollInterval.TotalMilliseconds));
 
         await using var client = new ServiceBusClient(connectionString);
         await using var receiver = client.CreateReceiver(queueName);
