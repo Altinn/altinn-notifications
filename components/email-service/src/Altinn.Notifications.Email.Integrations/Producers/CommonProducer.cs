@@ -58,8 +58,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
             }
 
             _logger.LogError(
-                "// CommonProducer // ProduceAsync // Message not ack'd by all brokers on topic '{Topic}'. Delivery status: {Status}, Partition: {Partition}, Offset: {Offset}",
-                topic,
+                "// CommonProducer // ProduceAsync // Message not ack'd by all brokers. Delivery status: {Status}, Partition: {Partition}, Offset: {Offset}",
                 result.Status,
                 result.Partition.Value,
                 result.Offset.Value);
@@ -68,7 +67,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
         }
         catch (ProduceException<Null, string> ex)
         {
-            _logger.LogError(ex, "// CommonProducer // ProduceAsync // Permanent error on topic '{Topic}': {ErrorReason}", topic, ex.Error.Reason);
+            _logger.LogError(ex, "// CommonProducer // ProduceAsync // Permanent error: {ErrorReason}", ex.Error.Reason);
 
             return false;
         }
@@ -100,7 +99,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                     Configs = _sharedClientConfig.TopicSpecification.Configs
                 }
             }).Wait();
-            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
+            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic created successfully.");
         }
     }
 }
