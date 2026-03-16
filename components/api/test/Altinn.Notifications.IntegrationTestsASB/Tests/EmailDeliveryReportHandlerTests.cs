@@ -95,9 +95,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
-            // Create notification without operationId — realistic pre-condition where
             // ACS report arrives before the email service has persisted the operationId
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report with an operationId that doesn't match any notification
