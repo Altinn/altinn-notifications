@@ -201,8 +201,41 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 
     #region Private Helpers
 
-    private Task WaitForPostgresAsync() =>
-        WaitForTcpPortAsync("PostgreSQL", "127.0.0.1", PostgresPort);
+    private async Task WaitForPostgresAsync()
+    {
+        await WaitForTcpPortAsync("PostgreSQL", "127.0.0.1", PostgresPort);
+
+        // TCP port open is not enough — probe with a real connection to ensure PostgreSQL
+        // is ready to authenticate. On Windows/Docker Desktop the port can accept TCP
+        // while the server is still initializing, causing auth-level failures.
+        const int maxRetries = 30;
+        const int delayMs = 1000;
+
+        bool ready = await WaitForUtils.WaitForAsync(
+            async () =>
+            {
+                try
+                {
+                    await using var dataSource = NpgsqlDataSource.Create(PostgresConnectionString);
+                    await using var cmd = dataSource.CreateCommand("SELECT 1");
+                    await cmd.ExecuteScalarAsync();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            maxRetries,
+            delayMs);
+
+        if (!ready)
+        {
+            throw new TimeoutException("PostgreSQL did not become ready for connections after TCP port opened");
+        }
+
+        Console.WriteLine("PostgreSQL accepting connections");
+    }
 
     private async Task WaitForServiceBusAsync()
     {
