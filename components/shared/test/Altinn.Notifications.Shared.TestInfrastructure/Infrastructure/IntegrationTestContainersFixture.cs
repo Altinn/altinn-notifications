@@ -4,6 +4,8 @@ using System.Text.Json;
 
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
+using Azure.Messaging.ServiceBus;
+
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -202,10 +204,40 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
     private Task WaitForPostgresAsync() =>
         WaitForTcpPortAsync("PostgreSQL", "127.0.0.1", PostgresPort);
 
-    private Task WaitForServiceBusAsync()
+    private async Task WaitForServiceBusAsync()
     {
         int hostPort = _serviceBusEmulatorContainer!.GetMappedPublicPort(5672);
-        return WaitForTcpPortAsync("Service Bus Emulator", "127.0.0.1", hostPort);
+        await WaitForTcpPortAsync("Service Bus Emulator", "127.0.0.1", hostPort);
+
+        // TCP port open is not enough — the AMQP layer needs additional time to initialize.
+        // Probe with a real ServiceBusClient until the emulator accepts connections.
+        const int maxRetries = 30;
+        const int delayMs = 1000;
+
+        bool ready = await WaitForUtils.WaitForAsync(
+            async () =>
+            {
+                try
+                {
+                    await using var client = new ServiceBusClient(ServiceBusConnectionString);
+                    await using var receiver = client.CreateReceiver("smoke-test");
+                    await receiver.PeekMessageAsync();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            maxRetries,
+            delayMs);
+
+        if (!ready)
+        {
+            throw new TimeoutException("Service Bus Emulator AMQP layer did not become ready after TCP port opened");
+        }
+
+        Console.WriteLine("Service Bus Emulator AMQP layer is ready");
     }
 
     private static PostgreSqlSettings? LoadPostgreSqlSettings()
