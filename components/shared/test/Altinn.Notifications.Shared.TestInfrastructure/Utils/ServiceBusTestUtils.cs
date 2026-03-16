@@ -21,21 +21,23 @@ public static class ServiceBusTestUtils
         await using var receiver = client.CreateReceiver(queueName);
         using var cts = new CancellationTokenSource(actualTimeout);
 
+        ServiceBusReceivedMessage? message;
         try
         {
-            var message = await receiver.ReceiveMessageAsync(actualTimeout, cts.Token);
-
-            if (message != null)
-            {
-                await receiver.CompleteMessageAsync(message, cts.Token);
-            }
-
-            return message;
+            message = await receiver.ReceiveMessageAsync(actualTimeout, cts.Token);
         }
         catch (OperationCanceledException)
         {
             return null;
         }
+
+        if (message == null)
+        {
+            return null;
+        }
+
+        await receiver.CompleteMessageAsync(message);
+        return message;
     }
 
     /// <summary>

@@ -80,7 +80,10 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
 
             // Override initialization of extension class with test settings
             string? uri = context.Configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri!);
+            if (!string.IsNullOrEmpty(uri))
+            {
+                ResourceLinkExtensions.Initialize(uri);
+            }
 
             // Replace NpgsqlDataSource with test container connection
             services.Replace(ServiceDescriptor.Singleton(sp =>

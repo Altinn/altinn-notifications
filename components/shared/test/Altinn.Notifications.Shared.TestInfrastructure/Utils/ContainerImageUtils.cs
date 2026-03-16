@@ -24,6 +24,11 @@ public static class ContainerImageUtils
     /// <exception cref="KeyNotFoundException">Thrown when the image name is not found in configuration.</exception>
     public static string GetImage(string imageName)
     {
+        if (string.IsNullOrWhiteSpace(imageName))
+        {
+            throw new ArgumentException("Image name must be a non-empty value.", nameof(imageName));
+        }
+
         if (_images.Value.TryGetValue(imageName, out string? image))
         {
             return image;

@@ -32,7 +32,10 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
             // overriding initialization of extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri!);
+            if (!string.IsNullOrEmpty(uri))
+            {
+                ResourceLinkExtensions.Initialize(uri);
+            }
         });
 
         builder.ConfigureTestServices(services =>

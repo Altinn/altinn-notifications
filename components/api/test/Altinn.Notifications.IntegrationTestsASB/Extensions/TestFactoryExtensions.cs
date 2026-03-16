@@ -46,13 +46,21 @@ public static class TestFactoryExtensions
     {
         factory.ConfigureTestServices(services =>
         {
-            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(TService));
-            if (descriptor != null)
+            var descriptors = services
+                .Where(d => d.ServiceType == typeof(TService))
+                .ToList();
+
+            var lifetime = descriptors.LastOrDefault()?.Lifetime ?? ServiceLifetime.Singleton;
+
+            foreach (var descriptor in descriptors)
             {
                 services.Remove(descriptor);
             }
 
-            services.AddSingleton(implementationFactory);
+            services.Add(new ServiceDescriptor(
+                typeof(TService),
+                serviceProvider => implementationFactory(serviceProvider),
+                lifetime));
         });
 
         return factory;
