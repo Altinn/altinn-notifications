@@ -116,25 +116,4 @@ public static class EmailDeliveryReportHandler
 
         await emailNotificationService.UpdateSendStatus(operationResult);
     }
-
-    /// <summary>
-    /// Saves a dead delivery report for a notification that has expired.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
-    private static async Task SaveDeadDeliveryReportForExpired(AcsEmailDeliveryReportReceivedEventData deliveryReport, IDeadDeliveryReportService deadDeliveryReportService)
-    {
-        var deadDeliveryReport = new DeadDeliveryReport
-        {
-            Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
-            FirstSeen = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
-            LastAttempt = deliveryReport.DeliveryAttemptTimestamp?.UtcDateTime ?? DateTime.UtcNow,
-            AttemptCount = 1,
-            Resolved = false,
-            DeliveryReport = JsonSerializer.Serialize(deliveryReport),
-            Reason = "NOTIFICATION_EXPIRED",
-            Message = "Notification expiry time has passed"
-        };
-
-        await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
-    }
 }
