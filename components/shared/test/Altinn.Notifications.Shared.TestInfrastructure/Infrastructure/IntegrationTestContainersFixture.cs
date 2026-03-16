@@ -108,10 +108,15 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 .WithNetworkAliases("mssql")
                 .WithEnvironment("ACCEPT_EULA", "Y")
                 .WithEnvironment("MSSQL_SA_PASSWORD", _mssqlSaPassword)
+                .WithPortBinding(1433, true)
                 .WithAutoRemove(true)
                 .Build();
 
             await _mssqlContainer.StartAsync();
+
+            int mssqlPort = _mssqlContainer.GetMappedPublicPort(1433);
+            await WaitForTcpPortAsync("MSSQL", "127.0.0.1", mssqlPort);
+            Console.WriteLine($"MSSQL started on port {mssqlPort}");
 
             string configPath = Path.Combine(AppContext.BaseDirectory, "Infrastructure", "config.json");
 
