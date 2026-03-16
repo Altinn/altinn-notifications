@@ -43,6 +43,12 @@ public static class EmailDeliveryReportHandler
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
+
+        chain.
+            OnException<NotificationNotFoundException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
+            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.SaveDeadDeliveryReport();
     }
 
     /// <summary>
