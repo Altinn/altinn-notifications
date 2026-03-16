@@ -87,7 +87,10 @@ public static class PostgreUtil
         }
 
         await using var reader = await cmd.ExecuteReaderAsync();
-        await reader.ReadAsync();
+        if (!await reader.ReadAsync())
+        {
+            throw new InvalidOperationException("Query returned no rows.");
+        }
 
         return await reader.GetFieldValueAsync<T>(0);
     }
