@@ -1,5 +1,3 @@
-#nullable enable
-
 namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 /// <summary>

@@ -1,4 +1,3 @@
-#nullable enable
 using System.Text.Json;
 
 namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;

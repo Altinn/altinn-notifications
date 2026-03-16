@@ -1,4 +1,3 @@
-#nullable enable
 using Azure.Messaging.ServiceBus;
 
 namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;

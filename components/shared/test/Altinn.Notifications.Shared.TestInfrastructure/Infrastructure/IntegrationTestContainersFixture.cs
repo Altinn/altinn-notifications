@@ -1,4 +1,3 @@
-#nullable enable
 using System.Net.Sockets;
 using System.Text.Json;
 

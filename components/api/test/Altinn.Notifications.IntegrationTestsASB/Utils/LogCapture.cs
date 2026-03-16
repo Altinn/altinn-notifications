@@ -8,16 +8,14 @@ namespace Altinn.Notifications.IntegrationTestsASB.Utils;
 /// A simple logger provider that captures log entries containing a specific pattern.
 /// Used in integration tests to count handler invocations via log output.
 /// </summary>
-public sealed class LogCapture : ILoggerProvider
+/// <remarks>
+/// Initializes a new instance of the <see cref="LogCapture"/> class.
+/// </remarks>
+/// <param name="pattern">The substring pattern to match in log messages or exception types.</param>
+public sealed class LogCapture(string pattern) : ILoggerProvider
 {
-    private readonly string _pattern;
+    private readonly string _pattern = pattern;
     private readonly ConcurrentBag<string> _entries = [];
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LogCapture"/> class.
-    /// </summary>
-    /// <param name="pattern">The substring pattern to match in log messages or exception types.</param>
-    public LogCapture(string pattern) => _pattern = pattern;
 
     /// <summary>
     /// Gets the number of log entries that matched the pattern.
