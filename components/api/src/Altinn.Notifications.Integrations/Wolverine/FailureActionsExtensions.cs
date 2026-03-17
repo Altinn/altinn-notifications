@@ -6,7 +6,6 @@ using Azure.Messaging.EventGrid.SystemEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wolverine.ErrorHandling;
-using Wolverine.Runtime;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
 
@@ -27,7 +26,8 @@ public static class FailureActionsExtensions
                 
                 try
                 {
-                    var eventGridEvent = EventGridEvent.Parse(BinaryData.FromBytes(envelope.Envelope!.Data!));
+                    var command = (EmailDeliveryReportCommand)envelope.Envelope!.Message!;
+                    var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
                     
                     if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
                     {
