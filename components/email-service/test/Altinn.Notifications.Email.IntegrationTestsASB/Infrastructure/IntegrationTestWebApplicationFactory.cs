@@ -42,17 +42,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     }
 
     /// <summary>
-    /// Adds in-memory configuration overrides, applied after appsettings.integrationtest.json.
-    /// Use this to enable or disable specific Wolverine listeners per test.
+    /// Adds an in-memory configuration override, applied after appsettings.integrationtest.json.
+    /// Use this to enable or disable specific settings per test.
     /// Must be called before CreateClient().
     /// </summary>
-    public IntegrationTestWebApplicationFactory WithConfig(Dictionary<string, string?> overrides)
+    public IntegrationTestWebApplicationFactory WithConfig(string key, string? value)
     {
-        foreach (var (key, value) in overrides)
-        {
-            _configOverrides[key] = value;
-        }
-
+        _configOverrides[key] = value;
         return this;
     }
 
