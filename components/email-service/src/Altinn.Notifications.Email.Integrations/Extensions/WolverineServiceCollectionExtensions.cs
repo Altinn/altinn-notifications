@@ -40,6 +40,7 @@ public static class WolverineServiceCollectionExtensions
 
         services.AddWolverine(opts =>
         {
+            opts.Discovery.IncludeAssembly(typeof(WolverineServiceCollectionExtensions).Assembly);
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
