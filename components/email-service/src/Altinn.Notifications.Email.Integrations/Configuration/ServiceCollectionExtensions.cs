@@ -51,6 +51,7 @@ public static class ServiceCollectionExtensions
             .AddHostedService<SendEmailQueueConsumer>()
             .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton(kafkaSettings)
+            .AddSingleton(wolverineSettings)
             .AddSingleton(communicationServicesSettings)
             .AddSingleton(emailServiceAdminSettings);
 
