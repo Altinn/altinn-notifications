@@ -29,7 +29,9 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
         Assert.False(string.IsNullOrEmpty(_fixture.ServiceBusConnectionString), "ServiceBus connection string should be set");
         Assert.True(string.IsNullOrEmpty(_fixture.PostgresConnectionString), "Postgres should not be provisioned for email service");
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig(new Dictionary<string, string?> { ["WolverineSettings:EnableWolverine"] = "false" })
+            .Initialize();
 
         await using (factory)
         {
@@ -45,7 +47,9 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
     public async Task ServiceBus_CanSendAndReceiveMessage_OnSmokeTestQueue()
     {
         const string queueName = "smoke-test";
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig(new Dictionary<string, string?> { ["WolverineSettings:EnableWolverine"] = "false" })
+            .Initialize();
 
         await using (factory)
         {

@@ -23,6 +23,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     private readonly IntegrationTestContainersFixture _fixture = fixture;
     private IHost _host = null!;
     private readonly List<Action<IServiceCollection>> _configureTestServices = [];
+    private readonly Dictionary<string, string?> _configOverrides = [];
 
     /// <summary>
     /// Gets the IHost instance for use with Wolverine's IMessageBus.
@@ -40,6 +41,21 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         return this;
     }
 
+    /// <summary>
+    /// Adds in-memory configuration overrides, applied after appsettings.integrationtest.json.
+    /// Use this to enable or disable specific Wolverine listeners per test.
+    /// Must be called before CreateClient().
+    /// </summary>
+    public IntegrationTestWebApplicationFactory WithConfig(Dictionary<string, string?> overrides)
+    {
+        foreach (var (key, value) in overrides)
+        {
+            _configOverrides[key] = value;
+        }
+
+        return this;
+    }
+
     /// <inheritdoc/>
     protected override IHost CreateHost(IHostBuilder builder)
     {
@@ -52,6 +68,12 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             {
                 ["WolverineSettings:ServiceBusConnectionString"] = _fixture.ServiceBusConnectionString,
             };
+
+            foreach (var (key, value) in _configOverrides)
+            {
+                testConfigOverrides[key] = value;
+            }
+
             config.AddInMemoryCollection(testConfigOverrides);
         });
 
