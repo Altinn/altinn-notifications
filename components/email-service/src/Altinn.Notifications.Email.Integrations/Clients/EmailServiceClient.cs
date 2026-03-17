@@ -10,6 +10,7 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 using Azure;
 using Azure.Communication.Email;
 using Azure.Core;
+
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
@@ -44,7 +45,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// Send an email
     /// </summary>
     /// <param name="email">The email</param>
-    /// <returns>A Task representing the asyncrhonous operation.</returns>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
     {
         EmailContent emailContent = new(email.Subject);
@@ -116,7 +117,7 @@ public class EmailServiceClient : IEmailServiceClient
         {
             if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
             {
-                _logger.LogWarning("A request failed because the recipient is on the suppression list of Azure Communcation Services, OperationId {OperationId}", operationId);
+                _logger.LogWarning("A request failed because the recipient is on the suppression list of Azure Communication Services, OperationId {OperationId}", operationId);
             }
             else
             {
@@ -178,7 +179,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// Gets the int proceeding the word seconds in the string.
     /// Falls back to the configured intermittent error delay if no delay is found in the message.
     /// </summary>
-    /// <param name="message">The messsage to find delay within</param>
+    /// <param name="message">The message to find delay within</param>
     /// <returns></returns>
     internal int GetDelayFromString(string message)
     {

@@ -43,14 +43,21 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required email service admin settings is missing from application configuration");
         }
 
+        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+
         services
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddHostedService<SendEmailQueueConsumer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(communicationServicesSettings)
             .AddSingleton(emailServiceAdminSettings);
+
+        if (!wolverineSettings.EnableCheckEmailSendStatusListener && !wolverineSettings.EnableCheckEmailSendStatusPublisher)
+        {
+            services.AddHostedService<EmailSendingAcceptedConsumer>();
+        }
+
         return services;
     }
 
