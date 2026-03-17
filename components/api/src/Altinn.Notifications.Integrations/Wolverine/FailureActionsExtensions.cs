@@ -30,12 +30,7 @@ public static class FailureActionsExtensions
                 
                 try
                 {
-                    if (envelope.Envelope?.Message is not EmailDeliveryReportCommand command)
-                    {
-                        logger.LogError("Envelope message is not an EmailDeliveryReportCommand; cannot save dead delivery report.");
-                        return;
-                    }
-
+                    var command = (EmailDeliveryReportCommand)envelope.Envelope!.Message!;
                     var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
                     
                     if (eventGridEvent.TryGetSystemEventData(out object systemEvent))

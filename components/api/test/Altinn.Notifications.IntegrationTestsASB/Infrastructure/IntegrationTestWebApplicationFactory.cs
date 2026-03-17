@@ -6,11 +6,9 @@ using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Azure.Messaging.ServiceBus;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 
 using Moq;
 
@@ -19,109 +17,120 @@ using Npgsql;
 namespace Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 
 /// <summary>
-/// WebApplicationFactory for ASB integration tests that uses the real Program.cs setup
-/// with test-specific overrides via in-memory configuration.
+/// WebApplicationFactory for API ASB integration tests.
+/// Boots the real Program.cs with test-specific configuration and service overrides.
 /// </summary>
-public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture) : WebApplicationFactory<Program>
+public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
+    : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
-    private IHost _host = null!;
-    private readonly List<Action<IServiceCollection>> _configureTestServices = [];
-
     /// <summary>
     /// Gets the Wolverine settings loaded from configuration.
     /// </summary>
     public WolverineSettings WolverineSettings { get; private set; } = null!;
 
-    /// <summary>
-    /// Gets the IHost instance for use with Wolverine's IMessageBus.
-    /// Access this after calling CreateClient() or Initialize().
-    /// </summary>
-    public IHost Host => _host ?? throw new InvalidOperationException("Host not created yet. Call CreateClient() or Initialize() first.");
-
-    /// <summary>
-    /// Configures additional test services. Use this to replace services with mocks.
-    /// Must be called before CreateClient().
-    /// </summary>
-    public IntegrationTestWebApplicationFactory ConfigureTestServices(Action<IServiceCollection> configure)
+    /// <inheritdoc/>
+    protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
-        _configureTestServices.Add(configure);
-        return this;
+        ["WolverineSettings:ServiceBusConnectionString"] = Fixture.ServiceBusConnectionString,
+        ["PostgreSQLSettings:ConnectionString"] = Fixture.PostgresConnectionString,
+        ["PostgreSQLSettings:AdminConnectionString"] = Fixture.PostgresConnectionString,
+        ["PostgreSQLSettings:NotificationsDbAdminPwd"] = string.Empty,
+        ["PostgreSQLSettings:NotificationsDbPwd"] = string.Empty,
+        ["PostgreSQLSettings:MigrationScriptPath"] = FindMigrationPath()
+    };
+
+    /// <inheritdoc/>
+    protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
+    {
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+            ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
+
+        Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
+        Console.WriteLine($"[Factory] ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
+        Console.WriteLine($"[Factory] Postgres connection: {Truncate(Fixture.PostgresConnectionString, 50)}...");
+
+        string? uri = configuration["GeneralSettings:BaseUri"];
+        if (!string.IsNullOrEmpty(uri))
+        {
+            ResourceLinkExtensions.Initialize(uri);
+        }
+
+        services.Replace(ServiceDescriptor.Singleton(sp =>
+        {
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(Fixture.PostgresConnectionString);
+            dataSourceBuilder.EnableParameterLogging(true);
+            dataSourceBuilder.EnableDynamicJson();
+            return dataSourceBuilder.Build();
+        }));
+
+        var consumersToRemove = services
+            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
+            .ToList();
+
+        foreach (var descriptor in consumersToRemove)
+        {
+            services.Remove(descriptor);
+        }
+
+        services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
     }
 
     /// <inheritdoc/>
-    protected override IHost CreateHost(IHostBuilder builder)
+    protected override async Task DrainQueuesAsync()
     {
-        builder.ConfigureHostConfiguration(config =>
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
         {
-            config.SetBasePath(AppContext.BaseDirectory);
-            config.AddJsonFile("appsettings.integrationtest.json", optional: false, reloadOnChange: false);
+            return;
+        }
 
-            var testConfigOverrides = new Dictionary<string, string?>
-            {
-                ["WolverineSettings:ServiceBusConnectionString"] = _fixture.ServiceBusConnectionString,
-                ["PostgreSQLSettings:ConnectionString"] = _fixture.PostgresConnectionString,
-                ["PostgreSQLSettings:AdminConnectionString"] = _fixture.PostgresConnectionString,
-                ["PostgreSQLSettings:NotificationsDbAdminPwd"] = string.Empty,
-                ["PostgreSQLSettings:NotificationsDbPwd"] = string.Empty,
-                ["PostgreSQLSettings:MigrationScriptPath"] = FindMigrationPath()
-            };
-            config.AddInMemoryCollection(testConfigOverrides);
-        });
+        string[] queueNames = [WolverineSettings.EmailDeliveryReportQueueName];
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
 
-        builder.ConfigureServices((context, services) =>
+        try
         {
-            WolverineSettings = context.Configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
-                ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
+            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
 
-            Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
-            Console.WriteLine($"[Factory] ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
-            Console.WriteLine($"[Factory] Postgres connection: {Truncate(_fixture.PostgresConnectionString, 50)}...");
-
-            // Override initialization of extension class with test settings
-            string? uri = context.Configuration["GeneralSettings:BaseUri"];
-            if (!string.IsNullOrEmpty(uri))
+            foreach (var queueName in queueNames)
             {
-                ResourceLinkExtensions.Initialize(uri);
+                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
+
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
             }
-
-            // Replace NpgsqlDataSource with test container connection
-            services.Replace(ServiceDescriptor.Singleton(sp =>
-            {
-                var dataSourceBuilder = new NpgsqlDataSourceBuilder(_fixture.PostgresConnectionString);
-                dataSourceBuilder.EnableParameterLogging(true);
-                dataSourceBuilder.EnableDynamicJson();
-                return dataSourceBuilder.Build();
-            }));
-
-            // Remove all Kafka services - they are not needed in ASB tests
-            // and the KafkaProducer constructor crashes without a running broker
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-                .ToList();
-
-            foreach (var descriptor in consumersToRemove)
-            {
-                services.Remove(descriptor);
-            }
-
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
-
-            // Apply any additional test service configuration
-            foreach (var configure in _configureTestServices)
-            {
-                configure(services);
-            }
-        });
-
-        builder.UseEnvironment("Development");
-
-        _host = base.CreateHost(builder);
-        return _host;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
+        }
     }
 
-    private static string Truncate(string? value, int maxLength) =>
-        value is null ? "(null)" : value[..Math.Min(value.Length, maxLength)];
+    /// <inheritdoc/>
+    protected override async Task CleanupAsync()
+    {
+        try
+        {
+            await using var dataSource = NpgsqlDataSource.Create(Fixture.PostgresConnectionString);
+            await using var cmd = dataSource.CreateCommand(
+                "DELETE FROM notifications.emailnotifications; " +
+                "DELETE FROM notifications.smsnotifications; " +
+                "DELETE FROM notifications.orders; " +
+                "DELETE FROM notifications.statusfeed; " +
+                "DELETE FROM notifications.deaddeliveryreports;");
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Factory] Database cleanup failed (non-fatal): {ex.Message}");
+        }
+    }
 
     private static string FindMigrationPath()
     {
@@ -145,78 +154,5 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         throw new DirectoryNotFoundException(
             $"Could not find Migration directory. Expected structure: <repo>/components/api/src/Altinn.Notifications.Persistence/Migration. " +
             $"Searched up to 10 parent directories from: {AppContext.BaseDirectory}");
-    }
-
-    /// <inheritdoc/>
-    public override async ValueTask DisposeAsync()
-    {
-        // Give Wolverine's Service Bus processors time to settle before disposal
-        await Task.Delay(500);
-
-        try
-        {
-            await base.DisposeAsync();
-        }
-        finally
-        {
-            await CleanupDatabaseAsync();
-            await DrainAllDeadLetterQueuesAsync();
-            GC.SuppressFinalize(this);
-        }
-    }
-
-    private async Task CleanupDatabaseAsync()
-    {
-        try
-        {
-            await using var dataSource = NpgsqlDataSource.Create(_fixture.PostgresConnectionString);
-            await using var cmd = dataSource.CreateCommand(
-                "DELETE FROM notifications.emailnotifications; " +
-                "DELETE FROM notifications.smsnotifications; " +
-                "DELETE FROM notifications.orders; " +
-                "DELETE FROM notifications.statusfeed; " +
-                "DELETE FROM notifications.deaddeliveryreports;");
-            await cmd.ExecuteNonQueryAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Factory] Database cleanup failed (non-fatal): {ex.Message}");
-        }
-    }
-
-    private async Task DrainAllDeadLetterQueuesAsync()
-    {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
-        {
-            return;
-        }
-
-        string[] queueNames = [WolverineSettings.EmailDeliveryReportQueueName];
-        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
-
-        try
-        {
-            await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
-
-            foreach (var queueName in queueNames)
-            {
-                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
-
-                while (true)
-                {
-                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                    if (message == null)
-                    {
-                        break;
-                    }
-
-                    await receiver.CompleteMessageAsync(message);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
-        }
     }
 }

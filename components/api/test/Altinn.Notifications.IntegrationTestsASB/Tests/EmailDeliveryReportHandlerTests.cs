@@ -2,7 +2,6 @@ using System.Text.Json;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
@@ -39,7 +38,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         {
             // Arrange - Create notification and set status to Succeeded with an operationId
             // (simulates the email service having successfully sent via ACS)
-            var (order, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
             await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
@@ -143,7 +142,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             // so we must set the operationId before expiring — simulating the real scenario
             // where ACS sent the email (setting operationId) before the TTL elapsed.
             string operationId = Guid.NewGuid().ToString();
-            var (order, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             // Now expire the notification by backdating its expiry time
