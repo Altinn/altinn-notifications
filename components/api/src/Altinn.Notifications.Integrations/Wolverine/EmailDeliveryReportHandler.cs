@@ -62,6 +62,9 @@ public static class EmailDeliveryReportHandler
         chain
             .OnException<NotificationExpiredException>()
             .SaveDeadDeliveryReport(NotificationExpiredReason);
+
+        // Permanent failures — no retry, move directly to error queue
+        // No need to create an explicit policy for this case since the default behavior is to move to the error queue on unhandled exceptions
     }
 
     /// <summary>
