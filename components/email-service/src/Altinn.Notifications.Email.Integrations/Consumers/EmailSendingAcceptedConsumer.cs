@@ -83,7 +83,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
                 NotificationId = operationIdentifier.NotificationId
             };
 
-            await _messageBus.SendAsync(checkEmailSendStatusCommand);
+            await _messageBus.PublishAsync(checkEmailSendStatusCommand);
         }
     }
 

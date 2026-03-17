@@ -7,12 +7,14 @@ using Altinn.Notifications.Email.Core.Status;
 using Microsoft.Extensions.Logging;
 
 using Wolverine;
+using Wolverine.Attributes;
 
 namespace Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Handles <see cref="CheckEmailSendStatusCommand"/> by polling ACS for email delivery status.
 /// </summary>
+[WolverineHandler]
 public static class CheckEmailSendStatusHandler
 {
     private const int _statusPollDelayMs = 8000;
@@ -65,7 +67,7 @@ public static class CheckEmailSendStatusHandler
                 SendOperationId = checkEmailSendStatusCommand.SendOperationId
             };
 
-            await messageBus.SendAsync(retryCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+            await messageBus.PublishAsync(retryCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
         }
     }
 }
