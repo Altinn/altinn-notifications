@@ -1,6 +1,5 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
-using Altinn.Notifications.Sms.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 
 using Azure.Messaging.ServiceBus;

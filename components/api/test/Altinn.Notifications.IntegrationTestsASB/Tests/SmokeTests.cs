@@ -1,5 +1,4 @@
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;

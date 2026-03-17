@@ -2,16 +2,13 @@ using System.Collections.Concurrent;
 
 using Microsoft.Extensions.Logging;
 
-namespace Altinn.Notifications.IntegrationTestsASB.Utils;
+namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 /// <summary>
-/// A simple logger provider that captures log entries containing a specific pattern.
+/// A logger provider that captures log entries containing a specific pattern.
 /// Used in integration tests to count handler invocations via log output.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="LogCapture"/> class.
-/// </remarks>
-/// <param name="pattern">The substring pattern to match in log messages or exception types.</param>
+/// <param name="pattern">The substring pattern to match in log messages or exception type names.</param>
 public sealed class LogCapture(string pattern) : ILoggerProvider
 {
     private readonly string _pattern = pattern;

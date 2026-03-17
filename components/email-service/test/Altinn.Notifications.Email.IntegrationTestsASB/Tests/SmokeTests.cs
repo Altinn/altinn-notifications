@@ -1,4 +1,3 @@
-using Altinn.Notifications.Email.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;

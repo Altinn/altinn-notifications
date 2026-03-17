@@ -4,11 +4,9 @@ using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Azure.Messaging.ServiceBus;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 
 using Moq;
 
@@ -16,117 +14,40 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 
 /// <summary>
 /// WebApplicationFactory for email service ASB integration tests.
-/// Boots the real Program.cs with test-specific overrides.
+/// Boots the real Program.cs with test-specific configuration and service overrides.
 /// </summary>
-public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture) : WebApplicationFactory<Program>
+public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
+    : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
-    private IHost _host = null!;
-    private readonly List<Action<IServiceCollection>> _configureTestServices = [];
-    private readonly Dictionary<string, string?> _configOverrides = [];
-
-    /// <summary>
-    /// Gets the IHost instance for use with Wolverine's IMessageBus.
-    /// Access this after calling CreateClient() or Initialize().
-    /// </summary>
-    public IHost Host => _host ?? throw new InvalidOperationException("Host not created yet. Call CreateClient() or Initialize() first.");
-
-    /// <summary>
-    /// Configures additional test services. Use this to replace services with mocks.
-    /// Must be called before CreateClient().
-    /// </summary>
-    public IntegrationTestWebApplicationFactory ConfigureTestServices(Action<IServiceCollection> configure)
+    /// <inheritdoc/>
+    protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
-        _configureTestServices.Add(configure);
-        return this;
-    }
+        ["WolverineSettings:ServiceBusConnectionString"] = Fixture.ServiceBusConnectionString,
+    };
 
-    /// <summary>
-    /// Adds an in-memory configuration override, applied after appsettings.integrationtest.json.
-    /// Use this to enable or disable specific settings per test.
-    /// Must be called before CreateClient().
-    /// </summary>
-    public IntegrationTestWebApplicationFactory WithConfig(string key, string? value)
+    /// <inheritdoc/>
+    protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        _configOverrides[key] = value;
-        return this;
+        Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
+
+        var consumersToRemove = services
+            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
+            .ToList();
+
+        foreach (var descriptor in consumersToRemove)
+        {
+            services.Remove(descriptor);
+        }
+
+        services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
 
     /// <inheritdoc/>
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        builder.ConfigureHostConfiguration(config =>
-        {
-            config.SetBasePath(AppContext.BaseDirectory);
-            config.AddJsonFile("appsettings.integrationtest.json", optional: false, reloadOnChange: false);
-
-            var testConfigOverrides = new Dictionary<string, string?>
-            {
-                ["WolverineSettings:ServiceBusConnectionString"] = _fixture.ServiceBusConnectionString,
-            };
-
-            foreach (var (key, value) in _configOverrides)
-            {
-                testConfigOverrides[key] = value;
-            }
-
-            config.AddInMemoryCollection(testConfigOverrides);
-        });
-
-        builder.ConfigureServices((context, services) =>
-        {
-            Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(_fixture.ServiceBusConnectionString, 50)}...");
-
-            // Remove all Kafka services - they are not needed in ASB tests
-            // and the CommonProducer constructor crashes without a running broker
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-                .ToList();
-
-            foreach (var descriptor in consumersToRemove)
-            {
-                services.Remove(descriptor);
-            }
-
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
-
-            // Apply any additional test service configuration
-            foreach (var configure in _configureTestServices)
-            {
-                configure(services);
-            }
-        });
-
-        builder.UseEnvironment("Development");
-
-        _host = base.CreateHost(builder);
-        return _host;
-    }
-
-    private static string Truncate(string? value, int maxLength) =>
-        value is null ? "(null)" : value[..Math.Min(value.Length, maxLength)];
-
-    /// <inheritdoc/>
-    public override async ValueTask DisposeAsync()
-    {
-        await Task.Delay(150);
-
-        try
-        {
-            await base.DisposeAsync();
-        }
-        finally
-        {
-            await DrainDeadLetterQueueAsync();
-            GC.SuppressFinalize(this);
-        }
-    }
-
-    private async Task DrainDeadLetterQueueAsync()
+    protected override async Task DrainQueuesAsync()
     {
         try
         {
-            await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
+            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
             await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
 
             while (true)
