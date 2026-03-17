@@ -39,7 +39,7 @@ public static class FailureActionsExtensions
                             Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
                             FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
                             LastAttempt = DateTime.UtcNow,
-                            AttemptCount = envelope.Envelope.Attempts,
+                            AttemptCount = Math.Max(1, envelope.Envelope.Attempts),
                             Resolved = false,
                             DeliveryReport = JsonSerializer.Serialize(deliveryReport),
                             Reason = reason,
