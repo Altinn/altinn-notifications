@@ -78,6 +78,7 @@ jobs:
               - 'components/api/src/**'
               - 'components/api/test/Altinn.Notifications.Tests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+              - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
               - 'components/api/Altinn.Notifications.API.slnx'
             shared:
               - 'components/shared/src/**'
@@ -242,6 +243,15 @@ jobs:
           --logger "trx;LogFileName=api-integration.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API ASB integration tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration-asb/ \
+          --logger "trx;LogFileName=api-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -379,6 +389,15 @@ jobs:
           --logger "trx;LogFileName=email-integration.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run Email ASB integration tests
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-integration-asb/ \
+          --logger "trx;LogFileName=email-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -461,6 +480,15 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/sms-integration/ \
           --logger "trx;LogFileName=sms-integration.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run SMS ASB integration tests
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-integration-asb/ \
+          --logger "trx;LogFileName=sms-integration-asb.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results

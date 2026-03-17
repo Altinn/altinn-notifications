@@ -34,4 +34,8 @@
     <ProjectReference Include="..\..\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
   </ItemGroup>
 
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <NoWarn>$(NoWarn);SA0001</NoWarn>
+  </PropertyGroup>
+
 </Project>

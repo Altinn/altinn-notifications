@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 namespace Altinn.Notifications.Shared.Configuration;
 
 /// <summary>
