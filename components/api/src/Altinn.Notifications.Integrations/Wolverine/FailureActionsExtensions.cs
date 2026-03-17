@@ -1,12 +1,15 @@
 using System.Text.Json;
+
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Wolverine.ErrorHandling;
-using Wolverine.Runtime;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
 
@@ -27,7 +30,13 @@ public static class FailureActionsExtensions
                 
                 try
                 {
-                    var eventGridEvent = EventGridEvent.Parse(BinaryData.FromBytes(envelope.Envelope!.Data!));
+                    if (envelope.Envelope?.Message is not EmailDeliveryReportCommand command)
+                    {
+                        logger.LogError("Envelope message is not an EmailDeliveryReportCommand; cannot save dead delivery report.");
+                        return;
+                    }
+
+                    var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
                     
                     if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
                     {

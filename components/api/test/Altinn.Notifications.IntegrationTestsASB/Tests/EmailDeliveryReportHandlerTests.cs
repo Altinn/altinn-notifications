@@ -7,14 +7,10 @@ using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
-
 using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 using Npgsql;
-
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
