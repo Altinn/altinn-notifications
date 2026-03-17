@@ -151,7 +151,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     public override async ValueTask DisposeAsync()
     {
         // Give Wolverine's Service Bus processors time to settle before disposal
-        await Task.Delay(150);
+        await Task.Delay(500);
 
         try
         {
