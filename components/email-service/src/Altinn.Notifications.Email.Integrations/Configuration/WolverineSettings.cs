@@ -9,14 +9,9 @@ namespace Altinn.Notifications.Email.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
-    /// Whether to enable the check email send status queue listener.
+    /// Determines whether the check-send-status should happen through Wolverine/Azure Service Bus.
     /// </summary>
-    public bool EnableCheckEmailSendStatusListener { get; set; } = false;
-
-    /// <summary>
-    /// Whether to enable the check email send status queue publisher.
-    /// </summary>
-    public bool EnableCheckEmailSendStatusPublisher { get; set; } = false;
+    public bool EnableCheckEmailSendStatus { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for check email send status operations (polling loop).

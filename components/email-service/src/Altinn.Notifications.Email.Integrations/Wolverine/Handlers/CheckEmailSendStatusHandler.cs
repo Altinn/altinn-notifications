@@ -34,14 +34,12 @@ public static class CheckEmailSendStatusHandler
     {
         if (checkEmailSendStatusCommand.NotificationId == Guid.Empty)
         {
-            logger.LogError("// CheckEmailSendStatusHandler // Handle // The NotificationId is empty Guid.");
-            return;
+            throw new ArgumentException("NotificationId cannot be empty");
         }
 
         if (string.IsNullOrWhiteSpace(checkEmailSendStatusCommand.SendOperationId))
         {
-            logger.LogError("// CheckEmailSendStatusHandler // Handle // The SendOperationId is null, empty, or whitespace.");
-            return;
+            throw new ArgumentException("SendOperationId cannot be null, empty, or whitespace");
         }
 
         EmailSendResult sendResult = await emailServiceClient.GetOperationUpdate(checkEmailSendStatusCommand.SendOperationId);
@@ -67,7 +65,7 @@ public static class CheckEmailSendStatusHandler
                 SendOperationId = checkEmailSendStatusCommand.SendOperationId
             };
 
-            await messageBus.PublishAsync(retryCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+            await messageBus.SendAsync(retryCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
         }
     }
 }

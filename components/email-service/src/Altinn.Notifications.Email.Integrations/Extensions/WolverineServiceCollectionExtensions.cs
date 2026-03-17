@@ -26,41 +26,51 @@ public static class WolverineServiceCollectionExtensions
     /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="config">The application configuration.</param>
-    /// <param name="env">The host environment (used for dev/prod ASB emulator detection).</param>
-    public static void AddWolverineServices(
-        this IServiceCollection services,
-        IConfiguration config,
-        IHostEnvironment env)
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
+    public static void AddWolverineServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment hostEnvironment)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+        if (!wolverineSettings.EnableWolverine)
+        {
+            return;
+        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
-            opts.Discovery.IncludeAssembly(typeof(WolverineServiceCollectionExtensions).Assembly);
-            opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
-            opts.Policies.AllListeners(x => x.ProcessInline());
+            opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
+
             opts.Policies.AllSenders(x => x.SendInline());
+            opts.Policies.AllListeners(x => x.ProcessInline());
 
-            if (!string.IsNullOrWhiteSpace(wolverineSettings.CheckEmailSendStatusQueueName))
-            {
-                // Listener: check email send status queue (polling loop)
-                if (wolverineSettings.EnableCheckEmailSendStatusListener)
-                {
-                    opts.ListenToAzureServiceBusQueue(wolverineSettings.CheckEmailSendStatusQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
-                }
-
-                // Publisher: check email send status queue (re-publish for polling loop)
-                if (wolverineSettings.EnableCheckEmailSendStatusPublisher)
-                {
-                    opts.PublishMessage<CheckEmailSendStatusCommand>()
-                        .ToAzureServiceBusQueue(wolverineSettings.CheckEmailSendStatusQueueName);
-                }
-            }
+            ConfigureCheckEmailSendStatus(opts, wolverineSettings);
         });
+    }
+
+    /// <summary>
+    /// Configures listener and publisher settings for the check-email-send-status queue.
+    /// </summary>
+    /// <param name="opts">The Wolverine options.</param>
+    /// <param name="wolverineSettings">The Wolverine settings.</param>
+    private static void ConfigureCheckEmailSendStatus(WolverineOptions opts, WolverineSettings wolverineSettings)
+    {
+        if (!wolverineSettings.EnableCheckEmailSendStatus)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.CheckEmailSendStatusQueueName))
+        {
+            return;
+        }
+
+        opts.PublishMessage<CheckEmailSendStatusCommand>()
+            .ToAzureServiceBusQueue(wolverineSettings.CheckEmailSendStatusQueueName);
+
+        opts.ListenToAzureServiceBusQueue(wolverineSettings.CheckEmailSendStatusQueueName)
+            .ListenerCount(wolverineSettings.ListenerCount);
     }
 }
