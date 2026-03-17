@@ -20,12 +20,13 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class EmailNotificationService : IEmailNotificationService
 {
-    private readonly IDateTimeService _dateTime;
-    private readonly IGuidService _guid;
-    private readonly string _emailQueueTopicName;
-    private readonly IEmailNotificationRepository _repository;
-    private readonly IKafkaProducer _producer;
+    private readonly IGuidService _guidService;
     private readonly int _emailPublishBatchSize;
+    private readonly string _emailSendTopicName;
+    private readonly string _emailSendQueueName;
+    private readonly IKafkaProducer _kafkaProducer;
+    private readonly IDateTimeService _dateTimeService;
+    private readonly IEmailNotificationRepository _emailNotificationRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
@@ -38,12 +39,12 @@ public class EmailNotificationService : IEmailNotificationService
         IOptions<NotificationConfig> notificationConfig,
         IEmailNotificationRepository repository)
     {
-        _guid = guid;
-        _dateTime = dateTime;
-        _producer = producer;
-        _repository = repository;
+        _guidService = guid;
+        _kafkaProducer = producer;
+        _dateTimeService = dateTime;
+        _emailNotificationRepository = repository;
+        _emailSendTopicName = kafkaSettings.Value.EmailQueueTopicName;
         _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
-        _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
     /// <inheritdoc/>
@@ -74,7 +75,7 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task TerminateExpiredNotifications()
     {
         // process hanging notifications that have been set to succeeded, but never reached a final stage
-        await _repository.TerminateExpiredNotifications();
+        await _emailNotificationRepository.TerminateExpiredNotifications();
     }
 
     /// <inheritdoc/>
@@ -88,7 +89,7 @@ public class EmailNotificationService : IEmailNotificationService
 
             try
             {
-                newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
                 if (newEmailNotifications.Count == 0)
                 {
                     break;
@@ -98,7 +99,7 @@ public class EmailNotificationService : IEmailNotificationService
 
                 var serializedEmailNotifications = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
 
-                var unpublishedEmailNotifications = await _producer.ProduceAsync(_emailQueueTopicName, serializedEmailNotifications, cancellationToken);
+                var unpublishedEmailNotifications = await _kafkaProducer.ProduceAsync(_emailSendTopicName, serializedEmailNotifications, cancellationToken);
 
                 foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
                 {
@@ -108,14 +109,14 @@ public class EmailNotificationService : IEmailNotificationService
                         continue;
                     }
 
-                    await _repository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
+                    await _emailNotificationRepository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
                 }
             }
             catch (OperationCanceledException)
             {
                 foreach (var email in newEmailNotifications)
                 {
-                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
                 }
 
                 throw;
@@ -133,7 +134,7 @@ public class EmailNotificationService : IEmailNotificationService
             sendOperationResult.SendResult = EmailNotificationResultType.New;
         }
 
-        await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+        await _emailNotificationRepository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
     }
 
     /// <summary>
@@ -149,23 +150,23 @@ public class EmailNotificationService : IEmailNotificationService
         var emailNotification = new EmailNotification()
         {
             OrderId = orderId,
-            Id = _guid.NewGuid(),
+            Id = _guidService.NewGuid(),
             Recipient = recipient,
             RequestedSendTime = requestedSendTime,
-            SendResult = new(result, _dateTime.UtcNow())
+            SendResult = new(result, _dateTimeService.UtcNow())
         };
 
         DateTime expiry;
 
         if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
         {
-            expiry = _dateTime.UtcNow();
+            expiry = _dateTimeService.UtcNow();
         }
         else
         {
             expiry = requestedSendTime.AddHours(48);
         }
 
-        await _repository.AddNotification(emailNotification, expiry);
+        await _emailNotificationRepository.AddNotification(emailNotification, expiry);
     }
 }
