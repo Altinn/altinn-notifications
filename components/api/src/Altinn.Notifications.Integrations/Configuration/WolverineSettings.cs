@@ -9,6 +9,21 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// Whether to enable the email send queue publisher.
+    /// </summary>
+    public bool EnableEmailSendPublisher { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for publishing email send messages.
+    /// </summary>
+    public string EmailSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the email send queue.
+    /// </summary>
+    public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
+
+    /// <summary>
     /// Whether to enable the email delivery report queue listener.
     /// </summary>
     public bool EnableEmailDeliveryReportListener { get; set; } = false;
