@@ -49,14 +49,10 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddHostedService<SendEmailQueueConsumer>()
+            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(communicationServicesSettings)
             .AddSingleton(emailServiceAdminSettings);
-
-        if (!wolverineSettings.EnableCheckEmailSendStatusListener && !wolverineSettings.EnableCheckEmailSendStatusPublisher)
-        {
-            services.AddHostedService<EmailSendingAcceptedConsumer>();
-        }
 
         return services;
     }

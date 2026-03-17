@@ -1,9 +1,12 @@
 ﻿using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.Extensions.Logging;
+using Wolverine;
+using Wolverine.Runtime;
 
 namespace Altinn.Notifications.Email.Integrations.Consumers;
 
@@ -18,6 +21,8 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
     private const int _processingDelay = 8000;
     private readonly IDateTimeService _dateTime;
     private readonly ILogger<EmailSendingAcceptedConsumer> _logger;
+    private readonly WolverineSettings _wolverineSettings;
+    private readonly IMessageBus _messageBus;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailSendingAcceptedConsumer"/> class.
@@ -27,7 +32,9 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         ICommonProducer producer,
         KafkaSettings kafkaSettings,
         IDateTimeService dateTime,
-        ILogger<EmailSendingAcceptedConsumer> logger)
+        ILogger<EmailSendingAcceptedConsumer> logger,
+        WolverineSettings wolverineSettings,
+        IMessageBus messageBus)
         : base(kafkaSettings.EmailSendingAcceptedTopicName, kafkaSettings, logger)
     {
         _statusService = statusService;
@@ -35,6 +42,8 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         _retryTopicName = kafkaSettings.EmailSendingAcceptedTopicName;
         _dateTime = dateTime;
         _logger = logger;
+        _wolverineSettings = wolverineSettings;
+        _messageBus = messageBus;
     }
 
     /// <inheritdoc/>
@@ -61,7 +70,21 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
             await Task.Delay(_processingDelay - diff);
         }
 
-        await _statusService.UpdateSendStatus(operationIdentifier);
+        if (!_wolverineSettings.EnableCheckEmailSendStatusListener && !_wolverineSettings.EnableCheckEmailSendStatusPublisher)
+        {
+            await _statusService.UpdateSendStatus(operationIdentifier);
+        }
+        else
+        {
+            var checkEmailSendStatusCommand = new CheckEmailSendStatusCommand
+            {
+                LastCheckedAtUtc = _dateTime.UtcNow(),
+                SendOperationId = operationIdentifier.OperationId,
+                NotificationId = operationIdentifier.NotificationId
+            };
+
+            await _messageBus.SendAsync(checkEmailSendStatusCommand);
+        }
     }
 
     private async Task RetryOperation(string message)
