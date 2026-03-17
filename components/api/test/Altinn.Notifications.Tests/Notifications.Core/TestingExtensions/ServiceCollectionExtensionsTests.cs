@@ -25,9 +25,24 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddCoreServices_WolverineSettingsMissing_ThrowsException()
+    {
+        Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", "value");
+        Environment.SetEnvironmentVariable("WolverineSettings__EnableEmailSendPublisher", null);
+        Environment.SetEnvironmentVariable("NotificationConfig__DefaultEmailFromAddress", "value");
+
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        Assert.Throws<ArgumentNullException>(() => services.AddCoreServices(config));
+    }
+
+    [Fact]
     public void AddCoreServices_NotificationConfigMissing_ThrowsException()
     {
         Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", "value");
+        Environment.SetEnvironmentVariable("WolverineSettings__EnableEmailSendPublisher", "true");
         Environment.SetEnvironmentVariable("NotificationConfig__DefaultEmailFromAddress", null);
 
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
