@@ -151,7 +151,8 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
-        await Task.Delay(150);
+        // Give time for any in-flight messages to be processed and queues to stabilize before shutdown.
+        await Task.Delay(500);
 
         try
         {
