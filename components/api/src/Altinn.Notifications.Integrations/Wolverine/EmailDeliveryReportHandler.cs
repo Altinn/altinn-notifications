@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -11,6 +9,7 @@ using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
 
@@ -49,6 +48,7 @@ public static class EmailDeliveryReportHandler
             .Or<TaskCanceledException>()
             .Or<TimeoutException>()
             .Or<ServiceBusException>()
+            .Or<NpgsqlException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
