@@ -1,4 +1,3 @@
-using Altinn.Notifications.Email.IntegrationTestsASB.Extensions;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
@@ -30,7 +29,7 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
         Assert.True(string.IsNullOrEmpty(_fixture.PostgresConnectionString), "Postgres should not be provisioned for email service");
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig(new Dictionary<string, string?> { ["WolverineSettings:EnableWolverine"] = "false" })
+            .WithConfig("WolverineSettings:EnableWolverine", "false")
             .Initialize();
 
         await using (factory)
@@ -48,7 +47,7 @@ public class SmokeTests(IntegrationTestContainersFixture fixture)
     {
         const string queueName = "smoke-test";
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig(new Dictionary<string, string?> { ["WolverineSettings:EnableWolverine"] = "false" })
+            .WithConfig("WolverineSettings:EnableWolverine", "false")
             .Initialize();
 
         await using (factory)
