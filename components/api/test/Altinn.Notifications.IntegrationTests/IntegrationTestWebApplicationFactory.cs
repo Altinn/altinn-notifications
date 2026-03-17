@@ -25,10 +25,17 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "WolverineSettings:EnableWolverine", "false" }
+            });
 
             // overriding initialization of extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri!);
+            if (!string.IsNullOrEmpty(uri))
+            {
+                ResourceLinkExtensions.Initialize(uri);
+            }
         });
 
         builder.ConfigureTestServices(services =>

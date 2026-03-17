@@ -38,7 +38,16 @@ public static class WolverineOptionsExtensions
         opts.EnableRemoteInvocation = false;
         opts.MultipleHandlerBehavior = MultipleHandlerBehavior.Separated;
 
-        var azureBusConfig = opts.UseAzureServiceBus(azureServiceBusConnectionString);
+        // In development (which includes the ASB emulator used in integration tests),
+        // shorten TryTimeout so the AMQP drain on shutdown fails in ~3s instead of
+        // the default 60s. On shutdown, ServiceBusProcessor sends an AMQP drain frame
+        // (FLOW with drain=true) whenever link.LinkCredit > 0 — which is always the case
+        // when a processor is idle waiting for the next message. The emulator never
+        // acknowledges this frame, so without a short TryTimeout every factory disposal
+        // hangs for a full minute.
+        var azureBusConfig = env.IsDevelopment()
+            ? opts.UseAzureServiceBus(azureServiceBusConnectionString, o => o.RetryOptions.TryTimeout = TimeSpan.FromSeconds(3))
+            : opts.UseAzureServiceBus(azureServiceBusConnectionString);
 
         if (env.IsDevelopment())
         {
