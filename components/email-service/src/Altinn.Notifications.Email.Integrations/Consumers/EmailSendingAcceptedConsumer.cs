@@ -5,8 +5,8 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.Extensions.Logging;
+
 using Wolverine;
-using Wolverine.Runtime;
 
 namespace Altinn.Notifications.Email.Integrations.Consumers;
 
@@ -22,7 +22,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
     private readonly IDateTimeService _dateTime;
     private readonly ILogger<EmailSendingAcceptedConsumer> _logger;
     private readonly WolverineSettings _wolverineSettings;
-    private readonly IMessageBus _messageBus;
+    private readonly IMessageBus? _messageBus;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailSendingAcceptedConsumer"/> class.
@@ -34,7 +34,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         IDateTimeService dateTime,
         ILogger<EmailSendingAcceptedConsumer> logger,
         WolverineSettings wolverineSettings,
-        IMessageBus messageBus)
+        IMessageBus? messageBus = null)
         : base(kafkaSettings.EmailSendingAcceptedTopicName, kafkaSettings, logger)
     {
         _statusService = statusService;
@@ -74,7 +74,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         {
             await _statusService.UpdateSendStatus(operationIdentifier);
         }
-        else
+        else if (_messageBus is not null)
         {
             var checkEmailSendStatusCommand = new CheckEmailSendStatusCommand
             {
