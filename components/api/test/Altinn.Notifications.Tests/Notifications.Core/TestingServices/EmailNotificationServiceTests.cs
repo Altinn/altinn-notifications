@@ -602,7 +602,7 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        var emailSendPublisher = new Mock<IEmailSendPublisher>();;
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
 
         return new EmailNotificationService(
             guidService.Object,
