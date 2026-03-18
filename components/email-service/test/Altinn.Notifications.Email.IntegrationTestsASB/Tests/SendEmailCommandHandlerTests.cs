@@ -47,7 +47,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         await using (factory)
         {
             // Act
-            await factory.PublishMessageAsync(command);
+            await factory.SendToEndpointAsync("altinn.notifications.email.send", command);
             var capturedEmail = await spy.WaitForEmailAsync(TimeSpan.FromSeconds(10));
 
             // Assert
@@ -89,7 +89,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         await using (factory)
         {
             // Act
-            await factory.PublishMessageAsync(command);
+            await factory.SendToEndpointAsync("altinn.notifications.email.send", command);
             var capturedEmail = await spy.WaitForEmailAsync(TimeSpan.FromSeconds(10));
 
             // Assert
