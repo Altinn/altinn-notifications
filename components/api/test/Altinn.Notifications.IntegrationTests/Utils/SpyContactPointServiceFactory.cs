@@ -35,6 +35,10 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "WolverineSettings:EnableWolverine", "false" }
+            });
 
             string? uri = configuration["GeneralSettings:BaseUri"];
             if (!string.IsNullOrEmpty(uri))
@@ -54,6 +58,19 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
             {
                 services.Remove(descriptor);
             }
+
+            // Replace scoped IEmailSendPublisher (registered by Wolverine) with a singleton
+            // no-op to avoid the scoped-from-singleton lifetime validation error.
+            var emailPublisherDescriptors = services
+                .Where(s => s.ServiceType == typeof(IEmailSendPublisher))
+                .ToList();
+
+            foreach (var descriptor in emailPublisherDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddSingleton<IEmailSendPublisher, SpyEmailSendPublisher>();
 
             // Remove the existing IContactPointService registration
             var contactPointDescriptor = services.SingleOrDefault(

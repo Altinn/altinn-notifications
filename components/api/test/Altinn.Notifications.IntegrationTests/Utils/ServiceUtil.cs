@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
@@ -118,13 +119,14 @@ public static class ServiceUtil
         // This provides compile-time safety and avoids fragility of reflection-based registration.
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
+        services.AddSingleton<IEmailSendPublisher, SpyEmailSendPublisher>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
+        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
-        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment

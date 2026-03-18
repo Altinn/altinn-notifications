@@ -2,6 +2,8 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
 
+using Microsoft.Extensions.Logging;
+
 using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
@@ -13,39 +15,48 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 public class EmailSendPublisher : IEmailSendPublisher
 {
     private readonly IMessageBus _messageBus;
+    private readonly ILogger<EmailSendPublisher> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailSendPublisher"/> class.
     /// </summary>
-    /// <param name="messageBus">The Wolverine message bus.</param>
-    public EmailSendPublisher(IMessageBus messageBus)
+    public EmailSendPublisher(ILogger<EmailSendPublisher> logger, IMessageBus messageBus)
     {
+        _logger = logger;
         _messageBus = messageBus;
     }
 
     /// <inheritdoc/>
     public async Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken)
     {
+        var sendEmailCommand = new SendEmailCommand
+        {
+            Body = email.Body,
+            Subject = email.Subject,
+            ToAddress = email.ToAddress,
+            FromAddress = email.FromAddress,
+            NotificationId = email.NotificationId,
+            ContentType = email.ContentType.ToString()
+        };
+
+        cancellationToken.ThrowIfCancellationRequested();
+
         try
         {
-            var sendEmailCommand = new SendEmailCommand
-            {
-                Body = email.Body,
-                Subject = email.Subject,
-                ToAddress = email.ToAddress,
-                FromAddress = email.FromAddress,
-                NotificationId = email.NotificationId,
-                ContentType = email.ContentType.ToString()
-            };
-
-            cancellationToken.ThrowIfCancellationRequested();
-
             await _messageBus.SendAsync(sendEmailCommand);
+
+            _logger.LogInformation("// EmailSendPublisher // PublishAsync // Successfully published email notification {NotificationId}.", email.NotificationId);
 
             return null;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "// EmailSendPublisher // PublishAsync // Failed to publish email notification {NotificationId}.", email.NotificationId);
+
             return email.NotificationId;
         }
     }
