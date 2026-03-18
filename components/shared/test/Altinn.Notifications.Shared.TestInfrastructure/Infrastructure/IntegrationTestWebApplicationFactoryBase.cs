@@ -172,6 +172,11 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         {
             await base.DisposeAsync();
         }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is ObjectDisposedException { ObjectName: "EventLogInternal" }))
+        {
+            // Suppress the EventLogInternal disposed error that occurs during Wolverine shutdown
+            // when the Windows Event Log logger is disposed before Wolverine finishes draining.
+        }
         finally
         {
             await CleanupAsync();
