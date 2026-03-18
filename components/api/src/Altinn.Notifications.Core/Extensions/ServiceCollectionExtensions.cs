@@ -24,10 +24,6 @@ public static class ServiceCollectionExtensions
             .Get<KafkaSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
-        _ = config.GetSection("WolverineSettings")
-            .Get<WolverineSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required WolverineSettings is missing from application configuration");
-
         _ = config.GetSection("NotificationConfig")
             .Get<NotificationConfig>()
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
@@ -61,7 +57,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<WolverineSettings>(config.GetSection("WolverineSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }
 }
