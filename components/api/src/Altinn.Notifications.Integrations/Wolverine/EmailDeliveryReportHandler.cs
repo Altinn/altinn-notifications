@@ -73,7 +73,7 @@ public static class EmailDeliveryReportHandler
     public static async Task Handle(
         EmailDeliveryReportCommand command,
         IEmailNotificationService emailNotificationService,
-        ILogger logger)
+        ILogger<EmailDeliveryReportHandler> logger)
     {
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
