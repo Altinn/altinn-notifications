@@ -19,7 +19,6 @@ internal static class Utils
     {
         return deliveryStatus switch
         {
-            null => EmailNotificationResultType.Failed,
             "Bounced" => EmailNotificationResultType.Failed_Bounced,
             "Delivered" => EmailNotificationResultType.Delivered,
             "Expanded" => EmailNotificationResultType.Failed,
