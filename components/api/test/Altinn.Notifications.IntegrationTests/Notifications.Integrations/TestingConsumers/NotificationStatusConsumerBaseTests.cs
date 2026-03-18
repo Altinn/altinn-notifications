@@ -161,6 +161,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var guidService = new Mock<IGuidService>();
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -190,6 +191,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            emailSendPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 
@@ -332,6 +334,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -366,6 +369,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            emailSendPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 
@@ -507,6 +511,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -541,6 +546,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            emailSendPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 
@@ -593,6 +599,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -627,6 +634,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            emailSendPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 
@@ -775,6 +783,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -811,6 +820,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            emailSendPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 

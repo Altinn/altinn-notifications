@@ -35,64 +35,6 @@ public class EmailNotificationServiceTests
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
     [Fact]
-    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
-    {
-        // Arrange
-        Guid notificationid = Guid.NewGuid();
-        string operationId = Guid.NewGuid().ToString();
-        EmailSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notificationid,
-            OperationId = operationId,
-            SendResult = EmailNotificationResultType.Succeeded
-        };
-
-        var mockRepo = new Mock<EmailNotificationRepository>(
-            (null as NpgsqlDataSource)!,
-            (null as ILogger<EmailNotificationRepository>)!,
-            Options.Create(new NotificationConfig()))
-        {
-            CallBase = true
-        };
-
-        mockRepo.Protected()
-            .Setup<Task>(
-                "ExecuteUpdateWithTransactionAsync",
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.IsAny<NotificationChannel>(),
-                ItExpr.IsAny<Guid?>(),
-                ItExpr.IsAny<string?>(),
-                ItExpr.IsAny<bool>(),
-                ItExpr.IsAny<SendStatusIdentifierType>())
-            .Returns(Task.CompletedTask);
-
-        var service = new EmailNotificationService(
-            new Mock<IGuidService>().Object,
-            new Mock<IKafkaProducer>().Object,
-            new Mock<IDateTimeService>().Object,
-            Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
-            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
-            mockRepo.Object);
-
-        // Act
-        await service.UpdateSendStatus(sendOperationResult);
-
-        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
-        mockRepo.Protected()
-            .Verify<Task>(
-                "ExecuteUpdateWithTransactionAsync", 
-                Times.Once(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Email),
-                ItExpr.IsAny<Guid?>(),
-                ItExpr.IsAny<string?>(),
-                ItExpr.Is<bool>(b => b),
-                ItExpr.IsAny<SendStatusIdentifierType>());
-    }
-
-    [Fact]
     public async Task CreateNotification_ToAddressDefined_ResultNew()
     {
         // Arrange
@@ -258,21 +200,21 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateSendStatus_SendResultDefined_Succeded()
+    public async Task UpdateSendStatus_SendResultDefined_Succeeded()
     {
         // Arrange
-        Guid notificationid = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
         string operationId = Guid.NewGuid().ToString();
 
         EmailSendOperationResult sendOperationResult = new()
         {
-            NotificationId = notificationid,
+            NotificationId = notificationId,
             OperationId = operationId,
             SendResult = EmailNotificationResultType.Succeeded
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationid), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId))));
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationId), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId))));
 
         var service = GetTestService(repo: repoMock.Object);
 
@@ -287,19 +229,19 @@ public class EmailNotificationServiceTests
     public async Task UpdateSendStatus_TransientErrorResult_ConvertedToNew()
     {
         // Arrange
-        Guid notificationid = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
         string operationId = Guid.NewGuid().ToString();
 
         EmailSendOperationResult sendOperationResult = new()
         {
-            NotificationId = notificationid,
+            NotificationId = notificationId,
             OperationId = operationId,
             SendResult = EmailNotificationResultType.Failed_TransientError
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.UpdateSendStatus(
-            It.Is<Guid>(n => n == notificationid),
+            It.Is<Guid>(n => n == notificationId),
             It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
             It.Is<string>(s => s.Equals(operationId))));
 
@@ -310,6 +252,65 @@ public class EmailNotificationServiceTests
 
         // Assert
         repoMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        var mockRepo = new Mock<EmailNotificationRepository>(
+            (null as NpgsqlDataSource)!,
+            (null as ILogger<EmailNotificationRepository>)!,
+            Options.Create(new NotificationConfig()))
+        {
+            CallBase = true
+        };
+
+        mockRepo.Protected()
+            .Setup<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.IsAny<NotificationChannel>(),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.IsAny<bool>(),
+                ItExpr.IsAny<SendStatusIdentifierType>())
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailNotificationService(
+            new Mock<IGuidService>().Object,
+            new Mock<IKafkaProducer>().Object,
+            new Mock<IDateTimeService>().Object,
+            Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            new Mock<IEmailSendPublisher>().Object,
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            mockRepo.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
+        mockRepo.Protected()
+            .Verify<Task>(
+                "ExecuteUpdateWithTransactionAsync",
+                Times.Once(),
+                ItExpr.IsAny<string>(),
+                ItExpr.IsAny<Action<NpgsqlCommand>>(),
+                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Email),
+                ItExpr.IsAny<Guid?>(),
+                ItExpr.IsAny<string?>(),
+                ItExpr.Is<bool>(b => b),
+                ItExpr.IsAny<SendStatusIdentifierType>());
     }
 
     [Fact]
@@ -588,6 +589,7 @@ public class EmailNotificationServiceTests
         dateTimeService
             .Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
+
         if (repo == null)
         {
             var repoMock = new Mock<IEmailNotificationRepository>();
@@ -600,11 +602,14 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
+        var emailSendPublisher = new Mock<IEmailSendPublisher>();;
+
         return new EmailNotificationService(
             guidService.Object,
             producer,
             dateTimeService.Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            emailSendPublisher.Object,
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             repo);
     }

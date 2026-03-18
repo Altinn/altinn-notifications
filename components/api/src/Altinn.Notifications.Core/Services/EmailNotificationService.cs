@@ -25,7 +25,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly string _emailSendTopicName;
     private readonly IKafkaProducer _kafkaProducer;
     private readonly IDateTimeService _dateTimeService;
-    private readonly IEmailSendPublisher? _emailSendPublisher;
+    private readonly IEmailSendPublisher _emailSendPublisher;
     private readonly bool _sendEmailNotificationsViaWolverine;
     private readonly IEmailNotificationRepository _emailNotificationRepository;
 
@@ -37,9 +37,9 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer kafkaProducer,
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> kafkaSettings,
+        IEmailSendPublisher emailSendPublisher,
         IOptions<NotificationConfig> notificationConfig,
-        IEmailNotificationRepository emailNotificationRepository,
-        IEmailSendPublisher? emailSendPublisher = null)
+        IEmailNotificationRepository emailNotificationRepository)
     {
         _guidService = guidService;
         _kafkaProducer = kafkaProducer;
@@ -171,16 +171,6 @@ public class EmailNotificationService : IEmailNotificationService
     /// <returns>A task that represents the asynchronous publish operation.</returns>
     private async Task PublishEmailNotificationsViaWolverine(List<Email> emailNotifications, CancellationToken cancellationToken)
     {
-        if (_emailSendPublisher == null)
-        {
-            foreach (var emailNotification in emailNotifications)
-            {
-                await _emailNotificationRepository.UpdateSendStatus(emailNotification.NotificationId, EmailNotificationResultType.New);
-            }
-
-            return;
-        }
-
         List<Guid> unpublishedNotificationIds = [];
 
         foreach (var email in emailNotifications)
