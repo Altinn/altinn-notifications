@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
+using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Email.Integrations.Extensions;
 
@@ -42,8 +43,31 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners: none configured yet.
+            // Listeners
+            AddEmailSendQueueListener(wolverineSettings, ref opts);
+
             // Publishers: none configured yet.
         });
+    }
+
+    /// <summary>
+    /// Adds the email send queue listener.
+    /// </summary>
+    /// <param name="wolverineSettings">The wolverine settings.</param>
+    /// <param name="opts">The opts.</param>
+    private static void AddEmailSendQueueListener(WolverineSettings wolverineSettings, ref WolverineOptions opts)
+    {
+        if (wolverineSettings.AcceptEmailNotificationsViaWolverine)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+        {
+            return;
+        }
+
+        opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
+            .ListenerCount(wolverineSettings.ListenerCount);
     }
 }
