@@ -5,10 +5,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
-
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 using Wolverine.ErrorHandling;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
@@ -26,37 +23,27 @@ public static class FailureActionsExtensions
         return failureActions.CustomAction(
             async (runtime, envelope, exception) =>
             {
-                var logger = runtime.LoggerFactory.CreateLogger(typeof(EmailDeliveryReportHandler));
-                
-                try
-                {
-                    var command = (EmailDeliveryReportCommand)envelope.Envelope!.Message!;
-                    var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
-                    
-                    if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
-                    {
-                        var deliveryReport = (AcsEmailDeliveryReportReceivedEventData)systemEvent;
-                        var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
-                        
-                        var deadDeliveryReport = new DeadDeliveryReport
-                        {
-                            Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
-                            FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
-                            LastAttempt = DateTime.UtcNow,
-                            AttemptCount = Math.Max(1, envelope.Envelope.Attempts),
-                            Resolved = false,
-                            DeliveryReport = JsonSerializer.Serialize(deliveryReport),
-                            Reason = reason,
-                            Message = exception.Message
-                        };
+                var command = (EmailDeliveryReportCommand)envelope.Envelope!.Message!;
+                var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
-                        await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
-                    }
-                }
-                catch (Exception ex)
+                if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
                 {
-                    logger.LogError(ex, "Failed to save dead delivery report");
-                    throw;
+                    var deliveryReport = (AcsEmailDeliveryReportReceivedEventData)systemEvent;
+                    var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
+
+                    var deadDeliveryReport = new DeadDeliveryReport
+                    {
+                        Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
+                        FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
+                        LastAttempt = DateTime.UtcNow,
+                        AttemptCount = Math.Max(1, envelope.Envelope.Attempts),
+                        Resolved = false,
+                        DeliveryReport = JsonSerializer.Serialize(deliveryReport),
+                        Reason = reason,
+                        Message = exception.Message
+                    };
+
+                    await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
                 }
             },
             "Save Dead Delivery Report");

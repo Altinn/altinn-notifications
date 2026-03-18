@@ -143,7 +143,13 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
+        var logCapture = new LogCapture(nameof(NotificationExpiredException));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ConfigureTestServices(services =>
+                services.AddSingleton<ILoggerProvider>(logCapture))
+            .Initialize();
 
         await using (factory)
         {
@@ -185,6 +191,10 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 queueName,
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — expired reports are not retried");
+
+            // Assert - Verify the handler encountered the exception exactly once (no retries)
+            Console.WriteLine($"[Test] NotificationExpiredException logged {logCapture.Count} times");
+            Assert.Equal(1, logCapture.Count);
         }
     }
 
