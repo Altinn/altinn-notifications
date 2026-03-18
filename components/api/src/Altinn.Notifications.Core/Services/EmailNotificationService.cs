@@ -136,6 +136,32 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <summary>
+    /// Publishes email notifications to a Kafka topic and resets the send status to
+    /// <see cref="EmailNotificationResultType.New"/> for any notifications that
+    /// the producer failed to deliver.
+    /// </summary>
+    /// <param name="emailNotifications">The email notifications to publish.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous publish operation.</returns>
+    private async Task PublishEmailNotificationsViaKafka(List<Email> emailNotifications, CancellationToken cancellationToken)
+    {
+        var serializedEmailNotifications = emailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
+
+        var unpublishedEmailNotifications = await _kafkaProducer.ProduceAsync(_emailSendTopicName, serializedEmailNotifications, cancellationToken);
+
+        foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
+        {
+            var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
+            if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
+            {
+                continue;
+            }
+
+            await _emailNotificationRepository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
+        }
+    }
+
+    /// <summary>
     /// Publishes email notifications to Azure Service Bus via Wolverine and resets
     /// the send status to <see cref="EmailNotificationResultType.New"/> for any
     /// notifications that failed to publish.
@@ -159,32 +185,6 @@ public class EmailNotificationService : IEmailNotificationService
         foreach (var notificationId in unpublishedNotificationIds)
         {
             await _emailNotificationRepository.UpdateSendStatus(notificationId, EmailNotificationResultType.New);
-        }
-    }
-
-    /// <summary>
-    /// Publishes email notifications to a Kafka topic and resets the send status to
-    /// <see cref="EmailNotificationResultType.New"/> for any notifications that
-    /// the producer failed to deliver.
-    /// </summary>
-    /// <param name="emailNotifications">The email notifications to publish.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous publish operation.</returns>
-    private async Task PublishEmailNotificationsViaKafka(List<Email> emailNotifications, CancellationToken cancellationToken)
-    {
-        var serializedEmailNotifications = emailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
-
-        var unpublishedEmailNotifications = await _kafkaProducer.ProduceAsync(_emailSendTopicName, serializedEmailNotifications, cancellationToken);
-
-        foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
-        {
-            var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
-            if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
-            {
-                continue;
-            }
-
-            await _emailNotificationRepository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
         }
     }
 
