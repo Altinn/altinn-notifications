@@ -100,11 +100,17 @@ public static class PostgreUtil
     /// </summary>
     public static async Task<long?> GetDeadDeliveryReportIdByMessageId(string connectionString, string messageId)
     {
-        const string sql = "SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'messageId' = $1";
+        const string sql = """
+            SELECT id
+            FROM notifications.deaddeliveryreports
+            WHERE deliveryreport ->> 'messageId' = `@messageId`
+            ORDER BY id DESC
+            LIMIT 1
+            """;
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         await using var cmd = dataSource.CreateCommand(sql);
-        cmd.Parameters.AddWithValue(messageId);
+        cmd.Parameters.AddWithValue("messageId", messageId);
 
         await using var reader = await cmd.ExecuteReaderAsync();
         if (!await reader.ReadAsync())
