@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -56,7 +56,7 @@ public static class WolverineServiceCollectionExtensions
             // Publishers
             if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
             {
-                opts.PublishMessage<Email>()
+                opts.PublishMessage<SendEmailCommand>()
                     .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
             }
         });

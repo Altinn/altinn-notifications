@@ -1,5 +1,6 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Shared.Commands;
 
 using Wolverine;
 
@@ -27,7 +28,17 @@ public class EmailSendPublisher : IEmailSendPublisher
     {
         try
         {
-            await _messageBus.SendAsync(email);
+            var sendEmailCommand = new SendEmailCommand
+            {
+                Body = email.Body,
+                Subject = email.Subject,
+                ToAddress = email.ToAddress,
+                FromAddress = email.FromAddress,
+                NotificationId = email.NotificationId,
+                ContentType = email.ContentType.ToString()
+            };
+
+            await _messageBus.SendAsync(sendEmailCommand);
 
             return null;
         }
