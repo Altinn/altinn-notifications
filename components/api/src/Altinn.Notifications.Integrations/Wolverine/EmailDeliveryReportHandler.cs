@@ -86,7 +86,7 @@ public static class EmailDeliveryReportHandler
                     if (string.IsNullOrWhiteSpace(deliveryReport.MessageId))
                     {
                         logger.LogError("Received delivery report with missing MessageId. Subject: {Subject}", eventGridEvent.Subject);
-                        return;
+                        throw new InvalidDeliveryReportException("Received delivery report with missing MessageId");
                     }
 
                     logger.LogInformation(
@@ -98,12 +98,13 @@ public static class EmailDeliveryReportHandler
                     break;
                 default:
                     logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
-                    break;
+                    throw new InvalidDeliveryReportException("Received unhandled system event type in Event Grid event.");
             }
         }
         else
         {
             logger.LogWarning("Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}", eventGridEvent.Subject, eventGridEvent.EventType);
+            throw new InvalidDeliveryReportException("Failed to parse system event data from Event Grid event.");
         }
     }
 
