@@ -103,10 +103,10 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var count = await PostgreUtil.RunSqlReturnOutput<long>(
-                        _fixture.PostgresConnectionString,
-                        "SELECT count(1) FROM notifications.deaddeliveryreports");
-                    return count > 0;
+                    var id = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
+                         _fixture.PostgresConnectionString,
+                         unmatchedOperationId);
+                    return id.HasValue;
                 },
                 maxAttempts: 40,
                 delayMs: 500);
@@ -170,10 +170,10 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var count = await PostgreUtil.RunSqlReturnOutput<long>(
+                    var id = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
                         _fixture.PostgresConnectionString,
-                        "SELECT count(1) FROM notifications.deaddeliveryreports");
-                    return count > 0;
+                        operationId);
+                    return id.HasValue;
                 },
                 maxAttempts: 20,
                 delayMs: 500);
