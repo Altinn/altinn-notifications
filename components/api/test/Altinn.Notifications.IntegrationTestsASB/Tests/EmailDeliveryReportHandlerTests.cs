@@ -119,6 +119,13 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — report is saved to dead delivery reports, not DLQ");
 
+            // Assert - DLQ is empty
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
+
             // Assert - Verify the handler was called the expected number of times
             // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
             // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks

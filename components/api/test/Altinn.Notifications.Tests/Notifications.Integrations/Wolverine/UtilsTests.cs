@@ -9,7 +9,6 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
 public class UtilsTests
 {
     [Theory]
-    [InlineData(null, EmailNotificationResultType.Failed)]
     [InlineData("Bounced", EmailNotificationResultType.Failed_Bounced)]
     [InlineData("Delivered", EmailNotificationResultType.Delivered)]
     [InlineData("Expanded", EmailNotificationResultType.Failed)]
@@ -27,10 +26,11 @@ public class UtilsTests
     }
 
     [Theory]
+    [InlineData(null)]
     [InlineData("")]
     [InlineData("UnknownStatus")]
     [InlineData("bounced")]
-    public void ParseDeliveryStatus_UnhandledStatus_ThrowsArgumentException(string deliveryStatus)
+    public void ParseDeliveryStatus_UnhandledStatus_ThrowsArgumentException(string? deliveryStatus)
     {
         Assert.Throws<ArgumentException>(() => Altinn.Notifications.Integrations.Wolverine.Utils.ParseDeliveryStatus(deliveryStatus));
     }
