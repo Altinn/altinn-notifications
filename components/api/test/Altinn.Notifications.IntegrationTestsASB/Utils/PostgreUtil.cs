@@ -103,7 +103,7 @@ public static class PostgreUtil
         const string sql = """
             SELECT id
             FROM notifications.deaddeliveryreports
-            WHERE deliveryreport ->> 'messageId' = `@messageId`
+            WHERE deliveryreport ->> 'messageId' = @messageId
             ORDER BY id DESC
             LIMIT 1
             """;
