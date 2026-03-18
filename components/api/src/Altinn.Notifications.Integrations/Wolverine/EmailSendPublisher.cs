@@ -38,7 +38,9 @@ public class EmailSendPublisher : IEmailSendPublisher
                 ContentType = email.ContentType.ToString()
             };
 
-            await _messageBus.PublishAsync(sendEmailCommand);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await _messageBus.SendAsync(sendEmailCommand);
 
             return null;
         }
