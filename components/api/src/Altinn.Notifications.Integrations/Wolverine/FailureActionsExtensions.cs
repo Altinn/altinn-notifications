@@ -56,6 +56,7 @@ public static class FailureActionsExtensions
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to save dead delivery report");
+                    throw;
                 }
             },
             "Save Dead Delivery Report");
