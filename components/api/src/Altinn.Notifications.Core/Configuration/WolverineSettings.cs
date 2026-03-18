@@ -6,12 +6,8 @@
 public class WolverineSettings
 {
     /// <summary>
-    /// Whether to enable the email send queue publisher.
-    /// </summary>
-    public bool EnableEmailSendPublisher { get; set; } = false;
-
-    /// <summary>
-    /// ASB queue name for publishing email send messages.
+    /// ASB queue name used for publishing email messages.
+    /// Produced by the API and consumed by the email service and Azure Communication Services.
     /// </summary>
     public string EmailSendQueueName { get; set; } = string.Empty;
 }

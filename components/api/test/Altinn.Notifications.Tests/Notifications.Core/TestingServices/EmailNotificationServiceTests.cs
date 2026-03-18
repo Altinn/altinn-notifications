@@ -15,11 +15,15 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Moq;
 using Moq.Protected;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -68,6 +72,7 @@ public class EmailNotificationServiceTests
             new Mock<IKafkaProducer>().Object,
             new Mock<IDateTimeService>().Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            new Mock<IEmailSendPublisher>().Object,
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             mockRepo.Object);
 
@@ -601,6 +606,7 @@ public class EmailNotificationServiceTests
             producer,
             dateTimeService.Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            new Mock<IEmailSendPublisher>().Object,
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             repo);
     }

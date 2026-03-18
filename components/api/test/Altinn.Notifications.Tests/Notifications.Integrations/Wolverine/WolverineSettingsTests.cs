@@ -19,7 +19,6 @@ public class WolverineSettingsTests
             {
                 ["WolverineSettings:EnableWolverine"] = "true",
 
-                ["WolverineSettings:EnableEmailSendPublisher"] = "true",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
                 ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
@@ -37,7 +36,6 @@ public class WolverineSettingsTests
 
         Assert.True(settings.EnableWolverine);
 
-        Assert.True(settings.EnableEmailSendPublisher);
         Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailSendQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.EmailSendQueuePolicy.GetScheduleDelays());
@@ -56,7 +54,6 @@ public class WolverineSettingsTests
         Assert.False(settings.EnableWolverine);
 
         Assert.NotNull(settings.EmailSendQueuePolicy);
-        Assert.False(settings.EnableEmailSendPublisher);
         Assert.Equal(string.Empty, settings.EmailSendQueueName);
 
         Assert.NotNull(settings.EmailDeliveryReportQueuePolicy);
