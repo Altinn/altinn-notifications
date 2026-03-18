@@ -61,6 +61,6 @@ public static class WolverineServiceCollectionExtensions
             }
         });
 
-        services.AddSingleton<IEmailSendPublisher, EmailSendPublisher>();
+        services.AddScoped<IEmailSendPublisher, EmailSendPublisher>();
     }
 }

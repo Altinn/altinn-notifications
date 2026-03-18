@@ -73,11 +73,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         }
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
-
-        if (!WolverineSettings.EnableWolverine)
-        {
-            services.TryAddSingleton(Mock.Of<IEmailSendPublisher>());
-        }
     }
 
     /// <inheritdoc/>
