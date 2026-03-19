@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Integrations;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,8 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
+            // Add a placeholder factory that will be overridden by the Integrations module if Wolverine is enabled
+            .AddSingleton<IEmailSendPublisherFactory>(provider => new NoOpEmailSendPublisherFactory())
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }

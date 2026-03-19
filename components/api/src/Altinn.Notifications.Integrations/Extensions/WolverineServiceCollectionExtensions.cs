@@ -9,6 +9,7 @@ using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
@@ -61,6 +62,9 @@ public static class WolverineServiceCollectionExtensions
             }
         });
 
+        // Replace the no-op factory with the real Wolverine-based factory if Wolverine is enabled
+        services.RemoveAll<IEmailSendPublisherFactory>();
+        services.AddSingleton<IEmailSendPublisherFactory, EmailSendPublisherFactory>();
         services.AddScoped<IEmailSendPublisher, EmailSendPublisher>();
     }
 }

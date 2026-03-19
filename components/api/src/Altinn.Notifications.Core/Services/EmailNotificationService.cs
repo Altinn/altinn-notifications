@@ -25,8 +25,8 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly string _emailSendTopicName;
     private readonly IKafkaProducer _kafkaProducer;
     private readonly IDateTimeService _dateTimeService;
-    private readonly IEmailSendPublisher _emailSendPublisher;
     private readonly bool _sendEmailNotificationsViaWolverine;
+    private readonly IEmailSendPublisherFactory _emailSendPublisherFactory;
     private readonly IEmailNotificationRepository _emailNotificationRepository;
 
     /// <summary>
@@ -37,14 +37,14 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer kafkaProducer,
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> kafkaSettings,
-        IEmailSendPublisher emailSendPublisher,
+        IEmailSendPublisherFactory emailSendPublisherFactory,
         IOptions<NotificationConfig> notificationConfig,
         IEmailNotificationRepository emailNotificationRepository)
     {
         _guidService = guidService;
         _kafkaProducer = kafkaProducer;
         _dateTimeService = dateTimeService;
-        _emailSendPublisher = emailSendPublisher;
+        _emailSendPublisherFactory = emailSendPublisherFactory;
         _emailNotificationRepository = emailNotificationRepository;
         _emailSendTopicName = kafkaSettings.Value.EmailQueueTopicName;
         _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
@@ -175,7 +175,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         foreach (var email in emailNotifications)
         {
-            var failedNotificationId = await _emailSendPublisher.PublishAsync(email, cancellationToken);
+            var failedNotificationId = await _emailSendPublisherFactory.PublishAsync(email, cancellationToken);
             if (failedNotificationId.HasValue && failedNotificationId.Value != Guid.Empty)
             {
                 unpublishedNotificationIds.Add(failedNotificationId.Value);
