@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
@@ -26,7 +26,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IKafkaProducer _kafkaProducer;
     private readonly IDateTimeService _dateTimeService;
     private readonly bool _sendEmailNotificationsViaWolverine;
-    private readonly IEmailSendPublisherFactory _emailSendPublisherFactory;
+    private readonly IEmailCommandPublisherFactory _emailCommandPublisherFactory;
     private readonly IEmailNotificationRepository _emailNotificationRepository;
 
     /// <summary>
@@ -38,13 +38,13 @@ public class EmailNotificationService : IEmailNotificationService
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig,
-        IEmailSendPublisherFactory emailSendPublisherFactory,
+        IEmailCommandPublisherFactory emailCommandPublisherFactory,
         IEmailNotificationRepository emailNotificationRepository)
     {
         _guidService = guidService;
         _kafkaProducer = kafkaProducer;
         _dateTimeService = dateTimeService;
-        _emailSendPublisherFactory = emailSendPublisherFactory;
+        _emailCommandPublisherFactory = emailCommandPublisherFactory;
         _emailNotificationRepository = emailNotificationRepository;
         _emailSendTopicName = kafkaSettings.Value.EmailQueueTopicName;
         _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
@@ -175,7 +175,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         foreach (var email in emailNotifications)
         {
-            var failedNotificationId = await _emailSendPublisherFactory.PublishAsync(email, cancellationToken);
+            var failedNotificationId = await _emailCommandPublisherFactory.PublishAsync(email, cancellationToken);
             if (failedNotificationId.HasValue && failedNotificationId.Value != Guid.Empty)
             {
                 unpublishedNotificationIds.Add(failedNotificationId.Value);

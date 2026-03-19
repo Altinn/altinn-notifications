@@ -4,10 +4,10 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
-/// No-op implementation of <see cref="IEmailSendPublisher"/> used in integration tests
+/// No-op implementation of <see cref="IEmailCommandPublisher"/> used in integration tests
 /// where Wolverine/Azure Service Bus is disabled.
 /// </summary>
-public class SpyEmailSendPublisher : IEmailSendPublisher
+public class SpyEmailCommandPublisher : IEmailCommandPublisher
 {
     /// <inheritdoc/>
     public Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken)

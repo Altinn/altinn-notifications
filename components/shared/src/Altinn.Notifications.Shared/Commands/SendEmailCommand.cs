@@ -1,8 +1,7 @@
 namespace Altinn.Notifications.Shared.Commands;
 
 /// <summary>
-/// Wolverine command representing a request to send an email notification
-/// via Azure Service Bus.
+/// Represents a command to send an email notification from the Notifications API to the Email service.
 /// </summary>
 public sealed class SendEmailCommand
 {

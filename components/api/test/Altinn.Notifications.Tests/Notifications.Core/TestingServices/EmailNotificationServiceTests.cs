@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
@@ -293,7 +293,7 @@ public class EmailNotificationServiceTests
             new Mock<IDateTimeService>().Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
-            new Mock<IEmailSendPublisherFactory>().Object,
+            new Mock<IEmailCommandPublisherFactory>().Object,
             mockRepo.Object);
 
         // Act
@@ -602,7 +602,7 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        var emailSendPublisherFactory = new Mock<IEmailSendPublisherFactory>();
+        var emailCommandPublisherFactory = new Mock<IEmailCommandPublisherFactory>();
 
         return new EmailNotificationService(
             guidService.Object,
@@ -610,7 +610,7 @@ public class EmailNotificationServiceTests
             dateTimeService.Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
-            emailSendPublisherFactory.Object,
+            emailCommandPublisherFactory.Object,
             repo);
     }
 }

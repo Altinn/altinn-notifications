@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -53,10 +53,10 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
 
-            // Replace scoped IEmailSendPublisher (registered by Wolverine) with a singleton
+            // Replace scoped IEmailCommandPublisher (registered by Wolverine) with a singleton
             // no-op to avoid the scoped-from-singleton lifetime validation error.
             var emailPublisherDescriptors = services
-                .Where(s => s.ServiceType == typeof(IEmailSendPublisher))
+                .Where(s => s.ServiceType == typeof(IEmailCommandPublisher))
                 .ToList();
 
             foreach (var descriptor in emailPublisherDescriptors)
@@ -64,7 +64,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
 
-            services.AddSingleton<IEmailSendPublisher, SpyEmailSendPublisher>();
+            services.AddSingleton<IEmailCommandPublisher, SpyEmailCommandPublisher>();
         });
     }
 }

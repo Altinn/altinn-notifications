@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
@@ -119,7 +119,7 @@ public static class ServiceUtil
         // This provides compile-time safety and avoids fragility of reflection-based registration.
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
-        services.AddSingleton<IEmailSendPublisher, SpyEmailSendPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, SpyEmailCommandPublisher>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();

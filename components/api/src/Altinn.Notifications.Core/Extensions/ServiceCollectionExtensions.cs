@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services;
@@ -51,13 +51,13 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
+            .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
+            .AddSingleton<IEmailCommandPublisherFactory, NoOpEmailCommandPublisherFactory>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
-            .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
-            .AddSingleton<IEmailSendPublisherFactory>(provider => new NoOpEmailSendPublisherFactory())
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }

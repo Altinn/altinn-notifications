@@ -3,12 +3,12 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
-/// Defines the contract for publishing email notifications to a message broker for sending.
+/// Defines the contract for publishing email notifications from the API to the Email service via Azure Service Bus using Wolverine.
 /// </summary>
-public interface IEmailSendPublisher
+public interface IEmailCommandPublisher
 {
     /// <summary>
-    /// Publishes an email notification to the configured message broker for asynchronous sending.
+    /// Publishes an email notification to Azure Service Bus via Wolverine for asynchronous sending.
     /// </summary>
     /// <param name="email">The email notification to publish.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
