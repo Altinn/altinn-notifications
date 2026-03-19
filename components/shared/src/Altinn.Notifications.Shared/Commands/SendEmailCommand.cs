@@ -5,41 +5,41 @@ namespace Altinn.Notifications.Shared.Commands;
 /// <summary>
 /// Represents a command to send an email notification from the Notifications API to the Email service.
 /// </summary>
-public sealed class SendEmailCommand
+public sealed record SendEmailCommand
 {
     /// <summary>
-    /// Gets or sets the notification identifier.
+    /// Gets the notification identifier.
     /// </summary>
     [JsonPropertyName("notificationId")]
-    public Guid NotificationId { get; set; }
+    public Guid NotificationId { get; init; }
 
     /// <summary>
-    /// Gets or sets the subject of the email.
+    /// Gets the subject of the email.
     /// </summary>
     [JsonPropertyName("subject")]
-    public string Subject { get; set; } = string.Empty;
+    public string Subject { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the body of the email.
+    /// Gets the body of the email.
     /// </summary>
     [JsonPropertyName("body")]
-    public string Body { get; set; } = string.Empty;
+    public string Body { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the sender address.
+    /// Gets the sender address.
     /// </summary>
     [JsonPropertyName("fromAddress")]
-    public string FromAddress { get; set; } = string.Empty;
+    public string FromAddress { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the recipient address.
+    /// Gets the recipient address.
     /// </summary>
     [JsonPropertyName("toAddress")]
-    public string ToAddress { get; set; } = string.Empty;
+    public string ToAddress { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the content type of the email (e.g. "Plain", "Html").
+    /// Gets the content type of the email (e.g. "Plain", "Html").
     /// </summary>
     [JsonPropertyName("contentType")]
-    public string ContentType { get; set; } = string.Empty;
+    public string ContentType { get; init; } = string.Empty;
 }
