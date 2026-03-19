@@ -29,6 +29,20 @@ public class EmailSendPublisher : IEmailSendPublisher
     /// <inheritdoc/>
     public async Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken)
     {
+        using var scope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["NotificationId"] = email.NotificationId,
+            ["ToAddress"] = email.ToAddress,
+            ["Subject"] = email.Subject,
+            ["Operation"] = "EmailPublish"
+        });
+
+        _logger.LogInformation(
+            "EmailSendPublisher starting to publish email notification {NotificationId} to ASB queue. ToAddress: {ToAddress}, Subject: {Subject}",
+            email.NotificationId,
+            email.ToAddress,
+            email.Subject);
+
         var sendEmailCommand = new SendEmailCommand
         {
             Body = email.Body,
@@ -43,9 +57,15 @@ public class EmailSendPublisher : IEmailSendPublisher
 
         try
         {
+            var startTime = DateTime.UtcNow;
             await _messageBus.SendAsync(sendEmailCommand);
+            var duration = DateTime.UtcNow - startTime;
 
-            _logger.LogInformation("// EmailSendPublisher // PublishAsync // Successfully published email notification {NotificationId}.", email.NotificationId);
+            _logger.LogInformation(
+                "EmailSendPublisher successfully published email notification {NotificationId} to ASB queue in {Duration}ms. ToAddress: {ToAddress}",
+                email.NotificationId,
+                duration.TotalMilliseconds,
+                email.ToAddress);
 
             return null;
         }
@@ -55,7 +75,12 @@ public class EmailSendPublisher : IEmailSendPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// EmailSendPublisher // PublishAsync // Failed to publish email notification {NotificationId}.", email.NotificationId);
+            _logger.LogError(
+                ex,
+                "EmailSendPublisher failed to publish email notification {NotificationId} to ASB queue. ToAddress: {ToAddress}, Error: {ErrorMessage}",
+                email.NotificationId,
+                email.ToAddress,
+                ex.Message);
 
             return email.NotificationId;
         }

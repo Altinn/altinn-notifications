@@ -54,12 +54,31 @@ public static class SendEmailCommandHandler
         ISendingService sendingService,
         ILogger<object> logger)
     {
+        using var scope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["NotificationId"] = command.NotificationId,
+            ["ToAddress"] = command.ToAddress,
+            ["FromAddress"] = command.FromAddress,
+            ["Subject"] = command.Subject,
+            ["ContentType"] = command.ContentType,
+            ["Operation"] = "EmailSend"
+        });
+
+        logger.LogInformation(
+            "SendEmailCommandHandler received email command from ASB queue. NotificationId: {NotificationId}, ToAddress: {ToAddress}, FromAddress: {FromAddress}, Subject: {Subject}, ContentType: {ContentType}",
+            command.NotificationId,
+            command.ToAddress,
+            command.FromAddress, 
+            command.Subject, 
+            command.ContentType);
+
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
             logger.LogError(
-                "SendEmailCommandHandler // HandleAsync // Unknown ContentType '{ContentType}' for NotificationId {NotificationId}. Defaulting to Plain.",
+                "SendEmailCommandHandler unknown ContentType '{ContentType}' for NotificationId {NotificationId}. Defaulting to Plain. ToAddress: {ToAddress}",
                 command.ContentType,
-                command.NotificationId);
+                command.NotificationId,
+                command.ToAddress);
 
             contentType = EmailContentType.Plain;
         }
@@ -72,6 +91,34 @@ public static class SendEmailCommandHandler
             command.ToAddress,
             contentType);
 
-        await sendingService.SendAsync(email);
+        try
+        {
+            var startTime = DateTime.UtcNow;
+
+            logger.LogInformation(
+                "SendEmailCommandHandler starting email send operation for NotificationId: {NotificationId}, ToAddress: {ToAddress}",
+                command.NotificationId, 
+                command.ToAddress);
+
+            await sendingService.SendAsync(email);
+
+            var duration = DateTime.UtcNow - startTime;
+
+            logger.LogInformation(
+                "SendEmailCommandHandler successfully completed email send operation for NotificationId: {NotificationId} in {Duration}ms. ToAddress: {ToAddress}",
+                command.NotificationId, 
+                duration.TotalMilliseconds, 
+                command.ToAddress);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex, 
+                "SendEmailCommandHandler failed to send email for NotificationId: {NotificationId}. ToAddress: {ToAddress}, Error: {ErrorMessage}",
+                command.NotificationId,
+                command.ToAddress, 
+                ex.Message);
+            throw; // Re-throw to trigger Wolverine retry logic
+        }
     }
 }
