@@ -226,7 +226,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
-    ///if (config.GetValue<bool>("WolverineSettings:EnableWolverine"))
+    
+    if (config.GetValue<bool>("WolverineSettings:EnableWolverine"))
     {
         services.AddWolverineServices(config, builder.Environment);
     }
