@@ -168,9 +168,9 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
             Assert.NotNull(command);
             Assert.Equal("Hello", command.Subject);
             Assert.Equal("<p>World</p>", command.Body);
-            Assert.Equal("to@test.no", command.ToAddress);
-            Assert.Equal("from@test.no", command.FromAddress);
             Assert.Equal(notificationId, command.NotificationId);
+            Assert.Equal("sender@example.com", command.FromAddress);
+            Assert.Equal("recipient@example.com", command.ToAddress);
             Assert.Equal(EmailContentType.Html.ToString(), command.ContentType);
         }
     }

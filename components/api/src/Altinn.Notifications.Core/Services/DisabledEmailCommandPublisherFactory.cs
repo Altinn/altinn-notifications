@@ -4,16 +4,16 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// A no-operation implementation of <see cref="IEmailCommandPublisherFactory"/> that serves as a placeholder.
-/// This factory is used when Wolverine is disabled or not configured.
-/// It prevents dependency injection errors but doesn't actually publish emails.
+/// A disabled implementation of <see cref="IEmailCommandPublisherFactory"/> used when Wolverine is not configured.
+/// Returns the notification ID on every call to signal that publishing did not occur,
+/// keeping the email in "new" status so it can be retried via other mechanisms.
 /// </summary>
-internal sealed class NoOpEmailCommandPublisherFactory : IEmailCommandPublisherFactory
+internal sealed class DisabledEmailCommandPublisherFactory : IEmailCommandPublisherFactory
 {
     /// <inheritdoc/>
     public IEmailCommandPublisher CreatePublisher()
     {
-        return new NoOpEmailCommandPublisher();
+        return new DisabledEmailCommandPublisher();
     }
 
     /// <inheritdoc/>
@@ -25,9 +25,9 @@ internal sealed class NoOpEmailCommandPublisherFactory : IEmailCommandPublisherF
     }
 
     /// <summary>
-    /// A no-operation implementation of <see cref="IEmailCommandPublisher"/>.
+    /// A disabled implementation of <see cref="IEmailCommandPublisher"/> used when Wolverine is not configured.
     /// </summary>
-    private sealed class NoOpEmailCommandPublisher : IEmailCommandPublisher
+    private sealed class DisabledEmailCommandPublisher : IEmailCommandPublisher
     {
         /// <inheritdoc/>
         public Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken)
