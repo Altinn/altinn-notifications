@@ -2,6 +2,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Wolverine;
@@ -11,19 +12,21 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// <summary>
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
 /// email notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
+/// Creates a dedicated service scope per publish call to satisfy Wolverine's scoped
+/// <see cref="IMessageBus"/> lifetime while allowing this publisher to be registered as a singleton.
 /// </summary>
 public class EmailCommandPublisher : IEmailCommandPublisher
 {
-    private readonly IMessageBus _messageBus;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EmailCommandPublisher> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailCommandPublisher"/> class.
     /// </summary>
-    public EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessageBus messageBus)
+    public EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _messageBus = messageBus;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>
@@ -43,7 +46,9 @@ public class EmailCommandPublisher : IEmailCommandPublisher
 
         try
         {
-            await _messageBus.SendAsync(sendEmailCommand);
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+            await messageBus.SendAsync(sendEmailCommand);
 
             return null;
         }

@@ -62,9 +62,8 @@ public static class WolverineServiceCollectionExtensions
             }
         });
 
-        // Replace the no-op factory with the real Wolverine-based factory if Wolverine is enabled
-        services.RemoveAll<IEmailCommandPublisherFactory>();
-        services.AddSingleton<IEmailCommandPublisherFactory, EmailCommandPublisherFactory>();
-        services.AddScoped<IEmailCommandPublisher, EmailCommandPublisher>();
+        // Replace the disabled publisher with the real Wolverine-based publisher
+        services.RemoveAll<IEmailCommandPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
     }
 }

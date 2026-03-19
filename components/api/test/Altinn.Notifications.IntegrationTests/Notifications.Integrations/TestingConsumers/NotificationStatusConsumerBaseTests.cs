@@ -161,7 +161,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var guidService = new Mock<IGuidService>();
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var emailCommandPublisher = new Mock<IEmailCommandPublisherFactory>();
+        var emailCommandPublisher = new Mock<IEmailCommandPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -334,7 +334,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var emailCommandPublisher = new Mock<IEmailCommandPublisherFactory>();
+        var emailCommandPublisher = new Mock<IEmailCommandPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -511,7 +511,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var emailCommandPublisher = new Mock<IEmailCommandPublisherFactory>();
+        var emailCommandPublisher = new Mock<IEmailCommandPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -599,7 +599,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var emailCommandPublisher = new Mock<IEmailCommandPublisherFactory>();
+        var emailCommandPublisher = new Mock<IEmailCommandPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
@@ -783,7 +783,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var emailCommandPublisher = new Mock<IEmailCommandPublisherFactory>();
+        var emailCommandPublisher = new Mock<IEmailCommandPublisher>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();

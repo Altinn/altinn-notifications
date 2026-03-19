@@ -23,7 +23,7 @@ namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
-    private const string _emailSendQueueName = "altinn.notifications.email.send";
+    private const string EmailSendQueueName = "altinn.notifications.email.send";
 
     /// <summary>
     /// Verifies that publishing a valid email returns null (success indicator).
@@ -31,50 +31,16 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     [Fact]
     public async Task PublishAsync_ValidEmail_ReturnsNull()
     {
-        // Assign
         var factory = CreateFactory();
-
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@example.com", "recipient@example.com", EmailContentType.Html);
 
         await using (factory)
         {
-            using var scope = factory.Host.Services.CreateScope();
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var publisher = scope.ServiceProvider.GetRequiredService<IEmailCommandPublisher>();
-
-            // Act
             var result = await publisher.PublishAsync(email, CancellationToken.None);
 
-            // Assert
             Assert.Null(result);
-        }
-    }
-
-    /// <summary>
-    /// Verifies that cancelling after the call starts propagates the cancellation correctly
-    /// and no partial message appears on the queue in a way that would indicate silent swallowing.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_CancelledToken_DoesNotReturnNotificationId()
-    {
-        // Assign
-        var factory = CreateFactory();
-        var email = new Email(Guid.NewGuid(), "Hello", "<p>World</p>", "sender@example.com", "recipient@example.com", EmailContentType.Html);
-
-        await using (factory)
-        {
-            using var scope = factory.Host.Services.CreateScope();
-            var publisher = scope.ServiceProvider.GetRequiredService<IEmailCommandPublisher>();
-
-            // Act
-            using var cancellationTokenSource = new CancellationTokenSource();
-            await cancellationTokenSource.CancelAsync();
-
-            // OperationCanceledException must propagate — the NotificationId failure path
-            // is only triggered by non-cancellation exceptions from the message bus.
-            var exception = await Record.ExceptionAsync(() => publisher.PublishAsync(email, cancellationTokenSource.Token));
-
-            Assert.IsType<OperationCanceledException>(exception, exactMatch: false);
         }
     }
 
@@ -85,24 +51,20 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     [Fact]
     public async Task PublishAsync_PlainContentType_MapsEnumToStringCorrectly()
     {
-        // Assign
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@example.com", "recipient@example.com", EmailContentType.Plain);
 
         await using (factory)
         {
-            using var scope = factory.Host.Services.CreateScope();
-            var publisher = scope.ServiceProvider.GetRequiredService<IEmailCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            // Act
             await publisher.PublishAsync(email, CancellationToken.None);
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
-                _emailSendQueueName,
+                EmailSendQueueName,
                 TimeSpan.FromSeconds(10));
 
-            // Assert
             Assert.NotNull(message);
 
             var command = JsonSerializer.Deserialize<SendEmailCommand>(message.Body.ToString());
@@ -119,21 +81,60 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     [Fact]
     public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
-        // Assign
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Hello", "<p>World</p>", "sender@example.com", "recipient@example.com", EmailContentType.Html);
 
         await using (factory)
         {
-            using var scope = factory.Host.Services.CreateScope();
-            var publisher = scope.ServiceProvider.GetRequiredService<IEmailCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            // Act & Assert
-            using var cancellationTokenSource = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
 
-            await cancellationTokenSource.CancelAsync();
+            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(email, cts.Token));
+        }
+    }
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(email, cancellationTokenSource.Token));
+    /// <summary>
+    /// Verifies that multiple sequential publishes each deliver their own independent
+    /// <see cref="SendEmailCommand"/> to the queue, proving each call creates a fresh scope.
+    /// </summary>
+    [Fact]
+    public async Task PublishAsync_MultipleCalls_EachDeliversIndependentCommandToQueue()
+    {
+        var factory = CreateFactory();
+        var idFirst = Guid.NewGuid();
+        var idSecond = Guid.NewGuid();
+
+        await using (factory)
+        {
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+
+            await publisher.PublishAsync(
+                new Email(idFirst, "First", "Body", "from@test.no", "to@test.no", EmailContentType.Html),
+                CancellationToken.None);
+
+            await publisher.PublishAsync(
+                new Email(idSecond, "Second", "Body", "from@test.no", "to@test.no", EmailContentType.Html),
+                CancellationToken.None);
+
+            var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString, EmailSendQueueName, TimeSpan.FromSeconds(10));
+
+            var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString, EmailSendQueueName, TimeSpan.FromSeconds(10));
+
+            Assert.NotNull(firstMessage);
+            Assert.NotNull(secondMessage);
+
+            var ids = new[]
+            {
+                JsonSerializer.Deserialize<SendEmailCommand>(firstMessage.Body.ToString())!.NotificationId,
+                JsonSerializer.Deserialize<SendEmailCommand>(secondMessage.Body.ToString())!.NotificationId
+            };
+
+            Assert.Contains(idFirst, ids);
+            Assert.Contains(idSecond, ids);
         }
     }
 
@@ -144,43 +145,35 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     [Fact]
     public async Task PublishAsync_ValidEmail_DeliversCommandWithAllFieldsMappedToQueue()
     {
-        // Assign
         var factory = CreateFactory();
-
         var notificationId = Guid.NewGuid();
-
         var email = new Email(notificationId, "Hello", "<p>World</p>", "sender@example.com", "recipient@example.com", EmailContentType.Html);
 
         await using (factory)
         {
-            using var scope = factory.Host.Services.CreateScope();
-            var publisher = scope.ServiceProvider.GetRequiredService<IEmailCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            // Act
             await publisher.PublishAsync(email, CancellationToken.None);
-            var message = await ServiceBusTestUtils.WaitForMessageAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
 
-            // Assert
+            var message = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                EmailSendQueueName,
+                TimeSpan.FromSeconds(10));
+
             Assert.NotNull(message);
 
             var command = JsonSerializer.Deserialize<SendEmailCommand>(message.Body.ToString());
 
             Assert.NotNull(command);
+            Assert.Equal(notificationId, command.NotificationId);
             Assert.Equal("Hello", command.Subject);
             Assert.Equal("<p>World</p>", command.Body);
-            Assert.Equal(notificationId, command.NotificationId);
             Assert.Equal("sender@example.com", command.FromAddress);
             Assert.Equal("recipient@example.com", command.ToAddress);
             Assert.Equal(EmailContentType.Html.ToString(), command.ContentType);
         }
     }
 
-    /// <summary>
-    /// Creates and initializes the test web application factory
-    /// </summary>
-    /// <returns></returns>
-    private IntegrationTestWebApplicationFactory CreateFactory()
-    {
-        return new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-    }
+    private IntegrationTestWebApplicationFactory CreateFactory() =>
+        new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 }

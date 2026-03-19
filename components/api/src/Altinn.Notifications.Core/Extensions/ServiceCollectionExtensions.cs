@@ -52,7 +52,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
-            .AddSingleton<IEmailCommandPublisherFactory, DisabledEmailCommandPublisherFactory>()
+            .AddSingleton<IEmailCommandPublisher, DisabledEmailCommandPublisher>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
