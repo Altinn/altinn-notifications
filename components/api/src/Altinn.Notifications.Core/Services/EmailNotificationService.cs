@@ -37,8 +37,8 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer kafkaProducer,
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> kafkaSettings,
-        IEmailSendPublisherFactory emailSendPublisherFactory,
         IOptions<NotificationConfig> notificationConfig,
+        IEmailSendPublisherFactory emailSendPublisherFactory,
         IEmailNotificationRepository emailNotificationRepository)
     {
         _guidService = guidService;

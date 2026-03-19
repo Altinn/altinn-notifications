@@ -292,8 +292,8 @@ public class EmailNotificationServiceTests
             new Mock<IKafkaProducer>().Object,
             new Mock<IDateTimeService>().Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
-            new Mock<IEmailSendPublisherFactory>().Object,
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            new Mock<IEmailSendPublisherFactory>().Object,
             mockRepo.Object);
 
         // Act
@@ -609,8 +609,8 @@ public class EmailNotificationServiceTests
             producer,
             dateTimeService.Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
-            emailSendPublisherFactory.Object,
             Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            emailSendPublisherFactory.Object,
             repo);
     }
 }
