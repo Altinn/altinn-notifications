@@ -13,6 +13,8 @@ on:
       - 'components/shared/test/**'
       - 'components/shared/Altinn.Notifications.Shared.slnx'
       - 'global.json'
+      - '.github/workflows/ci-api.yml'
+      - 'tools/dev-setup/dbsetup.sh'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -26,6 +28,8 @@ on:
       - 'components/shared/test/**'
       - 'components/shared/Altinn.Notifications.Shared.slnx'
       - 'global.json'
+      - '.github/workflows/ci-api.yml'
+      - 'tools/dev-setup/dbsetup.sh'
   merge_group:
   workflow_dispatch:
 
