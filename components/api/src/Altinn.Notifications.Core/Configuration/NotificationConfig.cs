@@ -54,4 +54,9 @@ public class NotificationConfig
     /// Grace period in seconds added to expiry time of notifications, before setting a notification to failed time to live.
     /// </summary>
     public int ExpiryOffsetSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// Determines whether to send Sms notifications to the Sms Service via Wolverine and Azure Service Bus or via Kafka
+    /// </summary>
+    public bool SendSmsNotificationsViaWolverine { get; set; } = false;
 }

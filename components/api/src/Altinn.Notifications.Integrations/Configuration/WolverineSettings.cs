@@ -9,6 +9,17 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// ASB queue name used for publishing sms messages.
+    /// Produced by the API and consumed by the SMS Service and service provider.
+    /// </summary>
+    public string SmsSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the sms send queue.
+    /// </summary>
+    public QueueRetryPolicy SmsSendQueuePolicy { get; set; } = new();
+
+    /// <summary>
     /// Whether to enable the email delivery report queue listener.
     /// </summary>
     public bool EnableEmailDeliveryReportListener { get; set; } = false;
