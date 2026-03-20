@@ -8,6 +8,8 @@ on:
       - 'tools/test/**'
       - 'tools/Altinn.Notifications.Tools.slnx'
       - 'global.json'
+      - '.github/workflows/ci-tools.yml'
+      - 'tools/dev-setup/dbsetup.sh'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -16,6 +18,8 @@ on:
       - 'tools/test/**'
       - 'tools/Altinn.Notifications.Tools.slnx'
       - 'global.json'
+      - '.github/workflows/ci-tools.yml'
+      - 'tools/dev-setup/dbsetup.sh'
   merge_group:
   workflow_dispatch:
 

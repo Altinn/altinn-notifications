@@ -8,6 +8,7 @@ on:
       - 'components/shared/test/**'
       - 'components/shared/Altinn.Notifications.Shared.slnx'
       - 'global.json'
+      - '.github/workflows/ci-shared.yml'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -16,6 +17,7 @@ on:
       - 'components/shared/test/**'
       - 'components/shared/Altinn.Notifications.Shared.slnx'
       - 'global.json'
+      - '.github/workflows/ci-shared.yml'
   merge_group:
   workflow_dispatch:
 
