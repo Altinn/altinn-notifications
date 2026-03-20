@@ -55,6 +55,9 @@ public class SmsNotificationService : ISmsNotificationService
             return;
         }
 
+        int test = AddDummyCall();
+        Console.WriteLine(test);
+
         if (addressPoints.Count == 0)
         {
             await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
@@ -66,6 +69,16 @@ public class SmsNotificationService : ISmsNotificationService
             recipient.MobileNumber = addressPoint.MobileNumber;
             await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.New, count);
         }
+    }
+
+    /// <summary>
+    /// This code is introduced to test code change analysis in pipeline
+    /// </summary>
+    /// <returns></returns>
+    private int AddDummyCall()
+    {
+        var test = 1 + 2;
+        return test;
     }
 
     /// <inheritdoc/>
