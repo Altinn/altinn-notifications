@@ -18,6 +18,9 @@
 
         /// <summary>
         /// Gets or sets the hash of the file content (e.g. MD5) used for integrity checks.
+        /// Note: Although MD5 is no longer considered safe for encryption, 
+        /// it is still widely used for file integrity verification due to its speed and simplicity. 
+        /// The hash can be used to verify that the file content has not been altered or corrupted during transfer or storage.
         /// </summary>
         public string FileHash { get; init; } = string.Empty;
 
