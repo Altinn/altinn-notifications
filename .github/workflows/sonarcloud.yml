@@ -42,6 +42,7 @@ jobs:
       email: ${{ steps.filter.outputs.email }}
       tools: ${{ steps.filter.outputs.tools }}
       shared: ${{ steps.filter.outputs.shared }}
+      global: ${{ steps.filter.outputs.global }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
@@ -70,7 +71,8 @@ jobs:
               - 'tools/src/**'
               - 'tools/test/**'
               - 'tools/Altinn.Notifications.Tools.slnx'
-
+            global:
+              - 'global.json'
   analyze:
     name: Analyze
     needs: changes
@@ -80,6 +82,7 @@ jobs:
       needs.changes.outputs.email == 'true' ||
       needs.changes.outputs.sms == 'true' ||
       needs.changes.outputs.tools == 'true' ||
+      needs.changes.outputs.global == 'true' ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
