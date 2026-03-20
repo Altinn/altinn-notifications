@@ -152,6 +152,11 @@ jobs:
           echo "| Detect changes | ${{ needs.changes.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Analyze | ${{ needs.analyze.result }} |" >> $GITHUB_STEP_SUMMARY
 
+          if [[ "${{ needs.changes.result }}" == "failure" ]]; then
+            echo "❌ Change detection failed"
+            exit 1
+          fi
+
           if [[ "${{ needs.analyze.result }}" == "failure" ]]; then
             echo "❌ SonarCloud analysis failed"
             exit 1
