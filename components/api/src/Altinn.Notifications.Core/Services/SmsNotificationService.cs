@@ -18,32 +18,37 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class SmsNotificationService : ISmsNotificationService
 {
-    private readonly IGuidService _guid;
+    private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
+    private readonly bool _sendSmsNotificationsViaWolverine;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
-    private readonly IDateTimeService _dateTime;
+    private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
+    private readonly ISmsCommandPublisher _smsCommandPublisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
     /// </summary>
     public SmsNotificationService(
-        IGuidService guid,
+        IGuidService guidService,
         IKafkaProducer producer,
-        IDateTimeService dateTime,
+        IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
+        ISmsCommandPublisher smsCommandPublisher,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig)
     {
-        _guid = guid;
-        _dateTime = dateTime;
+        _guidService = guidService;
+        _dateTimeService = dateTimeService;
         _producer = producer;
         _repository = repository;
+        _smsCommandPublisher = smsCommandPublisher;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
+        _sendSmsNotificationsViaWolverine = notificationConfig.Value.SendSmsNotificationsViaWolverine;
     }
 
     /// <inheritdoc/>
@@ -87,19 +92,13 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var serializedSmsNotifications = newSmsNotifications.Select(readyToSendSms => readyToSendSms.Serialize());
-
-                var unpublishedSmsNotifications = await _producer.ProduceAsync(_smsQueueTopicName, [.. serializedSmsNotifications], cancellationToken);
-
-                foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
+                if (_sendSmsNotificationsViaWolverine)
                 {
-                    var deserializedSmsNotification = JsonSerializer.Deserialize<Sms>(unpublishedSmsNotification, JsonSerializerOptionsProvider.Options);
-                    if (deserializedSmsNotification == null || deserializedSmsNotification.NotificationId == Guid.Empty)
-                    {
-                        continue;
-                    }
-
-                    await _repository.UpdateSendStatus(deserializedSmsNotification.NotificationId, SmsNotificationResultType.New);
+                    await PublishViaWolverine(newSmsNotifications, cancellationToken);
+                }
+                else
+                {
+                    await PublishViaKafka(newSmsNotifications, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -113,6 +112,64 @@ public class SmsNotificationService : ISmsNotificationService
             }
         }
         while (newSmsNotifications.Count > 0);
+    }
+
+    /// <summary>
+    /// Publishes a collection of SMS notifications asynchronously and updates the send status for any notifications
+    /// that fail to publish.
+    /// </summary>
+    /// <remarks>Notifications that fail to publish will have their send status reset in the repository. The
+    /// operation monitors the cancellation token to allow for graceful cancellation.</remarks>
+    /// <param name="newSmsNotifications">A list of SMS notifications to be published. Each notification is processed individually, and any that fail to
+    /// publish will have their IDs collected for status updates.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous publish and update operation.</returns>
+    private async Task PublishViaWolverine(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
+    {
+        List<Guid> unpublishedNotificationIds = [];
+
+        foreach (var sms in newSmsNotifications)
+        {
+            var failedNotificationId = await _smsCommandPublisher.PublishAsync(sms, cancellationToken);
+            if (failedNotificationId.HasValue && failedNotificationId.Value != Guid.Empty)
+            {
+                unpublishedNotificationIds.Add(failedNotificationId.Value);
+            }
+        }
+
+        foreach (var notificationId in unpublishedNotificationIds)
+        {
+            await _repository.UpdateSendStatus(notificationId, SmsNotificationResultType.New);
+        }
+    }
+
+    /// <summary>
+    /// Publishes a collection of SMS notifications to a Kafka topic asynchronously and updates their send status based
+    /// on the publishing result.
+    /// </summary>
+    /// <remarks>After attempting to publish each SMS notification, the method updates the send status in the
+    /// repository for notifications that were not successfully published. The operation is performed asynchronously and
+    /// can be cancelled using the provided cancellation token.</remarks>
+    /// <param name="newSmsNotifications">A list of SMS notifications to be published. Each notification must be properly serialized before being sent to
+    /// the Kafka topic.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the publish operation.</param>
+    /// <returns>A task that represents the asynchronous publish operation. The task does not return a value.</returns>
+    private async Task PublishViaKafka(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
+    {
+        var serializedSmsNotifications = newSmsNotifications.Select(readyToSendSms => readyToSendSms.Serialize());
+
+        var unpublishedSmsNotifications = await _producer.ProduceAsync(_smsQueueTopicName, [.. serializedSmsNotifications], cancellationToken);
+
+        foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
+        {
+            var deserializedSmsNotification = JsonSerializer.Deserialize<Sms>(unpublishedSmsNotification, JsonSerializerOptionsProvider.Options);
+            if (deserializedSmsNotification == null || deserializedSmsNotification.NotificationId == Guid.Empty)
+            {
+                continue;
+            }
+
+            await _repository.UpdateSendStatus(deserializedSmsNotification.NotificationId, SmsNotificationResultType.New);
+        }
     }
 
     /// <inheritdoc/>
@@ -142,10 +199,10 @@ public class SmsNotificationService : ISmsNotificationService
         var smsNotification = new SmsNotification()
         {
             OrderId = orderId,
-            Id = _guid.NewGuid(),
+            Id = _guidService.NewGuid(),
             Recipient = recipient,
             RequestedSendTime = requestedSendTime,
-            SendResult = new(resultType, _dateTime.UtcNow())
+            SendResult = new(resultType, _dateTimeService.UtcNow())
         };
 
         await _repository.AddNotification(smsNotification, expiryDateTime, count);
