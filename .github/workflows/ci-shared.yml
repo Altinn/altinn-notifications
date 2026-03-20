@@ -1,0 +1,153 @@
+name: "CI: Shared"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'components/shared/src/**'
+      - 'components/shared/test/**'
+      - 'components/shared/Altinn.Notifications.Shared.slnx'
+      - 'global.json'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'components/shared/src/**'
+      - 'components/shared/test/**'
+      - 'components/shared/Altinn.Notifications.Shared.slnx'
+      - 'global.json'
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-shared-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate-solution:
+    name: Validate Solution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Validate solution
+        run: |
+          dotnet sln components/shared/Altinn.Notifications.Shared.slnx list || { echo "❌ Invalid solution"; exit 1; }
+          echo "✅ Solution valid"
+
+  build:
+    name: Build
+    needs: validate-solution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build solution
+        run: dotnet build components/shared/Altinn.Notifications.Shared.slnx -c Release -v q
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Run Shared unit tests
+        run: |
+          dotnet test components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/shared-unit/ \
+          --logger "trx;LogFileName=shared-unit.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-shared
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-shared
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  status-check:
+    name: Status Check
+    needs: [validate-solution, build, test]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check job results
+        run: |
+          echo "### CI: Shared Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Solution | ${{ needs.validate-solution.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.validate-solution.result }}" == "failure" ]]; then
+            echo "❌ Solution validation failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+
+          echo "✅ All checks passed"

@@ -1,0 +1,160 @@
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'components/**/src/**'
+      - 'components/**/test/**'
+      - 'components/**/*.slnx'
+      - 'tools/src/**'
+      - 'tools/test/**'
+      - 'tools/*.slnx'
+      - 'global.json'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'components/**/src/**'
+      - 'components/**/test/**'
+      - 'components/**/*.slnx'
+      - 'tools/src/**'
+      - 'tools/test/**'
+      - 'tools/*.slnx'
+      - 'global.json'
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: sonarcloud-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      sms: ${{ steps.filter.outputs.sms }}
+      email: ${{ steps.filter.outputs.email }}
+      tools: ${{ steps.filter.outputs.tools }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'components/api/src/**'
+              - 'components/api/test/Altinn.Notifications.Tests/**'
+              - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+              - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
+              - 'components/api/Altinn.Notifications.API.slnx'
+            shared:
+              - 'components/shared/src/**'
+              - 'components/shared/test/**'
+              - 'components/shared/Altinn.Notifications.Shared.slnx'
+            sms:
+              - 'components/sms-service/src/**'
+              - 'components/sms-service/test/**'
+              - 'components/sms-service/Altinn.Notifications.Sms.slnx'
+            email:
+              - 'components/email-service/src/**'
+              - 'components/email-service/test/**'
+              - 'components/email-service/Altinn.Notifications.Email.slnx'
+            tools:
+              - 'tools/src/**'
+              - 'tools/test/**'
+              - 'tools/Altinn.Notifications.Tools.slnx'
+
+  analyze:
+    name: Analyze
+    needs: changes
+    if: >-
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.email == 'true' ||
+      needs.changes.outputs.sms == 'true' ||
+      needs.changes.outputs.tools == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Install SonarCloud scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Run SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet-sonarscanner begin \
+            /k:"Altinn_altinn-notifications" \
+            /o:"altinn" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
+
+          if [[ "${{ needs.changes.outputs.api }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            dotnet build components/api/Altinn.Notifications.API.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            dotnet build components/shared/Altinn.Notifications.Shared.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.email }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            dotnet build components/email-service/Altinn.Notifications.Email.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.sms }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            dotnet build components/sms-service/Altinn.Notifications.Sms.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.tools }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            dotnet build tools/Altinn.Notifications.Tools.slnx -c Release -v q
+          fi
+
+          dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+  status-check:
+    name: Status Check (SonarCloud)
+    needs: [changes, analyze]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check job results
+        run: |
+          echo "### SonarCloud Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Detect changes | ${{ needs.changes.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Analyze | ${{ needs.analyze.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.analyze.result }}" == "failure" ]]; then
+            echo "❌ SonarCloud analysis failed"
+            exit 1
+          fi
+
+          echo "✅ All checks passed"

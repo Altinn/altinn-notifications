@@ -1,0 +1,224 @@
+name: "CI: Notifications API"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'components/api/src/**'
+      - 'components/api/test/Altinn.Notifications.Tests/**'
+      - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+      - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
+      - 'components/api/Altinn.Notifications.API.slnx'
+      - 'components/shared/src/**'
+      - 'components/shared/test/**'
+      - 'components/shared/Altinn.Notifications.Shared.slnx'
+      - 'global.json'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'components/api/src/**'
+      - 'components/api/test/Altinn.Notifications.Tests/**'
+      - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+      - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
+      - 'components/api/Altinn.Notifications.API.slnx'
+      - 'components/shared/src/**'
+      - 'components/shared/test/**'
+      - 'components/shared/Altinn.Notifications.Shared.slnx'
+      - 'global.json'
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-api-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate-solution:
+    name: Validate Solution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Validate solution
+        run: |
+          dotnet sln components/api/Altinn.Notifications.API.slnx list || { echo "❌ Invalid solution"; exit 1; }
+          echo "✅ Solution valid"
+
+  build:
+    name: Build
+    needs: validate-solution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build solution
+        run: dotnet build components/api/Altinn.Notifications.API.slnx -c Release -v q
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    services:
+      postgres:
+        image: postgres:18.3@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a
+        env:
+          POSTGRES_USER: platform_notifications_admin
+          POSTGRES_PASSWORD: Password
+          POSTGRES_DB: notificationsdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      kafka:
+        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Setup PostgreSQL
+        run: |
+          chmod +x tools/dev-setup/dbsetup.sh
+          ./tools/dev-setup/dbsetup.sh
+      - name: Restart database to enable config changes
+        run: docker restart ${{ job.services.postgres.id }}
+      - name: Increase inotify watchers
+        run: sudo sysctl -w fs.inotify.max_user_instances=524288
+      - name: Run API unit tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-unit/ \
+          --logger "trx;LogFileName=api-unit.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API integration tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration/ \
+          --logger "trx;LogFileName=api-integration.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API ASB integration tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration-asb/ \
+          --logger "trx;LogFileName=api-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-api
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-api
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  status-check:
+    name: Status Check
+    needs: [validate-solution, build, test]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check job results
+        run: |
+          echo "### CI: Notifications API Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Solution | ${{ needs.validate-solution.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.validate-solution.result }}" == "failure" ]]; then
+            echo "❌ Solution validation failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+
+          echo "✅ All checks passed"
