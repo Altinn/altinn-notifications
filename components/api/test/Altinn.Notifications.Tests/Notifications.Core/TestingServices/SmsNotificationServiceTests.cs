@@ -68,6 +68,7 @@ public class SmsNotificationServiceTests
             new Mock<IKafkaProducer>().Object,
             new Mock<IDateTimeService>().Object,
             mockRepo.Object,
+            new Mock<ISmsCommandPublisher>().Object,
             Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
 
@@ -682,6 +683,7 @@ public class SmsNotificationServiceTests
         DateTime? dateTimeOutput = null,
         IKafkaProducer? producer = null,
         ISmsNotificationRepository? repository = null,
+        ISmsCommandPublisher? commandPublisher = null,
         int? publishBatchSize = null)
     {
         var guidService = MockGuidService(guidOutput);
@@ -689,12 +691,14 @@ public class SmsNotificationServiceTests
 
         producer ??= new Mock<IKafkaProducer>().Object;
         repository ??= new Mock<ISmsNotificationRepository>().Object;
+        commandPublisher ??= new Mock<ISmsCommandPublisher>().Object;
 
         return new SmsNotificationService(
             guidService,
             producer,
             dateTimeService,
             repository,
+            commandPublisher,
             Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig { SmsPublishBatchSize = publishBatchSize ?? 50 }));
     }

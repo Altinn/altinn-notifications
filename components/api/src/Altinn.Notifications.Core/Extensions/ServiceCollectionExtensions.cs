@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailPublishTaskQueue, EmailPublishTaskQueue>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+            .AddSingleton<ISmsCommandPublisher, DisabledSmsCommandPublisher>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()

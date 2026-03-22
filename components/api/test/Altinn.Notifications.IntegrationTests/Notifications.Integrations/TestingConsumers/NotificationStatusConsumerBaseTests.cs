@@ -82,6 +82,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -106,6 +107,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 SmsQueueTopicName = Guid.NewGuid().ToString()
@@ -245,6 +247,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -274,6 +277,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 SmsQueueTopicName = Guid.NewGuid().ToString()
@@ -424,6 +428,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -452,6 +457,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 SmsQueueTopicName = Guid.NewGuid().ToString()
@@ -681,6 +687,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsSendCommandPublisher = new Mock<ISmsCommandPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var notificationId = Guid.NewGuid();
@@ -712,6 +719,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
+            smsSendCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 SmsQueueTopicName = Guid.NewGuid().ToString()

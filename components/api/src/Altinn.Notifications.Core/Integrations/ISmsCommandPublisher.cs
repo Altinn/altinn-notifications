@@ -1,7 +1,4 @@
 ﻿using Altinn.Notifications.Core.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Altinn.Notifications.Core.Integrations;
 
