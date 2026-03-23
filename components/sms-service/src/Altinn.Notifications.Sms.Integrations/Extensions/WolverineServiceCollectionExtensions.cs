@@ -3,12 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-
+using Altinn.Notifications.Sms.Integrations.Wolverine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
+using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Sms.Integrations.Extensions;
 
@@ -34,6 +34,8 @@ public static class WolverineServiceCollectionExtensions
         IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
 
+        SendSmsCommandHandler.Settings = wolverineSettings;
+
         services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
@@ -42,8 +44,11 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners: none configured yet.
-            // Publishers: none configured yet.
+            if (wolverineSettings.AcceptSmsNotificationsViaWolverine && !string.IsNullOrWhiteSpace(wolverineSettings.SmsSendQueueName))
+            {
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendQueueName)
+                    .ListenerCount(wolverineSettings.ListenerCount);
+            }
         });
     }
 }

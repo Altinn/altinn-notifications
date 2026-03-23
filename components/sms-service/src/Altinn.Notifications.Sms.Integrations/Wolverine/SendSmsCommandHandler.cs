@@ -50,6 +50,7 @@ public static class SendSmsCommandHandler
         ISendingService sendingService,
         ILogger<object> logger)
     {
+
         var sms = new Core.Sending.Sms
         {
             Recipient = command.MobileNumber,

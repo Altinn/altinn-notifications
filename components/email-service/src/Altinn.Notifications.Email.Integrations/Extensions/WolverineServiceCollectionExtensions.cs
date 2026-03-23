@@ -1,14 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
-
-using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
+using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Email.Integrations.Extensions;
 
@@ -41,9 +39,6 @@ public static class WolverineServiceCollectionExtensions
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
-
-            // Listeners: none configured yet.
-            // Publishers: none configured yet.
         });
     }
 }
