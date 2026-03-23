@@ -37,7 +37,10 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
             config.AddConfiguration(configuration);
 
             string? uri = configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri!);
+            if (!string.IsNullOrEmpty(uri))
+            {
+                ResourceLinkExtensions.Initialize(uri);
+            }
         });
 
         builder.ConfigureTestServices(services =>

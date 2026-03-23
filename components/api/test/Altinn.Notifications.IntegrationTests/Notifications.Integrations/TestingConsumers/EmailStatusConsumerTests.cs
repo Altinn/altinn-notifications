@@ -159,7 +159,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .First();
 
         (NotificationOrder notificationOrder, EmailNotification emailNotification) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         EmailSendOperationResult deliveryReport = new()
         {
