@@ -1,11 +1,10 @@
 using Altinn.Notifications.Email.Core.Sending;
+using Altinn.Notifications.Email.Integrations.Wolverine;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Xunit;
-
-using EmailMessage = Altinn.Notifications.Email.Core.Sending.Email;
 
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
@@ -20,6 +19,48 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
     /// <summary>
+    /// Verifies that a transient exception triggers Wolverine retry logic
+    /// configured by <see cref="SendEmailCommandHandler.Configure"/> and
+    /// the handler eventually succeeds after the sending service recovers.
+    /// </summary>
+    [Fact]
+    public async Task HandleAsync_TransientException_RetriesAndEventuallySucceeds()
+    {
+        // Arrange
+        var sendingService = new FailThenSucceedSendingService(failCount: 2);
+        var command = new SendEmailCommand
+        {
+            Body = "Body",
+            ContentType = "Html",
+            Subject = "Retry test",
+            NotificationId = Guid.NewGuid(),
+            FromAddress = "sender@example.com",
+            ToAddress = "recipient@example.com"
+        };
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
+            .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
+            .WithConfig("WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0", "100")
+            .WithConfig("WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1", "200")
+            .WithConfig("WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0", "500")
+            .ReplaceService<ISendingService>(_ => sendingService)
+            .Initialize();
+
+        await using (factory)
+        {
+            // Act
+            await factory.SendToEndpointAsync("altinn.notifications.email.send", command);
+            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(15));
+
+            // Assert
+            Assert.NotNull(capturedEmail);
+            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
+            Assert.Equal(3, sendingService.AttemptCount); // 2 failures + 1 success
+        }
+    }
+
+    /// <summary>
     /// Verifies that a <see cref="SendEmailCommand"/> published via Wolverine is handled
     /// end-to-end and the sending service receives a correctly mapped email with Html content type.
     /// </summary>
@@ -27,37 +68,37 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
     public async Task HandleAsync_ValidHtmlCommand_SendingServiceReceivesMappedEmail()
     {
         // Arrange
-        var spy = new SpySendingService();
+        var sendingService = new AlwaysSucceedSendingService();
         var command = new SendEmailCommand
         {
+            Body = "Body",
+            ContentType = "Html",
+            Subject = "Retry test",
             NotificationId = Guid.NewGuid(),
-            Subject = "Test Subject",
-            Body = "<p>Hello</p>",
             FromAddress = "sender@example.com",
-            ToAddress = "recipient@example.com",
-            ContentType = "Html"
+            ToAddress = "recipient@example.com"
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
             .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
-            .ReplaceService<ISendingService>(_ => spy)
+            .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
 
         await using (factory)
         {
             // Act
             await factory.SendToEndpointAsync("altinn.notifications.email.send", command);
-            var capturedEmail = await spy.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
 
             // Assert
             Assert.NotNull(capturedEmail);
-            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
-            Assert.Equal(command.Subject, capturedEmail.Subject);
             Assert.Equal(command.Body, capturedEmail.Body);
-            Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
+            Assert.Equal(command.Subject, capturedEmail.Subject);
             Assert.Equal(command.ToAddress, capturedEmail.ToAddress);
+            Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
             Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
+            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
         }
     }
 
@@ -69,65 +110,32 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
     public async Task HandleAsync_PlainContentType_MapsCorrectly()
     {
         // Arrange
-        var spy = new SpySendingService();
+        var sendingService = new AlwaysSucceedSendingService();
         var command = new SendEmailCommand
         {
+            Body = "Body",
+            ContentType = "Html",
+            Subject = "Retry test",
             NotificationId = Guid.NewGuid(),
-            Subject = "Plain email",
-            Body = "Hello, World!",
             FromAddress = "sender@example.com",
-            ToAddress = "recipient@example.com",
-            ContentType = "Plain"
+            ToAddress = "recipient@example.com"
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
             .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
-            .ReplaceService<ISendingService>(_ => spy)
+            .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
 
         await using (factory)
         {
             // Act
             await factory.SendToEndpointAsync("altinn.notifications.email.send", command);
-            var capturedEmail = await spy.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
 
             // Assert
             Assert.NotNull(capturedEmail);
             Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
-        }
-    }
-
-    /// <summary>
-    /// Spy implementation of <see cref="ISendingService"/> that captures the email
-    /// sent through the handler and signals completion via a <see cref="TaskCompletionSource"/>.
-    /// </summary>
-    private sealed class SpySendingService : ISendingService
-    {
-        private readonly TaskCompletionSource<EmailMessage> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public EmailMessage? CapturedEmail { get; private set; }
-
-        public Task SendAsync(EmailMessage email)
-        {
-            CapturedEmail = email;
-            _tcs.TrySetResult(email);
-            return Task.CompletedTask;
-        }
-
-        public async Task<EmailMessage?> WaitForEmailAsync(TimeSpan timeout)
-        {
-            using var cts = new CancellationTokenSource(timeout);
-            cts.Token.Register(() => _tcs.TrySetCanceled());
-
-            try
-            {
-                return await _tcs.Task;
-            }
-            catch (TaskCanceledException)
-            {
-                return null;
-            }
         }
     }
 }
