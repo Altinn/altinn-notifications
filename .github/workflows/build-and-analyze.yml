@@ -75,24 +75,29 @@ jobs:
         with:
           filters: |
             api:
+              - 'global.json'
               - 'components/api/src/**'
+              - 'components/api/Altinn.Notifications.API.slnx'
               - 'components/api/test/Altinn.Notifications.Tests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
-              - 'components/api/Altinn.Notifications.API.slnx'
             shared:
+              - 'global.json'
               - 'components/shared/src/**'
               - 'components/shared/test/**'
               - 'components/shared/Altinn.Notifications.Shared.slnx'
             sms:
+              - 'global.json'
               - 'components/sms-service/src/**'
               - 'components/sms-service/test/**'
               - 'components/sms-service/Altinn.Notifications.Sms.slnx'
             email:
+              - 'global.json'
               - 'components/email-service/src/**'
               - 'components/email-service/test/**'
               - 'components/email-service/Altinn.Notifications.Email.slnx'
             tools:
+              - 'global.json'
               - 'tools/src/**'
               - 'tools/test/**'
               - 'tools/Altinn.Notifications.Tools.slnx'
