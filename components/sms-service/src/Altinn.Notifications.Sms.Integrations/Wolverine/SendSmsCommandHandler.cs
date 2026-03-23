@@ -1,4 +1,11 @@
 ﻿using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Sms.Core.Sending;
+using Altinn.Notifications.Sms.Integrations.Configuration;
+
+using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Logging;
+using Wolverine.ErrorHandling;
+using Wolverine.Runtime.Handlers;
 
 namespace Altinn.Notifications.Sms.Integrations.Wolverine;
 
@@ -10,12 +17,47 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine;
 public static class SendSmsCommandHandler
 {
     /// <summary>
-    /// Consume the SendSmsCommand to send an SMS message.
+    /// Gets or sets the Wolverine settings for configuring the behavior of the command handler, including error handling policies and retry strategies.
     /// </summary>
-    /// <param name="command">The contract associated with this handler</param>
-    /// <returns></returns>
-    public static async Task Handle(SendSmsCommand command)
+    public static WolverineSettings Settings { get; set; } = new();
+
+    /// <summary>
+    /// Configures error handling for the email delivery report queue handler.
+    /// </summary>
+    public static void Configure(HandlerChain chain)
     {
-        await Task.CompletedTask;
+        var policy = Settings.SmsSendQueuePolicy;
+
+        chain
+            .OnException<InvalidOperationException>()
+            .Or<TaskCanceledException>()
+            .Or<TimeoutException>()
+            .Or<ServiceBusException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
+            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.MoveToErrorQueue();
+    }
+
+    /// <summary>
+    /// Handles a <see cref="SendSmsCommand"/> by converting it to an <see cref="Sms"/>
+    /// and forwarding it to the sending service.
+    /// </summary>
+    /// <param name="command">The incoming send-sms command.</param>
+    /// <param name="sendingService">The sms sending service.</param>
+    /// <param name="logger">The logger.</param>
+    public static async Task HandleAsync(
+        SendSmsCommand command,
+        ISendingService sendingService,
+        ILogger<object> logger)
+    {
+        var sms = new Core.Sending.Sms
+        {
+            Recipient = command.MobileNumber,
+            Message = command.Body,
+            Sender = command.SenderNumber,
+            NotificationId = command.NotificationId
+        };
+        
+        await sendingService.SendAsync(sms);
     }
 }

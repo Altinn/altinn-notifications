@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
@@ -119,12 +120,13 @@ public static class ServiceUtil
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
+        services.AddSingleton<ISmsCommandPublisher, SpySmsCommandPublisher>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
+        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
-        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment
