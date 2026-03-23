@@ -60,7 +60,7 @@ public static class WolverineServiceCollectionExtensions
     /// <param name="opts">The opts.</param>
     private static void AddEmailSendQueueListener(WolverineSettings wolverineSettings, ref WolverineOptions opts)
     {
-        if (!wolverineSettings.AcceptEmailNotificationsViaWolverine)
+        if (!wolverineSettings.EnableSendEmailListener)
         {
             return;
         }

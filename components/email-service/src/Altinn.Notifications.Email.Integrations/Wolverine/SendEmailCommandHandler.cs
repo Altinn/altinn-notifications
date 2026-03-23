@@ -22,14 +22,26 @@ public static class SendEmailCommandHandler
 {
     /// <summary>
     /// Gets or sets the Wolverine settings used for configuring error handling policies.
+    /// Set by <see cref="Extensions.WolverineServiceCollectionExtensions.AddWolverineServices"/> during startup.
     /// </summary>
-    public static WolverineSettings Settings { get; set; }
+    public static WolverineSettings? Settings { get; set; }
 
     /// <summary>
-    /// Configures error handling for the email delivery report queue handler.
+    /// Configures error handling for the email send queue handler.
     /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if <see cref="Settings"/> has not been set before Wolverine calls this method,
+    /// which indicates <see cref="Extensions.WolverineServiceCollectionExtensions.AddWolverineServices"/> was not called.
+    /// </exception>
     public static void Configure(HandlerChain chain)
     {
+        if (Settings is null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(SendEmailCommandHandler)}.{nameof(Settings)} is null. " +
+                $"Ensure {nameof(Extensions.WolverineServiceCollectionExtensions.AddWolverineServices)} is called during application startup.");
+        }
+
         var policy = Settings.EmailSendQueuePolicy;
 
         chain

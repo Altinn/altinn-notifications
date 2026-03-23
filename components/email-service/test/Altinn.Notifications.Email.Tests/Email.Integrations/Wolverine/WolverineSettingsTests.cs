@@ -17,7 +17,7 @@ public class WolverineSettingsTests
         Assert.Equal(10, settings.ListenerCount);
         Assert.NotNull(settings.EmailSendQueuePolicy);
         Assert.Equal(string.Empty, settings.EmailSendQueueName);
-        Assert.False(settings.AcceptEmailNotificationsViaWolverine);
+        Assert.False(settings.EnableSendEmailListener);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
     }
 
@@ -29,7 +29,7 @@ public class WolverineSettingsTests
             {
                 ["WolverineSettings:ListenerCount"] = "5",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:AcceptEmailNotificationsViaWolverine"] = "true",
+                ["WolverineSettings:EnableSendEmailListener"] = "true",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
@@ -45,7 +45,7 @@ public class WolverineSettingsTests
 
         Assert.Equal(5, settings.ListenerCount);
 
-        Assert.True(settings.AcceptEmailNotificationsViaWolverine);
+        Assert.True(settings.EnableSendEmailListener);
         Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailSendQueuePolicy.GetCooldownDelays());

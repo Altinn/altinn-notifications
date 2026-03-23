@@ -39,7 +39,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
+            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
             .WithConfig("WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0", "100")
             .WithConfig("WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1", "200")
@@ -80,7 +80,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
+            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
             .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
@@ -114,7 +114,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         var command = new SendEmailCommand
         {
             Body = "Body",
-            ContentType = "Html",
+            ContentType = "Plain",
             Subject = "Retry test",
             NotificationId = Guid.NewGuid(),
             FromAddress = "sender@example.com",
@@ -122,7 +122,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:AcceptEmailNotificationsViaWolverine", "true")
+            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .WithConfig("WolverineSettings:EmailSendQueueName", "altinn.notifications.email.send")
             .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
@@ -135,7 +135,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
 
             // Assert
             Assert.NotNull(capturedEmail);
-            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
+            Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
         }
     }
 }

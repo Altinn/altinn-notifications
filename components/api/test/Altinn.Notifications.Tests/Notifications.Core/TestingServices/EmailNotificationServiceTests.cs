@@ -774,7 +774,7 @@ public class EmailNotificationServiceTests
             dateTimeService.Object,
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
             emailCommandPublisher,
-            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize, SendEmailNotificationsViaWolverine = sendViaWolverine }),
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize, EnableSendEmailPublisher = sendViaWolverine }),
             repo);
     }
 }

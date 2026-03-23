@@ -48,7 +48,7 @@ public class EmailNotificationService : IEmailNotificationService
         _emailNotificationRepository = emailNotificationRepository;
         _emailSendTopicName = kafkaSettings.Value.EmailQueueTopicName;
         _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
-        _sendEmailNotificationsViaWolverine = notificationConfig.Value.SendEmailNotificationsViaWolverine;
+        _sendEmailNotificationsViaWolverine = notificationConfig.Value.EnableSendEmailPublisher;
     }
 
     /// <inheritdoc/>
