@@ -16,7 +16,6 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine;
 /// </summary>
 /// <remarks>This static class is intended to process SMS sending commands. All members are thread-safe and can be
 /// used concurrently. Ensure that the provided command contains valid data before invoking handler methods.</remarks>
-[ExcludeFromCodeCoverage]
 public static class SendSmsCommandHandler
 {
     /// <summary>
