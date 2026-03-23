@@ -58,11 +58,11 @@ public static class WolverineServiceCollectionExtensions
             {
                 opts.PublishMessage<SendSmsCommand>()
                 .ToAzureServiceBusQueue(wolverineSettings.SmsSendQueueName);
-            }
 
-            // Replace the disabled publisher with the real Wolverine-based publisher
-            services.RemoveAll<ISmsCommandPublisher>();
-            services.AddSingleton<ISmsCommandPublisher, SmsCommandPublisher>();
+                // Replace the disabled publisher with the real Wolverine-based publisher
+                services.RemoveAll<ISmsCommandPublisher>();
+                services.AddSingleton<ISmsCommandPublisher, SmsCommandPublisher>();
+            }
         });
     }
 }
