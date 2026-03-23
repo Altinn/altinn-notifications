@@ -1,10 +1,12 @@
-﻿using Altinn.Notifications.Extensions;
+﻿using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
-
+using Altinn.Notifications.IntegrationTests.Utils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.IntegrationTests;
 
@@ -49,6 +51,19 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 services.Remove(descriptor);
             }
+
+            // Replace scoped ISmsCommandPublisher (registered by Wolverine) with a singleton
+            // no-op to avoid the scoped-from-singleton lifetime validation error.
+            var smsPublisherDescriptors = services
+                .Where(s => s.ServiceType == typeof(ISmsCommandPublisher))
+                .ToList();
+
+            foreach (var descriptor in smsPublisherDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddSingleton<ISmsCommandPublisher, SpySmsCommandPublisher>();
         });
     }
 }
