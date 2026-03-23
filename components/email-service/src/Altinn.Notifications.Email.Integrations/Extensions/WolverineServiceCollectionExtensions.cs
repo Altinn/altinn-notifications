@@ -1,12 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
-using Altinn.Notifications.Integrations.Configuration;
+
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
-using Wolverine.AzureServiceBus;
 
 namespace Altinn.Notifications.Email.Integrations.Extensions;
 
