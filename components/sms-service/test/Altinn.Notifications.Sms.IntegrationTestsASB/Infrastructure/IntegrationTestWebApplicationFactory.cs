@@ -1,5 +1,6 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Consumers;
 
 using Azure.Messaging.ServiceBus;
@@ -19,6 +20,11 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration.
+    /// </summary>
+    public WolverineSettings WolverineSettings { get; private set; } = null!;
+
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
@@ -28,6 +34,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+            ?? new WolverineSettings();
+
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
         var consumersToRemove = services
@@ -45,20 +54,32 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        {
+            return;
+        }
+
+        string[] queueNames = [WolverineSettings.SmsDeliveryReportQueueName];
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
+
         try
         {
             await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
 
-            while (true)
+            foreach (var queueName in queueNames)
             {
-                var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                if (message == null)
-                {
-                    break;
-                }
+                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
 
-                await receiver.CompleteMessageAsync(message);
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
             }
         }
         catch (Exception ex)
