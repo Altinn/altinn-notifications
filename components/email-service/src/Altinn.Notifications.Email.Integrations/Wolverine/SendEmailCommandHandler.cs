@@ -64,7 +64,7 @@ public static class SendEmailCommandHandler
     public static async Task HandleAsync(
         SendEmailCommand command,
         ISendingService sendingService,
-        ILogger<object> logger)
+        ILogger logger)
     {
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
