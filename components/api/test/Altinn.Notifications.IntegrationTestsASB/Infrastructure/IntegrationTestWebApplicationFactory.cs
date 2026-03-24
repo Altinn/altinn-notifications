@@ -83,7 +83,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return;
         }
 
-        string[] queueNames = [WolverineSettings.EmailDeliveryReportQueueName];
+        string[] queueNames = [WolverineSettings.EmailDeliveryReportQueueName, WolverineSettings.SmsDeliveryReportQueueName];
         queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
 
         try
