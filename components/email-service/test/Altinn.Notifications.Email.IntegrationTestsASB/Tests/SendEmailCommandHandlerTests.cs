@@ -135,7 +135,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
 
             // Assert
             Assert.NotNull(capturedEmail);
-            Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
+            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
         }
     }
 }
