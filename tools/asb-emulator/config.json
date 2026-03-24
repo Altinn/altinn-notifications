@@ -19,6 +19,20 @@
             }
           },
           {
+            "Name": "altinn.notifications.sms.deliveryreports",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          },
+          {
             "Name": "wolverine-dead-letter-queue",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,
