@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
@@ -66,5 +68,35 @@ public class EmailCommandPublisher : IEmailCommandPublisher
 
             return email.NotificationId;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Guid>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
+    {
+        if (emails.Count == 0)
+        {
+            return [];
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var failedNotificationIds = new ConcurrentBag<Guid>();
+
+        var parallelOptions = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Min(emails.Count, Environment.ProcessorCount * 2)
+        };
+
+        await Parallel.ForEachAsync(emails, parallelOptions, async (email, ct) =>
+        {
+            var failedId = await PublishAsync(email, ct);
+            if (failedId.HasValue && failedId.Value != Guid.Empty)
+            {
+                failedNotificationIds.Add(failedId.Value);
+            }
+        });
+
+        return [.. failedNotificationIds];
     }
 }

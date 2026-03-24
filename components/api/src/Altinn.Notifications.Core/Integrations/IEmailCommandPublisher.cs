@@ -18,4 +18,15 @@ public interface IEmailCommandPublisher
     /// otherwise, returns the <see cref="Guid"/> of the notification that failed to publish.
     /// </returns>
     Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Publishes a batch of email notifications to Azure Service Bus via Wolverine using controlled concurrency.
+    /// </summary>
+    /// <param name="emails">The email notifications to publish.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A read-only list of <see cref="Guid"/> values representing the notification IDs that failed to publish.
+    /// An empty list indicates all notifications were published successfully.
+    /// </returns>
+    Task<IReadOnlyList<Guid>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken);
 }

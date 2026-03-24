@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,6 +42,41 @@ public class DisabledEmailCommandPublisherTests
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => publisher.PublishAsync(_email, CancellationToken.None));
+
+        Assert.Contains("EnableSendEmailPublisher", ex.Message);
+        Assert.Contains("EnableWolverine", ex.Message);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_Always_ThrowsInvalidOperationException()
+    {
+        var publisher = new DisabledEmailCommandPublisher();
+        var emails = new List<Email> { _email };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync(emails, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_ExceptionMessage_ContainsBatchCount()
+    {
+        var publisher = new DisabledEmailCommandPublisher();
+        var emails = new List<Email> { _email, _email };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync(emails, CancellationToken.None));
+
+        Assert.Contains("2", ex.Message);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_ExceptionMessage_MentionsMisconfiguredFlags()
+    {
+        var publisher = new DisabledEmailCommandPublisher();
+        var emails = new List<Email> { _email };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync(emails, CancellationToken.None));
 
         Assert.Contains("EnableSendEmailPublisher", ex.Message);
         Assert.Contains("EnableWolverine", ex.Message);

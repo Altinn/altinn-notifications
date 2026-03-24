@@ -23,4 +23,17 @@ internal sealed class DisabledEmailCommandPublisher : IEmailCommandPublisher
             "which means 'EnableSendEmailPublisher' is true but Wolverine is not configured. " +
             "Either set 'WolverineSettings:EnableWolverine' to true, or set 'NotificationConfig:EnableSendEmailPublisher' to false to use Kafka.");
     }
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">
+    /// Always thrown. <c>EnableSendEmailPublisher</c> is <c>true</c> but Wolverine is not configured.
+    /// Set <c>WolverineSettings:EnableWolverine</c> to <c>true</c> or set <c>NotificationConfig:EnableSendEmailPublisher</c> to <c>false</c> to use Kafka.
+    /// </exception>
+    public Task<IReadOnlyList<Guid>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
+    {
+        throw new InvalidOperationException(
+            $"{nameof(DisabledEmailCommandPublisher)} was called for a batch of {emails.Count} notification(s), " +
+            "which means 'EnableSendEmailPublisher' is true but Wolverine is not configured. " +
+            "Either set 'WolverineSettings:EnableWolverine' to true, or set 'NotificationConfig:EnableSendEmailPublisher' to false to use Kafka.");
+    }
 }

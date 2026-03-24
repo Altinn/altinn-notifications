@@ -171,16 +171,7 @@ public class EmailNotificationService : IEmailNotificationService
     /// <returns>A task that represents the asynchronous publish operation.</returns>
     private async Task PublishEmailNotificationsViaWolverine(List<Email> emailNotifications, CancellationToken cancellationToken)
     {
-        List<Guid> unpublishedNotificationIds = [];
-
-        foreach (var email in emailNotifications)
-        {
-            var failedNotificationId = await _emailCommandPublisher.PublishAsync(email, cancellationToken);
-            if (failedNotificationId.HasValue && failedNotificationId.Value != Guid.Empty)
-            {
-                unpublishedNotificationIds.Add(failedNotificationId.Value);
-            }
-        }
+        var unpublishedNotificationIds = await _emailCommandPublisher.PublishAsync(emailNotifications, cancellationToken);
 
         foreach (var notificationId in unpublishedNotificationIds)
         {
