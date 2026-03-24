@@ -56,7 +56,7 @@ public class NotificationConfig
     public int ExpiryOffsetSeconds { get; set; } = 300;
 
     /// <summary>
-    /// Determines whether to send Email notifications to Email service via Wolverine and Azure Service Bus or via Kafka.
+    /// Determines whether to send Email notifications to Email service via Wolverine and Azure Service Bus.
     /// </summary>
     public bool EnableSendEmailPublisher { get; set; } = false;
 }
