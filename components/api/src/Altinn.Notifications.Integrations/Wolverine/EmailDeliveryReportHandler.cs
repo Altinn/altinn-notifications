@@ -57,11 +57,11 @@ public static class EmailDeliveryReportHandler
             .OnException<NotificationNotFoundException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
-            .Then.SaveDeadDeliveryReport(RetryExceededReason);
+            .Then.SaveDeadDeliveryReport(RetryExceededReason, Core.Enums.DeliveryReportChannel.AzureCommunicationServices);
 
         chain
             .OnException<NotificationExpiredException>()
-            .SaveDeadDeliveryReport(NotificationExpiredReason);
+            .SaveDeadDeliveryReport(NotificationExpiredReason, Core.Enums.DeliveryReportChannel.AzureCommunicationServices);
 
         // Permanent failures — no retry, move directly to error queue
         // No need to create an explicit policy for this case since the default behavior is to move to the error queue on unhandled exceptions
