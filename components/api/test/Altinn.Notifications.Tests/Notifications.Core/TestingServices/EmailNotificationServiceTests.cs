@@ -752,6 +752,26 @@ public class EmailNotificationServiceTests
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
     }
 
+    [Fact]
+    public async Task SendNotifications_ViaWolverine_PublisherThrowsInvalidOperationException_ExceptionPropagates()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Email> { _email });
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
+
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(CancellationToken.None));
+
+        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
     private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, bool sendViaWolverine = false)
     {
         var guidService = new Mock<IGuidService>();
