@@ -16,8 +16,8 @@ public class WolverineSettingsTests
         Assert.False(settings.EnableWolverine);
         Assert.Equal(10, settings.ListenerCount);
         Assert.NotNull(settings.EmailSendQueuePolicy);
-        Assert.Equal(string.Empty, settings.EmailSendQueueName);
         Assert.False(settings.EnableSendEmailListener);
+        Assert.Equal(string.Empty, settings.EmailSendQueueName);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
     }
 

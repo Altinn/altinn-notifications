@@ -13,15 +13,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class DisabledEmailCommandPublisherTests
 {
-    private readonly Email _email = new(Guid.NewGuid(), "Subject", "Body", "from@example.com", "to@example.com", EmailContentType.Plain);
+    private readonly Email _email = new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
 
     [Fact]
     public async Task PublishAsync_Always_ThrowsInvalidOperationException()
     {
         var publisher = new DisabledEmailCommandPublisher();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(_email, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_email, CancellationToken.None));
     }
 
     [Fact]
@@ -29,8 +28,7 @@ public class DisabledEmailCommandPublisherTests
     {
         var publisher = new DisabledEmailCommandPublisher();
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(_email, CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_email, CancellationToken.None));
 
         Assert.Contains(_email.NotificationId.ToString(), ex.Message);
     }
@@ -40,21 +38,10 @@ public class DisabledEmailCommandPublisherTests
     {
         var publisher = new DisabledEmailCommandPublisher();
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(_email, CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_email, CancellationToken.None));
 
-        Assert.Contains("EnableSendEmailPublisher", ex.Message);
         Assert.Contains("EnableWolverine", ex.Message);
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_Always_ThrowsInvalidOperationException()
-    {
-        var publisher = new DisabledEmailCommandPublisher();
-        var emails = new List<Email> { _email };
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(emails, CancellationToken.None));
+        Assert.Contains("EnableSendEmailPublisher", ex.Message);
     }
 
     [Fact]
@@ -63,10 +50,18 @@ public class DisabledEmailCommandPublisherTests
         var publisher = new DisabledEmailCommandPublisher();
         var emails = new List<Email> { _email, _email };
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(emails, CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(emails, CancellationToken.None));
 
         Assert.Contains("2", ex.Message);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_Always_ThrowsInvalidOperationException()
+    {
+        var publisher = new DisabledEmailCommandPublisher();
+        var emails = new List<Email> { _email };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(emails, CancellationToken.None));
     }
 
     [Fact]
@@ -75,10 +70,9 @@ public class DisabledEmailCommandPublisherTests
         var publisher = new DisabledEmailCommandPublisher();
         var emails = new List<Email> { _email };
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(emails, CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(emails, CancellationToken.None));
 
-        Assert.Contains("EnableSendEmailPublisher", ex.Message);
         Assert.Contains("EnableWolverine", ex.Message);
+        Assert.Contains("EnableSendEmailPublisher", ex.Message);
     }
 }

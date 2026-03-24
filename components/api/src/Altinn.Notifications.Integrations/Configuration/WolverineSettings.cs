@@ -9,6 +9,11 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// Maximum number of email send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int EmailPublishConcurrency { get; set; } = 10;
+
+    /// <summary>
     /// ASB queue name used for publishing email messages.
     /// Produced by the API and consumed by the email service and Azure Communication Services.
     /// </summary>

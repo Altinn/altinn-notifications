@@ -1,9 +1,13 @@
+using System.Collections.Concurrent;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Wolverine;
 
@@ -13,22 +17,14 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
 /// email notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
-public class EmailCommandPublisher : IEmailCommandPublisher
+public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServiceProvider serviceProvider, IOptions<WolverineSettings> options) : IEmailCommandPublisher
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<EmailCommandPublisher> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EmailCommandPublisher"/> class.
-    /// </summary>
-    public EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServiceProvider serviceProvider)
-    {
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-    }
+    private readonly ILogger<EmailCommandPublisher> _logger = logger;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly int _publishConcurrency = options.Value.EmailPublishConcurrency;
 
     /// <inheritdoc/>
-    public async Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken)
+    public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -39,7 +35,7 @@ public class EmailCommandPublisher : IEmailCommandPublisher
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<Guid>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Email>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
     {
         if (emails.Count == 0)
         {
@@ -51,23 +47,40 @@ public class EmailCommandPublisher : IEmailCommandPublisher
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var failedNotificationIds = new List<Guid>();
+        var failedEmails = new ConcurrentBag<Email>();
+        using var semaphore = new SemaphoreSlim(_publishConcurrency);
 
-        foreach (var email in emails)
+        await Task.WhenAll(emails.Select(async email =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            await semaphore.WaitAsync(cancellationToken);
 
-            var failedId = await SendAsync(email, messageBus);
-            if (failedId.HasValue)
+            try
             {
-                failedNotificationIds.Add(failedId.Value);
+                var failedEmail = await SendAsync(email, messageBus);
+                if (failedEmail is not null)
+                {
+                    failedEmails.Add(failedEmail);
+                }
             }
-        }
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
 
-        return failedNotificationIds;
+        return [.. failedEmails];
     }
 
-    private async Task<Guid?> SendAsync(Email email, IMessageBus messageBus)
+    /// <summary>
+    /// Sends a single email notification command to the Azure Service Bus queue via <see cref="IMessageBus"/>.
+    /// </summary>
+    /// <param name="email">The email notification to send.</param>
+    /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
+    /// <returns>
+    /// <see langword="null"/> if the command was dispatched successfully;
+    /// otherwise the original <paramref name="email"/> if an error occurred.
+    /// </returns>
+    private async Task<Email?> SendAsync(Email email, IMessageBus messageBus)
     {
         var sendEmailCommand = new SendEmailCommand
         {
@@ -93,11 +106,10 @@ public class EmailCommandPublisher : IEmailCommandPublisher
         {
             _logger.LogError(
                 ex,
-                "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue. ToAddress: {ToAddress}",
-                email.NotificationId,
-                email.ToAddress);
+                "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.",
+                email.NotificationId);
 
-            return email.NotificationId;
+            return email;
         }
     }
 }

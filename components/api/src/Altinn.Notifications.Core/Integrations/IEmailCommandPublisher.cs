@@ -3,30 +3,29 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
-/// Defines the contract for publishing email notifications from the API to the Email service via Azure Service Bus using Wolverine.
+/// Defines methods for publishing email notifications from the API to the Email service.
 /// </summary>
 public interface IEmailCommandPublisher
 {
     /// <summary>
-    /// Publishes an email notification to Azure Service Bus via Wolverine for asynchronous sending.
+    /// Enqueues a single email notification for asynchronous delivery to the Email service.
     /// </summary>
-    /// <param name="email">The email notification to publish.</param>
+    /// <param name="email">The email to deliver.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
-    /// A task representing the asynchronous publish operation.
-    /// Returns <c>null</c> if the email was published successfully;
-    /// otherwise, returns the <see cref="Guid"/> of the notification that failed to publish.
+    /// A task that completes when the publish attempt has finished. Returns <c>null</c> when the
+    /// publish succeeded; otherwise returns the <see cref="Email"/> that failed to publish.
     /// </returns>
-    Task<Guid?> PublishAsync(Email email, CancellationToken cancellationToken);
+    Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Publishes a batch of email notifications to Azure Service Bus via Wolverine using controlled concurrency.
+    /// Enqueues a batch of email notifications for asynchronous delivery to the Email service.
     /// </summary>
-    /// <param name="emails">The email notifications to publish.</param>
+    /// <param name="emails">The collection of emails to deliver.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
-    /// A read-only list of <see cref="Guid"/> values representing the notification IDs that failed to publish.
-    /// An empty list indicates all notifications were published successfully.
+    /// A task that completes with a read-only list of <see cref="Email"/> objects for notifications
+    /// that failed to deliver. An empty list indicates that all notifications were delivered successfully.
     /// </returns>
-    Task<IReadOnlyList<Guid>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Email>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken);
 }

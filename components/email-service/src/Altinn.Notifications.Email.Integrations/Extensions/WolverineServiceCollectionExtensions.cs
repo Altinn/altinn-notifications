@@ -38,8 +38,6 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(wolverineSection);
 
-        SendEmailCommandHandler.Settings = wolverineSettings;
-
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);

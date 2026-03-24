@@ -618,7 +618,7 @@ public class EmailNotificationServiceTests
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([firstEmail.NotificationId, secondEmail.NotificationId, thirdEmail.NotificationId]);
+            .ReturnsAsync([firstEmail, secondEmail, thirdEmail]);
 
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
 
@@ -647,7 +647,7 @@ public class EmailNotificationServiceTests
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([secondEmail.NotificationId]);
+            .ReturnsAsync([secondEmail]);
 
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
 
