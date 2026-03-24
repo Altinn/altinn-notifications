@@ -8,37 +8,37 @@ namespace Altinn.Notifications.Shared.Commands;
 public sealed record SendEmailCommand
 {
     /// <summary>
-    /// Gets the notification identifier.
+    /// The identifier of the email notification.
     /// </summary>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; }
 
     /// <summary>
-    /// Gets the subject of the email.
+    /// The subject of the email.
     /// </summary>
     [JsonPropertyName("subject")]
     public string Subject { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the body of the email.
+    /// The body of the email.
     /// </summary>
     [JsonPropertyName("body")]
     public string Body { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the sender address.
+    /// The sender address.
     /// </summary>
     [JsonPropertyName("fromAddress")]
     public string FromAddress { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the recipient address.
+    /// The recipient address.
     /// </summary>
     [JsonPropertyName("toAddress")]
     public string ToAddress { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the content type of the email (e.g. "Plain", "Html").
+    /// The content type of the email (e.g. "Plain", "Html").
     /// </summary>
     [JsonPropertyName("contentType")]
     public string ContentType { get; init; } = string.Empty;
