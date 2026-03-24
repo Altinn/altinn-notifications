@@ -40,6 +40,7 @@ public static class WolverineServiceCollectionExtensions
 
         // Set static settings on handlers before Wolverine discovers and configures them.
         EmailDeliveryReportHandler.Settings = wolverineSettings;
+        SmsDeliveryReportHandler.Settings = wolverineSettings;
 
         services.AddWolverine(opts =>
         {
@@ -52,6 +53,12 @@ public static class WolverineServiceCollectionExtensions
             {
                 opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                     .InteropWith(new EventGridEnvelopeMapper())
+                    .ListenerCount(wolverineSettings.ListenerCount);
+            }
+
+            if (wolverineSettings.EnableSmsDeliveryReportListener && !string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
+            {
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
             }
 
