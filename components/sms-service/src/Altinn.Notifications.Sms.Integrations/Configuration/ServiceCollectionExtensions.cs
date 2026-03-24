@@ -1,7 +1,9 @@
-﻿using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using Altinn.Notifications.Sms.Core.Configuration;
+using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Consumers;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
 using Altinn.Notifications.Sms.Integrations.Producers;
+using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +39,10 @@ public static class ServiceCollectionExtensions
 
         services
             .AddSingleton<ICommonProducer, CommonProducer>()
+            .AddSingleton<ISmsDeliveryReportPublisher>(sp =>
+                new KafkaSmsDeliveryReportPublisher(
+                    sp.GetRequiredService<ICommonProducer>(),
+                    sp.GetRequiredService<TopicSettings>().SmsStatusUpdatedTopicName))
             .AddHostedService<SendSmsQueueConsumer>()
             .AddSingleton(kafkaSettings)
             .AddSingleton<ISmsClient, SmsClient>()
