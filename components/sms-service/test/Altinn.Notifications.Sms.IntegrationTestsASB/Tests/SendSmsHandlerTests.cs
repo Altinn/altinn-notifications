@@ -44,6 +44,7 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
             .Returns(Task.CompletedTask);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig("WolverineSettings:AcceptSmsNotificationsViaWolverine", "true")
             .ReplaceService(_ => mockService.Object)
             .Initialize();
 
