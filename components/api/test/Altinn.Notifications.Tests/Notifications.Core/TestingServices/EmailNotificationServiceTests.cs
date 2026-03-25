@@ -671,11 +671,11 @@ public class EmailNotificationServiceTests
         var publisherMock = new Mock<IEmailCommandPublisher>();
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
 
-        // Act
+        // Act  
         await service.SendNotifications(CancellationToken.None);
 
         // Assert
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
