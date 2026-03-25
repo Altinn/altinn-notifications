@@ -21,7 +21,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
 {
     private readonly ILogger<EmailCommandPublisher> _logger = logger;
     private readonly IServiceProvider _serviceProvider = serviceProvider;
-    private readonly int _publishConcurrency = options.Value.EmailPublishConcurrency;
+    private readonly int _publishConcurrency = options.Value.EmailPublishConcurrency <= 0 ? 10 : options.Value.EmailPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
