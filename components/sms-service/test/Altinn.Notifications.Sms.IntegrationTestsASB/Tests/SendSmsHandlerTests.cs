@@ -26,11 +26,6 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
     /// Verifies that when a SendSmsCommand is received from the queue, the ISendingService.SendAsync method is invoked
     /// with an SMS object whose fields are correctly mapped from the command.
     /// </summary>
-    /// <remarks>This integration test ensures that the SMS sending workflow correctly processes a
-    /// SendSmsCommand by mapping its properties to the corresponding SMS object and invoking the sending service. The
-    /// test waits for the service to be called and asserts that the mapped fields match the original command
-    /// values.</remarks>
-    /// <returns></returns>
     [Fact]
     public async Task HandleAsync_WhenSendSmsCommandReceivedFromQueue_InvokesSendingServiceWithMappedFields()
     {
@@ -51,6 +46,7 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
             .Returns(Task.CompletedTask);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig("WolverineSettings:AcceptSmsNotificationsViaWolverine", "true")
             .ReplaceService(_ => mockService.Object)
             .Initialize();
 
@@ -58,13 +54,9 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
         {
             await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
             var queueName = factory.WolverineSettings.SmsSendQueueName;
-            await using var sender = client.CreateSender(queueName);
-
-            string body = JsonSerializer.Serialize(command);
-            var message = new ServiceBusMessage(body);
 
             // Act
-            await sender.SendMessageAsync(message);
+            await factory.SendToQueueAsync(queueName, command);
 
             // Assert
             bool handled = await WaitForUtils.WaitForAsync(
