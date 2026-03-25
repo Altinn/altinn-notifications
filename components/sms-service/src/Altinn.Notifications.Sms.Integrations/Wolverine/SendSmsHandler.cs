@@ -21,7 +21,7 @@ public static class SendSmsHandler
     public static WolverineSettings Settings { get; set; } = new();
 
     /// <summary>
-    /// Configures error handling for the email delivery report queue handler.
+    /// Configures error handling for the SMS send queue handler.
     /// </summary>
     public static void Configure(HandlerChain chain)
     {
