@@ -5,7 +5,6 @@ using System.Text.Encodings.Web;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 
 namespace Altinn.Notifications.Sms.Configuration;
 
@@ -42,12 +41,9 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
     {
         if (!Request.Path.StartsWithSegments("/notifications/sms/api/v1/reports"))
         {
-            // Bypass authentication for all endspoint not reports related
+            // Bypass authentication for all endpoint not reports related
             return Task.FromResult(AuthenticateResult.NoResult());
         }
-
-        string username = string.Empty;
-        string password = string.Empty;
 
         if (!Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
         {
@@ -55,6 +51,9 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
             return Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
         }
+
+        string username;
+        string password;
 
         try
         {
@@ -71,7 +70,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
         if (username != _smsDeliveryReportSettings.UserSettings.Username || password != _smsDeliveryReportSettings.UserSettings.Password)
         {
-            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username {Username} or Password: {Password}", username, password[^5..]);
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username or Password.");
             return Task.FromResult(AuthenticateResult.Fail("Invalid Username or Password"));
         }
 
