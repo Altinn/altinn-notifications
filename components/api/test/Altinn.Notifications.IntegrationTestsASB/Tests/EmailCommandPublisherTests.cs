@@ -105,12 +105,12 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         var factory = CreateFactory();
         var firstEmail = new Email(Guid.NewGuid(), "First", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         var secondEmail = new Email(Guid.NewGuid(), "Second", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
+
         await using (factory)
         {
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
             await publisher.PublishAsync(firstEmail, CancellationToken.None);
-
             await publisher.PublishAsync(secondEmail, CancellationToken.None);
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
@@ -122,19 +122,26 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
             Assert.NotNull(firstMessage);
             Assert.NotNull(secondMessage);
 
-            var firstCommand = JsonSerializer.Deserialize<SendEmailCommand>(firstMessage.Body.ToString());
-            var secondCommand = JsonSerializer.Deserialize<SendEmailCommand>(secondMessage.Body.ToString());
+            var commands = new[]
+            {
+                JsonSerializer.Deserialize<SendEmailCommand>(firstMessage.Body.ToString()),
+                JsonSerializer.Deserialize<SendEmailCommand>(secondMessage.Body.ToString())
+            };
+
+            var firstCommand = commands.Single(c => c!.NotificationId == firstEmail.NotificationId);
+            var secondCommand = commands.Single(c => c!.NotificationId == secondEmail.NotificationId);
 
             Assert.NotNull(firstCommand);
-            Assert.Equal(firstEmail.Body, firstCommand.Body);
+            Assert.NotNull(secondCommand);
+
+            Assert.Equal(firstEmail.Body, firstCommand!.Body);
             Assert.Equal(firstEmail.Subject, firstCommand.Subject);
             Assert.Equal(firstEmail.ToAddress, firstCommand.ToAddress);
             Assert.Equal(firstEmail.FromAddress, firstCommand.FromAddress);
             Assert.Equal(firstEmail.NotificationId, firstCommand.NotificationId);
             Assert.Equal(firstEmail.ContentType.ToString(), firstCommand.ContentType);
 
-            Assert.NotNull(secondCommand);
-            Assert.Equal(secondEmail.Body, secondCommand.Body);
+            Assert.Equal(secondEmail.Body, secondCommand!.Body);
             Assert.Equal(secondEmail.Subject, secondCommand.Subject);
             Assert.Equal(secondEmail.ToAddress, secondCommand.ToAddress);
             Assert.Equal(secondEmail.FromAddress, secondCommand.FromAddress);

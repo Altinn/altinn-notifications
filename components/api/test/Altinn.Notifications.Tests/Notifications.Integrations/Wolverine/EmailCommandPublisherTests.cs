@@ -315,7 +315,7 @@ public class EmailCommandPublisherTests
     {
         // Arrange
         var email = new Email(Guid.NewGuid(), "Subject 1", "Body 1", "from@test.no", "to@test.no", EmailContentType.Plain);
-        var emails = Enumerable.Repeat(email, 10).ToList();
+        var emails = Enumerable.Repeat(email, 500).ToList();
 
         using var cts = new CancellationTokenSource();
 
