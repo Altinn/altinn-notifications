@@ -34,7 +34,7 @@ public static class WolverineServiceCollectionExtensions
         IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
 
-        SendSmsCommandHandler.Settings = wolverineSettings;
+        SendSmsHandler.Settings = wolverineSettings;
 
         services.Configure<WolverineSettings>(wolverineSection);
 

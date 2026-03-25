@@ -1,5 +1,6 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Consumers;
 
 using Azure.Messaging.ServiceBus;
@@ -19,6 +20,11 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration
+    /// </summary>
+    public WolverineSettings WolverineSettings { get; internal set; } = null!;
+
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
@@ -29,6 +35,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
+
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+           ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
         var consumersToRemove = services
             .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
