@@ -14,6 +14,9 @@ namespace Altinn.Notifications.Core.Services;
 [ExcludeFromCodeCoverage]
 public class DisabledSmsCommandPublisher : ISmsCommandPublisher
 {
+    /// <inheritdoc/>
+    public bool IsEnabled => false;
+
     /// <summary>
     /// This method is intentionally not implemented to indicate that SMS command publishing is disabled. Attempting to call this method will result in a NotImplementedException being thrown.
     /// </summary>

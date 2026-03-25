@@ -9,6 +9,9 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 /// </summary>
 public class SpySmsCommandPublisher : ISmsCommandPublisher
 {
+    /// <inheritdoc/>
+    public bool IsEnabled { get; set; } = false;
+
     /// <summary>
     /// Will return null, indicating that the command was not published to a message bus. This allows tests to verify that the command publisher was called without relying on external infrastructure.
     /// </summary>

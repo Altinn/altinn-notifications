@@ -50,7 +50,7 @@ public class SmsNotificationService : ISmsNotificationService
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
         _sendSmsNotificationsViaWolverine = notificationConfig.Value.SendSmsNotificationsViaWolverine;
-        _enableWolverine = string.Equals(_smsCommandPublisher.GetType().FullName, "SmsCommandPublisher", StringComparison.CurrentCultureIgnoreCase);
+        _enableWolverine = smsCommandPublisher.IsEnabled;
     }
 
     /// <inheritdoc/>

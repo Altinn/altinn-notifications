@@ -697,6 +697,8 @@ public class SmsNotificationServiceTests
         commandPublisherMock
             .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid?)null); // null = published successfully
+        commandPublisherMock
+            .SetupGet(p => p.IsEnabled).Returns(true);
 
         var producerMock = new Mock<IKafkaProducer>();
 
@@ -745,6 +747,8 @@ public class SmsNotificationServiceTests
         commandPublisherMock
             .Setup(p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == succeededSms.NotificationId), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid?)null); // null = published successfully
+        commandPublisherMock
+            .SetupGet(p => p.IsEnabled).Returns(true);
 
         var service = GetTestService(
             repository: repoMock.Object,
