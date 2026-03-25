@@ -26,6 +26,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
     private readonly ISmsCommandPublisher _smsCommandPublisher;
+    private readonly bool _enableWolverine;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -49,6 +50,7 @@ public class SmsNotificationService : ISmsNotificationService
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
         _sendSmsNotificationsViaWolverine = notificationConfig.Value.SendSmsNotificationsViaWolverine;
+        _enableWolverine = string.Equals(_smsCommandPublisher.GetType().FullName, "SmsCommandPublisher", StringComparison.CurrentCultureIgnoreCase);
     }
 
     /// <inheritdoc/>
@@ -92,7 +94,7 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (_sendSmsNotificationsViaWolverine)
+                if (_enableWolverine && _sendSmsNotificationsViaWolverine)
                 {
                     await PublishViaWolverine(newSmsNotifications, cancellationToken);
                 }
