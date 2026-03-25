@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Email.Integrations.Wolverine;
+using Altinn.Notifications.Email.Integrations.Configuration; 
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 

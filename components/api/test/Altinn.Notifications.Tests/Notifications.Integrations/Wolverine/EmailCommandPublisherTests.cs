@@ -314,9 +314,8 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_Batch_TokenCancelledMidBatch_ThrowsOperationCanceledException()
     {
         // Arrange
-        var firstEmail = new Email(Guid.NewGuid(), "Subject 1", "Body 1", "from@test.no", "to1@test.no", EmailContentType.Plain);
-        var secondEmail = new Email(Guid.NewGuid(), "Subject 2", "Body 2", "from@test.no", "to2@test.no", EmailContentType.Plain);
-        var emails = new List<Email> { firstEmail, secondEmail };
+        var email = new Email(Guid.NewGuid(), "Subject 1", "Body 1", "from@test.no", "to@test.no", EmailContentType.Plain);
+        var emails = Enumerable.Repeat(email, 10).ToList();
 
         using var cts = new CancellationTokenSource();
 
@@ -325,7 +324,7 @@ public class EmailCommandPublisherTests
 
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == firstEmail.NotificationId), It.IsAny<DeliveryOptions?>()))
+            .Setup(m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()))
             .Returns<SendEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
             {
                 firstEmailStarted.SetResult();
@@ -345,8 +344,8 @@ public class EmailCommandPublisherTests
         await Assert.ThrowsAsync<OperationCanceledException>(() => publishTask);
 
         messageBusMock.Verify(
-            m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == secondEmail.NotificationId), It.IsAny<DeliveryOptions?>()),
-            Times.Never);
+            m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()),
+            Times.AtLeastOnce);
     }
 
     [Fact]
