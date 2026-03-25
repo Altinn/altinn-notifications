@@ -1,11 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-using Altinn.Notifications.Shared.Commands;
+﻿using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 
 using Azure.Messaging.ServiceBus;
-using Microsoft.Extensions.Logging;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
 
@@ -46,11 +43,9 @@ public static class SendSmsCommandHandler
     /// </summary>
     /// <param name="command">The incoming send-sms command.</param>
     /// <param name="sendingService">The sms sending service.</param>
-    /// <param name="logger">The logger.</param>
     public static async Task HandleAsync(
         SendSmsCommand command,
-        ISendingService sendingService,
-        ILogger<object> logger)
+        ISendingService sendingService)
     {
         var sms = new Core.Sending.Sms
         {
