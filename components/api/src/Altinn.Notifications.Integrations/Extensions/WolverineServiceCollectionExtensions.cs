@@ -58,10 +58,10 @@ public static class WolverineServiceCollectionExtensions
             }
 
             // Publishers
-            if (!string.IsNullOrWhiteSpace(wolverineSettings.SmsSendQueueName))
+            if (!string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
             {
                 opts.PublishMessage<SendSmsCommand>()
-                .ToAzureServiceBusQueue(wolverineSettings.SmsSendQueueName);
+                .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
 
                 // Replace the disabled publisher with the real Wolverine-based publisher
                 services.RemoveAll<ISendSmsPublisher>();

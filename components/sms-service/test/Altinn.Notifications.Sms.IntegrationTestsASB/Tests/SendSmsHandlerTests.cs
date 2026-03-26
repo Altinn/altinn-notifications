@@ -44,14 +44,13 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
             .Returns(Task.CompletedTask);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:AcceptSmsNotificationsViaWolverine", "true")
             .ReplaceService(_ => mockService.Object)
             .Initialize();
 
         await using (factory)
         {
             await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
-            var queueName = factory.WolverineSettings.SmsSendQueueName;
+            var queueName = factory.WolverineSettings.SendSmsQueueName;
 
             // Act
             await factory.SendToQueueAsync(queueName, command);
@@ -71,6 +70,56 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
                     sms.Message == command.Body &&
                     sms.Sender == command.SenderNumber)),
                 Times.Once);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that when the ISendingService.SendAsync method throws a transient exception (e.g., TaskCanceledException),
+    /// the SendSmsHandler retries the operation according to the configured retry policy.
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task HandleAsync_WhenSendingServiceThrowsATransientException_RetriesAccordingToPolicy()
+    {
+        // Arrange
+        var command = new SendSmsCommand
+        {
+            NotificationId = Guid.NewGuid(),
+            MobileNumber = "+4799999999",
+            Body = "Integration test SMS body",
+            SenderNumber = "Altinn"
+        };
+        int callCount = 0;
+        var mockService = new Mock<ISendingService>();
+        mockService
+            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()))
+            .Callback(() => callCount++)
+            .ThrowsAsync(new TaskCanceledException("Transient error"));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService(_ => mockService.Object)
+            .Initialize();
+        await using (factory)
+        {
+            await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
+            var queueName = factory.WolverineSettings.SendSmsQueueName;
+            
+            // Act
+            await factory.SendToQueueAsync(queueName, command);
+            
+            // Assert
+            bool handled = await WaitForUtils.WaitForAsync(
+                () => Task.FromResult(callCount >= 2), // Expecting at least one retry
+                maxAttempts: 20,
+                delayMs: 500);
+            Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
+            mockService.Verify(
+                s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
+                    sms.NotificationId == command.NotificationId &&
+                    sms.Recipient == command.MobileNumber &&
+                    sms.Message == command.Body &&
+                    sms.Sender == command.SenderNumber)),
+                Times.AtLeast(2)); // Expecting at least one retry
         }
     }
 }

@@ -52,7 +52,7 @@ public class SendSmsPublisherTests(IntegrationTestContainersFixture fixture)
             var result = await publisher.PublishAsync(sms, default);
 
             // Assert: message should be sent to the correct queue
-            var queueName = factory.WolverineSettings.SmsSendQueueName;
+            var queueName = factory.WolverineSettings.SendSmsQueueName;
             await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
             var receiver = client.CreateReceiver(queueName);
 

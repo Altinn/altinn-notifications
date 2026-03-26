@@ -44,9 +44,9 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            if (wolverineSettings.AcceptSmsNotificationsViaWolverine && !string.IsNullOrWhiteSpace(wolverineSettings.SmsSendQueueName))
+            if (wolverineSettings.EnableSendSmsListener && !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
             {
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendQueueName)
+                opts.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
             }
         });
