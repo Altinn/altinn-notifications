@@ -1,6 +1,11 @@
+using System.Collections.Immutable;
+using System.Text.Json;
+
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
@@ -9,6 +14,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -96,7 +102,12 @@ public static class ServiceUtil
                 .Build();
 
             EnsureMigrationsRun(config);
-            serviceProvider = BuildServiceProvider(config);
+
+            // Pre-create any Kafka topics from the configured topic list so that
+            // consumers can subscribe immediately without EnsureTopicsExist overhead.
+            PreCreateTopicsFromConfig(config);
+
+            serviceProvider = BuildServiceProviderForConsumerTests(config);
         }
 
         List<object> outputServices = new();
@@ -190,6 +201,73 @@ public static class ServiceUtil
         return _defaultServiceProvider;
     }
 
+    private static ServiceProvider BuildServiceProviderForConsumerTests(IConfiguration config)
+    {
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
+        {
+            EnvironmentName = config["ASPNETCORE_ENVIRONMENT"] ?? "IntegrationTest",
+            ApplicationName = "Altinn.Notifications.IntegrationTests",
+            ContentRootPath = Directory.GetCurrentDirectory()
+        });
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddLogging();
+
+        var sharedDataSource = GetOrCreateDataSource(config);
+        services.AddSingleton(sharedDataSource);
+
+        RegisterRepositories(services);
+
+        services.AddCoreServices(config);
+        services.AddKafkaServices(config);
+        services.AddAltinnClients(config);
+        services.AddAuthorizationService(config);
+
+        // Replace the real KafkaProducer with a no-op to avoid the expensive
+        // EnsureTopicsExist() call (GetMetadata + topic creation) per ServiceProvider.
+        // Topics are pre-created via PreCreateTopicsFromConfig above.
+        // Consumer tests that need to verify producer behavior use their own mocks.
+        services.Replace(ServiceDescriptor.Singleton<IKafkaProducer>(new NoOpKafkaProducer()));
+
+        return services.BuildServiceProvider();
+    }
+
+    private static void PreCreateTopicsFromConfig(IConfiguration config)
+    {
+        var topicListJson = config["KafkaSettings:Admin:TopicList"];
+        if (string.IsNullOrEmpty(topicListJson))
+        {
+            // Try reading as array from config binding
+            var topicList = config.GetSection("KafkaSettings:Admin:TopicList").Get<string[]>();
+            if (topicList != null)
+            {
+                foreach (var topic in topicList.Where(t => !string.IsNullOrWhiteSpace(t)))
+                {
+                    KafkaUtil.CreateTopicAsync(topic, timeoutMs: 5000).GetAwaiter().GetResult();
+                }
+            }
+
+            return;
+        }
+
+        try
+        {
+            var topics = JsonSerializer.Deserialize<string[]>(topicListJson);
+            if (topics != null)
+            {
+                foreach (var topic in topics.Where(t => !string.IsNullOrWhiteSpace(t)))
+                {
+                    KafkaUtil.CreateTopicAsync(topic, timeoutMs: 5000).GetAwaiter().GetResult();
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not valid JSON array — skip
+        }
+    }
+
     private static void RegisterRepositories(IServiceCollection services)
     {
         // Explicitly register repositories to match production configuration.
@@ -214,5 +292,17 @@ public static class ServiceUtil
         public string ContentRootPath { get; set; } = string.Empty;
 
         public IFileProvider ContentRootFileProvider { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    }
+
+    /// <summary>
+    /// Lightweight IKafkaProducer replacement for consumer integration tests.
+    /// Avoids the expensive EnsureTopicsExist() call in the real KafkaProducer constructor.
+    /// </summary>
+    private sealed class NoOpKafkaProducer : IKafkaProducer
+    {
+        public Task<bool> ProduceAsync(string topicName, string message) => Task.FromResult(true);
+
+        public Task<ImmutableList<string>> ProduceAsync(string topicName, ImmutableList<string> messages, CancellationToken cancellationToken = default)
+            => Task.FromResult(ImmutableList<string>.Empty);
     }
 }
