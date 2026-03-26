@@ -73,6 +73,20 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     }
 
     /// <summary>
+    /// Sends a message to a specific named endpoint using Wolverine's transport.
+    /// Use this when the component only has a listener (no publisher route) for the message type,
+    /// for example when simulating a message arriving from another component's queue.
+    /// </summary>
+    public async Task SendToEndpointAsync<T>(string endpointName, T message)
+        where T : class
+    {
+        using var scope = Host.Services.CreateScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var endpoint = messageBus.EndpointFor(endpointName);
+        await endpoint.SendAsync(message);
+    }
+
+    /// <summary>
     /// Replaces a service registration with a test implementation, preserving the original lifetime.
     /// </summary>
     public TSelf ReplaceService<TService>(Func<IServiceProvider, TService> implementationFactory)
@@ -157,6 +171,11 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         try
         {
             await base.DisposeAsync();
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is ObjectDisposedException { ObjectName: "EventLogInternal" }))
+        {
+            // Suppress the EventLogInternal disposed error that occurs during Wolverine shutdown
+            // when the Windows Event Log logger is disposed before Wolverine finishes draining.
         }
         finally
         {

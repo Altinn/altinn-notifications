@@ -46,8 +46,33 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllSenders(x => x.SendInline());
             opts.Policies.AllListeners(x => x.ProcessInline());
 
+            // Listeners
+            AddEmailSendQueueListener(wolverineSettings, opts);
+
+            // Publishers: none configured yet.
             ConfigureCheckEmailSendStatus(opts, wolverineSettings);
         });
+    }
+
+    /// <summary>
+    /// Adds the email send queue listener.
+    /// </summary>
+    /// <param name="wolverineSettings">The wolverine settings.</param>
+    /// <param name="wolverineOptions">The opts.</param>
+    private static void AddEmailSendQueueListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendEmailListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+        {
+            return;
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
     }
 
     /// <summary>
