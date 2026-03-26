@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
@@ -19,6 +19,21 @@ public static class ServiceUtil
 {
     private static readonly object _lock = new();
     private static NpgsqlDataSource? _sharedDataSource;
+
+    private static bool _migrationsRun;
+    private static readonly object _migrationLock = new();
+    private static IConfiguration? _defaultConfig;
+    private static ServiceProvider? _defaultServiceProvider;
+
+    public static NpgsqlDataSource SharedDataSource
+    {
+        get
+        {
+            var config = GetOrCreateDefaultConfig();
+            EnsureMigrationsRun(config);
+            return GetOrCreateDataSource(config);
+        }
+    }
 
     private static NpgsqlDataSource GetOrCreateDataSource(IConfiguration config)
     {
@@ -53,30 +68,88 @@ public static class ServiceUtil
         {
             _sharedDataSource?.Dispose();
             _sharedDataSource = null;
+
+            _defaultServiceProvider?.Dispose();
+            _defaultServiceProvider = null;
         }
     }
 
     public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
     {
-        if (envVariables != null)
+        ServiceProvider serviceProvider;
+
+        if (envVariables == null)
+        {
+            serviceProvider = GetOrCreateDefaultProvider();
+        }
+        else
         {
             foreach (var item in envVariables)
             {
                 Environment.SetEnvironmentVariable(item.Key, item.Value);
             }
+
+            var config = new ConfigurationBuilder()
+                .AddJsonFile($"appsettings.json")
+                .AddJsonFile("appsettings.IntegrationTest.json")
+                .AddEnvironmentVariables()
+                .Build();
+
+            EnsureMigrationsRun(config);
+            serviceProvider = BuildServiceProvider(config);
         }
 
-        var builder = new ConfigurationBuilder()
+        List<object> outputServices = new();
+
+        foreach (Type interfaceType in interfaceTypes)
+        {
+            var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
+            outputServices.AddRange(outputServiceObject!);
+        }
+
+        return outputServices;
+    }
+
+    private static IConfiguration GetOrCreateDefaultConfig()
+    {
+        if (_defaultConfig != null)
+        {
+            return _defaultConfig;
+        }
+
+        _defaultConfig = new ConfigurationBuilder()
             .AddJsonFile($"appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();
-        
-        var config = builder.Build();
+            .AddEnvironmentVariables()
+            .Build();
 
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
+        return _defaultConfig;
+    }
 
+    private static void EnsureMigrationsRun(IConfiguration config)
+    {
+        if (_migrationsRun)
+        {
+            return;
+        }
+
+        lock (_migrationLock)
+        {
+            if (_migrationsRun)
+            {
+                return;
+            }
+
+            WebApplication.CreateBuilder()
+                           .Build()
+                           .SetUpPostgreSql(true, config);
+
+            _migrationsRun = true;
+        }
+    }
+
+    private static ServiceProvider BuildServiceProvider(IConfiguration config)
+    {
         IServiceCollection services = new ServiceCollection();
 
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment
@@ -100,16 +173,21 @@ public static class ServiceUtil
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
 
-        var serviceProvider = services.BuildServiceProvider();
-        List<object> outputServices = new();
+        return services.BuildServiceProvider();
+    }
 
-        foreach (Type interfaceType in interfaceTypes)
+    private static ServiceProvider GetOrCreateDefaultProvider()
+    {
+        if (_defaultServiceProvider != null)
         {
-            var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
-            outputServices.AddRange(outputServiceObject!);
+            return _defaultServiceProvider;
         }
 
-        return outputServices;
+        var config = GetOrCreateDefaultConfig();
+        EnsureMigrationsRun(config);
+        _defaultServiceProvider = BuildServiceProvider(config);
+
+        return _defaultServiceProvider;
     }
 
     private static void RegisterRepositories(IServiceCollection services)
