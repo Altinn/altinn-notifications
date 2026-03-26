@@ -23,6 +23,7 @@ namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 public class SendSmsPublisherTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>
     /// Asynchronously verifies that publishing an SMS message results in the message being sent to the SMS send queue
@@ -59,8 +60,7 @@ public class SendSmsPublisherTests(IntegrationTestContainersFixture fixture)
             var received = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
             Assert.NotNull(received);
 
-            // Optionally, verify the message body
-            var command = JsonSerializer.Deserialize<SendSmsCommand>(received.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var command = JsonSerializer.Deserialize<SendSmsCommand>(received.Body, _jsonSerializerOptions);
             Assert.NotNull(command);
             Assert.Equal(sms.NotificationId, command.NotificationId);
             Assert.Equal(sms.Recipient, command.MobileNumber);
