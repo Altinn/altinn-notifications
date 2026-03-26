@@ -591,7 +591,9 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
+        var kafkaProducerMock = new Mock<IKafkaProducer>();
+
+        var service = GetTestService(repo: repoMock.Object, producer: kafkaProducerMock.Object, emailCommandPublisher: publisherMock.Object, sendViaWolverine: true);
 
         // Act
         await service.SendNotifications(CancellationToken.None);
@@ -599,6 +601,7 @@ public class EmailNotificationServiceTests
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Once);
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        kafkaProducerMock.Verify(k => k.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
