@@ -1,4 +1,4 @@
-﻿using Confluent.Kafka;
+using Confluent.Kafka;
 
 using Confluent.Kafka.Admin;
 
@@ -7,6 +7,12 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class KafkaUtil
 {
     private const string _brokerAddress = "localhost:9092";
+
+    private static readonly Lazy<IProducer<Null, string>> _sharedProducer = new(
+        () => new ProducerBuilder<Null, string>(new ProducerConfig { BootstrapServers = _brokerAddress, Acks = Acks.All }).Build());
+
+    private static readonly Lazy<IAdminClient> _sharedAdminClient = new(
+        () => new AdminClientBuilder(new AdminClientConfig { BootstrapServers = _brokerAddress }).Build());
 
     /// <summary>
     /// Publishes a message to the specified Kafka topic.
@@ -22,9 +28,7 @@ public static class KafkaUtil
 
         try
         {
-            using var producer = new ProducerBuilder<Null, string>(new ProducerConfig { BootstrapServers = _brokerAddress, Acks = Acks.All }).Build();
-
-            var result = await producer.ProduceAsync(topic, new Message<Null, string> { Value = message });
+            var result = await _sharedProducer.Value.ProduceAsync(topic, new Message<Null, string> { Value = message });
 
             if (result.Status != PersistenceStatus.Persisted)
             {
@@ -49,10 +53,9 @@ public static class KafkaUtil
     {
         ArgumentException.ThrowIfNullOrEmpty(topic);
 
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = _brokerAddress }).Build();
         try
         {
-            await adminClient.DeleteTopicsAsync([topic], new DeleteTopicsOptions { OperationTimeout = TimeSpan.FromMilliseconds(timeoutMs) });
+            await _sharedAdminClient.Value.DeleteTopicsAsync([topic], new DeleteTopicsOptions { OperationTimeout = TimeSpan.FromMilliseconds(timeoutMs) });
         }
         catch (DeleteTopicsException ex) when (ex.Results.Any(r => r.Error.Code == ErrorCode.UnknownTopicOrPart))
         {
@@ -72,11 +75,9 @@ public static class KafkaUtil
     {
         ArgumentException.ThrowIfNullOrEmpty(topicName);
 
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = _brokerAddress }).Build();
-
         try
         {
-            await adminClient.CreateTopicsAsync(
+            await _sharedAdminClient.Value.CreateTopicsAsync(
                 [new TopicSpecification
                 {
                     Name = topicName,
