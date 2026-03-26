@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// commands. Ensure that the provided Sms object is properly configured before calling PublishAsync.</remarks>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
 /// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
-public class SmsCommandPublisher(ILogger<SmsCommandPublisher> logger, IServiceProvider serviceProvider) : ISmsCommandPublisher
+public class SendSmsPublisher(ILogger<SendSmsPublisher> logger, IServiceProvider serviceProvider) : ISendSmsPublisher
 {
     /// <inheritdoc/>
     public bool IsEnabled => true;

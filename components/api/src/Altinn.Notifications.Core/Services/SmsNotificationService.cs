@@ -25,7 +25,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
-    private readonly ISmsCommandPublisher _smsCommandPublisher;
+    private readonly ISendSmsPublisher _smsCommandPublisher;
     private readonly bool _enableWolverine;
 
     /// <summary>
@@ -36,7 +36,7 @@ public class SmsNotificationService : ISmsNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
-        ISmsCommandPublisher smsCommandPublisher,
+        ISendSmsPublisher smsCommandPublisher,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig)
     {

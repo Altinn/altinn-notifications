@@ -4,10 +4,10 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
-/// No-op implementation of <see cref="ISmsCommandPublisher"/> used in integration tests
+/// No-op implementation of <see cref="ISendSmsPublisher"/> used in integration tests
 /// where Wolverine/Azure Service Bus is disabled.
 /// </summary>
-public class SpySmsCommandPublisher : ISmsCommandPublisher
+public class SpySendSmsPublisher : ISendSmsPublisher
 {
     /// <inheritdoc/>
     public bool IsEnabled { get; set; } = false;

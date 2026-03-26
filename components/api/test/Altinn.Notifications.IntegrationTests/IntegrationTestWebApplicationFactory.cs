@@ -55,7 +55,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             // Replace scoped ISmsCommandPublisher (registered by Wolverine) with a singleton
             // no-op to avoid the scoped-from-singleton lifetime validation error.
             var smsPublisherDescriptors = services
-                .Where(s => s.ServiceType == typeof(ISmsCommandPublisher))
+                .Where(s => s.ServiceType == typeof(ISendSmsPublisher))
                 .ToList();
 
             foreach (var descriptor in smsPublisherDescriptors)
@@ -63,7 +63,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
 
-            services.AddSingleton<ISmsCommandPublisher, SpySmsCommandPublisher>();
+            services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
         });
     }
 }

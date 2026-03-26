@@ -82,7 +82,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
-        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -247,7 +247,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
-        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -428,7 +428,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
-        var smsCommandPublisher = new Mock<ISmsCommandPublisher>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -687,7 +687,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
-        var smsSendCommandPublisher = new Mock<ISmsCommandPublisher>();
+        var smsSendCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var notificationId = Guid.NewGuid();

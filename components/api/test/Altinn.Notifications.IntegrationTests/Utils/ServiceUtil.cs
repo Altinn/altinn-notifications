@@ -120,7 +120,7 @@ public static class ServiceUtil
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
-        services.AddSingleton<ISmsCommandPublisher, SpySmsCommandPublisher>();
+        services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();

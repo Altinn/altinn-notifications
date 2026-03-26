@@ -69,7 +69,7 @@ public class SmsNotificationServiceTests
             new Mock<IKafkaProducer>().Object,
             new Mock<IDateTimeService>().Object,
             mockRepo.Object,
-            new Mock<ISmsCommandPublisher>().Object,
+            new Mock<ISendSmsPublisher>().Object,
             Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
 
@@ -693,7 +693,7 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch)
             .ReturnsAsync([]);
 
-        var commandPublisherMock = new Mock<ISmsCommandPublisher>();
+        var commandPublisherMock = new Mock<ISendSmsPublisher>();
         commandPublisherMock
             .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid?)null); // null = published successfully
@@ -740,7 +740,7 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch)
             .ReturnsAsync([]);
 
-        var commandPublisherMock = new Mock<ISmsCommandPublisher>();
+        var commandPublisherMock = new Mock<ISendSmsPublisher>();
         commandPublisherMock
             .Setup(p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == failedSms.NotificationId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(failedSms.NotificationId); // non-null = failed to publish
@@ -768,7 +768,7 @@ public class SmsNotificationServiceTests
         DateTime? dateTimeOutput = null,
         IKafkaProducer? producer = null,
         ISmsNotificationRepository? repository = null,
-        ISmsCommandPublisher? commandPublisher = null,
+        ISendSmsPublisher? commandPublisher = null,
         int? publishBatchSize = null,
         bool sendSmsNotificationsViaWolverine = false)
     {
@@ -777,7 +777,7 @@ public class SmsNotificationServiceTests
 
         producer ??= new Mock<IKafkaProducer>().Object;
         repository ??= new Mock<ISmsNotificationRepository>().Object;
-        commandPublisher ??= new Mock<ISmsCommandPublisher>().Object;
+        commandPublisher ??= new Mock<ISendSmsPublisher>().Object;
 
         return new SmsNotificationService(
             guidService,
