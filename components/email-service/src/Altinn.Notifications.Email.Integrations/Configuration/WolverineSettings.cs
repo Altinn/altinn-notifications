@@ -23,6 +23,7 @@ public class WolverineSettings : WolverineSettingsBase
     /// Determines whether to accept Email notifications via Wolverine and Azure Service Bus or via Kafka.
     /// </summary>
     public bool EnableSendEmailListener { get; set; } = false;
+
     /// <summary>
     /// Determines whether the check-send-status should happen through Wolverine/Azure Service Bus.
     /// </summary>
