@@ -25,7 +25,7 @@ public static class SendSmsHandler
     /// </summary>
     public static void Configure(HandlerChain chain)
     {
-        var policy = Settings.SmsSendQueuePolicy;
+        var policy = Settings.SendSmsQueuePolicy;
 
         chain
             .OnException<InvalidOperationException>()

@@ -15,7 +15,7 @@ public class WolverineSettingsTests
 
         Assert.False(settings.EnableWolverine);
         Assert.Equal(10, settings.ListenerCount);
-        Assert.NotNull(settings.SmsSendQueuePolicy);
+        Assert.NotNull(settings.SendSmsQueuePolicy);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
         Assert.False(settings.EnableSendSmsListener);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
@@ -29,11 +29,11 @@ public class WolverineSettingsTests
             {
                 ["WolverineSettings:ListenerCount"] = "5",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:AcceptSmsNotificationsViaWolverine"] = "true",
-                ["WolverineSettings:SmsSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
-                ["WolverineSettings:SmsSendQueuePolicy:CooldownDelaysMs:1"] = "5000",
-                ["WolverineSettings:SmsSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
-                ["WolverineSettings:SmsSendQueueName"] = "altinn.notifications.sms.send",
+                ["WolverineSettings:EnableSendSmsListener"] = "true",
+                ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:0"] = "1000",
+                ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:1"] = "5000",
+                ["WolverineSettings:SendSmsQueuePolicy:ScheduleDelaysMs:0"] = "60000",
+                ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
             })
             .Build();
@@ -48,8 +48,8 @@ public class WolverineSettingsTests
         Assert.True(settings.EnableSendSmsListener);
         Assert.Equal("altinn.notifications.sms.send", settings.SendSmsQueueName);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
-        Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.SmsSendQueuePolicy.GetCooldownDelays());
-        Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.SmsSendQueuePolicy.GetCooldownDelays());
-        Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.SmsSendQueuePolicy.GetScheduleDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.SendSmsQueuePolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.SendSmsQueuePolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.SendSmsQueuePolicy.GetScheduleDelays());
     }
 }
