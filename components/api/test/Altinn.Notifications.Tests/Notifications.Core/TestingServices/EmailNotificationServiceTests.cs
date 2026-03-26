@@ -726,7 +726,7 @@ public class EmailNotificationServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cts.Token));
 
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Never);
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
     }
 
