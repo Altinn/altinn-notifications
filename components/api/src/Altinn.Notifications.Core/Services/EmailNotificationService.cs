@@ -112,10 +112,13 @@ public class EmailNotificationService : IEmailNotificationService
             }
             catch (OperationCanceledException)
             {
-                foreach (var email in newEmailNotifications)
-                {
-                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-                }
+                await ResetSendStatusToNewAsync(newEmailNotifications);
+
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                await ResetSendStatusToNewAsync(newEmailNotifications);
 
                 throw;
             }
@@ -133,6 +136,23 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         await _emailNotificationRepository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+    }
+
+    /// <summary>
+    /// Resets the send status to <see cref="EmailNotificationResultType.New"/> for the given emails.
+    /// </summary>
+    /// <param name="emails">The collection of emails to reset the send status for.</param>
+    private async Task ResetSendStatusToNewAsync(IEnumerable<Email> emails)
+    {
+        if (emails is null)
+        {
+            return;
+        }
+
+        foreach (var email in emails)
+        {
+            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+        }
     }
 
     /// <summary>
