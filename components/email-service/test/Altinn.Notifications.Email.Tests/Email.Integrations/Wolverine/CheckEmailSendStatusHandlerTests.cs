@@ -5,6 +5,7 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -30,6 +31,23 @@ public class CheckEmailSendStatusHandlerTests
             NotificationId = notificationId ?? Guid.NewGuid()
         };
 
+    private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
+    {
+        var innerSp = new Mock<IServiceProvider>();
+        innerSp.Setup(sp => sp.GetService(typeof(IMessageBus))).Returns(messageBus);
+
+        var scope = new Mock<IServiceScope>();
+        scope.Setup(s => s.ServiceProvider).Returns(innerSp.Object);
+
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        scopeFactory.Setup(f => f.CreateScope()).Returns(scope.Object);
+
+        var serviceProvider = new Mock<IServiceProvider>();
+        serviceProvider.Setup(sp => sp.GetService(typeof(IServiceScopeFactory))).Returns(scopeFactory.Object);
+
+        return serviceProvider.Object;
+    }
+
     [Fact]
     public async Task Handle_EmptyNotificationId_ThrowsArgumentException()
     {
@@ -38,9 +56,9 @@ public class CheckEmailSendStatusHandlerTests
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
                 Mock.Of<ILogger>(),
-                Mock.Of<IMessageBus>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
+                Mock.Of<IServiceProvider>(),
                 Mock.Of<ICommonProducer>(),
                 Mock.Of<IEmailServiceClient>(),
                 command));
@@ -58,9 +76,9 @@ public class CheckEmailSendStatusHandlerTests
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
                 Mock.Of<ILogger>(),
-                Mock.Of<IMessageBus>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
+                Mock.Of<IServiceProvider>(),
                 Mock.Of<ICommonProducer>(),
                 Mock.Of<IEmailServiceClient>(),
                 command));
@@ -105,9 +123,9 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             loggerMock.Object,
-            busMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            CreateServiceProvider(busMock.Object),
             producerMock.Object,
             clientMock.Object,
             command);
@@ -141,9 +159,9 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             loggerMock.Object,
-            Mock.Of<IMessageBus>(),
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            Mock.Of<IServiceProvider>(),
             producerMock.Object,
             clientMock.Object,
             command);
@@ -191,9 +209,9 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             Mock.Of<ILogger>(),
-            busMock.Object,
             dateTimeMock.Object,
             _topicSettings,
+            CreateServiceProvider(busMock.Object),
             producerMock.Object,
             clientMock.Object,
             command);
@@ -231,9 +249,9 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             loggerMock.Object,
-            busMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            CreateServiceProvider(busMock.Object),
             Mock.Of<ICommonProducer>(),
             clientMock.Object,
             command);

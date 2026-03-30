@@ -9,6 +9,7 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 
 using Azure.Messaging.ServiceBus;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -59,10 +60,11 @@ public static class CheckEmailSendStatusHandler
     /// the notification status. If still sending, re-schedules the command on ASB
     /// with an 8-second delay so the polling loop continues.
     /// </summary>
-    public static async Task<OutgoingMessages> Handle(
+    public static async Task Handle(
         ILogger logger,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
+        IServiceProvider serviceProvider,
         ICommonProducer commonKafkaProducer,
         IEmailServiceClient emailServiceClient,
         CheckEmailSendStatusCommand checkEmailSendStatusCommand)
@@ -78,8 +80,6 @@ public static class CheckEmailSendStatusHandler
         }
 
         EmailSendResult sendResult = await emailServiceClient.GetOperationUpdate(checkEmailSendStatusCommand.SendOperationId);
-
-        var outgoing = new OutgoingMessages();
 
         if (sendResult != EmailSendResult.Sending)
         {
@@ -104,16 +104,17 @@ public static class CheckEmailSendStatusHandler
                 checkEmailSendStatusCommand.NotificationId,
                 _statusPollDelayMs);
 
-            var retryCommand = new CheckEmailSendStatusCommand
+            var recheckEmailSendStatusCommand = new CheckEmailSendStatusCommand
             {
                 LastCheckedAtUtc = dateTime.UtcNow(),
                 NotificationId = checkEmailSendStatusCommand.NotificationId,
                 SendOperationId = checkEmailSendStatusCommand.SendOperationId
             };
 
-            outgoing.Schedule(retryCommand, DateTimeOffset.UtcNow.AddMilliseconds(_statusPollDelayMs));
-        }
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        return outgoing;
+            await messageBus.SendAsync(recheckEmailSendStatusCommand, new DeliveryOptions() { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+        }
     }
 }

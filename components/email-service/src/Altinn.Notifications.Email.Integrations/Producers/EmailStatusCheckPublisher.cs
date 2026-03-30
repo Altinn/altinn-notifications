@@ -2,6 +2,8 @@ using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using Wolverine;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
@@ -14,34 +16,37 @@ namespace Altinn.Notifications.Email.Integrations.Producers;
 /// </summary>
 public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
 {
-    private readonly IMessageBus _messageBus;
     private readonly IDateTimeService _dateTime;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckPublisher"/> class.
     /// </summary>
-    /// <param name="messageBus">
+    /// <param name="serviceProvider">
     /// The Wolverine message bus responsible for sending <see cref="CheckEmailSendStatusCommand"/> messages to Azure Service Bus.
     /// </param>
     /// <param name="dateTime">
     /// Provides the current UTC timestamp applied to the command as the initial status‑check time.
     /// </param>
-    public EmailStatusCheckPublisher(IMessageBus messageBus, IDateTimeService dateTime)
+    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime)
     {
         _dateTime = dateTime;
-        _messageBus = messageBus;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>
     public async Task DispatchAsync(Guid notificationId, string operationId)
     {
-        var command = new CheckEmailSendStatusCommand
+        var checkEmailSendStatusCommand = new CheckEmailSendStatusCommand
         {
             SendOperationId = operationId,
             NotificationId = notificationId,
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
 
-        await _messageBus.SendAsync(command);
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        await messageBus.SendAsync(checkEmailSendStatusCommand);
     }
 }
