@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.AspNetCore.Hosting;

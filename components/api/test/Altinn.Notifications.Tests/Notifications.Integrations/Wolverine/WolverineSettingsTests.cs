@@ -18,17 +18,28 @@ public class WolverineSettingsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["WolverineSettings:EnableWolverine"] = "true",
+
+                ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
+                ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
+                ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
+
                 ["WolverineSettings:EnableEmailDeliveryReportListener"] = "true",
-                ["WolverineSettings:EmailDeliveryReportQueueName"] = "altinn.notifications.email.deliveryreports",
                 ["WolverineSettings:EmailDeliveryReportQueuePolicy:CooldownDelaysMs:0"] = "1000",
-                ["WolverineSettings:EmailDeliveryReportQueuePolicy:ScheduleDelaysMs:0"] = "60000"
+                ["WolverineSettings:EmailDeliveryReportQueuePolicy:ScheduleDelaysMs:0"] = "60000",
+                ["WolverineSettings:EmailDeliveryReportQueueName"] = "altinn.notifications.email.deliveryreports",
             })
             .Build();
 
         var settings = config.GetSection("WolverineSettings").Get<WolverineSettings>();
 
         Assert.NotNull(settings);
+
         Assert.True(settings.EnableWolverine);
+
+        Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
+        Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailSendQueuePolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.EmailSendQueuePolicy.GetScheduleDelays());
+
         Assert.True(settings.EnableEmailDeliveryReportListener);
         Assert.Equal("altinn.notifications.email.deliveryreports", settings.EmailDeliveryReportQueueName);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailDeliveryReportQueuePolicy.GetCooldownDelays());
@@ -41,8 +52,12 @@ public class WolverineSettingsTests
         var settings = new WolverineSettings();
 
         Assert.False(settings.EnableWolverine);
+
+        Assert.NotNull(settings.EmailSendQueuePolicy);
+        Assert.Equal(string.Empty, settings.EmailSendQueueName);
+
+        Assert.NotNull(settings.EmailDeliveryReportQueuePolicy);
         Assert.False(settings.EnableEmailDeliveryReportListener);
         Assert.Equal(string.Empty, settings.EmailDeliveryReportQueueName);
-        Assert.NotNull(settings.EmailDeliveryReportQueuePolicy);
     }
 }
