@@ -13,10 +13,10 @@ using Xunit;
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 
 /// <summary>
-/// Contains integration tests for the SendSmsHandler, verifying end-to-end behavior of processing a SendSmsCommand,
+/// Contains integration tests for the SendSmsCommandHandler, verifying end-to-end behavior of processing a SendSmsCommand,
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
+public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
@@ -75,7 +75,7 @@ public class SendSmsHandlerTests(IntegrationTestContainersFixture fixture)
 
     /// <summary>
     /// Verifies that when the ISendingService.SendAsync method throws a transient exception (e.g., TaskCanceledException),
-    /// the SendSmsHandler retries the operation according to the configured retry policy.
+    /// the SendSmsCommandHandler retries the operation according to the configured retry policy.
     /// </summary>
     /// <returns></returns>
     [Fact]
