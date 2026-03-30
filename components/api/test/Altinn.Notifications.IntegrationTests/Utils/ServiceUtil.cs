@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
@@ -72,7 +72,7 @@ public static class ServiceUtil
             .AddJsonFile($"appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
             .AddEnvironmentVariables();
-        
+
         var config = builder.Build();
 
         WebApplication.CreateBuilder()

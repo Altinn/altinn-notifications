@@ -58,6 +58,11 @@ public static class WolverineServiceCollectionExtensions
             }
 
             // Publishers
+            if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+            {
+                opts.PublishMessage<SendEmailCommand>()
+                    .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+            }
             if (!string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
             {
                 opts.PublishMessage<SendSmsCommand>()
@@ -68,5 +73,9 @@ public static class WolverineServiceCollectionExtensions
                 services.AddSingleton<ISendSmsPublisher, SendSmsPublisher>();
             }
         });
+
+        // Replace the disabled publisher with the real Wolverine-based publisher
+        services.RemoveAll<IEmailCommandPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
     }
 }

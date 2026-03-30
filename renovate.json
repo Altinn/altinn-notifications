@@ -30,6 +30,15 @@
         "review/component/sms-service"
       ],
       "additionalBranchPrefix": "sms-service/"
+    },
+    {
+      "matchFileNames": [
+        "components/shared/**"
+      ],
+      "addLabels": [
+        "review/component/shared"
+      ],
+      "additionalBranchPrefix": "shared/"
     }
   ],
   "customManagers": [
