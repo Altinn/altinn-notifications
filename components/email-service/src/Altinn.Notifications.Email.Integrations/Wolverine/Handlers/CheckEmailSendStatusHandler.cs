@@ -12,6 +12,7 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Wolverine;
 using Wolverine.Attributes;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
@@ -55,10 +56,11 @@ public static class CheckEmailSendStatusHandler
     /// <summary>
     /// Polls ACS for delivery status. If the result is terminal, publishes
     /// a <see cref="SendOperationResult"/> to Kafka so downstream consumers can update
-    /// the notification status. If still sending, returns a new <see cref="CheckEmailSendStatusCommand"/>
-    /// as a cascading message so Wolverine re-schedules it on ASB with an 8-second delay.
+    /// the notification status. If still sending, returns a scheduled <see cref="Envelope"/>
+    /// wrapping a new <see cref="CheckEmailSendStatusCommand"/> so Wolverine re-schedules
+    /// it on ASB with an 8-second delay using the configured publish routing rules.
     /// </summary>
-    public static async Task<CheckEmailSendStatusCommand?> Handle(
+    public static async Task<Envelope?> Handle(
         ILogger logger,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
@@ -102,11 +104,15 @@ public static class CheckEmailSendStatusHandler
             checkEmailSendStatusCommand.NotificationId,
             _statusPollDelayMs);
 
-        return new CheckEmailSendStatusCommand
+        return new Envelope
         {
-            LastCheckedAtUtc = dateTime.UtcNow(),
-            NotificationId = checkEmailSendStatusCommand.NotificationId,
-            SendOperationId = checkEmailSendStatusCommand.SendOperationId
+            Message = new CheckEmailSendStatusCommand
+            {
+                LastCheckedAtUtc = dateTime.UtcNow(),
+                NotificationId = checkEmailSendStatusCommand.NotificationId,
+                SendOperationId = checkEmailSendStatusCommand.SendOperationId
+            },
+            ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs)
         };
     }
 }

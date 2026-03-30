@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
+using Wolverine;
+
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Integrations.Wolverine;
@@ -110,7 +112,7 @@ public class CheckEmailSendStatusHandlerTests
         Assert.Contains(command.NotificationId.ToString(), capturedMessage);
         Assert.Contains(command.SendOperationId, capturedMessage);
 
-        // Assert: no cascading command returned
+        // Assert: no cascading envelope returned
         Assert.Null(result);
     }
 
@@ -151,7 +153,7 @@ public class CheckEmailSendStatusHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SendResultIsSending_ReturnsCascadingCommandAndDoesNotPublishToKafka()
+    public async Task Handle_SendResultIsSending_ReturnsScheduledEnvelopeAndDoesNotPublishToKafka()
     {
         // Arrange
         var command = ValidCommand();
@@ -175,11 +177,14 @@ public class CheckEmailSendStatusHandlerTests
             clientMock.Object,
             command);
 
-        // Assert: cascading command returned with correct values
+        // Assert: envelope returned with correct message and 8-second delay
         Assert.NotNull(result);
-        Assert.Equal(command.NotificationId, result!.NotificationId);
-        Assert.Equal(command.SendOperationId, result.SendOperationId);
-        Assert.Equal(fixedTime, result.LastCheckedAtUtc);
+        Assert.Equal(TimeSpan.FromMilliseconds(8000), result!.ScheduleDelay);
+
+        var scheduledCommand = Assert.IsType<CheckEmailSendStatusCommand>(result.Message);
+        Assert.Equal(command.NotificationId, scheduledCommand.NotificationId);
+        Assert.Equal(command.SendOperationId, scheduledCommand.SendOperationId);
+        Assert.Equal(fixedTime, scheduledCommand.LastCheckedAtUtc);
 
         // Assert: nothing published to Kafka
         producerMock.VerifyNoOtherCalls();
