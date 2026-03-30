@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -101,6 +102,10 @@ public static class ServiceUtil
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
 
+        // Ensure only one instance of ISendSmsPublisher is registered, and replace it with a test spy implementation.
+        services.RemoveAll<ISendSmsPublisher>();
+        services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
+
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();
 
@@ -109,6 +114,7 @@ public static class ServiceUtil
             var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
             outputServices.AddRange(outputServiceObject!);
         }
+
 
         return outputServices;
     }
@@ -120,7 +126,6 @@ public static class ServiceUtil
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
-        services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
