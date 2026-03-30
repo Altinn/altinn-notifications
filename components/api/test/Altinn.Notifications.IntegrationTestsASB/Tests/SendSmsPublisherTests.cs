@@ -60,15 +60,25 @@ public class SendSmsPublisherTests(IntegrationTestContainersFixture fixture)
             var received = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
             Assert.NotNull(received);
 
-            var command = JsonSerializer.Deserialize<SendSmsCommand>(received.Body, _jsonSerializerOptions);
-            Assert.NotNull(command);
-            Assert.Equal(sms.NotificationId, command.NotificationId);
-            Assert.Equal(sms.Recipient, command.MobileNumber);
-            Assert.Equal(sms.Message, command.Body);
-            Assert.Equal(sms.Sender, command.SenderNumber);
+            try
+            {
+                var command = JsonSerializer.Deserialize<SendSmsCommand>(received.Body, _jsonSerializerOptions);
+                Assert.NotNull(command);
+                Assert.Equal(sms.NotificationId, command.NotificationId);
+                Assert.Equal(sms.Recipient, command.MobileNumber);
+                Assert.Equal(sms.Message, command.Body);
+                Assert.Equal(sms.Sender, command.SenderNumber);
 
-            // The result should be null on success
-            Assert.Null(result);
+                // The result should be null on success
+                Assert.Null(result);
+            }
+            finally
+            {
+                if (received != null)
+                {
+                    await receiver.CompleteMessageAsync(received);
+                }
+            }
         }
     }
 }
