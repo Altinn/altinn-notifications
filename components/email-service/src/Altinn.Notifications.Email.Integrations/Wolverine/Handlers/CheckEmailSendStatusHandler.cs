@@ -59,9 +59,8 @@ public static class CheckEmailSendStatusHandler
     /// the notification status. If still sending, re-schedules the command on ASB
     /// with an 8-second delay so the polling loop continues.
     /// </summary>
-    public static async Task Handle(
+    public static async Task<OutgoingMessages> Handle(
         ILogger logger,
-        IMessageBus messageBus,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
         ICommonProducer commonKafkaProducer,
@@ -79,6 +78,8 @@ public static class CheckEmailSendStatusHandler
         }
 
         EmailSendResult sendResult = await emailServiceClient.GetOperationUpdate(checkEmailSendStatusCommand.SendOperationId);
+
+        var outgoing = new OutgoingMessages();
 
         if (sendResult != EmailSendResult.Sending)
         {
@@ -110,7 +111,9 @@ public static class CheckEmailSendStatusHandler
                 SendOperationId = checkEmailSendStatusCommand.SendOperationId
             };
 
-            await messageBus.SendAsync(retryCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+            outgoing.Schedule(retryCommand, DateTimeOffset.UtcNow.AddMilliseconds(_statusPollDelayMs));
         }
+
+        return outgoing;
     }
 }
