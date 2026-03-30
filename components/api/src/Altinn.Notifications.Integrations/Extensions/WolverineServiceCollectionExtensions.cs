@@ -63,6 +63,7 @@ public static class WolverineServiceCollectionExtensions
                 opts.PublishMessage<SendEmailCommand>()
                     .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
             }
+
             if (!string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
             {
                 opts.PublishMessage<SendSmsCommand>()

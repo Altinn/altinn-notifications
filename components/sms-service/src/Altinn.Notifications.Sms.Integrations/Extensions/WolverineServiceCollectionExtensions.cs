@@ -55,7 +55,6 @@ public static class WolverineServiceCollectionExtensions
                 opts.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
             }
-            }
         });
     }
 }
