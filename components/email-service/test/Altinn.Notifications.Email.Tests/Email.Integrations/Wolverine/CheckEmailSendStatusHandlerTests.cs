@@ -196,7 +196,7 @@ public class CheckEmailSendStatusHandlerTests
 
         var busMock = new Mock<IMessageBus>();
         busMock
-            .Setup(b => b.SendAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()))
+            .Setup(b => b.PublishAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()))
             .Callback<CheckEmailSendStatusCommand, DeliveryOptions>((cmd, opts) =>
             {
                 scheduledCommand = cmd;
@@ -217,7 +217,7 @@ public class CheckEmailSendStatusHandlerTests
             command);
 
         // Assert: retry scheduled with the 8-second delay
-        busMock.Verify(b => b.SendAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()), Times.Once);
+        busMock.Verify(b => b.PublishAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()), Times.Once);
         Assert.NotNull(scheduledCommand);
         Assert.Equal(command.NotificationId, scheduledCommand!.NotificationId);
         Assert.Equal(command.SendOperationId, scheduledCommand.SendOperationId);
@@ -240,7 +240,7 @@ public class CheckEmailSendStatusHandlerTests
 
         var busMock = new Mock<IMessageBus>();
         busMock
-            .Setup(b => b.SendAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()))
+            .Setup(b => b.PublishAsync(It.IsAny<CheckEmailSendStatusCommand>(), It.IsAny<DeliveryOptions>()))
             .Returns(ValueTask.CompletedTask);
 
         var loggerMock = new Mock<ILogger>();

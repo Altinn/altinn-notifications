@@ -114,7 +114,7 @@ public static class CheckEmailSendStatusHandler
             await using var scope = serviceProvider.CreateAsyncScope();
             var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-            await messageBus.SendAsync(recheckEmailSendStatusCommand, new DeliveryOptions() { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+            await messageBus.PublishAsync(recheckEmailSendStatusCommand, new DeliveryOptions() { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
         }
     }
 }

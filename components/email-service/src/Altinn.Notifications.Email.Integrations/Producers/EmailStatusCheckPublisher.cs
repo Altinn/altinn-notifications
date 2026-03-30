@@ -47,6 +47,6 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        await messageBus.SendAsync(checkEmailSendStatusCommand);
+        await messageBus.PublishAsync(checkEmailSendStatusCommand);
     }
 }
