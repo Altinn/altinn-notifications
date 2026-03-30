@@ -44,10 +44,17 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            if (wolverineSettings.EnableSendSmsListener && !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+            if (wolverineSettings.EnableSendSmsListener)
             {
+                if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(WolverineSettings.SendSmsQueueName)} must be set when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+                }
+
                 opts.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
+            }
             }
         });
     }
