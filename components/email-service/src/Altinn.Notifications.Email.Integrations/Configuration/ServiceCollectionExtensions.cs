@@ -86,7 +86,6 @@ public static class ServiceCollectionExtensions
     /// <list type="bullet">
     ///   <item><description><see cref="WolverineSettingsBase.EnableWolverine"/></description></item>
     ///   <item><description><see cref="WolverineSettings.EnableCheckEmailSendStatusListener"/></description></item>
-    ///   <item><description><see cref="WolverineSettings.EnableCheckEmailSendStatusPublisher"/></description></item>
     /// </list>
     /// the <see cref="EmailStatusCheckPublisher"/> (Azure Service Bus via Wolverine) is registered.
     /// Otherwise, the legacy Kafka-based <see cref="EmailStatusCheckProducer"/> implementation is registered.
@@ -98,8 +97,7 @@ public static class ServiceCollectionExtensions
 
         bool useWolverine =
              wolverineSettings.EnableWolverine &&
-             wolverineSettings.EnableCheckEmailSendStatusListener &&
-             wolverineSettings.EnableCheckEmailSendStatusPublisher;
+             wolverineSettings.EnableCheckEmailSendStatusListener;
 
         if (useWolverine)
         {

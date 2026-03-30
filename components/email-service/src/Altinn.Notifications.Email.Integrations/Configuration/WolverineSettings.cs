@@ -25,14 +25,6 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether <c>SendingService</c> publishes a <c>CheckEmailSendStatusCommand</c>
-    /// to the Azure Service Bus polling‑loop queue when an email is accepted by Azure Communication Services (ACS).
-    /// When set to <c>false</c> (default), the Kafka topic is used instead.
-    /// This setting requires <see cref="WolverineSettingsBase.EnableWolverine"/> to be <c>true</c>.
-    /// </summary>
-    public bool EnableCheckEmailSendStatusPublisher { get; set; } = false;
-
-    /// <summary>
     /// Enables or disables the Wolverine listener responsible for consuming
     /// <c>CheckEmailSendStatusCommand</c> messages from the Azure Service Bus polling‑loop queue.
     /// When <c>true</c>, the email service actively consumes these commands and polls ACS for delivery status.

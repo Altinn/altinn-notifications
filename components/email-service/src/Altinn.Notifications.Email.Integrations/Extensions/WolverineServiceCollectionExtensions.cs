@@ -78,11 +78,11 @@ public static class WolverineServiceCollectionExtensions
 
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="CheckEmailSendStatusCommand"/>, routing outbound commands to the Azure Service Bus polling‑loop queue.
-    /// This method is invoked only when <see cref="WolverineSettings.EnableCheckEmailSendStatusPublisher"/> is <c>true</c>.
+    /// This method is invoked only when <see cref="WolverineSettings.EnableCheckEmailSendStatusListener"/> is <c>true</c>.
     /// </summary>
     private static void AddEmailPollingLoopPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableCheckEmailSendStatusPublisher)
+        if (!wolverineSettings.EnableCheckEmailSendStatusListener)
         {
             return;
         }
