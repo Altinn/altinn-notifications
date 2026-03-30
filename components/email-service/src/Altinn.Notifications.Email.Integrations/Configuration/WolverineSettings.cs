@@ -9,6 +9,11 @@ namespace Altinn.Notifications.Email.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// Determines whether to accept Email notifications via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnableSendEmailListener { get; set; } = false;
+
+    /// <summary>
     /// ASB queue name for receiving email send commands.
     /// Produced by the API and consumed by this email service.
     /// </summary>
@@ -20,17 +25,29 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether to accept Email notifications via Wolverine and Azure Service Bus or via Kafka.
+    /// Determines whether <c>SendingService</c> publishes a <c>CheckEmailSendStatusCommand</c>
+    /// to the Azure Service Bus polling‑loop queue when an email is accepted by Azure Communication Services (ACS).
+    /// When set to <c>false</c> (default), the Kafka topic is used instead.
+    /// This setting requires <see cref="WolverineSettingsBase.EnableWolverine"/> to be <c>true</c>.
     /// </summary>
-    public bool EnableSendEmailListener { get; set; } = false;
+    public bool EnableCheckEmailSendStatusPublisher { get; set; } = false;
 
     /// <summary>
-    /// Determines whether the check-send-status should happen through Wolverine/Azure Service Bus.
+    /// Enables or disables the Wolverine listener responsible for consuming
+    /// <c>CheckEmailSendStatusCommand</c> messages from the Azure Service Bus polling‑loop queue.
+    /// When <c>true</c>, the email service actively consumes these commands and polls ACS for delivery status.
+    /// When <c>false</c> (default), the Kafka‑based <c>EmailSendingAcceptedConsumer</c>
+    /// remains the active mechanism for processing accepted email events.
     /// </summary>
-    public bool EnableCheckEmailSendStatus { get; set; } = false;
+    public bool EnableCheckEmailSendStatusListener { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for check email send status operations (polling loop).
     /// </summary>
     public string CheckEmailSendStatusQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the check-email-send-status polling-loop queue.
+    /// </summary>
+    public QueueRetryPolicy CheckEmailSendStatusQueuePolicy { get; set; } = new();
 }

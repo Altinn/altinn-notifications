@@ -19,6 +19,10 @@ public class WolverineSettingsTests
         Assert.False(settings.EnableSendEmailListener);
         Assert.Equal(string.Empty, settings.EmailSendQueueName);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
+        Assert.False(settings.EnableEmailPollingLoopPublisher);
+        Assert.False(settings.EnableEmailPollingLoopListener);
+        Assert.Equal(string.Empty, settings.CheckEmailSendStatusQueueName);
+        Assert.NotNull(settings.CheckEmailSendStatusQueuePolicy);
     }
 
     [Fact]
@@ -35,6 +39,11 @@ public class WolverineSettingsTests
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
                 ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
+                ["WolverineSettings:EnableCheckEmailSendStatusListener"] = "true",
+                ["WolverineSettings:EnableCheckEmailSendStatusPublisher"] = "true",
+                ["WolverineSettings:CheckEmailSendStatusQueueName"] = "altinn.notifications.email.check-send-status",
+                ["WolverineSettings:CheckEmailSendStatusQueuePolicy:CooldownDelaysMs:0"] = "500",
+                ["WolverineSettings:CheckEmailSendStatusQueuePolicy:ScheduleDelaysMs:0"] = "30000",
             })
             .Build();
 
@@ -51,5 +60,11 @@ public class WolverineSettingsTests
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailSendQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.EmailSendQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.EmailSendQueuePolicy.GetScheduleDelays());
+
+        Assert.True(settings.EnableCheckEmailSendStatusListener);
+        Assert.True(settings.EnableCheckEmailSendStatusPublisher);
+        Assert.Equal("altinn.notifications.email.check-send-status", settings.CheckEmailSendStatusQueueName);
+        Assert.Contains(TimeSpan.FromMilliseconds(500), settings.CheckEmailSendStatusQueuePolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(30000), settings.CheckEmailSendStatusQueuePolicy.GetScheduleDelays());
     }
 }
