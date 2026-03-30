@@ -33,15 +33,15 @@ public class WolverineSettingsTests
                 ["WolverineSettings:ListenerCount"] = "5",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSendEmailListener"] = "true",
+                ["WolverineSettings:EnableCheckEmailSendStatusListener"] = "true",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
                 ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
-                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
-                ["WolverineSettings:EnableCheckEmailSendStatusListener"] = "true",
-                ["WolverineSettings:CheckEmailSendStatusQueueName"] = "altinn.notifications.email.check-send-status",
                 ["WolverineSettings:CheckEmailSendStatusQueuePolicy:CooldownDelaysMs:0"] = "500",
                 ["WolverineSettings:CheckEmailSendStatusQueuePolicy:ScheduleDelaysMs:0"] = "30000",
+                ["WolverineSettings:CheckEmailSendStatusQueueName"] = "altinn.notifications.email.check-send-status",
+                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
             })
             .Build();
 
