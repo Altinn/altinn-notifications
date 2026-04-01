@@ -3,7 +3,7 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
 using Wolverine;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
@@ -18,6 +18,7 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
 {
     private readonly IDateTimeService _dateTime;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<EmailStatusCheckPublisher> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckPublisher"/> class.
@@ -28,8 +29,9 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     /// <param name="dateTime">
     /// Provides the current UTC timestamp applied to the command as the initial status‑check time.
     /// </param>
-    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime)
+    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime, ILogger<EmailStatusCheckPublisher> logger)
     {
+        _logger = logger;
         _dateTime = dateTime;
         _serviceProvider = serviceProvider;
     }
@@ -43,6 +45,11 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
             NotificationId = notificationId,
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
+
+        _logger.LogInformation(
+            "EmailStatusCheckPublisher // DispatchAsync // Dispatching CheckEmailSendStatusCommand for NotificationId {NotificationId} with OperationId {OperationId}.",
+            notificationId,
+            operationId);
 
         // Task.Run escapes the Wolverine handler's ambient AsyncLocal message context,
         // ensuring PublishAsync uses the configured PublishMessage<T> routing rules

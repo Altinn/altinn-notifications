@@ -3,7 +3,7 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
 using Moq;
 
 using Wolverine;
@@ -43,6 +43,8 @@ public class EmailStatusCheckPublisherTests
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
 
+        var loggerMock = new Mock<ILogger<EmailStatusCheckPublisher>>();
+
         CheckEmailSendStatusCommand? capturedCommand = null;
 
         var busMock = new Mock<IMessageBus>();
@@ -51,7 +53,7 @@ public class EmailStatusCheckPublisherTests
             .Callback<object, DeliveryOptions?>((msg, _) => capturedCommand = msg as CheckEmailSendStatusCommand)
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailStatusCheckPublisher(CreateServiceProvider(busMock.Object), dateTimeMock.Object);
+        var sut = new EmailStatusCheckPublisher(CreateServiceProvider(busMock.Object), dateTimeMock.Object, loggerMock.Object);
 
         // Act
         await sut.DispatchAsync(notificationId, operationId);
@@ -76,7 +78,9 @@ public class EmailStatusCheckPublisherTests
             .Setup(b => b.PublishAsync(It.IsAny<object>(), It.IsAny<DeliveryOptions?>()))
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailStatusCheckPublisher(CreateServiceProvider(busMock.Object), dateTimeMock.Object);
+        var loggerMock = new Mock<ILogger<EmailStatusCheckPublisher>>();
+
+        var sut = new EmailStatusCheckPublisher(CreateServiceProvider(busMock.Object), dateTimeMock.Object, loggerMock.Object);
 
         // Act
         await sut.DispatchAsync(Guid.NewGuid(), "op-id");
