@@ -37,13 +37,13 @@ public class CheckEmailSendStatusHandlerTests
 
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
+                command,
                 Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
                 Mock.Of<IMessageContext>(),
                 Mock.Of<ICommonProducer>(),
-                Mock.Of<IEmailServiceClient>(),
-                command));
+                Mock.Of<IEmailServiceClient>()));
 
         Assert.Equal("checkEmailSendStatusCommand", ex.ParamName);
     }
@@ -57,13 +57,13 @@ public class CheckEmailSendStatusHandlerTests
 
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
+                command,
                 Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
                 Mock.Of<IMessageContext>(),
                 Mock.Of<ICommonProducer>(),
-                Mock.Of<IEmailServiceClient>(),
-                command));
+                Mock.Of<IEmailServiceClient>()));
 
         Assert.Equal("checkEmailSendStatusCommand", ex.ParamName);
     }
@@ -101,13 +101,13 @@ public class CheckEmailSendStatusHandlerTests
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
+            command,
             Mock.Of<ILogger>(),
             Mock.Of<IDateTimeService>(),
             _topicSettings,
             Mock.Of<IMessageContext>(),
             producerMock.Object,
-            clientMock.Object,
-            command);
+            clientMock.Object);
 
         // Assert: terminal result goes to Kafka
         Assert.Equal(_topicSettings.EmailStatusUpdatedTopicName, capturedTopic);
@@ -134,13 +134,13 @@ public class CheckEmailSendStatusHandlerTests
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
+            command,
             loggerMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
             Mock.Of<IMessageContext>(),
             producerMock.Object,
-            clientMock.Object,
-            command);
+            clientMock.Object);
 
         // Assert
         loggerMock.Verify(
@@ -172,13 +172,13 @@ public class CheckEmailSendStatusHandlerTests
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
+            command,
             Mock.Of<ILogger>(),
             dateTimeMock.Object,
             _topicSettings,
             messageContextMock.Object,
             producerMock.Object,
-            clientMock.Object,
-            command);
+            clientMock.Object);
 
         // Assert: re-check is scheduled with correct message and 8-second delay
         messageContextMock.Verify(
@@ -209,13 +209,13 @@ public class CheckEmailSendStatusHandlerTests
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
+            command,
             loggerMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
             Mock.Of<IMessageContext>(),
             Mock.Of<ICommonProducer>(),
-            clientMock.Object,
-            command);
+            clientMock.Object);
 
         // Assert
         loggerMock.Verify(

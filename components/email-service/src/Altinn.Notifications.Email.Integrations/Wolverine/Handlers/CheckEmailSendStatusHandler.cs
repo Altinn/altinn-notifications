@@ -60,13 +60,13 @@ public static class CheckEmailSendStatusHandler
     /// with an 8-second delay so the polling loop continues.
     /// </summary>
     public static async Task Handle(
+        CheckEmailSendStatusCommand checkEmailSendStatusCommand,
         ILogger logger,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
         IMessageContext messageContext,
         ICommonProducer commonKafkaProducer,
-        IEmailServiceClient emailServiceClient,
-        CheckEmailSendStatusCommand checkEmailSendStatusCommand)
+        IEmailServiceClient emailServiceClient)
     {
         if (checkEmailSendStatusCommand.NotificationId == Guid.Empty)
         {
