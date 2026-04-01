@@ -17,11 +17,4 @@ public interface ISendSmsPublisher
     /// <returns>A task that represents the asynchronous operation, containing a GUID that uniquely identifies the published
     /// item.</returns>
     Task<Guid?> PublishAsync(Sms sms, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Gets or sets a value indicating whether this implementation of the Sms publlisher is real or a test dummy. Feature is enabled when the imeplementation is real.
-    /// </summary>
-    /// <remarks>This property controls the activation state of the feature. When set to <see
-    /// langword="true"/>, the feature is enabled; otherwise, it is disabled.</remarks>
-    bool IsEnabled { get; }
 }

@@ -12,11 +12,8 @@ namespace Altinn.Notifications.Core.Services;
 /// NotImplementedException when attempting to publish an SMS command. Use this class when SMS publishing functionality
 /// should be explicitly disabled, such as in testing or development environments.</remarks>
 [ExcludeFromCodeCoverage]
-public class DisabledSendSmsPublisher : ISendSmsPublisher
+public class DisabledSendSmsCommandPublisher : ISendSmsPublisher
 {
-    /// <inheritdoc/>
-    public bool IsEnabled => false;
-
     /// <summary>
     /// This method is intentionally not implemented to indicate that SMS command publishing is disabled. Attempting to call this method will result in a NotImplementedException being thrown.
     /// </summary>
@@ -26,6 +23,9 @@ public class DisabledSendSmsPublisher : ISendSmsPublisher
     /// <exception cref="NotImplementedException">Will always throw NotImplementedException</exception>
     public Task<Guid?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        throw new InvalidOperationException(
+         $"{nameof(DisabledSendSmsCommandPublisher)} was called for notification {sms.NotificationId}, " +
+         "which means 'EnableSendSmsCommandPublisher' is true but Wolverine is not configured. " +
+         "Either set 'WolverineSettings:EnableWolverine' to true, or set 'NotificationConfig:EnableSendSmsCommandPublisher' to false to use Kafka.");
     }
 }

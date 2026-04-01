@@ -16,9 +16,6 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
 public class SendSmsPublisher(ILogger<SendSmsPublisher> logger, IServiceProvider serviceProvider) : ISendSmsPublisher
 {
-    /// <inheritdoc/>
-    public bool IsEnabled => true;
-
     /// <summary>
     /// Publishes an SMS message asynchronously and returns the unique identifier of the published message.
     /// </summary>
