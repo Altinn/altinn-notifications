@@ -40,6 +40,7 @@ public class CheckEmailSendStatusHandlerTests
                 Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
+                Mock.Of<IMessageContext>(),
                 Mock.Of<ICommonProducer>(),
                 Mock.Of<IEmailServiceClient>(),
                 command));
@@ -59,6 +60,7 @@ public class CheckEmailSendStatusHandlerTests
                 Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
+                Mock.Of<IMessageContext>(),
                 Mock.Of<ICommonProducer>(),
                 Mock.Of<IEmailServiceClient>(),
                 command));
@@ -75,7 +77,7 @@ public class CheckEmailSendStatusHandlerTests
     [InlineData(EmailSendResult.Failed_Bounced)]
     [InlineData(EmailSendResult.Failed_FilteredSpam)]
     [InlineData(EmailSendResult.Failed_Quarantined)]
-    public async Task Handle_TerminalSendResult_PublishesToKafkaAndReturnsNull(EmailSendResult terminalResult)
+    public async Task Handle_TerminalSendResult_PublishesToKafka(EmailSendResult terminalResult)
     {
         // Arrange
         var command = ValidCommand();
@@ -98,10 +100,11 @@ public class CheckEmailSendStatusHandlerTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await CheckEmailSendStatusHandler.Handle(
+        await CheckEmailSendStatusHandler.Handle(
             Mock.Of<ILogger>(),
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            Mock.Of<IMessageContext>(),
             producerMock.Object,
             clientMock.Object,
             command);
@@ -111,9 +114,6 @@ public class CheckEmailSendStatusHandlerTests
         Assert.NotNull(capturedMessage);
         Assert.Contains(command.NotificationId.ToString(), capturedMessage);
         Assert.Contains(command.SendOperationId, capturedMessage);
-
-        // Assert: no cascading envelope returned
-        Assert.Null(result);
     }
 
     [Fact]
@@ -137,6 +137,7 @@ public class CheckEmailSendStatusHandlerTests
             loggerMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            Mock.Of<IMessageContext>(),
             producerMock.Object,
             clientMock.Object,
             command);
@@ -153,7 +154,7 @@ public class CheckEmailSendStatusHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SendResultIsSending_ReturnsScheduledEnvelopeAndDoesNotPublishToKafka()
+    public async Task Handle_SendResultIsSending_SchedulesRecheckAndDoesNotPublishToKafka()
     {
         // Arrange
         var command = ValidCommand();
@@ -167,24 +168,27 @@ public class CheckEmailSendStatusHandlerTests
         dateTimeMock.Setup(d => d.UtcNow()).Returns(fixedTime);
 
         var producerMock = new Mock<ICommonProducer>();
+        var messageContextMock = new Mock<IMessageContext>();
 
         // Act
-        var result = await CheckEmailSendStatusHandler.Handle(
+        await CheckEmailSendStatusHandler.Handle(
             Mock.Of<ILogger>(),
             dateTimeMock.Object,
             _topicSettings,
+            messageContextMock.Object,
             producerMock.Object,
             clientMock.Object,
             command);
 
-        // Assert: envelope returned with correct message and 8-second delay
-        Assert.NotNull(result);
-        Assert.Equal(TimeSpan.FromMilliseconds(8000), result!.ScheduleDelay);
-
-        var scheduledCommand = Assert.IsType<CheckEmailSendStatusCommand>(result.Message);
-        Assert.Equal(command.NotificationId, scheduledCommand.NotificationId);
-        Assert.Equal(command.SendOperationId, scheduledCommand.SendOperationId);
-        Assert.Equal(fixedTime, scheduledCommand.LastCheckedAtUtc);
+        // Assert: re-check is scheduled with correct message and 8-second delay
+        messageContextMock.Verify(
+            m => m.PublishAsync(
+                It.Is<CheckEmailSendStatusCommand>(c =>
+                    c.NotificationId == command.NotificationId &&
+                    c.SendOperationId == command.SendOperationId &&
+                    c.LastCheckedAtUtc == fixedTime),
+                It.Is<DeliveryOptions>(o => o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
+            Times.Once);
 
         // Assert: nothing published to Kafka
         producerMock.VerifyNoOtherCalls();
@@ -208,6 +212,7 @@ public class CheckEmailSendStatusHandlerTests
             loggerMock.Object,
             Mock.Of<IDateTimeService>(),
             _topicSettings,
+            Mock.Of<IMessageContext>(),
             Mock.Of<ICommonProducer>(),
             clientMock.Object,
             command);

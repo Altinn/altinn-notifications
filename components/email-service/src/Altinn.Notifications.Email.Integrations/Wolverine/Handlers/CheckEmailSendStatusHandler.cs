@@ -56,14 +56,14 @@ public static class CheckEmailSendStatusHandler
     /// <summary>
     /// Polls ACS for delivery status. If the result is terminal, publishes
     /// a <see cref="SendOperationResult"/> to Kafka so downstream consumers can update
-    /// the notification status. If still sending, returns a scheduled <see cref="Envelope"/>
-    /// wrapping a new <see cref="CheckEmailSendStatusCommand"/> so Wolverine re-schedules
-    /// it on ASB with an 8-second delay using the configured publish routing rules.
+    /// the notification status. If still sending, re-schedules the command on ASB
+    /// with an 8-second delay so the polling loop continues.
     /// </summary>
-    public static async Task<Envelope?> Handle(
+    public static async Task Handle(
         ILogger logger,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
+        IMessageContext messageContext,
         ICommonProducer commonKafkaProducer,
         IEmailServiceClient emailServiceClient,
         CheckEmailSendStatusCommand checkEmailSendStatusCommand)
@@ -95,24 +95,22 @@ public static class CheckEmailSendStatusHandler
             };
 
             await commonKafkaProducer.ProduceAsync(topicSettings.EmailStatusUpdatedTopicName, operationResult.Serialize());
-
-            return null;
         }
-
-        logger.LogDebug(
-            "CheckEmailSendStatusHandler // Handle // Still sending for NotificationId {NotificationId}. Scheduling re-check in {DelayMs} ms.",
-            checkEmailSendStatusCommand.NotificationId,
-            _statusPollDelayMs);
-
-        return new Envelope
+        else
         {
-            Message = new CheckEmailSendStatusCommand
+            logger.LogDebug(
+                "CheckEmailSendStatusHandler // Handle // Still sending for NotificationId {NotificationId}. Scheduling re-check in {DelayMs} ms.",
+                checkEmailSendStatusCommand.NotificationId,
+                _statusPollDelayMs);
+
+            var recheckEmailSendStatusCommand = new CheckEmailSendStatusCommand
             {
                 LastCheckedAtUtc = dateTime.UtcNow(),
                 NotificationId = checkEmailSendStatusCommand.NotificationId,
                 SendOperationId = checkEmailSendStatusCommand.SendOperationId
-            },
-            ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs)
-        };
+            };
+
+            await messageContext.ScheduleAsync(recheckEmailSendStatusCommand, TimeSpan.FromMilliseconds(_statusPollDelayMs));
+        }
     }
 }
