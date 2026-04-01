@@ -37,7 +37,7 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     }
 
     /// <inheritdoc/>
-    public Task DispatchAsync(Guid notificationId, string operationId)
+    public async Task DispatchAsync(Guid notificationId, string operationId)
     {
         var checkEmailSendStatusCommand = new CheckEmailSendStatusCommand
         {
@@ -46,19 +46,13 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
 
-        _logger.LogInformation(
+        _logger.LogWarning(
             "EmailStatusCheckPublisher // DispatchAsync // Dispatching CheckEmailSendStatusCommand for NotificationId {NotificationId} with OperationId {OperationId}.",
             notificationId,
             operationId);
 
-        // Task.Run escapes the Wolverine handler's ambient AsyncLocal message context,
-        // ensuring PublishAsync uses the configured PublishMessage<T> routing rules
-        // rather than inheriting the parent handler's ReplyTo queue.
-        return Task.Run(async () =>
-        {
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-            await messageBus.PublishAsync(checkEmailSendStatusCommand);
-        });
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        await messageBus.SendAsync(checkEmailSendStatusCommand);
     }
 }

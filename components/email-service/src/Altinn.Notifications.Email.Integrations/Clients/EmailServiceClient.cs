@@ -23,8 +23,8 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
-    private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
     private readonly ILogger<EmailServiceClient> _logger;
+    private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
@@ -34,11 +34,11 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="logger">A logger</param>
     public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
     {
+        _logger = logger;
         var emailClientOptions = new EmailClientOptions();
+        _emailServiceAdminSettings = emailServiceAdminSettings;
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString, emailClientOptions);
-        _emailServiceAdminSettings = emailServiceAdminSettings;
-        _logger = logger;
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public class EmailServiceClient : IEmailServiceClient
         {
             EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
 
-            _logger.LogInformation("// EmailServiceClient // SendEmail // The email is send, NotificationId {NotificationId} - OperationId {OperationId}", email.NotificationId, emailSendOperation.Id);
+            _logger.LogWarning("// EmailServiceClient // SendEmail // The email is send, NotificationId {NotificationId} - OperationId {OperationId}", email.NotificationId, emailSendOperation.Id);
 
             return emailSendOperation.Id;
         }

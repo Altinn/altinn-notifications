@@ -8,6 +8,7 @@ using Altinn.Notifications.Shared.Configuration;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Configuration;
@@ -99,6 +100,8 @@ public static class ServiceCollectionExtensions
         bool useWolverine =
              wolverineSettings.EnableWolverine &&
              wolverineSettings.EnableCheckEmailSendStatusListener;
+
+        services.RemoveAll<IEmailStatusCheckDispatcher>();
 
         if (useWolverine)
         {

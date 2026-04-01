@@ -47,7 +47,7 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
             LastStatusCheck = _dateTime.UtcNow()
         };
 
-        _logger.LogInformation(
+        _logger.LogWarning(
             "EmailStatusCheckProducer // DispatchAsync // Dispatching CheckEmailSendStatusCommand for NotificationId {NotificationId} with OperationId {OperationId}.",
             notificationId,
             operationId);

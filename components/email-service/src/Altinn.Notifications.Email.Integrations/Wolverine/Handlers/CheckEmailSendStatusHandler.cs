@@ -82,7 +82,7 @@ public static class CheckEmailSendStatusHandler
 
         if (sendResult != EmailSendResult.Sending)
         {
-            logger.LogInformation(
+            logger.LogWarning(
                 "CheckEmailSendStatusHandler // Handle // Terminal status {SendResult} for NotificationId {NotificationId}.",
                 sendResult,
                 checkEmailSendStatusCommand.NotificationId);
@@ -98,7 +98,7 @@ public static class CheckEmailSendStatusHandler
         }
         else
         {
-            logger.LogDebug(
+            logger.LogWarning(
                 "CheckEmailSendStatusHandler // Handle // Still sending for NotificationId {NotificationId}. Scheduling re-check in {DelayMs} ms.",
                 checkEmailSendStatusCommand.NotificationId,
                 _statusPollDelayMs);
