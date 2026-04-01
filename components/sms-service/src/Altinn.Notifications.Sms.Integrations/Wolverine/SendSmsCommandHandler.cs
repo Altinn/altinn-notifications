@@ -17,19 +17,22 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine;
 public static class SendSmsCommandHandler
 {
     /// <summary>
+    /// Gets or sets the Wolverine settings used for configuring error handling policies.
+    /// </summary>
+    public static WolverineSettings WolverineSettings { get; set; } = null!;
+
+    /// <summary>
     /// Configures error handling for the SMS send queue handler.
     /// </summary>
-    public static void Configure(HandlerChain chain, IOptions<WolverineSettings> options)
+    public static void Configure(HandlerChain chain)
     {
-        var policy = options.Value.SendSmsQueuePolicy;
-
         chain
             .OnException<InvalidOperationException>()
             .Or<TaskCanceledException>()
             .Or<TimeoutException>()
             .Or<ServiceBusException>()
-            .RetryWithCooldown(policy.GetCooldownDelays())
-            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .RetryWithCooldown(WolverineSettings.SendSmsQueuePolicy.GetCooldownDelays())
+            .Then.ScheduleRetry(WolverineSettings.SendSmsQueuePolicy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
     }
 

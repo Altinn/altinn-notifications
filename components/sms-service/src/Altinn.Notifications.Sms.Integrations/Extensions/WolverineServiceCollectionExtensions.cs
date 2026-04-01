@@ -36,6 +36,9 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(wolverineSection);
 
+        // Set static settings on handlers before Wolverine discovers and configures them.
+        SendSmsCommandHandler.WolverineSettings = wolverineSettings;
+
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
