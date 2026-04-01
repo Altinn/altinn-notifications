@@ -179,6 +179,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddNpgsql();
 
             tracing.AddConfluentKafkaInstrumentation();
+
+            tracing.AddSource("Wolverine");
         });
 
     AddAzureMonitorTelemetryExporters(services, config);

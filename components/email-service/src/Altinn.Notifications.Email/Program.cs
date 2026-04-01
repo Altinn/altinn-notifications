@@ -152,6 +152,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
             tracing.AddHttpClientInstrumentation();
+            tracing.AddSource("Wolverine");
         });
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))

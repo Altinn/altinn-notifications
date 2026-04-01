@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
 
@@ -14,6 +15,7 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
     private readonly string _topicName;
     private readonly ICommonProducer _producer;
     private readonly IDateTimeService _dateTime;
+    private readonly ILogger<EmailStatusCheckProducer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckProducer"/> class.
@@ -27,8 +29,9 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
     /// <param name="topicName">
     /// The name of the Kafka topic where the status‑check message will be published.
     /// </param>
-    public EmailStatusCheckProducer(ICommonProducer producer, IDateTimeService dateTime, string topicName)
+    public EmailStatusCheckProducer(ICommonProducer producer, IDateTimeService dateTime, string topicName, ILogger<EmailStatusCheckProducer> logger)
     {
+        _logger = logger;
         _producer = producer;
         _dateTime = dateTime;
         _topicName = topicName;
@@ -43,6 +46,11 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
             NotificationId = notificationId,
             LastStatusCheck = _dateTime.UtcNow()
         };
+
+        _logger.LogInformation(
+            "EmailStatusCheckProducer // DispatchAsync // Dispatching CheckEmailSendStatusCommand for NotificationId {NotificationId} with OperationId {OperationId}.",
+            notificationId,
+            operationId);
 
         await _producer.ProduceAsync(_topicName, identifier.Serialize());
     }
