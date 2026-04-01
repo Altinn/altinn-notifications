@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Email.Integrations.Producers;
 /// </summary>
 public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
 {
+    private const int _statusPollDelayMs = 8000;
     private readonly IDateTimeService _dateTime;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EmailStatusCheckPublisher> _logger;
@@ -53,6 +54,6 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        await messageBus.SendAsync(checkEmailSendStatusCommand);
+        await messageBus.SendAsync(checkEmailSendStatusCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
     }
 }
