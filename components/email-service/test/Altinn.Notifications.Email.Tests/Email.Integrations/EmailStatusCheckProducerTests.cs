@@ -1,7 +1,7 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Producers;
-
+using Microsoft.Extensions.Logging;
 using Moq;
 
 using Xunit;
@@ -20,6 +20,8 @@ public class EmailStatusCheckProducerTests
         var notificationId = Guid.NewGuid();
         const string operationId = "acs-op-abc123";
 
+        var loggerMock = new Mock<ILogger<EmailStatusCheckProducer>>();
+
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
 
@@ -36,7 +38,7 @@ public class EmailStatusCheckProducerTests
             })
             .ReturnsAsync(true);
 
-        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName, loggerMock.Object);
 
         // Act
         await sut.DispatchAsync(notificationId, operationId);
@@ -53,6 +55,8 @@ public class EmailStatusCheckProducerTests
     public async Task DispatchAsync_AlwaysProducesExactlyOnce()
     {
         // Arrange
+        var loggerMock = new Mock<ILogger<EmailStatusCheckProducer>>();
+
         var producerMock = new Mock<ICommonProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
@@ -60,7 +64,7 @@ public class EmailStatusCheckProducerTests
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
 
-        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName, loggerMock.Object);
 
         // Act
         await sut.DispatchAsync(Guid.NewGuid(), "op-id");

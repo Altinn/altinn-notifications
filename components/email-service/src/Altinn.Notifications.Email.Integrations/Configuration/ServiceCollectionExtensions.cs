@@ -8,6 +8,7 @@ using Altinn.Notifications.Shared.Configuration;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Configuration;
 
@@ -109,7 +110,8 @@ public static class ServiceCollectionExtensions
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
                     sp.GetRequiredService<IDateTimeService>(),
-                    kafkaSettings.EmailSendingAcceptedTopicName));
+                    kafkaSettings.EmailSendingAcceptedTopicName,
+                    sp.GetRequiredService<ILogger<EmailStatusCheckProducer>>()));
         }
     }
 }
