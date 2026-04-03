@@ -70,8 +70,8 @@ public static class WolverineServiceCollectionExtensions
                 .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
 
                 // Replace the disabled publisher with the real Wolverine-based publisher
-                services.RemoveAll<ISendSmsPublisher>();
-                services.AddSingleton<ISendSmsPublisher, SendSmsPublisher>();
+                services.RemoveAll<ISendSmsCommandPublisher>();
+                services.AddSingleton<ISendSmsCommandPublisher, SendSmsCommandPublisher>();
             }
         });
 

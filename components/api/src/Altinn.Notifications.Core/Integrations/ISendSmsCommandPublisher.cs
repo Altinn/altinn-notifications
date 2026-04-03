@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Integrations;
 /// <summary>
 /// Defines the contract for publishing sms notifications from the API to the Sms Service via Azure Service Bus using Wolverine.
 /// </summary>
-public interface ISendSmsPublisher
+public interface ISendSmsCommandPublisher
 {
     /// <summary>
     /// Publishes an asynchronous operation and returns a unique identifier for the published item.

@@ -25,7 +25,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
-    private readonly ISendSmsPublisher _smsCommandPublisher;
+    private readonly ISendSmsCommandPublisher _smsCommandPublisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -35,7 +35,7 @@ public class SmsNotificationService : ISmsNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
-        ISendSmsPublisher smsCommandPublisher,
+        ISendSmsCommandPublisher smsCommandPublisher,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig)
     {

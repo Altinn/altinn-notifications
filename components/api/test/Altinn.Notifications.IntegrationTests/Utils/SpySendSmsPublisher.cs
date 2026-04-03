@@ -4,10 +4,10 @@ using Altinn.Notifications.Core.Models;
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
-/// No-op implementation of <see cref="ISendSmsPublisher"/> used in integration tests
+/// No-op implementation of <see cref="ISendSmsCommandPublisher"/> used in integration tests
 /// where Wolverine/Azure Service Bus is disabled.
 /// </summary>
-public class SpySendSmsPublisher : ISendSmsPublisher
+public class SpySendSmsPublisher : ISendSmsCommandPublisher
 {
     /// <summary>
     /// Will return null, indicating that the command was not published to a message bus. This allows tests to verify that the command publisher was called without relying on external infrastructure.

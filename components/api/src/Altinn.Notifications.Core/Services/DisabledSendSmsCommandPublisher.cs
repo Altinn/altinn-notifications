@@ -8,11 +8,11 @@ namespace Altinn.Notifications.Core.Services;
 /// <summary>
 /// Represents a command publisher that does not send SMS messages.
 /// </summary>
-/// <remarks>This implementation of ISendSmsPublisher is disabled and will always throw a
+/// <remarks>This implementation of ISendSmsCommandPublisher is disabled and will always throw a
 /// NotImplementedException when attempting to publish an SMS command. Use this class when SMS publishing functionality
 /// should be explicitly disabled, such as in testing or development environments.</remarks>
 [ExcludeFromCodeCoverage]
-public class DisabledSendSmsCommandPublisher : ISendSmsPublisher
+public class DisabledSendSmsCommandPublisher : ISendSmsCommandPublisher
 {
     /// <summary>
     /// This method is intentionally not implemented to indicate that SMS command publishing is disabled. Attempting to call this method will result in a NotImplementedException being thrown.

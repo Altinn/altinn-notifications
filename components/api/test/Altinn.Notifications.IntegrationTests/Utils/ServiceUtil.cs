@@ -102,9 +102,9 @@ public static class ServiceUtil
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
 
-        // Ensure only one instance of ISendSmsPublisher is registered, and replace it with a test spy implementation.
-        services.RemoveAll<ISendSmsPublisher>();
-        services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
+        // Ensure only one instance of ISendSmsCommandPublisher is registered, and replace it with a test spy implementation.
+        services.RemoveAll<ISendSmsCommandPublisher>();
+        services.AddSingleton<ISendSmsCommandPublisher, SpySendSmsPublisher>();
 
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();
