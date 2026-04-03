@@ -785,7 +785,7 @@ public class SmsNotificationServiceTests
             Options.Create(new NotificationConfig
             {
                 SmsPublishBatchSize = publishBatchSize ?? 50,
-                SendSmsNotificationsViaWolverine = sendSmsNotificationsViaWolverine
+                EnableSendSmsPublisher = sendSmsNotificationsViaWolverine
             }));
     }
 

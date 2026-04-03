@@ -20,13 +20,12 @@ public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
-    private readonly bool _sendSmsNotificationsViaWolverine;
+    private readonly bool _enableSendSmsPublisher;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
     private readonly ISendSmsPublisher _smsCommandPublisher;
-    private readonly bool _enableWolverine;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -49,7 +48,7 @@ public class SmsNotificationService : ISmsNotificationService
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
-        _sendSmsNotificationsViaWolverine = notificationConfig.Value.SendSmsNotificationsViaWolverine;
+        _enableSendSmsPublisher = notificationConfig.Value.EnableSendSmsPublisher;
     }
 
     /// <inheritdoc/>
@@ -93,7 +92,7 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (_enableWolverine && _sendSmsNotificationsViaWolverine)
+                if (_enableSendSmsPublisher)
                 {
                     await PublishViaWolverine(newSmsNotifications, cancellationToken);
                 }
