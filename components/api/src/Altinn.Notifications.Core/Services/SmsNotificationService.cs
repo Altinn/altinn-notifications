@@ -101,12 +101,15 @@ public class SmsNotificationService : ISmsNotificationService
                     await PublishViaKafka(newSmsNotifications, cancellationToken);
                 }
             }
-            catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException)
+            catch (OperationCanceledException)
             {
-                foreach (var newSmsNotification in newSmsNotifications)
-                {
-                    await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
-                }
+                await ResetSendStatusToNewAsync(newSmsNotifications);
+
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                await ResetSendStatusToNewAsync(newSmsNotifications);
 
                 throw;
             }
@@ -206,5 +209,22 @@ public class SmsNotificationService : ISmsNotificationService
         };
 
         await _repository.AddNotification(smsNotification, expiryDateTime, count);
+    }
+
+    /// <summary>
+    /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
+    /// </summary>
+    /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
+    private async Task ResetSendStatusToNewAsync(IEnumerable<Sms> smsNotifications)
+    {
+        if (smsNotifications is null)
+        {
+            return;
+        }
+
+        foreach (var sms in smsNotifications)
+        {
+            await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+        }
     }
 }
