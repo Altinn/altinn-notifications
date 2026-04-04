@@ -101,7 +101,7 @@ public class SmsNotificationService : ISmsNotificationService
                     await PublishViaKafka(newSmsNotifications, cancellationToken);
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException)
             {
                 foreach (var newSmsNotification in newSmsNotifications)
                 {
