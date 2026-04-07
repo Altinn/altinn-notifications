@@ -49,4 +49,14 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             }
         });
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", null);
+        }
+
+        base.Dispose(disposing);
+    }
 }
