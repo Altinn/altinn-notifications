@@ -9,7 +9,6 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 
 using Azure.Messaging.ServiceBus;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Wolverine;
@@ -61,7 +60,6 @@ public static class CheckEmailSendStatusHandler
     /// </summary>
     public static async Task Handle(
         CheckEmailSendStatusCommand checkEmailSendStatusCommand,
-        ILogger logger,
         IDateTimeService dateTime,
         TopicSettings topicSettings,
         IMessageContext messageContext,
@@ -82,11 +80,6 @@ public static class CheckEmailSendStatusHandler
 
         if (sendResult != EmailSendResult.Sending)
         {
-            logger.LogWarning(
-                "CheckEmailSendStatusHandler // Handle // Terminal status {SendResult} for NotificationId {NotificationId}.",
-                sendResult,
-                checkEmailSendStatusCommand.NotificationId);
-
             var operationResult = new SendOperationResult
             {
                 SendResult = sendResult,
@@ -98,11 +91,6 @@ public static class CheckEmailSendStatusHandler
         }
         else
         {
-            logger.LogWarning(
-                "CheckEmailSendStatusHandler // Handle // Still sending for NotificationId {NotificationId}. Scheduling re-check in {DelayMs} ms.",
-                checkEmailSendStatusCommand.NotificationId,
-                _statusPollDelayMs);
-
             var recheckEmailSendStatusCommand = new CheckEmailSendStatusCommand
             {
                 LastCheckedAtUtc = dateTime.UtcNow(),

@@ -5,8 +5,6 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 
-using Microsoft.Extensions.Logging;
-
 using Moq;
 
 using Wolverine;
@@ -38,7 +36,6 @@ public class CheckEmailSendStatusHandlerTests
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
                 command,
-                Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
                 Mock.Of<IMessageContext>(),
@@ -58,7 +55,6 @@ public class CheckEmailSendStatusHandlerTests
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
             CheckEmailSendStatusHandler.Handle(
                 command,
-                Mock.Of<ILogger>(),
                 Mock.Of<IDateTimeService>(),
                 _topicSettings,
                 Mock.Of<IMessageContext>(),
@@ -102,7 +98,6 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             command,
-            Mock.Of<ILogger>(),
             Mock.Of<IDateTimeService>(),
             _topicSettings,
             Mock.Of<IMessageContext>(),
@@ -114,43 +109,6 @@ public class CheckEmailSendStatusHandlerTests
         Assert.NotNull(capturedMessage);
         Assert.Contains(command.NotificationId.ToString(), capturedMessage);
         Assert.Contains(command.SendOperationId, capturedMessage);
-    }
-
-    [Fact]
-    public async Task Handle_TerminalSendResult_LogsInformation()
-    {
-        // Arrange
-        var command = ValidCommand();
-
-        var clientMock = new Mock<IEmailServiceClient>();
-        clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
-            .ReturnsAsync(EmailSendResult.Delivered);
-
-        var producerMock = new Mock<ICommonProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-
-        var loggerMock = new Mock<ILogger>();
-        loggerMock.Setup(l => l.IsEnabled(LogLevel.Information)).Returns(true);
-
-        // Act
-        await CheckEmailSendStatusHandler.Handle(
-            command,
-            loggerMock.Object,
-            Mock.Of<IDateTimeService>(),
-            _topicSettings,
-            Mock.Of<IMessageContext>(),
-            producerMock.Object,
-            clientMock.Object);
-
-        // Assert
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(command.NotificationId.ToString())),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     [Fact]
@@ -173,7 +131,6 @@ public class CheckEmailSendStatusHandlerTests
         // Act
         await CheckEmailSendStatusHandler.Handle(
             command,
-            Mock.Of<ILogger>(),
             dateTimeMock.Object,
             _topicSettings,
             messageContextMock.Object,
@@ -192,39 +149,5 @@ public class CheckEmailSendStatusHandlerTests
 
         // Assert: nothing published to Kafka
         producerMock.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task Handle_SendResultIsSending_LogsDebug()
-    {
-        // Arrange
-        var command = ValidCommand();
-
-        var clientMock = new Mock<IEmailServiceClient>();
-        clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
-            .ReturnsAsync(EmailSendResult.Sending);
-
-        var loggerMock = new Mock<ILogger>();
-        loggerMock.Setup(l => l.IsEnabled(LogLevel.Debug)).Returns(true);
-
-        // Act
-        await CheckEmailSendStatusHandler.Handle(
-            command,
-            loggerMock.Object,
-            Mock.Of<IDateTimeService>(),
-            _topicSettings,
-            Mock.Of<IMessageContext>(),
-            Mock.Of<ICommonProducer>(),
-            clientMock.Object);
-
-        // Assert
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(command.NotificationId.ToString())),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 }
