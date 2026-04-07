@@ -14,6 +14,11 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailPublishConcurrency { get; set; } = 10;
 
     /// <summary>
+    /// Whether to enable the email send publisher.
+    /// </summary>
+    public bool EnableSendEmailPublisher { get; set; } = false;
+
+    /// <summary>
     /// ASB queue name used for publishing email messages.
     /// Produced by the API and consumed by the email service and Azure Communication Services.
     /// </summary>

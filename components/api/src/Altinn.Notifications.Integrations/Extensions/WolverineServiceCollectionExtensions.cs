@@ -58,7 +58,7 @@ public static class WolverineServiceCollectionExtensions
             }
 
             // Publishers
-            if (!string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+            if (wolverineSettings.EnableSendEmailPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
             {
                 opts.PublishMessage<SendEmailCommand>()
                     .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);

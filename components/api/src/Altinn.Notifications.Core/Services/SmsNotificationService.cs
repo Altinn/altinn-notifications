@@ -20,7 +20,6 @@ public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
-    private readonly bool _enableSendSmsPublisher;
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -46,7 +45,6 @@ public class SmsNotificationService : ISmsNotificationService
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
-        _enableSendSmsPublisher = notificationConfig.Value.EnableSendSmsPublisher;
     }
 
     /// <inheritdoc/>
@@ -90,14 +88,7 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (_enableSendSmsPublisher)
-                {
-                    await PublishViaWolverine(newSmsNotifications, cancellationToken);
-                }
-                else
-                {
-                    await PublishViaKafka(newSmsNotifications, cancellationToken);
-                }
+                await Publish(newSmsNotifications, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -126,21 +117,18 @@ public class SmsNotificationService : ISmsNotificationService
     /// the Kafka topic.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the publish operation.</param>
     /// <returns>A task that represents the asynchronous publish operation. The task does not return a value.</returns>
-    private async Task PublishViaKafka(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
+    private async Task Publish(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
     {
-        var serializedSmsNotifications = newSmsNotifications.Select(readyToSendSms => readyToSendSms.Serialize());
-
-        var unpublishedSmsNotifications = await _producer.ProduceAsync(_smsQueueTopicName, [.. serializedSmsNotifications], cancellationToken);
+        var unpublishedSmsNotifications = await _smsPublisher.PublishAsync([.. newSmsNotifications], cancellationToken);
 
         foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
         {
-            var deserializedSmsNotification = JsonSerializer.Deserialize<Sms>(unpublishedSmsNotification, JsonSerializerOptionsProvider.Options);
-            if (deserializedSmsNotification == null || deserializedSmsNotification.NotificationId == Guid.Empty)
+            if (unpublishedSmsNotification == null || unpublishedSmsNotification.NotificationId == Guid.Empty)
             {
                 continue;
             }
 
-            await _repository.UpdateSendStatus(deserializedSmsNotification.NotificationId, SmsNotificationResultType.New);
+            await _repository.UpdateSendStatus(unpublishedSmsNotification.NotificationId, SmsNotificationResultType.New);
         }
     }
 
