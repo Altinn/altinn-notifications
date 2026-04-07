@@ -17,6 +17,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
+
         IConfiguration configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
@@ -25,10 +27,6 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                { "WolverineSettings:EnableWolverine", "false" }
-            });
 
             // overriding initialization of extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
@@ -50,5 +48,15 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", null);
+        }
+
+        base.Dispose(disposing);
     }
 }
