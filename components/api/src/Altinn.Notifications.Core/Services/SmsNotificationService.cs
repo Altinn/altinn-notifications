@@ -21,11 +21,10 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
     private readonly bool _enableSendSmsPublisher;
-    private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
-    private readonly ISendSmsCommandPublisher _smsCommandPublisher;
+    private readonly ISendSmsPublisher _smsPublisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -35,15 +34,14 @@ public class SmsNotificationService : ISmsNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
-        ISendSmsCommandPublisher smsCommandPublisher,
+        ISendSmsPublisher smsPublisher,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
-        _producer = producer;
         _repository = repository;
-        _smsCommandPublisher = smsCommandPublisher;
+        _smsPublisher = smsPublisher;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
@@ -115,35 +113,6 @@ public class SmsNotificationService : ISmsNotificationService
             }
         }
         while (newSmsNotifications.Count > 0);
-    }
-
-    /// <summary>
-    /// Publishes a collection of SMS notifications asynchronously and updates the send status for any notifications
-    /// that fail to publish.
-    /// </summary>
-    /// <remarks>Notifications that fail to publish will have their send status reset in the repository. The
-    /// operation monitors the cancellation token to allow for graceful cancellation.</remarks>
-    /// <param name="newSmsNotifications">A list of SMS notifications to be published. Each notification is processed individually, and any that fail to
-    /// publish will have their IDs collected for status updates.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous publish and update operation.</returns>
-    private async Task PublishViaWolverine(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
-    {
-        List<Guid> unpublishedNotificationIds = [];
-
-        foreach (var sms in newSmsNotifications)
-        {
-            var failedNotificationId = await _smsCommandPublisher.PublishAsync(sms, cancellationToken);
-            if (failedNotificationId.HasValue && failedNotificationId.Value != Guid.Empty)
-            {
-                unpublishedNotificationIds.Add(failedNotificationId.Value);
-            }
-        }
-
-        foreach (var notificationId in unpublishedNotificationIds)
-        {
-            await _repository.UpdateSendStatus(notificationId, SmsNotificationResultType.New);
-        }
     }
 
     /// <summary>

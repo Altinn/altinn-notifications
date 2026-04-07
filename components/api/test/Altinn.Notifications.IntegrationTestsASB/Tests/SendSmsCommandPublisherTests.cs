@@ -14,7 +14,7 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 /// <summary>
-/// Integration tests for <see cref="ISendSmsCommandPublisher"/> and its implementation.
+/// Integration tests for <see cref="ISendSmsPublisher"/> and its implementation.
 /// Verifies that SMS notifications are correctly mapped to <see cref="SendSmsCommand"/>
 /// and delivered to the Azure Service Bus queue via Wolverine.
 /// </summary>
@@ -42,7 +42,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
         {
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
 
-            var publisher = factory.Host.Services.GetRequiredService<ISendSmsCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
             var result = await publisher.PublishAsync(sms, CancellationToken.None);
 
@@ -69,7 +69,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
         {
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
 
-            var publisher = factory.Host.Services.GetRequiredService<ISendSmsCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
             await publisher.PublishAsync(sms, CancellationToken.None);
 
@@ -108,7 +108,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
         {
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
 
-            var publisher = factory.Host.Services.GetRequiredService<ISendSmsCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
             using var cancellationTokenSource = new CancellationTokenSource();
             await cancellationTokenSource.CancelAsync();
@@ -140,7 +140,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
         {
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
 
-            var publisher = factory.Host.Services.GetRequiredService<ISendSmsCommandPublisher>();
+            var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
             await publisher.PublishAsync(firstSms, CancellationToken.None);
             await publisher.PublishAsync(secondSms, CancellationToken.None);

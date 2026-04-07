@@ -1,60 +1,119 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using System.Collections.Concurrent;
+
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
 
 /// <summary>
-/// Publishes SMS messages asynchronously using Wolverine message bus.
+/// Wolverine-based implementation of <see cref="ISendSmsPublisher"/> that publishes
+/// SMS notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
 /// <remarks>
-/// This class implements the <see cref="ISendSmsCommandPublisher"/> interface to enable asynchronous publication of SMS
+/// This class implements the <see cref="ISendSmsPublisher"/> interface to enable asynchronous publication of SMS
 /// commands to Azure Service Bus via Wolverine. Ensure that the provided <see cref="Sms"/> object is properly configured before calling <see cref="PublishAsync"/>.
 /// </remarks>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
 /// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
-public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IServiceProvider serviceProvider) : ISendSmsCommandPublisher
+/// <param name="options">Configuration options for Wolverine settings, including SMS publish concurrency.</param>
+public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IServiceProvider serviceProvider, IOptions<WolverineSettings> options) : ISendSmsPublisher
 {
-    /// <summary>
-    /// Publishes an SMS message asynchronously to the message bus.
-    /// </summary>
-    /// <remarks>
-    /// This method converts the <see cref="Sms"/> object into a <see cref="SendSmsCommand"/> and publishes it
-    /// via Wolverine's message bus. If publishing fails, the exception is logged and the notification ID is returned
-    /// to signal that the message should be retried.
-    /// </remarks>
-    /// <param name="sms">The SMS message to be published. Must contain the message content and recipient information.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the publish operation.</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation. Returns <c>null</c> if the SMS was successfully published to the message bus,
-    /// or the <see cref="Sms.NotificationId"/> if the publish operation failed (indicating the message should be retried).
-    /// </returns>
-    public async Task<Guid?> PublishAsync(Sms sms, CancellationToken cancellationToken)
+    private readonly ILogger<SendSmsCommandPublisher> _logger = logger;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly int _publishConcurrency = options.Value.SmsPublishConcurrency <= 0 ? 10 : options.Value.SmsPublishConcurrency;
+
+    /// <inheritdoc/>
+    public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var sendSmsCommand = new SendSmsCommand();
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        return await SendAsync(sms, messageBus);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
+    {
+        if (smsList.Count == 0)
+        {
+            return [];
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var failedSms = new ConcurrentBag<Sms>();
+        using var semaphore = new SemaphoreSlim(_publishConcurrency);
+
+        await Task.WhenAll(smsList.Select(async sms =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                var failedMessage = await SendAsync(sms, messageBus);
+                if (failedMessage is not null)
+                {
+                    failedSms.Add(failedMessage);
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
+
+        return [.. failedSms];
+    }
+
+    /// <summary>
+    /// Sends a single SMS notification command to the Azure Service Bus queue via <see cref="IMessageBus"/>.
+    /// </summary>
+    /// <param name="sms">The SMS notification to send.</param>
+    /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
+    /// <returns>
+    /// <see langword="null"/> if the command was dispatched successfully;
+    /// otherwise the original <paramref name="sms"/> if an error occurred.
+    /// </returns>
+    private async Task<Sms?> SendAsync(Sms sms, IMessageBus messageBus)
+    {
+        var sendSmsCommand = new SendSmsCommand
+        {
+            MobileNumber = sms.Recipient,
+            Body = sms.Message,
+            SenderNumber = sms.Sender,
+            NotificationId = sms.NotificationId
+        };
 
         try
         {
-            sendSmsCommand.MobileNumber = sms.Recipient;
-            sendSmsCommand.Body = sms.Message;
-            sendSmsCommand.SenderNumber = sms.Sender;
-            sendSmsCommand.NotificationId = sms.NotificationId;
-
-            await using var scope = serviceProvider.CreateAsyncScope();
-            var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-            
             await messageBus.SendAsync(sendSmsCommand);
-            return null; // Success - no retry needed
+
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to publish SMS command for NotificationId: {NotificationId}", sms.NotificationId);
-            return sendSmsCommand.NotificationId; // Failure - return ID to signal retry needed
+            _logger.LogError(
+                ex,
+                "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.",
+                sms.NotificationId);
+
+            return sms;
         }
     }
 }

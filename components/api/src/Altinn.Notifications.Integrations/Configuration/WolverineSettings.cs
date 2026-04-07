@@ -50,4 +50,5 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email delivery report queue.
     /// </summary>
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
+    public int SmsPublishConcurrency { get; internal set; }
 }
