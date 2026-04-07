@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Email.Integrations.Configuration;
+﻿using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,5 +82,63 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
 
         Assert.Throws<ArgumentNullException>(() => services.AddIntegrationHealthChecks(config));
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineAndStatusCheckEnabled_RegistersWolverineDispatcher()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        services.AddIntegrationServices(config);
+
+        // Assert
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+        Assert.NotNull(descriptor);
+        Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AddIntegrationServices_WolverineNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enableStatusCheck)
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = enableStatusCheck.ToString(),
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        services.AddIntegrationServices(config);
+
+        // Assert
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+        Assert.NotNull(descriptor);
+        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.Null(descriptor.ImplementationType);
     }
 }
