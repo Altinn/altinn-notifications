@@ -99,7 +99,8 @@ public static class ServiceCollectionExtensions
 
         bool useWolverine =
              wolverineSettings.EnableWolverine &&
-             wolverineSettings.EnableEmailStatusCheckListener;
+             wolverineSettings.EnableEmailStatusCheckListener &&
+             !string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName);
 
         services.RemoveAll<IEmailStatusCheckDispatcher>();
 
