@@ -41,7 +41,7 @@ public static class CheckEmailSendStatusHandler
     [ExcludeFromCodeCoverage]
     public static void Configure(HandlerChain chain, IOptions<WolverineSettings> options)
     {
-        var policy = options.Value.CheckEmailSendStatusQueuePolicy;
+        var policy = options.Value.EmailStatusCheckQueuePolicy;
 
         chain
             .OnException<TimeoutException>()

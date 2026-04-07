@@ -31,15 +31,15 @@ public class WolverineSettings : WolverineSettingsBase
     /// When <c>false</c> (default), the Kafka‑based <c>EmailSendingAcceptedConsumer</c>
     /// remains the active mechanism for processing accepted email events.
     /// </summary>
-    public bool EnableCheckEmailSendStatusListener { get; set; } = false;
+    public bool EnableEmailStatusCheckListener { get; set; } = false;
 
     /// <summary>
-    /// ASB queue name for check email send status operations (polling loop).
+    /// ASB queue name for email status check operations (polling loop).
     /// </summary>
-    public string CheckEmailSendStatusQueueName { get; set; } = string.Empty;
+    public string EmailStatusCheckQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the check-email-send-status polling-loop queue.
+    /// Retry policy for the email-status-check polling-loop queue.
     /// </summary>
-    public QueueRetryPolicy CheckEmailSendStatusQueuePolicy { get; set; } = new();
+    public QueueRetryPolicy EmailStatusCheckQueuePolicy { get; set; } = new();
 }
