@@ -141,4 +141,35 @@ public class ServiceCollectionExtensionsTests
         Assert.NotNull(descriptor.ImplementationFactory);
         Assert.Null(descriptor.ImplementationType);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_RegistersKafkaDispatcher(string? queueName)
+    {
+        // Both feature flags are on, but EmailStatusCheckQueueName is blank — the ASB transport
+        // would be half-configured, so we must fall back to the Kafka dispatcher.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+        Assert.NotNull(descriptor);
+        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.Null(descriptor.ImplementationType);
+    }
 }
