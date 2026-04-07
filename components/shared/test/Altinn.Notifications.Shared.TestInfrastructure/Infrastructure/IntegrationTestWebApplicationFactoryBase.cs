@@ -172,10 +172,20 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         {
             await base.DisposeAsync();
         }
-        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is ObjectDisposedException { ObjectName: "EventLogInternal" }))
+        catch (AggregateException ex) when (ex.Flatten().InnerExceptions.All(e =>
+            e is ObjectDisposedException { ObjectName: "EventLogInternal" } ||
+            e is TimeoutException))
         {
-            // Suppress the EventLogInternal disposed error that occurs during Wolverine shutdown
-            // when the Windows Event Log logger is disposed before Wolverine finishes draining.
+            // Suppress errors that occur during Wolverine shutdown on the inline ASB listener:
+            //
+            // 1. TimeoutException — the AMQP link drain exceeds its 3-second budget; expected
+            //    for inline listeners that hold an open receiver until the process exits.
+            //
+            // 2. ObjectDisposedException(EventLogInternal) — Wolverine tries to log the timeout
+            //    error but the Windows EventLog provider has already been torn down.
+            //
+            // Wolverine may nest these inside multiple layers of AggregateException, so we call
+            // Flatten() before checking so every leaf exception is covered.
         }
         finally
         {
