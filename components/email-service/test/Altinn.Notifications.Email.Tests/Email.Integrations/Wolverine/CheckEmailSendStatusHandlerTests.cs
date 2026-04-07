@@ -138,13 +138,15 @@ public class CheckEmailSendStatusHandlerTests
             clientMock.Object);
 
         // Assert
+        // ScheduleAsync is an extension method that calls PublishAsync with options.ScheduleDelay set,
+        // so we verify the underlying PublishAsync call that Moq can intercept.
         messageContextMock.Verify(
-            m => m.ScheduleAsync(
+            m => m.PublishAsync(
                 It.Is<CheckEmailSendStatusCommand>(c =>
                     c.NotificationId == command.NotificationId &&
                     c.SendOperationId == command.SendOperationId &&
                     c.LastCheckedAtUtc == fixedTime),
-                TimeSpan.FromMilliseconds(8000)),
+                It.Is<DeliveryOptions?>(o => o != null && o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
             Times.Once);
 
         producerMock.VerifyNoOtherCalls();
