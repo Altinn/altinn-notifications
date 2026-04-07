@@ -66,8 +66,6 @@ public class EmailServiceClient : IEmailServiceClient
         {
             EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
 
-            _logger.LogWarning("// EmailServiceClient // SendEmail // The email is send, NotificationId {NotificationId} - OperationId {OperationId}", email.NotificationId, emailSendOperation.Id);
-
             return emailSendOperation.Id;
         }
         catch (RequestFailedException e)
