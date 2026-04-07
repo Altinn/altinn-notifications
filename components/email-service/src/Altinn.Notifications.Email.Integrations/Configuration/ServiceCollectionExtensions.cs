@@ -84,13 +84,16 @@ public static class ServiceCollectionExtensions
     /// the configured Wolverine email status settings.
     /// </summary>
     /// <remarks>
-    /// When all of the following flags are <c>true</c>:
+    /// When all of the following conditions are met:
     /// <list type="bullet">
-    ///   <item><description><see cref="WolverineSettingsBase.EnableWolverine"/></description></item>
-    ///   <item><description><see cref="WolverineSettings.EnableEmailStatusCheckListener"/></description></item>
+    ///   <item><description><see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c></description></item>
+    ///   <item><description><see cref="WolverineSettings.EnableEmailStatusCheckListener"/> is <c>true</c></description></item>
+    ///   <item><description><see cref="WolverineSettings.EmailStatusCheckQueueName"/> is non-empty</description></item>
     /// </list>
     /// the <see cref="EmailStatusCheckPublisher"/> (Azure Service Bus via Wolverine) is registered.
     /// Otherwise, the legacy Kafka-based <see cref="EmailStatusCheckProducer"/> implementation is registered.
+    /// This matches the guard used in <see cref="Extensions.WolverineServiceCollectionExtensions"/> so that
+    /// exactly one fully-configured transport path is active at a time.
     /// </remarks>
     private static void RegisterSendingAcceptedPublisher(IServiceCollection services, IConfiguration configuration, KafkaSettings kafkaSettings)
     {
