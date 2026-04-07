@@ -137,17 +137,16 @@ public class CheckEmailSendStatusHandlerTests
             producerMock.Object,
             clientMock.Object);
 
-        // Assert: re-check is scheduled with correct message and 8-second delay
+        // Assert
         messageContextMock.Verify(
-            m => m.PublishAsync(
+            m => m.ScheduleAsync(
                 It.Is<CheckEmailSendStatusCommand>(c =>
                     c.NotificationId == command.NotificationId &&
                     c.SendOperationId == command.SendOperationId &&
                     c.LastCheckedAtUtc == fixedTime),
-                It.Is<DeliveryOptions>(o => o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
+                TimeSpan.FromMilliseconds(8000)),
             Times.Once);
 
-        // Assert: nothing published to Kafka
         producerMock.VerifyNoOtherCalls();
     }
 }

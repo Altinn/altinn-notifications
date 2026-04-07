@@ -83,6 +83,55 @@ namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
             sendingAcceptedPublisherMock.VerifyNoOtherCalls();
         }
 
+        [Theory]
+        [InlineData(EmailSendResult.Failed)]
+        [InlineData(EmailSendResult.Failed_Bounced)]
+        [InlineData(EmailSendResult.Failed_Quarantined)]
+        [InlineData(EmailSendResult.Failed_FilteredSpam)]
+        [InlineData(EmailSendResult.Failed_SupressedRecipient)]
+        public async Task SendAsync_NonTransientFailure_PublishesOnlyStatusUpdateToKafka(EmailSendResult failResult)
+        {
+            // Arrange
+            Guid id = Guid.NewGuid();
+            Notifications.Email.Core.Sending.Email email =
+            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+
+            Mock<IEmailServiceClient> clientMock = new();
+            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+                .ReturnsAsync(new EmailClientErrorResponse { SendResult = failResult });
+
+            string? capturedTopic = null;
+            string? capturedMessage = null;
+
+            Mock<ICommonProducer> producerMock = new();
+            producerMock
+                .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string>((topic, msg) =>
+                {
+                    capturedTopic = topic;
+                    capturedMessage = msg;
+                })
+                .ReturnsAsync(true);
+
+            Mock<IEmailStatusCheckDispatcher> dispatcherMock = new();
+
+            var sut = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, dispatcherMock.Object);
+
+            // Act
+            await sut.SendAsync(email);
+
+            // Assert
+            producerMock.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+            
+            Assert.Equal(_topicSettings.EmailStatusUpdatedTopicName, capturedTopic);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Contains($"\"notificationId\":\"{id}\"", capturedMessage);
+            Assert.Contains($"\"sendResult\":\"{failResult}\"", capturedMessage);
+
+            dispatcherMock.VerifyNoOtherCalls();
+        }
+
         [Fact]
         public async Task SendAsync_Failed_TransientError_PublishedToExpectedKafkaTopics()
         {
