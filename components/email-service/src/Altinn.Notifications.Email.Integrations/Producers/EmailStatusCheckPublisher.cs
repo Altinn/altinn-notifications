@@ -3,7 +3,7 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+
 using Wolverine;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
@@ -19,7 +19,6 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     private const int _statusPollDelayMs = 8000;
     private readonly IDateTimeService _dateTime;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<EmailStatusCheckPublisher> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckPublisher"/> class.
@@ -30,9 +29,8 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     /// <param name="dateTime">
     /// Provides the current UTC timestamp applied to the command as the initial status‑check time.
     /// </param>
-    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime, ILogger<EmailStatusCheckPublisher> logger)
+    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime)
     {
-        _logger = logger;
         _dateTime = dateTime;
         _serviceProvider = serviceProvider;
     }
@@ -46,11 +44,6 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
             NotificationId = notificationId,
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
-
-        _logger.LogWarning(
-            "EmailStatusCheckPublisher // DispatchAsync // Dispatching CheckEmailSendStatusCommand for NotificationId {NotificationId} with OperationId {OperationId}.",
-            notificationId,
-            operationId);
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();

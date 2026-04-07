@@ -113,8 +113,7 @@ public static class ServiceCollectionExtensions
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
                     sp.GetRequiredService<IDateTimeService>(),
-                    kafkaSettings.EmailSendingAcceptedTopicName,
-                    sp.GetRequiredService<ILogger<EmailStatusCheckProducer>>()));
+                    kafkaSettings.EmailSendingAcceptedTopicName));
         }
     }
 }
