@@ -34,6 +34,8 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
     /// </returns>
     public async Task<Guid?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var sendSmsCommand = new SendSmsCommand();
 
         try

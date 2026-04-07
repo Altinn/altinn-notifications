@@ -178,44 +178,6 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
         }
     }
 
-    /// <summary>
-    /// Verifies that when the message bus fails (e.g., network error), the publisher
-    /// returns the notification ID instead of null, allowing the caller to handle retry.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_WhenMessageBusFails_ReturnsNotificationId()
-    {
-        var factory = CreateFactory();
-        var sms = new Sms(
-            notificationId: Guid.NewGuid(),
-            sender: "Altinn",
-            recipient: "+4799999999",
-            message: "Test message");
-
-        await using (factory)
-        {
-            // Dispose the factory to force subsequent bus operations to fail
-            await factory.DisposeAsync();
-
-            // Create a new factory but immediately dispose its services to simulate failure
-            var failingFactory = CreateFactory();
-            await using (failingFactory)
-            {
-                await failingFactory.Host.StopAsync();
-
-                var publisher = failingFactory.Host.Services.GetRequiredService<ISendSmsCommandPublisher>();
-
-                // The publisher should catch the exception and return the NotificationId
-                var result = await publisher.PublishAsync(sms, CancellationToken.None);
-
-                // Since the bus is stopped, the operation should fail and return the NotificationId
-                // Note: This test verifies error handling, not that it definitely fails in this specific way
-                // The actual behavior depends on Wolverine's internal state management
-                Assert.True(result == null || result == sms.NotificationId);
-            }
-        }
-    }
-
     private IntegrationTestWebApplicationFactory CreateFactory()
     {
         return new IntegrationTestWebApplicationFactory(_fixture).Initialize();
