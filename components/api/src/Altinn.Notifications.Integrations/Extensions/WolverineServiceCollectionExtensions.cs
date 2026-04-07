@@ -77,6 +77,8 @@ public static class WolverineServiceCollectionExtensions
 
         // Replace the disabled publisher with the real Wolverine-based publisher
         services.RemoveAll<IEmailCommandPublisher>();
+        services.RemoveAll<ISendSmsCommandPublisher>();
         services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
+        services.AddSingleton<ISendSmsCommandPublisher, SendSmsCommandPublisher>();
     }
 }
