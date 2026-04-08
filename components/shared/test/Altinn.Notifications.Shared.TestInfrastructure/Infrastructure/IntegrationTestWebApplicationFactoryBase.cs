@@ -62,14 +62,15 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     }
 
     /// <summary>
-    /// Publishes a message using Wolverine's message bus.
+    /// Sends a message to a specific ASB queue using Wolverine's endpoint routing.
     /// </summary>
-    public async Task PublishMessageAsync<T>(T message)
+    public async Task SendToQueueAsync<T>(string queueName, T message)
         where T : class
     {
         using var scope = Host.Services.CreateScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        await messageBus.PublishAsync(message);
+        var endpoint = messageBus.EndpointFor(new Uri($"asb://queue/{queueName}"));
+        await endpoint.SendAsync(message);
     }
 
     /// <summary>
