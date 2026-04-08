@@ -8,6 +8,7 @@ using Altinn.Notifications.Shared.Commands;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Wolverine.ErrorHandling;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
@@ -40,6 +41,9 @@ public static class FailureActionsExtensions
 
                 if (payload is null)
                 {
+                    runtime.Services.GetRequiredService<ILoggerFactory>()
+                        .CreateLogger(nameof(FailureActionsExtensions))
+                        .LogWarning("Failed to extract delivery report payload for channel {Channel}; skipping dead delivery report.", channel);
                     return;
                 }
 

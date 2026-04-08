@@ -32,7 +32,7 @@ public class AsbSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : I
             SendResult = result.SendResult.Value.ToString()
         };
 
-        using var scope = _serviceProvider.CreateScope();
+        await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await messageBus.SendAsync(command);
     }

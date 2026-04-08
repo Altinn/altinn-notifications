@@ -32,7 +32,7 @@ public class AsbSmsDeliveryReportPublisherTests
             .Setup(m => m.SendAsync(It.IsAny<SmsDeliveryReportCommand>(), It.IsAny<DeliveryOptions?>()))
             .Returns(ValueTask.CompletedTask);
 
-        var serviceProvider = BuildServiceProvider(messageBusMock);
+        using var serviceProvider = BuildServiceProvider(messageBusMock);
         var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
 
         // Act
@@ -60,7 +60,7 @@ public class AsbSmsDeliveryReportPublisherTests
             SendResult = null
         };
 
-        var serviceProvider = BuildServiceProvider(new Mock<IMessageBus>());
+        using var serviceProvider = BuildServiceProvider(new Mock<IMessageBus>());
         var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
 
         // Act & Assert
@@ -83,7 +83,7 @@ public class AsbSmsDeliveryReportPublisherTests
             .Setup(m => m.SendAsync(It.IsAny<SmsDeliveryReportCommand>(), It.IsAny<DeliveryOptions?>()))
             .ThrowsAsync(new InvalidOperationException("Bus unavailable"));
 
-        var serviceProvider = BuildServiceProvider(messageBusMock);
+        using var serviceProvider = BuildServiceProvider(messageBusMock);
         var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
 
         // Act & Assert

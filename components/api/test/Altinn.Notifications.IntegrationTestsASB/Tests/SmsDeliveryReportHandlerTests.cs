@@ -230,11 +230,13 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         {
             string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
 
+            string gatewayReference = Guid.NewGuid().ToString();
+
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
             {
                 NotificationId = Guid.NewGuid(),
-                GatewayReference = Guid.NewGuid().ToString(),
+                GatewayReference = gatewayReference,
                 SendResult = "Delivered"
             });
 
@@ -246,10 +248,10 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             Assert.NotNull(deadLetterMessage);
 
             // Assert - Dead delivery reports table should be empty (NpgsqlException goes to DLQ, not dead reports)
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            var deadReportId = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                gatewayReference);
+            Assert.Null(deadReportId);
 
             // Assert - Verify the handler was called the expected number of times
             // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
