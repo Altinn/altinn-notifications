@@ -107,16 +107,16 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <summary>
-    /// Publishes a collection of SMS notifications to a Kafka topic asynchronously and updates their send status based
-    /// on the publishing result.
+    /// Publishes a collection of SMS notifications via the configured transport and resets the send status
+    /// to <see cref="SmsNotificationResultType.New"/> for any notifications that failed to publish.
     /// </summary>
-    /// <remarks>After attempting to publish each SMS notification, the method updates the send status in the
-    /// repository for notifications that were not successfully published. The operation is performed asynchronously and
-    /// can be cancelled using the provided cancellation token.</remarks>
-    /// <param name="newSmsNotifications">A list of SMS notifications to be published. Each notification must be properly serialized before being sent to
-    /// the Kafka topic.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the publish operation.</param>
-    /// <returns>A task that represents the asynchronous publish operation. The task does not return a value.</returns>
+    /// <remarks>
+    /// The underlying transport is determined by the registered <see cref="ISendSmsPublisher"/> implementation,
+    /// which is either Kafka-based or Azure Service Bus via Wolverine.
+    /// </remarks>
+    /// <param name="newSmsNotifications">The SMS notifications to publish.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous publish operation.</returns>
     private async Task Publish(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
     {
         var unpublishedSmsNotifications = await _smsPublisher.PublishAsync([.. newSmsNotifications], cancellationToken);
