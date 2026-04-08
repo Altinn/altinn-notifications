@@ -101,7 +101,7 @@ public class EmailStatusCheckProducerTests
         // Arrange
         var producerMock = new Mock<ICommonProducer>();
         var dateTimeMock = new Mock<IDateTimeService>();
-        var suemailStatusCheckProducert = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), operationId));
