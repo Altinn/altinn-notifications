@@ -9,7 +9,6 @@ using Altinn.Notifications.Shared.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Configuration;
 
@@ -50,13 +49,12 @@ public static class ServiceCollectionExtensions
         services
             .AddHostedService<SendEmailQueueConsumer>()
             .AddSingleton<ICommonProducer, CommonProducer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
 
-        RegisterSendingAcceptedPublisher(services, config, kafkaSettings);
+        RegisterEmailStatusCheckDispatcher(services, config, kafkaSettings);
 
         return services;
     }
@@ -80,22 +78,10 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation based on
-    /// the configured Wolverine email status settings.
+    /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    /// <remarks>
-    /// When all of the following conditions are met:
-    /// <list type="bullet">
-    ///   <item><description><see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c></description></item>
-    ///   <item><description><see cref="WolverineSettings.EnableEmailStatusCheckListener"/> is <c>true</c></description></item>
-    ///   <item><description><see cref="WolverineSettings.EmailStatusCheckQueueName"/> is non-empty</description></item>
-    /// </list>
-    /// the <see cref="EmailStatusCheckPublisher"/> (Azure Service Bus via Wolverine) is registered.
-    /// Otherwise, the legacy Kafka-based <see cref="EmailStatusCheckProducer"/> implementation is registered.
-    /// This matches the guard used in <see cref="Extensions.WolverineServiceCollectionExtensions"/> so that
-    /// exactly one fully-configured transport path is active at a time.
-    /// </remarks>
-    private static void RegisterSendingAcceptedPublisher(IServiceCollection services, IConfiguration configuration, KafkaSettings kafkaSettings)
+    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, IConfiguration configuration, KafkaSettings kafkaSettings)
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
@@ -113,6 +99,8 @@ public static class ServiceCollectionExtensions
         }
         else
         {
+            services.AddHostedService<EmailSendingAcceptedConsumer>();
+
             services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
