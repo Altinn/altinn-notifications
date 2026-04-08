@@ -3,7 +3,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.Sms.IntegrationTests;
 
@@ -16,18 +15,22 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration((hostingContext, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                { "WolverineSettings:EnableWolverine", "false" }
-            });
-        });
+        Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
 
         builder.ConfigureTestServices(services =>
         {
             var descriptor = services.Single(s => s.ImplementationType == typeof(SendSmsQueueConsumer));
             services.Remove(descriptor);
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", null);
+        }
+
+        base.Dispose(disposing);
     }
 }
