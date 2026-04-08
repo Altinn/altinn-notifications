@@ -3,13 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
-using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Integrations.Publishers;
-using Microsoft.Extensions.Configuration;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
@@ -43,13 +40,6 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(wolverineSection);
 
-        // When ASB publishing is enabled, replace the default Kafka publisher with the ASB one.
-        if (wolverineSettings.EnableSmsDeliveryReportPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
-        {
-            services.Replace(ServiceDescriptor.Singleton<ISmsDeliveryReportPublisher>(
-                sp => new AsbSmsDeliveryReportPublisher(sp)));
-        }
-
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
@@ -59,11 +49,27 @@ public static class WolverineServiceCollectionExtensions
             // Listeners: none configured yet.
 
             // Publishers
-            if (wolverineSettings.EnableSmsDeliveryReportPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
-            {
-                opts.PublishMessage<SmsDeliveryReportCommand>()
-                    .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);
-            }
+            AddSmsDeliveryReportPublisher(wolverineSettings, opts);
         });
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SmsDeliveryReportCommand"/>,
+    /// routing outbound commands to the Azure Service Bus SMS delivery report queue.
+    /// </summary>
+    private static void AddSmsDeliveryReportPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSmsDeliveryReportPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
+        {
+            return;
+        }
+
+        wolverineOptions.PublishMessage<SmsDeliveryReportCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);
     }
 }
