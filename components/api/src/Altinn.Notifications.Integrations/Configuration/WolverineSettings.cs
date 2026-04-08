@@ -55,5 +55,9 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email delivery report queue.
     /// </summary>
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
-    public int SmsPublishConcurrency { get; internal set; }
+
+    /// <summary>
+    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int SmsPublishConcurrency { get; internal set; } = 10;
 }

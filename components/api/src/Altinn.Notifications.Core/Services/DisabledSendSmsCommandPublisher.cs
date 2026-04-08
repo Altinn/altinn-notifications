@@ -27,7 +27,7 @@ public class DisabledSendSmsCommandPublisher : ISendSmsPublisher
     public Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
     {
         throw new InvalidOperationException(
-         $"{nameof(DisabledSendSmsCommandPublisher)} was called for notification {sms.NotificationId}, " +
+         $"{nameof(DisabledSendSmsCommandPublisher)} was called for notifications, " +
          "which means 'EnableSendSmsCommandPublisher' is true but Wolverine is not configured. " +
          "Either set 'WolverineSettings:EnableWolverine' to true, or set 'NotificationConfig:EnableSendSmsCommandPublisher' to false to use Kafka.");
     }

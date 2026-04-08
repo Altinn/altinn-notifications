@@ -15,8 +15,13 @@ public class SpySendSmsPublisher : ISendSmsPublisher
     /// <param name="sms">The object containing the body of the message</param>
     /// <param name="cancellationToken">The cancellation token used to propagate notification that the operation should be canceled.</param>
     /// <returns></returns>
-    public Task<Guid?> PublishAsync(Sms sms, CancellationToken cancellationToken)
+    Task<Sms?> ISendSmsPublisher.PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
-       return Task.FromResult<Guid?>(null);
+        return Task.FromResult<Sms?>(null);
+    }
+
+    public Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(smsList);
     }
 }

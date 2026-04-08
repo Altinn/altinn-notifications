@@ -1,6 +1,9 @@
 ﻿using System.Text.Json;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Integrations;
 
@@ -8,10 +11,10 @@ namespace Altinn.Notifications.Core.Integrations;
 /// Implementation of <see cref="ISendSmsPublisher"/> that publishes SMS notifications to a Kafka topic.
 /// This publisher is used when Wolverine/Azure Service Bus is not enabled.
 /// </summary>
-public class KafkaSendSmsPublisher(IKafkaProducer producer, string topicName) : ISendSmsPublisher
+public class KafkaSendSmsPublisher(IKafkaProducer producer, IOptions<KafkaSettings> kafkaSettings) : ISendSmsPublisher
 {
     private readonly IKafkaProducer _producer = producer;
-    private readonly string _topicName = topicName;
+    private readonly string _topicName = kafkaSettings.Value.SmsQueueTopicName;
 
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
@@ -30,7 +33,7 @@ public class KafkaSendSmsPublisher(IKafkaProducer producer, string topicName) : 
     public async Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
     {
         var result = await _producer.ProduceAsync(_topicName, [.. smsList.Select(sms => sms.Serialize())], cancellationToken);
-        
+
         if (result.Count == 0)
         {
             return [];
