@@ -22,6 +22,7 @@ public class SpySendSmsPublisher : ISendSmsPublisher
 
     public Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
     {
-        return Task.FromResult(smsList);
+        return Task.FromResult<IReadOnlyList<Sms>>(Array.Empty<Sms>());
+    }
     }
 }
