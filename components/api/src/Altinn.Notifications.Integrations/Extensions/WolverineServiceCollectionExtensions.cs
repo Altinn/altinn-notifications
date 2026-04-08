@@ -1,12 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
@@ -62,7 +65,16 @@ public static class WolverineServiceCollectionExtensions
                     .ListenerCount(wolverineSettings.ListenerCount);
             }
 
-            // Publishers: none configured yet.
+            // Publishers
+            if (wolverineSettings.EnableSendEmailPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+            {
+                opts.PublishMessage<SendEmailCommand>()
+                    .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+            }
         });
+
+        // Replace the disabled publisher with the real Wolverine-based publisher
+        services.RemoveAll<IEmailCommandPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
     }
 }
