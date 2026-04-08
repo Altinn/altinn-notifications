@@ -11,6 +11,8 @@ namespace Altinn.Notifications.IntegrationTests;
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
+    private readonly string? _originalEnableWolverine = Environment.GetEnvironmentVariable("WolverineSettings__EnableWolverine");
+
     /// <summary>
     /// ConfigureWebHost for setup of configuration and test services
     /// </summary>
@@ -54,7 +56,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     {
         if (disposing)
         {
-            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", null);
+            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", _originalEnableWolverine);
         }
 
         base.Dispose(disposing);
