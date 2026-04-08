@@ -38,6 +38,9 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(Guid notificationId, string operationId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
+        ArgumentOutOfRangeException.ThrowIfEqual(notificationId, Guid.Empty);
+
         var checkEmailSendStatusCommand = new CheckEmailSendStatusCommand
         {
             SendOperationId = operationId,

@@ -56,6 +56,44 @@ public class EmailStatusCheckPublisherTests
         Assert.Equal(TimeSpan.FromMilliseconds(8000), capturedOptions.ScheduleDelay);
     }
 
+    [Fact]
+    public async Task DispatchAsync_NullOperationId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var messageBusMock = new Mock<IMessageBus>();
+        var dateTimeMock = new Mock<IDateTimeService>();
+        var emailStatusCheckPublisher = new EmailStatusCheckPublisher(CreateServiceProvider(messageBusMock.Object), dateTimeMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => emailStatusCheckPublisher.DispatchAsync(Guid.NewGuid(), null!));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_EmptyNotificationId_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        var messageBusMock = new Mock<IMessageBus>();
+        var dateTimeMock = new Mock<IDateTimeService>();
+        var emailStatusCheckPublisher = new EmailStatusCheckPublisher(CreateServiceProvider(messageBusMock.Object), dateTimeMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => emailStatusCheckPublisher.DispatchAsync(Guid.Empty, "some-operation-id"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DispatchAsync_WhitespaceOperationId_ThrowsArgumentException(string operationId)
+    {
+        // Arrange
+        var messageBusMock = new Mock<IMessageBus>();
+        var dateTimeMock = new Mock<IDateTimeService>();
+        var emailStatusCheckPublisher = new EmailStatusCheckPublisher(CreateServiceProvider(messageBusMock.Object), dateTimeMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => emailStatusCheckPublisher.DispatchAsync(Guid.NewGuid(), operationId));
+    }
+
     private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
     {
         var scopeServiceProvider = new Mock<IServiceProvider>();

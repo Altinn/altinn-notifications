@@ -17,5 +17,11 @@ public interface IEmailStatusCheckDispatcher
     /// <returns>
     /// A <see cref="Task"/> representing the asynchronous status-check dispatch process.
     /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operationId"/> is <see langword="null"/>, empty, or consists only of white-space characters.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="notificationId"/> is <see cref="Guid.Empty"/>.
+    /// </exception>
     Task DispatchAsync(Guid notificationId, string operationId);
 }

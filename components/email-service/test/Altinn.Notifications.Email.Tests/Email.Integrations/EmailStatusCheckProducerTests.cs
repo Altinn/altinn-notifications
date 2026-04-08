@@ -14,6 +14,50 @@ public class EmailStatusCheckProducerTests
     private static readonly DateTime _fixedTime = new(2025, 6, 1, 10, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public async Task DispatchAsync_AlwaysProducesExactlyOnce()
+    {
+        // Arrange
+        var producerMock = new Mock<ICommonProducer>();
+        producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        var dateTimeMock = new Mock<IDateTimeService>();
+        dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
+
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+
+        // Act
+        await emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), "op-id");
+
+        // Assert
+        producerMock.Verify(p => p.ProduceAsync(_topicName, It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_NullOperationId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var producerMock = new Mock<ICommonProducer>();
+        var dateTimeMock = new Mock<IDateTimeService>();
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.DispatchAsync(Guid.NewGuid(), null!));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_EmptyNotificationId_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        var producerMock = new Mock<ICommonProducer>();
+        var dateTimeMock = new Mock<IDateTimeService>();
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => emailStatusCheckProducer.DispatchAsync(Guid.Empty, "some-operation-id"));
+    }
+
+    [Fact]
     public async Task DispatchAsync_ValidArgs_ProducesSerializedIdentifierToConfiguredTopic()
     {
         // Arrange
@@ -49,23 +93,17 @@ public class EmailStatusCheckProducerTests
         Assert.Contains("2025-06-01T10:00:00Z", capturedMessage);
     }
 
-    [Fact]
-    public async Task DispatchAsync_AlwaysProducesExactlyOnce()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DispatchAsync_WhitespaceOperationId_ThrowsArgumentException(string operationId)
     {
         // Arrange
         var producerMock = new Mock<ICommonProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(true);
-
         var dateTimeMock = new Mock<IDateTimeService>();
-        dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
+        var suemailStatusCheckProducert = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
 
-        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
-
-        // Act
-        await emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), "op-id");
-
-        // Assert
-        producerMock.Verify(p => p.ProduceAsync(_topicName, It.IsAny<string>()), Times.Once);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), operationId));
     }
 }
