@@ -49,30 +49,12 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners (ASB queues will be auto-provisioned in production)
-            if (wolverineSettings.EnableEmailDeliveryReportListener && !string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
-            {
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
-                    .InteropWith(new EventGridEnvelopeMapper())
-                    .ListenerCount(wolverineSettings.ListenerCount);
-            }
+            // Listeners 
+            AddEmailDeliveryReportListener(wolverineSettings, opts);
 
             // Publishers
-            if (wolverineSettings.EnableSendEmailPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
-            {
-                opts.PublishMessage<SendEmailCommand>()
-                    .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
-            }
-
-            if (!string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
-            {
-                opts.PublishMessage<SendSmsCommand>()
-                .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
-
-                // Replace the disabled publisher with the real Wolverine-based publisher
-                services.RemoveAll<ISendSmsPublisher>();
-                services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
-            }
+            AddSendEmailPublisher(wolverineSettings, opts);
+            AddSendSmsPublisher(wolverineSettings, opts);
         });
 
         // Replace the disabled publisher with the real Wolverine-based publisher
@@ -80,5 +62,65 @@ public static class WolverineServiceCollectionExtensions
         services.RemoveAll<ISendSmsPublisher>();
         services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
         services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SendEmailCommand"/>,
+    /// routing outbound commands to the Azure Service Bus email send queue.
+    /// </summary>
+    private static void AddSendEmailPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendEmailPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+        {
+            return;
+        }
+
+        wolverineOptions.PublishMessage<SendEmailCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
+    /// </summary>
+    private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendSmsPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            return;
+        }
+
+        wolverineOptions.PublishMessage<SendSmsCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus email delivery report queue.
+    /// Uses <see cref="EventGridEnvelopeMapper"/> to interop with Event Grid message format.
+    /// </summary>
+    private static void AddEmailDeliveryReportListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableEmailDeliveryReportListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
+        {
+            return;
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                        .InteropWith(new EventGridEnvelopeMapper())
+                        .ListenerCount(wolverineSettings.ListenerCount);
     }
 }
