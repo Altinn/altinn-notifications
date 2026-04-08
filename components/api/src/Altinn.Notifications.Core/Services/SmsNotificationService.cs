@@ -20,7 +20,6 @@ public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
-    private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
     private readonly ISendSmsPublisher _smsPublisher;
@@ -41,7 +40,6 @@ public class SmsNotificationService : ISmsNotificationService
         _dateTimeService = dateTimeService;
         _repository = repository;
         _smsPublisher = smsPublisher;
-        _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
