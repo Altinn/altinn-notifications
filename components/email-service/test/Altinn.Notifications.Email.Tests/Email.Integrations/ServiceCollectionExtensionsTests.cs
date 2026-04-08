@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Microsoft.Extensions.Configuration;
@@ -108,8 +109,10 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
+        Assert.DoesNotContain(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 
     [Theory]
@@ -138,9 +141,11 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+
         Assert.NotNull(descriptor);
-        Assert.NotNull(descriptor.ImplementationFactory);
         Assert.Null(descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 
     [Theory]
@@ -169,8 +174,10 @@ public class ServiceCollectionExtensionsTests
         services.AddIntegrationServices(config);
 
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+
         Assert.NotNull(descriptor);
-        Assert.NotNull(descriptor.ImplementationFactory);
         Assert.Null(descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 }
