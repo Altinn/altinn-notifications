@@ -806,12 +806,12 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch);
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
-        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object, producer: new Mock<IKafkaProducer>().Object);
+        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cts.Token));
 
-        commandPublisherMock.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        commandPublisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()), Times.Never);
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), SmsNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(batch.Count));
     }
 
