@@ -1,11 +1,14 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
+﻿using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Producers;
+using Altinn.Notifications.Shared.Configuration;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Altinn.Notifications.Email.Integrations.Configuration;
 
@@ -44,13 +47,15 @@ public static class ServiceCollectionExtensions
         }
 
         services
-            .AddSingleton<IEmailServiceClient, EmailServiceClient>()
-            .AddSingleton<ICommonProducer, CommonProducer>()
             .AddHostedService<SendEmailQueueConsumer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
+            .AddSingleton<ICommonProducer, CommonProducer>()
+            .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
-            .AddSingleton(communicationServicesSettings)
-            .AddSingleton(emailServiceAdminSettings);
+            .AddSingleton(emailServiceAdminSettings)
+            .AddSingleton(communicationServicesSettings);
+
+        RegisterEmailStatusCheckDispatcher(services, config, kafkaSettings);
+
         return services;
     }
 
@@ -70,5 +75,37 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, IConfiguration configuration, KafkaSettings kafkaSettings)
+    {
+        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        bool useWolverine =
+             wolverineSettings.EnableWolverine &&
+             wolverineSettings.EnableEmailStatusCheckListener &&
+             !string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName);
+
+        services.RemoveAll<IEmailStatusCheckDispatcher>();
+
+        if (useWolverine)
+        {
+            services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
+        }
+        else
+        {
+            services.AddHostedService<EmailSendingAcceptedConsumer>();
+
+            services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
+                new EmailStatusCheckProducer(
+                    sp.GetRequiredService<ICommonProducer>(),
+                    sp.GetRequiredService<IDateTimeService>(),
+                    kafkaSettings.EmailSendingAcceptedTopicName));
+        }
     }
 }

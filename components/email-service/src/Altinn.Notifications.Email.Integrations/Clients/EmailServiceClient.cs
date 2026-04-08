@@ -10,6 +10,7 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 using Azure;
 using Azure.Communication.Email;
 using Azure.Core;
+
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
@@ -22,8 +23,8 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
-    private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
     private readonly ILogger<EmailServiceClient> _logger;
+    private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
@@ -33,18 +34,18 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="logger">A logger</param>
     public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
     {
+        _logger = logger;
         var emailClientOptions = new EmailClientOptions();
+        _emailServiceAdminSettings = emailServiceAdminSettings;
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString, emailClientOptions);
-        _emailServiceAdminSettings = emailServiceAdminSettings;
-        _logger = logger;
     }
 
     /// <summary>
     /// Send an email
     /// </summary>
     /// <param name="email">The email</param>
-    /// <returns>A Task representing the asyncrhonous operation.</returns>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
     {
         EmailContent emailContent = new(email.Subject);
@@ -116,7 +117,7 @@ public class EmailServiceClient : IEmailServiceClient
         {
             if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
             {
-                _logger.LogWarning("A request failed because the recipient is on the suppression list of Azure Communcation Services, OperationId {OperationId}", operationId);
+                _logger.LogWarning("A request failed because the recipient is on the suppression list of Azure Communication Services, OperationId {OperationId}", operationId);
             }
             else
             {
@@ -178,7 +179,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// Gets the int proceeding the word seconds in the string.
     /// Falls back to the configured intermittent error delay if no delay is found in the message.
     /// </summary>
-    /// <param name="message">The messsage to find delay within</param>
+    /// <param name="message">The message to find delay within</param>
     /// <returns></returns>
     internal int GetDelayFromString(string message)
     {

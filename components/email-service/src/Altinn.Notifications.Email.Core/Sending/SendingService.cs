@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Email.Core.Configuration;
+using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
@@ -6,28 +6,41 @@ using Altinn.Notifications.Email.Core.Status;
 namespace Altinn.Notifications.Email.Core.Sending;
 
 /// <summary>
-/// Service responsible for handling email sending requests.
+/// Coordinates the processing of email send requests by submitting them to Azure Communication Services (ACS)
+/// and directing the resulting outcome—success or failure—to the appropriate downstream handlers.
 /// </summary>
 public class SendingService : ISendingService
 {
-    private readonly IEmailServiceClient _emailServiceClient;
     private readonly TopicSettings _settings;
     private readonly ICommonProducer _producer;
+    private readonly IEmailServiceClient _emailServiceClient;
+    private readonly IEmailStatusCheckDispatcher _emailStatusCheckDispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SendingService"/> class.
     /// </summary>
-    /// <param name="emailServiceClient">A client that can perform actual mail sending.</param>
-    /// <param name="producer">A kafka producer.</param>
-    /// <param name="settings">The topic settings.</param>
+    /// <param name="emailServiceClient">
+    /// The client used to submit email send requests to Azure Communication Services.
+    /// </param>
+    /// <param name="producer">
+    /// The Kafka producer responsible for publishing error events and email status updates.
+    /// </param>
+    /// <param name="emailStatusCheckDispatcher">
+    /// The dispatcher used to initiate ACS operation status tracking after a successful email submission.
+    /// </param>
+    /// <param name="settings">
+    /// Configuration settings specifying the Kafka topics used for error reporting and status updates.
+    /// </param>
     public SendingService(
-        IEmailServiceClient emailServiceClient,
+        TopicSettings settings,
         ICommonProducer producer,
-        TopicSettings settings)
+        IEmailServiceClient emailServiceClient,
+        IEmailStatusCheckDispatcher emailStatusCheckDispatcher)
     {
-        _emailServiceClient = emailServiceClient;
-        _producer = producer;
         _settings = settings;
+        _producer = producer;
+        _emailServiceClient = emailServiceClient;
+        _emailStatusCheckDispatcher = emailStatusCheckDispatcher;
     }
 
     /// <inheritdoc/>
@@ -38,35 +51,29 @@ public class SendingService : ISendingService
         await result.Match(
             async operationId =>
             {
-                var operationIdentifier = new SendNotificationOperationIdentifier()
-                {
-                    NotificationId = email.NotificationId,
-                    OperationId = operationId
-                };
-
-                await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
+                await _emailStatusCheckDispatcher.DispatchAsync(email.NotificationId, operationId);
             },
             async emailSendFailResponse =>
             {
                 if (emailSendFailResponse.SendResult == EmailSendResult.Failed_TransientError)
                 {
-                    ResourceLimitExceeded resourceLimitExceeded = new ResourceLimitExceeded()
+                    var resourceLimitExceeded = new ResourceLimitExceeded
                     {
                         Resource = "azure-communication-services-email",
                         ResetTime = DateTime.UtcNow.AddSeconds((double)emailSendFailResponse.IntermittentErrorDelay!)
                     };
 
-                    GenericServiceUpdate genericServiceUpdate = new()
+                    var genericServiceUpdate = new GenericServiceUpdate
                     {
                         Source = "platform-notifications-email",
-                        Schema = AltinnServiceUpdateSchema.ResourceLimitExceeded,
-                        Data = resourceLimitExceeded.Serialize()
+                        Data = resourceLimitExceeded.Serialize(),
+                        Schema = AltinnServiceUpdateSchema.ResourceLimitExceeded
                     };
 
                     await _producer.ProduceAsync(_settings.AltinnServiceUpdateTopicName, genericServiceUpdate.Serialize());
                 }
 
-                var operationResult = new SendOperationResult()
+                var operationResult = new SendOperationResult
                 {
                     NotificationId = email.NotificationId,
                     SendResult = emailSendFailResponse.SendResult
