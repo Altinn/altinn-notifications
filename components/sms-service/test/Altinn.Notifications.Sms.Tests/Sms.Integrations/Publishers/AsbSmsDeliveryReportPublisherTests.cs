@@ -50,7 +50,7 @@ public class AsbSmsDeliveryReportPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_NullSendResult_SendsEmptyString()
+    public async Task PublishAsync_NullSendResult_ThrowsInvalidOperationException()
     {
         // Arrange
         var result = new SendOperationResult
@@ -60,23 +60,11 @@ public class AsbSmsDeliveryReportPublisherTests
             SendResult = null
         };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SmsDeliveryReportCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
-
-        var serviceProvider = BuildServiceProvider(messageBusMock);
+        var serviceProvider = BuildServiceProvider(new Mock<IMessageBus>());
         var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
 
-        // Act
-        await publisher.PublishAsync(result);
-
-        // Assert
-        messageBusMock.Verify(
-            m => m.SendAsync(
-                It.Is<SmsDeliveryReportCommand>(c => c.SendResult == string.Empty),
-                It.IsAny<DeliveryOptions?>()),
-            Times.Once);
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(result));
     }
 
     [Fact]
@@ -102,7 +90,7 @@ public class AsbSmsDeliveryReportPublisherTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(result));
     }
 
-    private static IServiceProvider BuildServiceProvider(Mock<IMessageBus> messageBusMock)
+    private static ServiceProvider BuildServiceProvider(Mock<IMessageBus> messageBusMock)
     {
         var services = new ServiceCollection();
         services.AddScoped(_ => messageBusMock.Object);

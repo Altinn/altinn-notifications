@@ -20,11 +20,16 @@ public class AsbSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : I
     /// <inheritdoc/>
     public async Task PublishAsync(SendOperationResult result)
     {
+        if (result.SendResult is null)
+        {
+            throw new InvalidOperationException($"Cannot publish SMS delivery report for notification {result.NotificationId}: SendResult must not be null.");
+        }
+
         var command = new SmsDeliveryReportCommand
         {
             NotificationId = result.NotificationId,
             GatewayReference = result.GatewayReference,
-            SendResult = result.SendResult?.ToString() ?? string.Empty
+            SendResult = result.SendResult.Value.ToString()
         };
 
         using var scope = _serviceProvider.CreateScope();
