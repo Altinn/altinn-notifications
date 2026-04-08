@@ -59,5 +59,5 @@ public class WolverineSettings : WolverineSettingsBase
     /// <summary>
     /// Maximum number of SMS send commands published concurrently during a batch publish operation.
     /// </summary>
-    public int SmsPublishConcurrency { get; internal set; } = 10;
+    public int SmsPublishConcurrency { get; set; } = 10;
 }
