@@ -20,6 +20,8 @@ public class AsbSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : I
     /// <inheritdoc/>
     public async Task PublishAsync(SendOperationResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         if (result.SendResult is null)
         {
             throw new InvalidOperationException($"Cannot publish SMS delivery report for notification {result.NotificationId}: SendResult must not be null.");

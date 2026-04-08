@@ -8,7 +8,6 @@ using Altinn.Notifications.Shared.Commands;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Wolverine.ErrorHandling;
 
 namespace Altinn.Notifications.Integrations.Wolverine;
@@ -32,20 +31,12 @@ public static class FailureActionsExtensions
         return failureActions.CustomAction(
             async (runtime, envelope, exception) =>
             {
-                string? payload = channel switch
+                string payload = channel switch
                 {
                     DeliveryReportChannel.AzureCommunicationServices => ExtractEmailPayload(envelope.Envelope!.Message!),
                     DeliveryReportChannel.LinkMobility => ExtractSmsPayload(envelope.Envelope!.Message!),
                     _ => throw new InvalidOperationException($"No payload extractor registered for channel {channel}")
                 };
-
-                if (payload is null)
-                {
-                    runtime.Services.GetRequiredService<ILoggerFactory>()
-                        .CreateLogger(nameof(FailureActionsExtensions))
-                        .LogWarning("Failed to extract delivery report payload for channel {Channel}; skipping dead delivery report.", channel);
-                    return;
-                }
 
                 var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
 
@@ -66,7 +57,7 @@ public static class FailureActionsExtensions
             "Save Dead Delivery Report");
     }
 
-    private static string? ExtractEmailPayload(object message)
+    private static string ExtractEmailPayload(object message)
     {
         var command = (EmailDeliveryReportCommand)message;
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
@@ -77,7 +68,7 @@ public static class FailureActionsExtensions
             return JsonSerializer.Serialize(deliveryReport);
         }
 
-        return null;
+        throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
     }
 
     private static string ExtractSmsPayload(object message)
