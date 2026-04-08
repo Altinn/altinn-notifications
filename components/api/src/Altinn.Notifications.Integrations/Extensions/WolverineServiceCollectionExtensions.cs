@@ -53,22 +53,16 @@ public static class WolverineServiceCollectionExtensions
             AddEmailDeliveryReportListener(wolverineSettings, opts);
 
             // Publishers
-            AddSendEmailPublisher(wolverineSettings, opts);
-            AddSendSmsPublisher(wolverineSettings, opts);
+            AddSendEmailPublisher(services, wolverineSettings, opts);
+            AddSendSmsPublisher(services, wolverineSettings, opts);
         });
-
-        // Replace the disabled publisher with the real Wolverine-based publisher
-        services.RemoveAll<IEmailCommandPublisher>();
-        services.RemoveAll<ISendSmsPublisher>();
-        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
-        services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
     }
 
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="SendEmailCommand"/>,
     /// routing outbound commands to the Azure Service Bus email send queue.
     /// </summary>
-    private static void AddSendEmailPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendEmailPublisher)
         {
@@ -80,6 +74,10 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        // Replace the disabled publisher with the real Wolverine-based publisher
+        services.RemoveAll<IEmailCommandPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
+
         wolverineOptions.PublishMessage<SendEmailCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
     }
@@ -87,7 +85,7 @@ public static class WolverineServiceCollectionExtensions
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
     /// </summary>
-    private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendSmsPublisher)
         {
@@ -98,6 +96,10 @@ public static class WolverineServiceCollectionExtensions
         {
             return;
         }
+
+        // Replace the disabled publisher with the real Wolverine-based publisher
+        services.RemoveAll<ISendSmsPublisher>();
+        services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
 
         wolverineOptions.PublishMessage<SendSmsCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);

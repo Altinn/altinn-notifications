@@ -24,5 +24,4 @@ public class SpySendSmsPublisher : ISendSmsPublisher
     {
         return Task.FromResult<IReadOnlyList<Sms>>(Array.Empty<Sms>());
     }
-    }
 }
