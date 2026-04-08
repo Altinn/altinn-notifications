@@ -43,7 +43,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailPublishTaskQueue, EmailPublishTaskQueue>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
-            .AddSingleton<ISendSmsPublisher, DisabledSendSmsCommandPublisher>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
