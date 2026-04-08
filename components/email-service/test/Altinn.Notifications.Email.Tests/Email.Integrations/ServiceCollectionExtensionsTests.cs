@@ -97,6 +97,7 @@ public class ServiceCollectionExtensionsTests
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
             })
             .Build();
 
