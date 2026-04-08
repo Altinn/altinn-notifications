@@ -104,14 +104,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
             smsCommandPublisher.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -276,14 +271,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
             smsCommandPublisher.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -458,14 +448,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
             smsCommandPublisher.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -724,14 +709,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
             smsSendCommandPublisher.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);

@@ -56,11 +56,6 @@ public class NotificationConfig
     public int ExpiryOffsetSeconds { get; set; } = 300;
 
     /// <summary>
-    /// Determines whether to send Sms notifications to the Sms Service via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableSendSmsPublisher { get; set; } = false;
-
-    /// <summary>
     /// Determines whether to send Email notifications to Email service via Wolverine and Azure Service Bus.
     /// </summary>
     public bool EnableSendEmailPublisher { get; set; } = false;

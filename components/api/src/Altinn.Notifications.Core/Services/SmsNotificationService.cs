@@ -29,11 +29,9 @@ public class SmsNotificationService : ISmsNotificationService
     /// </summary>
     public SmsNotificationService(
         IGuidService guidService,
-        IKafkaProducer producer,
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
         ISendSmsPublisher smsPublisher,
-        IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig)
     {
         _guidService = guidService;

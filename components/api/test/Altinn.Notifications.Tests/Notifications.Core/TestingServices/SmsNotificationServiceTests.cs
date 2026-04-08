@@ -66,11 +66,9 @@ public class SmsNotificationServiceTests
 
         var service = new SmsNotificationService(
             new Mock<IGuidService>().Object,
-            new Mock<IKafkaProducer>().Object,
             new Mock<IDateTimeService>().Object,
             mockRepo.Object,
             new Mock<ISendSmsPublisher>().Object,
-            Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
 
         // Act
@@ -696,33 +694,24 @@ public class SmsNotificationServiceTests
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
         commandPublisherMock
-            .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Sms?)null); // null = published successfully
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]); // empty list = published successfully
         
-        var producerMock = new Mock<IKafkaProducer>();
-
         var service = GetTestService(
             repository: repoMock.Object,
-            commandPublisher: commandPublisherMock.Object,
-            producer: producerMock.Object,
-            sendSmsNotificationsViaWolverine: true);
+            commandPublisher: commandPublisherMock.Object);
 
         // Act
         await service.SendNotifications(CancellationToken.None);
 
-        // Assert - PublishAsync called once per SMS
+        // Assert - PublishAsync called once with a batch containing both SMS items
         commandPublisherMock.Verify(
-            p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == firstSms.NotificationId), It.IsAny<CancellationToken>()),
+            p => p.PublishAsync(
+                It.Is<IReadOnlyList<Sms>>(list =>
+                    list.Any(s => s.NotificationId == firstSms.NotificationId) &&
+                    list.Any(s => s.NotificationId == secondSms.NotificationId)),
+                It.IsAny<CancellationToken>()),
             Times.Once);
-
-        commandPublisherMock.Verify(
-            p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == secondSms.NotificationId), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        // Assert - Kafka producer is never used when routing via Wolverine
-        producerMock.Verify(
-            p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]
@@ -741,16 +730,12 @@ public class SmsNotificationServiceTests
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
         commandPublisherMock
-            .Setup(p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == failedSms.NotificationId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(failedSms); // non-null = failed to publish
-        commandPublisherMock
-            .Setup(p => p.PublishAsync(It.Is<Sms>(s => s.NotificationId == succeededSms.NotificationId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Sms?)null); // null = published successfully
-   
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([failedSms]); // non-empty list = failed to publish those returned
+
         var service = GetTestService(
             repository: repoMock.Object,
-            commandPublisher: commandPublisherMock.Object,
-            sendSmsNotificationsViaWolverine: true);
+            commandPublisher: commandPublisherMock.Object);
 
         // Act
         await service.SendNotifications(CancellationToken.None);
@@ -766,27 +751,27 @@ public class SmsNotificationServiceTests
         IKafkaProducer? producer = null,
         ISmsNotificationRepository? repository = null,
         ISendSmsPublisher? commandPublisher = null,
-        int? publishBatchSize = null,
-        bool sendSmsNotificationsViaWolverine = false)
+        int? publishBatchSize = null)
     {
         var guidService = MockGuidService(guidOutput);
         var dateTimeService = MockDateTimeService(dateTimeOutput);
 
-        producer ??= new Mock<IKafkaProducer>().Object;
+        if (producer != null)
+        {
+            commandPublisher = new KafkaSendSmsPublisher(producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+        }
+
         repository ??= new Mock<ISmsNotificationRepository>().Object;
         commandPublisher ??= new Mock<ISendSmsPublisher>().Object;
 
         return new SmsNotificationService(
             guidService,
-            producer,
             dateTimeService,
             repository,
             commandPublisher,
-            Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
             Options.Create(new NotificationConfig
             {
-                SmsPublishBatchSize = publishBatchSize ?? 50,
-                EnableSendSmsPublisher = sendSmsNotificationsViaWolverine
+                SmsPublishBatchSize = publishBatchSize ?? 50
             }));
     }
 
@@ -821,7 +806,7 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch);
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
-        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object, sendSmsNotificationsViaWolverine: true);
+        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object, producer: new Mock<IKafkaProducer>().Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cts.Token));
@@ -844,11 +829,11 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch);
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
-        commandPublisherMock.Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+        commandPublisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         using var cts = new CancellationTokenSource();
-        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object, sendSmsNotificationsViaWolverine: true);
+        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cts.Token));
@@ -868,10 +853,10 @@ public class SmsNotificationServiceTests
             .ReturnsAsync(batch);
 
         var commandPublisherMock = new Mock<ISendSmsPublisher>();
-        commandPublisherMock.Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+        commandPublisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
 
-        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object, sendSmsNotificationsViaWolverine: true);
+        var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(CancellationToken.None));
