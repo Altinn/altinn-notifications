@@ -18,7 +18,7 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class ServiceUtil
 {
     private static readonly object _lock = new();
-    private static bool _postgreSqlInitialized;
+    private static volatile bool _postgreSqlInitialized;
     private static NpgsqlDataSource? _sharedDataSource;
     private static ServiceProvider? _sharedServiceProvider;
 
