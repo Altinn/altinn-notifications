@@ -1,4 +1,5 @@
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
@@ -19,6 +20,11 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration.
+    /// </summary>
+    public WolverineSettings WolverineSettings { get; private set; } = null!;
+
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
@@ -28,6 +34,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+            ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
+
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
         var consumersToRemove = services
@@ -45,25 +54,37 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        {
+            return;
+        }
+
+        string[] queueNames = [WolverineSettings.EmailSendQueueName, WolverineSettings.EmailStatusCheckQueueName];
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
+
         try
         {
             await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
 
-            while (true)
+            foreach (var queueName in queueNames)
             {
-                var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                if (message == null)
-                {
-                    break;
-                }
+                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
 
-                await receiver.CompleteMessageAsync(message);
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[EmailFactory] DLQ drain failed (non-fatal): {ex.Message}");
+            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
         }
     }
 }
