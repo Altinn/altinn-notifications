@@ -58,19 +58,17 @@ public static class ServiceUtil
 
     private static IConfiguration BuildConfiguration(Dictionary<string, string>? envVariables = null)
     {
-        if (envVariables != null)
-        {
-            foreach (var item in envVariables)
-            {
-                Environment.SetEnvironmentVariable(item.Key, item.Value);
-            }
-        }
-
-        return new ConfigurationBuilder()
+        var builder = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables()
-            .Build();
+            .AddEnvironmentVariables();
+
+        if (envVariables != null)
+        {
+            builder.AddInMemoryCollection(envVariables!);
+        }
+
+        return builder.Build();
     }
 
     public static void DisposeSharedDataSource()
