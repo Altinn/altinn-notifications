@@ -123,7 +123,8 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     protected abstract void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services);
 
     /// <summary>
-    /// Drains Service Bus dead-letter queues after each test. Override to drain component-specific queues.
+    /// Drains Service Bus dead-letter queues after each test. Override to drain component-specific queues using
+    /// the helper method <see cref="DrainDeadLetterQueuesAsync"/>. By default, does nothing.
     /// </summary>
     protected virtual Task DrainQueuesAsync() => Task.CompletedTask;
 
