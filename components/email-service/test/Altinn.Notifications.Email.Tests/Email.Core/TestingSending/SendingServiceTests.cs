@@ -1,8 +1,9 @@
-﻿using Altinn.Notifications.Email.Core.Configuration;
+using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
+
 using Moq;
 
 using Xunit;
@@ -24,7 +25,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
         }
 
         [Fact]
-        public async Task SendAsync_OperationIdentifierGenerated_PublishedToExpectedKafkaTopic()
+        public async Task SendAsync_OperationIdentifierGenerated_DelegatedToSendingAcceptedPublisher()
         {
             // Arrange
             Guid id = Guid.NewGuid();
@@ -36,19 +37,19 @@ namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
                 .ReturnsAsync("operation-id");
 
             Mock<ICommonProducer> producerMock = new();
-            producerMock.Setup(p => p.ProduceAsync(
-                It.Is<string>(s => s.Equals(nameof(_topicSettings.EmailSendingAcceptedTopicName))),
-                It.Is<string>(s =>
-                s.Contains("\"operationId\":\"operation-id\"") &&
-                s.Contains($"\"notificationId\":\"{id}\""))));
+            Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+            sendingAcceptedPublisherMock
+                .Setup(p => p.DispatchAsync(id, "operation-id"))
+                .Returns(Task.CompletedTask);
 
-            var sut = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+            var sut = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, sendingAcceptedPublisherMock.Object);
 
             // Act
             await sut.SendAsync(email);
 
             // Assert
-            producerMock.VerifyAll();
+            sendingAcceptedPublisherMock.Verify(p => p.DispatchAsync(id, "operation-id"), Times.Once);
+            producerMock.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -70,13 +71,65 @@ namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
                 s.Contains($"\"notificationId\":\"{id}\"") &&
                 s.Contains("\"sendResult\":\"Failed_InvalidEmailFormat\""))));
 
-            var sut = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+            Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+
+            var sut = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, sendingAcceptedPublisherMock.Object);
 
             // Act
             await sut.SendAsync(email);
 
             // Assert
             producerMock.VerifyAll();
+            sendingAcceptedPublisherMock.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(EmailSendResult.Failed)]
+        [InlineData(EmailSendResult.Failed_Bounced)]
+        [InlineData(EmailSendResult.Failed_Quarantined)]
+        [InlineData(EmailSendResult.Failed_FilteredSpam)]
+        [InlineData(EmailSendResult.Failed_SupressedRecipient)]
+        public async Task SendAsync_NonTransientFailure_PublishesOnlyStatusUpdateToKafka(EmailSendResult failResult)
+        {
+            // Arrange
+            Guid id = Guid.NewGuid();
+            Notifications.Email.Core.Sending.Email email =
+            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+
+            Mock<IEmailServiceClient> clientMock = new();
+            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+                .ReturnsAsync(new EmailClientErrorResponse { SendResult = failResult });
+
+            string? capturedTopic = null;
+            string? capturedMessage = null;
+
+            Mock<ICommonProducer> producerMock = new();
+            producerMock
+                .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string>((topic, msg) =>
+                {
+                    capturedTopic = topic;
+                    capturedMessage = msg;
+                })
+                .ReturnsAsync(true);
+
+            Mock<IEmailStatusCheckDispatcher> dispatcherMock = new();
+
+            var sut = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, dispatcherMock.Object);
+
+            // Act
+            await sut.SendAsync(email);
+
+            // Assert
+            producerMock.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+            
+            Assert.Equal(_topicSettings.EmailStatusUpdatedTopicName, capturedTopic);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Contains($"\"notificationId\":\"{id}\"", capturedMessage);
+            Assert.Contains($"\"sendResult\":\"{failResult}\"", capturedMessage);
+
+            dispatcherMock.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -107,13 +160,16 @@ namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
                 s.Contains($"\"notificationId\":\"{id}\"") &&
                 s.Contains("\"sendResult\":\"Failed_TransientError\""))));
 
-            var sut = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+            Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+
+            var sut = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, sendingAcceptedPublisherMock.Object);
 
             // Act
             await sut.SendAsync(email);
 
             // Assert
             producerMock.VerifyAll();
+            sendingAcceptedPublisherMock.VerifyNoOtherCalls();
         }
     }
 }
