@@ -23,7 +23,6 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
-    private const string _smsSendQueueName = "altinn.notifications.sms.send";
 
     /// <summary>
     /// Verifies that publishing a valid SMS returns null (success indicator).
@@ -40,7 +39,8 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
+            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -67,7 +67,8 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
+            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -75,7 +76,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
-                _smsSendQueueName,
+                smsSendQueueName,
                 TimeSpan.FromSeconds(10));
 
             Assert.NotNull(message);
@@ -106,7 +107,8 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
+            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -138,7 +140,8 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(5));
+            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -146,10 +149,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
             await publisher.PublishAsync(secondSms, CancellationToken.None);
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(10));
+                _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
 
             var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString, _smsSendQueueName, TimeSpan.FromSeconds(10));
+                _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
 
             Assert.NotNull(firstMessage);
             Assert.NotNull(secondMessage);
