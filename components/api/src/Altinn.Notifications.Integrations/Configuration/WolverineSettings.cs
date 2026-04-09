@@ -9,6 +9,27 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
+    /// Maximum number of email send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int EmailPublishConcurrency { get; set; } = 10;
+
+    /// <summary>
+    /// Whether to enable the email send publisher.
+    /// </summary>
+    public bool EnableSendEmailPublisher { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name used for publishing email messages.
+    /// Produced by the API and consumed by the email service and Azure Communication Services.
+    /// </summary>
+    public string EmailSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the email send queue.
+    /// </summary>
+    public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
+
+    /// <summary>
     /// Whether to enable the email delivery report queue listener.
     /// </summary>
     public bool EnableEmailDeliveryReportListener { get; set; } = false;
@@ -23,5 +44,4 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email delivery report queue.
     /// </summary>
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
-
 }

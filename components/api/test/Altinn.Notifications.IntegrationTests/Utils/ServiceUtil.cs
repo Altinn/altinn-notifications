@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
@@ -112,6 +112,12 @@ public static class ServiceUtil
             outputServices.AddRange(_sharedServiceProvider.GetServices(interfaceType)!);
         }
 
+        var builder = new ConfigurationBuilder()
+            .AddJsonFile($"appsettings.json")
+            .AddJsonFile("appsettings.IntegrationTest.json")
+            .AddEnvironmentVariables();
+
+        var config = builder.Build();
         return outputServices;
     }
 

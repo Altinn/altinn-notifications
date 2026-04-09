@@ -172,7 +172,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         services.AddWolverineServices(configuration, appBuilder.Environment);
     }
-
 }
 
 static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)

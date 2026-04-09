@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/API/test/">
     <Project Path="components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj" />
+    <Project Path="components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj" />
     <Project Path="components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj" />
   </Folder>
   <Folder Name="/Email/" />
@@ -19,6 +20,7 @@
   </Folder>
   <Folder Name="/Email/test/">
     <Project Path="components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj" />
+    <Project Path="components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj" />
     <Project Path="components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj" />
   </Folder>
   <Folder Name="/Shared/" />
@@ -26,6 +28,7 @@
     <Project Path="components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
   </Folder>
   <Folder Name="/Shared/test/">
+    <Project Path="components/shared/test/Altinn.Notifications.Shared.TestInfrastructure/Altinn.Notifications.Shared.TestInfrastructure.csproj" />
     <Project Path="components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj" />
   </Folder>
   <Folder Name="/SMS/" />
@@ -36,6 +39,7 @@
   </Folder>
   <Folder Name="/SMS/test/">
     <Project Path="components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj" />
+    <Project Path="components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj" />
     <Project Path="components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj" />
   </Folder>
   <Folder Name="/Tools/" />
