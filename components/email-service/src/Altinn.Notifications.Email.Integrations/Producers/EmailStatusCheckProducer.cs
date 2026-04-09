@@ -47,6 +47,10 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
             LastStatusCheck = _dateTime.UtcNow()
         };
 
-        await _producer.ProduceAsync(_topicName, identifier.Serialize());
+        bool success = await _producer.ProduceAsync(_topicName, identifier.Serialize());
+        if (!success)
+        {
+            throw new InvalidOperationException("Failed to publish email status-check message.");
+        }
     }
 }
