@@ -139,12 +139,12 @@ public class CheckEmailSendStatusHandlerTests
 
         // Assert
         messageContextMock.Verify(
-            m => m.PublishAsync(
+            m => m.ScheduleAsync(
                 It.Is<CheckEmailSendStatusCommand>(c =>
                     c.NotificationId == command.NotificationId &&
                     c.SendOperationId == command.SendOperationId &&
                     c.LastCheckedAtUtc == fixedTime),
-                It.Is<DeliveryOptions?>(o => o != null && o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
+                It.Is<TimeSpan>(t => t == TimeSpan.FromMilliseconds(8000))),
             Times.Once);
 
         producerMock.VerifyNoOtherCalls();
