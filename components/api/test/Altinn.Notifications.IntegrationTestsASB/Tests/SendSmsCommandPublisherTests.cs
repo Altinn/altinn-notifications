@@ -47,6 +47,9 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
             var result = await publisher.PublishAsync(sms, CancellationToken.None);
 
             Assert.Null(result);
+
+            // Drain the message from the queue so it doesn't pollute subsequent tests
+            await ServiceBusTestUtils.WaitForMessageAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
         }
     }
 
@@ -206,6 +209,12 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
             var result = await publisher.PublishAsync(smsList, CancellationToken.None);
 
             Assert.Empty(result);
+
+            // Drain all published messages so the queue is clean for subsequent tests
+            for (int i = 0; i < smsList.Count; i++)
+            {
+                await ServiceBusTestUtils.WaitForMessageAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
+            }
         }
     }
 
