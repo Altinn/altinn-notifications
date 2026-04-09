@@ -1,3 +1,5 @@
+using Azure.Messaging.ServiceBus;
+
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -193,6 +195,56 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
             await CleanupAsync();
             await DrainQueuesAsync();
             GC.SuppressFinalize(this);
+        }
+    }
+
+    /// <summary>
+    /// Removes all registered services whose implementation type is assignable to <paramref name="baseType"/>.
+    /// Use this to strip component-specific consumers (e.g. Kafka) before tests run.
+    /// </summary>
+    protected static void RemoveServicesAssignableTo(IServiceCollection services, Type baseType)
+    {
+        var toRemove = services
+            .Where(s => s.ImplementationType?.IsAssignableTo(baseType) == true)
+            .ToList();
+
+        foreach (var descriptor in toRemove)
+        {
+            services.Remove(descriptor);
+        }
+    }
+
+    /// <summary>
+    /// Drains all messages from the dead-letter sub-queues for each of the given <paramref name="queueNames"/>.
+    /// Silently skips blank names. Exceptions are logged but not rethrown.
+    /// </summary>
+    protected static async Task DrainDeadLetterQueuesAsync(string connectionString, params string[] queueNames)
+    {
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
+
+        try
+        {
+            await using var client = new ServiceBusClient(connectionString);
+
+            foreach (var queueName in queueNames)
+            {
+                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
+
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
         }
     }
 
