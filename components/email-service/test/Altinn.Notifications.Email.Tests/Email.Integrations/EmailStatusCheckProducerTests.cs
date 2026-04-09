@@ -93,6 +93,23 @@ public class EmailStatusCheckProducerTests
         Assert.Contains("2025-06-01T10:00:00Z", capturedMessage);
     }
 
+    [Fact]
+    public async Task DispatchAsync_ProduceReturnsFalse_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var producerMock = new Mock<ICommonProducer>();
+        producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        var dateTimeMock = new Mock<IDateTimeService>();
+        dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
+
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(Guid.NewGuid(), "op-id"));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
