@@ -5,20 +5,6 @@
         "Name": "sbemulatorns",
         "Queues": [
           {
-            "Name": "smoke-test",
-            "Properties": {
-              "DeadLetteringOnMessageExpiration": false,
-              "DefaultMessageTimeToLive": "PT1H",
-              "DuplicateDetectionHistoryTimeWindow": "PT5M",
-              "ForwardDeadLetteredMessagesTo": "",
-              "ForwardTo": "",
-              "LockDuration": "PT1M",
-              "MaxDeliveryCount": 3,
-              "RequiresDuplicateDetection": false,
-              "RequiresSession": false
-            }
-          },
-          {
             "Name": "altinn.notifications.email.send",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,
