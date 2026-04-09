@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
-
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Core.Integrations;
+namespace Altinn.Notifications.Integrations.Publishers;
 
 /// <summary>
 /// Implementation of <see cref="ISendSmsPublisher"/> that publishes SMS notifications to a Kafka topic.

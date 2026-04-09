@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
@@ -10,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wolverine;
 
-namespace Altinn.Notifications.Integrations.Wolverine;
+namespace Altinn.Notifications.Integrations.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="ISendSmsPublisher"/> that publishes
