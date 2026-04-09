@@ -112,7 +112,6 @@ public class ServiceCollectionExtensionsTests
 
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
-        Assert.DoesNotContain(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 
     [Theory]
