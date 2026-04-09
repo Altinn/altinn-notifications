@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SendEmailQueueConsumer>()
+            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
@@ -99,8 +100,6 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddHostedService<EmailSendingAcceptedConsumer>();
-
             services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
