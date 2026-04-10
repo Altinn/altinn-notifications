@@ -680,7 +680,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_WhenSendViaWolverineEnabled_CallsPublishAsyncForEachSms()
+    public async Task SendNotifications_WhenSendViaWolverineEnabled_CallsPublishAsyncWithBatch()
     {
         // Arrange
         var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4799990001", "first");
