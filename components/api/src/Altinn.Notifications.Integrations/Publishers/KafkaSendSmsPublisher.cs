@@ -19,6 +19,7 @@ public class KafkaSendSmsPublisher(IKafkaProducer producer, IOptions<KafkaSettin
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var result = await _producer.ProduceAsync(_topicName, sms.Serialize());
 
         if (result)
