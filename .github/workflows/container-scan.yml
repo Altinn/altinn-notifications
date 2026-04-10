@@ -49,7 +49,7 @@ jobs:
               - 'components/email-service/Dockerfile'
 
   scan-api:
-    name: "Scan: Notifications API"
+    name: 'Scan: Notifications API'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
@@ -68,12 +68,13 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
 
   scan-email:
-    name: "Scan: Email Delivery Service"
+    name: 'Scan: Email Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.email == 'true'
     runs-on: ubuntu-latest
@@ -92,12 +93,13 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
 
   scan-sms:
-    name: "Scan: SMS Delivery Service"
+    name: 'Scan: SMS Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.sms == 'true'
     runs-on: ubuntu-latest
@@ -116,6 +118,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
