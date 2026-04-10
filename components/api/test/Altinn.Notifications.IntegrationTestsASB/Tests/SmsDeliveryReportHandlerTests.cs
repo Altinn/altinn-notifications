@@ -19,21 +19,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
-/// <summary>
-/// Integration tests for the SMS delivery report Wolverine handler.
-/// Sends SmsDeliveryReportCommand messages to the ASB queue via Wolverine (simulating the SMS service)
-/// and verifies end-to-end processing through the handler pipeline.
-/// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
-    /// <summary>
-    /// Tests the happy path: a delivery report with status "Delivered" is received
-    /// for an SMS notification that exists in the database with a matching gatewayReference.
-    /// The handler should update the notification status to "Delivered".
-    /// </summary>
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
     {
@@ -79,10 +69,6 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         }
     }
 
-    /// <summary>
-    /// Tests that when the delivery report's gatewayReference doesn't match any notification in the database,
-    /// the handler retries according to the configured policy and eventually saves a dead delivery report.
-    /// </summary>
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
@@ -108,17 +94,22 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             });
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
+            DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var id = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                          _fixture.PostgresConnectionString,
                          unmatchedGatewayReference);
-                    return id.HasValue;
+                    return deadReport is not null;
                 },
                 maxAttempts: 40,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
+            Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
+            Assert.Equal(9, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, not moved to DLQ)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
@@ -143,10 +134,6 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         }
     }
 
-    /// <summary>
-    /// Tests that when the notification has expired (past its TTL), the handler catches
-    /// the NotificationExpiredException and saves a dead delivery report without retrying.
-    /// </summary>
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
@@ -183,17 +170,22 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             });
 
             // Assert - Poll the dead delivery reports table until the report appears
+            DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var id = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                         _fixture.PostgresConnectionString,
                         gatewayReference);
-                    return id.HasValue;
+                    return deadReport is not null;
                 },
                 maxAttempts: 20,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
+            Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, no retry)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
@@ -208,10 +200,6 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         }
     }
 
-    /// <summary>
-    /// Tests that when the database throws NpgsqlException, the handler retries
-    /// according to the configured policy and eventually moves the message to the dead letter queue.
-    /// </summary>
     [Fact]
     public async Task SmsDeliveryReport_WhenDatabaseThrowsNpgsqlException_RetriesAndMovesToDeadLetterQueue()
     {
@@ -259,6 +247,41 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
             Console.WriteLine($"[Test] Handler was called {attemptCount} times");
             Assert.Equal(9, attemptCount);
+        }
+    }
+
+    [Fact]
+    public async Task SmsDeliveryReport_WhenSendResultIsInvalid_GoesToDeadLetterQueueWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+            string gatewayReference = Guid.NewGuid().ToString();
+
+            // Act - Send delivery report with a SendResult value that is not a valid enum member.
+            // Enum.Parse<SmsNotificationResultType> will throw ArgumentException, which is not
+            // in any handler chain and should go straight to DLQ with no retries.
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                GatewayReference = gatewayReference,
+                SendResult = "NotARealStatus"
+            });
+
+            // Assert - Message should appear in DLQ immediately (no retries for ArgumentException)
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(30));
+            Assert.NotNull(deadLetterMessage);
+
+            // Assert - No dead delivery report should be created (ArgumentException is not handled by SaveDeadDeliveryReport)
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
+                _fixture.PostgresConnectionString,
+                gatewayReference);
+            Assert.Null(deadReport);
         }
     }
 }

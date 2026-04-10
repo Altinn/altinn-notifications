@@ -17,21 +17,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
-/// <summary>
-/// Integration tests for the email delivery report Wolverine handler.
-/// Sends raw EventGrid-formatted messages to the ASB queue (simulating ACS + Event Grid)
-/// and verifies end-to-end processing through the handler pipeline.
-/// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
-    /// <summary>
-    /// Tests the happy path: a delivery report with status "Delivered" is received
-    /// for a notification that exists in the database with a matching operationId.
-    /// The handler should update the notification status to "Delivered".
-    /// </summary>
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
     {
@@ -72,12 +62,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
-    /// <summary>
-    /// Tests that when the delivery report's operationId doesn't match any notification in the database,
-    /// the handler retries according to the configured policy and eventually saves a dead delivery report.
-    /// Simulates the realistic scenario where ACS delivers a report before the notification
-    /// has been persisted with its operationId.
-    /// </summary>
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
@@ -100,17 +84,22 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
             // maxAttempts is higher here to account for the full retry chain (cooldown + scheduled retries)
+            DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var id = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
                          _fixture.PostgresConnectionString,
                          unmatchedOperationId);
-                    return id.HasValue;
+                    return deadReport is not null;
                 },
                 maxAttempts: 40,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
+            Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(9, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, not moved to DLQ)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
@@ -135,11 +124,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
-    /// <summary>
-    /// Tests that when the notification has expired (past its TTL), the handler catches
-    /// the NotificationExpiredException and saves a dead delivery report without retrying.
-    /// The expiry is triggered naturally by the SQL function when expirytime &lt;= now().
-    /// </summary>
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
@@ -173,17 +157,22 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
             // Assert - Poll the dead delivery reports table until the report appears
+            DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    var id = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
                         _fixture.PostgresConnectionString,
                         operationId);
-                    return id.HasValue;
+                    return deadReport is not null;
                 },
                 maxAttempts: 20,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
+            Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, no retry)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
@@ -198,12 +187,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
-    /// <summary>
-    /// Tests that when the database throws NpgsqlException, the handler retries
-    /// according to the configured policy and eventually moves the message to the dead letter queue.
-    /// Unlike NotificationNotFoundException, NpgsqlException indicates a transient infrastructure
-    /// failure — it should not produce a dead delivery report.
-    /// </summary>
     [Fact]
     public async Task EmailDeliveryReport_WhenDatabaseThrowsNpgsqlException_RetriesAndMovesToDeadLetterQueue()
     {
@@ -247,10 +230,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
-    /// <summary>
-    /// Sends a raw EventGrid-formatted delivery report message to the specified ASB queue,
-    /// simulating what Azure Communication Services + Event Grid would produce.
-    /// </summary>
     private async Task SendDeliveryReportAsync(string queueName, string operationId, string status)
     {
         var eventGridEvent = new

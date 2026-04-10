@@ -134,10 +134,10 @@ public static class PostgreUtil
     /// <summary>
     /// Looks up a dead delivery report by the gatewayReference stored in the JSONB deliveryreport column.
     /// </summary>
-    public static async Task<long?> GetDeadDeliveryReportByGatewayReference(string connectionString, string gatewayReference)
+    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportByGatewayReference(string connectionString, string gatewayReference)
     {
         const string sql = """
-            SELECT id
+            SELECT id, channel, reason, attemptcount, resolved
             FROM notifications.deaddeliveryreports
             WHERE deliveryreport ->> 'gatewayReference' = @ref
             ORDER BY id DESC
@@ -154,16 +154,21 @@ public static class PostgreUtil
             return null;
         }
 
-        return await reader.GetFieldValueAsync<long>(0);
+        return new DeadDeliveryReportRow(
+            Id: await reader.GetFieldValueAsync<long>(0),
+            Channel: (DeliveryReportChannel)await reader.GetFieldValueAsync<short>(1),
+            Reason: await reader.IsDBNullAsync(2) ? null : await reader.GetFieldValueAsync<string>(2),
+            AttemptCount: await reader.GetFieldValueAsync<int>(3),
+            Resolved: await reader.GetFieldValueAsync<bool>(4));
     }
 
     /// <summary>
     /// Looks up a dead delivery report by the messageId stored in the JSONB deliveryreport column.
     /// </summary>
-    public static async Task<long?> GetDeadDeliveryReportIdByMessageId(string connectionString, string messageId)
+    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportIdByMessageId(string connectionString, string messageId)
     {
         const string sql = """
-            SELECT id
+            SELECT id, channel, reason, attemptcount, resolved
             FROM notifications.deaddeliveryreports
             WHERE deliveryreport ->> 'messageId' = @messageId
             ORDER BY id DESC
@@ -180,6 +185,11 @@ public static class PostgreUtil
             return null;
         }
 
-        return await reader.GetFieldValueAsync<long>(0);
+        return new DeadDeliveryReportRow(
+            Id: await reader.GetFieldValueAsync<long>(0),
+            Channel: (DeliveryReportChannel)await reader.GetFieldValueAsync<short>(1),
+            Reason: await reader.IsDBNullAsync(2) ? null : await reader.GetFieldValueAsync<string>(2),
+            AttemptCount: await reader.GetFieldValueAsync<int>(3),
+            Resolved: await reader.GetFieldValueAsync<bool>(4));
     }
 }
