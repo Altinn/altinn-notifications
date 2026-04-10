@@ -31,11 +31,17 @@ public static class FailureActionsExtensions
         return failureActions.CustomAction(
             async (runtime, envelope, exception) =>
             {
+                var innerEnvelope = envelope.Envelope
+                    ?? throw new InvalidDataException("Wolverine envelope is null.");
+
+                var message = innerEnvelope.Message
+                    ?? throw new InvalidDataException("Envelope message is null.");
+
                 string payload = channel switch
                 {
-                    DeliveryReportChannel.AzureCommunicationServices => ExtractEmailPayload(envelope.Envelope!.Message!),
-                    DeliveryReportChannel.LinkMobility => ExtractSmsPayload(envelope.Envelope!.Message!),
-                    _ => throw new InvalidOperationException($"No payload extractor registered for channel {channel}")
+                    DeliveryReportChannel.AzureCommunicationServices => ExtractEmailPayload(message),
+                    DeliveryReportChannel.LinkMobility => ExtractSmsPayload(message),
+                    _ => throw new NotSupportedException($"No payload extractor registered for channel {channel}")
                 };
 
                 var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
@@ -43,9 +49,9 @@ public static class FailureActionsExtensions
                 var deadDeliveryReport = new DeadDeliveryReport
                 {
                     Channel = channel,
-                    FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
+                    FirstSeen = innerEnvelope.SentAt.UtcDateTime,
                     LastAttempt = DateTime.UtcNow,
-                    AttemptCount = Math.Max(1, envelope.Envelope.Attempts),
+                    AttemptCount = Math.Max(1, innerEnvelope.Attempts),
                     Resolved = false,
                     DeliveryReport = payload,
                     Reason = reason,
@@ -57,6 +63,12 @@ public static class FailureActionsExtensions
             "Save Dead Delivery Report");
     }
 
+    /// <summary>
+    /// Extracts and serializes the email delivery report payload from a Wolverine message.
+    /// </summary>
+    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="EmailDeliveryReportCommand"/>.</param>
+    /// <returns>A JSON-serialized string of the <see cref="AcsEmailDeliveryReportReceivedEventData"/>.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the event type is not a recognized ACS email delivery report.</exception>
     private static string ExtractEmailPayload(object message)
     {
         var command = (EmailDeliveryReportCommand)message;
@@ -71,6 +83,11 @@ public static class FailureActionsExtensions
         throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
     }
 
+    /// <summary>
+    /// Serializes the SMS delivery report payload from a Wolverine message.
+    /// </summary>
+    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
+    /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
     private static string ExtractSmsPayload(object message)
         => JsonSerializer.Serialize((SmsDeliveryReportCommand)message);
 }
