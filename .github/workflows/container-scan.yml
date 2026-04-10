@@ -6,11 +6,15 @@ on:
     paths:
       - 'components/*/src/**'
       - 'components/*/Dockerfile'
+      - '.trivyignore.yaml'
+      - '.github/workflows/container-scan.yml'
   pull_request:
     branches: [main]
     paths:
       - 'components/*/src/**'
       - 'components/*/Dockerfile'
+      - '.trivyignore.yaml'
+      - '.github/workflows/container-scan.yml'
   schedule:
     - cron: '0 8 * * 1,4'
 
