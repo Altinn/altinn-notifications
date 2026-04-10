@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Integrations.Wolverine.Policies;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
@@ -40,10 +42,6 @@ public static class WolverineServiceCollectionExtensions
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
 
         services.Configure<WolverineSettings>(wolverineSection);
-
-        // Set static settings on handlers before Wolverine discovers and configures them.
-        EmailDeliveryReportHandler.Settings = wolverineSettings;
-        SmsDeliveryReportHandler.Settings = wolverineSettings;
 
         services.AddWolverine(opts =>
         {
@@ -83,6 +81,8 @@ public static class WolverineServiceCollectionExtensions
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                         .InteropWith(new EventGridEnvelopeMapper())
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new EmailDeliveryReportHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>
@@ -102,6 +102,8 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SmsDeliveryReportHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>

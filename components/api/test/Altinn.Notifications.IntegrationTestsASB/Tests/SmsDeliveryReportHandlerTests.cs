@@ -45,7 +45,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             // (simulates the SMS service having successfully sent via Link Mobility)
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(factory);
             string gatewayReference = Guid.NewGuid().ToString();
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
             // Act - Send an SMS delivery report command to the queue via Wolverine (simulates the SMS service)
@@ -97,7 +97,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             // Act - Send delivery report with a gatewayReference that doesn't match any notification
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
@@ -164,7 +164,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             // then expire it. Must set gatewayReference before expiring — the SQL function
             // blocks updates on expired notifications.
             string gatewayReference = Guid.NewGuid().ToString();
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(factory);
             await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
@@ -228,7 +228,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             string gatewayReference = Guid.NewGuid().ToString();
 

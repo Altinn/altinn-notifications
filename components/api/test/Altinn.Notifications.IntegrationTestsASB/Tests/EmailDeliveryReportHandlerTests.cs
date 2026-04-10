@@ -46,7 +46,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             // Act - Send a raw EventGrid delivery report to the queue (simulates ACS + Event Grid)
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
             await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
             // Assert - Poll the database until the handler updates the status to "Delivered"
@@ -93,7 +93,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         await using (factory)
         {
             // ACS report arrives before the email service has persisted the operationId
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report with an operationId that doesn't match any notification
             await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
@@ -167,7 +167,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 "UPDATE notifications.emailnotifications SET expirytime = now() - interval '1 minute' WHERE alternateid = $1",
                 new NpgsqlParameter { Value = notification.Id });
 
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report for the expired notification
             await SendDeliveryReportAsync(queueName, operationId, "Delivered");
@@ -220,7 +220,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
             await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), "Delivered");
