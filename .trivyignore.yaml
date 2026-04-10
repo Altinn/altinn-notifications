@@ -1,0 +1,4 @@
+vulnerabilities:
+  - id: CVE-2026-28390 # libcrypto3/libssl3
+    statement: Not exploitable - application does not process attacker-controlled CMS data
+    expired_at: 2026-05-10 # revisit in 1 month, might have a patch by then
