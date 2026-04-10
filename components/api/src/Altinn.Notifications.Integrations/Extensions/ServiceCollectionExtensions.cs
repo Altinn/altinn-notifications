@@ -13,11 +13,10 @@ using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
-using Altinn.Notifications.Integrations.Publishers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
-
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

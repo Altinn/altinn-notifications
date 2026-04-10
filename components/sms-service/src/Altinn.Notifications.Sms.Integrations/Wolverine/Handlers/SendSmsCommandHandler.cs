@@ -1,10 +1,7 @@
 ﻿using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Core.Sending;
-using Altinn.Notifications.Sms.Integrations.Configuration;
 
-using Azure.Messaging.ServiceBus;
-using Wolverine.ErrorHandling;
-using Wolverine.Runtime.Handlers;
+using Wolverine.Attributes;
 
 namespace Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
 
@@ -13,6 +10,7 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
 /// </summary>
 /// <remarks>This static class is intended to process SMS sending commands. All members are thread-safe and can be
 /// used concurrently. Ensure that the provided command contains valid data before invoking handler methods.</remarks>
+[WolverineHandler]
 public static class SendSmsCommandHandler
 {
     /// <summary>

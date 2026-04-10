@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Integrations.Publishers;
+namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Implementation of <see cref="ISendSmsPublisher"/> that publishes SMS notifications to a Kafka topic.

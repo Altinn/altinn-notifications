@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Publishers;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
