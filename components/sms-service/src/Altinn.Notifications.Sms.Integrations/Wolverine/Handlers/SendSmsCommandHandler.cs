@@ -3,11 +3,10 @@ using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 
 using Azure.Messaging.ServiceBus;
-using Microsoft.Extensions.Options;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
 
-namespace Altinn.Notifications.Sms.Integrations.Wolverine;
+namespace Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Provides functionality to handle commands for sending SMS messages asynchronously.
@@ -16,26 +15,6 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine;
 /// used concurrently. Ensure that the provided command contains valid data before invoking handler methods.</remarks>
 public static class SendSmsCommandHandler
 {
-    /// <summary>
-    /// Gets or sets the Wolverine settings used for configuring error handling policies.
-    /// </summary>
-    public static WolverineSettings WolverineSettings { get; set; } = null!;
-
-    /// <summary>
-    /// Configures error handling for the SMS send queue handler.
-    /// </summary>
-    public static void Configure(HandlerChain chain)
-    {
-        chain
-            .OnException<InvalidOperationException>()
-            .Or<TaskCanceledException>()
-            .Or<TimeoutException>()
-            .Or<ServiceBusException>()
-            .RetryWithCooldown(WolverineSettings.SendSmsQueuePolicy.GetCooldownDelays())
-            .Then.ScheduleRetry(WolverineSettings.SendSmsQueuePolicy.GetScheduleDelays())
-            .Then.MoveToErrorQueue();
-    }
-
     /// <summary>
     /// Handles a <see cref="SendSmsCommand"/> by converting it to an <see cref="Sms"/>
     /// and forwarding it to the sending service.

@@ -3,7 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Integrations.Wolverine;
+using Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
+using Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -36,9 +37,6 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(wolverineSection);
 
-        // Set static settings on handlers before Wolverine discovers and configures them.
-        SendSmsCommandHandler.WolverineSettings = wolverineSettings;
-
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
@@ -55,6 +53,8 @@ public static class WolverineServiceCollectionExtensions
 
                 opts.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
                     .ListenerCount(wolverineSettings.ListenerCount);
+
+                opts.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
             }
         });
     }
