@@ -24,8 +24,7 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Only called when <see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c>
-    /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
+    /// Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
