@@ -47,7 +47,7 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             await publisher.PublishAsync(result);
 
             // Assert - Receive the message from the queue and verify its content
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
@@ -89,7 +89,7 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             await statusService.UpdateStatusAsync(drMessage);
 
             // Assert - Receive the message from the queue
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
