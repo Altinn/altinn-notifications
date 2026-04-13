@@ -2,6 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Wolverine.Policies;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -56,10 +58,12 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds the email send queue listener.
+    /// Registers the Wolverine listener for the Azure Service Bus email send queue, enabling
+    /// the email service to consume <see cref="SendEmailCommand"/> messages.
+    /// This method is invoked only when <see cref="WolverineSettings.EnableSendEmailListener"/> is <c>true</c>.
     /// </summary>
-    /// <param name="wolverineSettings">The wolverine settings.</param>
-    /// <param name="wolverineOptions">The opts.</param>
+    /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
+    /// <param name="wolverineOptions">The Wolverine options to configure.</param>
     private static void AddEmailSendQueueListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendEmailListener)
@@ -74,12 +78,17 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SendEmailCommandHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="CheckEmailSendStatusCommand"/>, routing outbound commands to the Azure Service Bus email status check queue.
+    /// Registers Wolverine publishing rules for <see cref="CheckEmailSendStatusCommand"/>, routing
+    /// outbound commands to the Azure Service Bus email status check queue.
     /// This method is invoked only when <see cref="WolverineSettings.EnableEmailStatusCheckListener"/> is <c>true</c>.
     /// </summary>
+    /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
+    /// <param name="wolverineOptions">The Wolverine options to configure.</param>
     private static void AddEmailStatusCheckPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableEmailStatusCheckListener)
@@ -102,6 +111,8 @@ public static class WolverineServiceCollectionExtensions
     /// poll Azure Communication Services (ACS) for delivery status.
     /// This method is invoked only when <see cref="WolverineSettings.EnableEmailStatusCheckListener"/> is <c>true</c>.
     /// </summary>
+    /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
+    /// <param name="wolverineOptions">The Wolverine options to configure.</param>
     private static void AddEmailStatusCheckListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableEmailStatusCheckListener)
@@ -116,5 +127,7 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new CheckEmailSendStatusHandlerPolicy(wolverineSettings));
     }
 }
