@@ -45,6 +45,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, "smoke-test");
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        {
+            return;
+        }
+
+        await DrainDeadLetterQueuesAsync(
+            Fixture.ServiceBusConnectionString, 
+            WolverineSettings.SendSmsQueueName);
     }
 }
