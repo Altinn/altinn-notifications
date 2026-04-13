@@ -4,7 +4,7 @@ using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Producers;
-using Altinn.Notifications.Shared.Configuration;
+using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
