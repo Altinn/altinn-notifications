@@ -30,7 +30,7 @@ public static class SmsDeliveryReportHandler
         }
 
         if (!Enum.TryParse<Core.Enums.SmsNotificationResultType>(command.SendResult, ignoreCase: true, out var sendResult) ||
-            !Enum.IsDefined(typeof(Core.Enums.SmsNotificationResultType), sendResult))
+            !Enum.IsDefined(sendResult))
         {
             logger.LogError("Received SMS delivery report with unrecognized SendResult: {SendResult}", command.SendResult);
             throw new InvalidDeliveryReportException($"Received SMS delivery report with unrecognized SendResult: '{command.SendResult}'.");
