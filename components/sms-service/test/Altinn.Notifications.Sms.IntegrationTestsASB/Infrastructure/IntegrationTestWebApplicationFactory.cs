@@ -3,8 +3,6 @@ using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Consumers;
 
-using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -39,14 +37,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
            ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
-        var consumersToRemove = services
-            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-            .ToList();
-
-        foreach (var descriptor in consumersToRemove)
-        {
-            services.Remove(descriptor);
-        }
+        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
@@ -54,25 +45,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        try
-        {
-            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
-
-            while (true)
-            {
-                var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                if (message == null)
-                {
-                    break;
-                }
-
-                await receiver.CompleteMessageAsync(message);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[SmsFactory] DLQ drain failed (non-fatal): {ex.Message}");
-        }
+        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, "smoke-test");
     }
 }
