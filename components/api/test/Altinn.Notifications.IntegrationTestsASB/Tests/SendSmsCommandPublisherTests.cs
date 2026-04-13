@@ -39,7 +39,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            string smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -70,7 +70,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -110,7 +110,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -145,7 +145,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -201,7 +201,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -232,7 +232,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -279,7 +279,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -310,7 +310,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
-            var smsSendQueueName = factory.WolverineSettings.SendSmsQueueName;
+            var smsSendQueueName = GetQueueName(factory);
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
@@ -327,5 +327,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
     private IntegrationTestWebApplicationFactory CreateFactory()
     {
         return new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+    }
+
+    private static string GetQueueName(IntegrationTestWebApplicationFactory factory)
+    {
+        return factory.WolverineSettings!.SendSmsQueueName;
     }
 }

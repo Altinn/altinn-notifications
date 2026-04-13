@@ -1,7 +1,6 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Models;
-using Altinn.Notifications.Email.Integrations.Producers;
-
+using Altinn.Notifications.Email.Integrations.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 
 using Moq;

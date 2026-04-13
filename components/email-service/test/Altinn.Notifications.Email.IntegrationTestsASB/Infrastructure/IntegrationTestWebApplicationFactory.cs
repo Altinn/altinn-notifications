@@ -18,7 +18,10 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
-    private WolverineSettings? _wolverineSettings;
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration.
+    /// </summary>
+    public WolverineSettings? WolverineSettings { get; private set; }
 
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
@@ -29,7 +32,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        _wolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
@@ -42,14 +45,14 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (_wolverineSettings == null || !_wolverineSettings.EnableWolverine)
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
         {
             return;
         }
 
         await DrainDeadLetterQueuesAsync(
             Fixture.ServiceBusConnectionString,
-            _wolverineSettings.EmailSendQueueName,
-            _wolverineSettings.EmailStatusCheckQueueName);
+            WolverineSettings.EmailSendQueueName,
+            WolverineSettings.EmailStatusCheckQueueName);
     }
 }
