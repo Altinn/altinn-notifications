@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -21,11 +23,8 @@ internal sealed class SendEmailCommandHandlerPolicy(WolverineSettings settings) 
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
     {
-        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendEmailCommand));
-        if (chain is null)
-        {
-            return;
-        }
+        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendEmailCommand))
+            ?? throw new UnreachableException($"No handler chain found for {nameof(SendEmailCommand)}. Ensure the handler is registered before adding this policy.");
 
         var policy = settings.EmailSendQueuePolicy;
 
