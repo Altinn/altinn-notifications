@@ -1,45 +1,15 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Altinn.Notifications.Email.Core.Sending;
-using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
-using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
-using Wolverine.ErrorHandling;
-using Wolverine.Runtime.Handlers;
-
-namespace Altinn.Notifications.Email.Integrations.Wolverine;
+namespace Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Wolverine handler for <see cref="SendEmailCommand"/> messages received from Azure Service Bus.
 /// </summary>
 public static class SendEmailCommandHandler
 {
-    /// <summary>
-    /// Configures error-handling and retry policies for the email send queue handler.
-    /// Wolverine resolves <paramref name="options"/> from the IoC container at chain-compilation time.
-    /// </summary>
-    /// <param name="chain">The Wolverine handler chain to apply the retry policies to.</param>
-    /// <param name="options">The Wolverine settings resolved from the IoC container.</param>
-    [ExcludeFromCodeCoverage]
-    public static void Configure(HandlerChain chain, IOptions<WolverineSettings> options)
-    {
-        var policy = options.Value.EmailSendQueuePolicy;
-
-        chain
-            .OnException<TimeoutException>()
-            .Or<ServiceBusException>()
-            .Or<TaskCanceledException>()
-            .Or<InvalidOperationException>()
-            .RetryWithCooldown(policy.GetCooldownDelays())
-            .Then.ScheduleRetry(policy.GetScheduleDelays())
-            .Then.MoveToErrorQueue();
-    }
-
     /// <summary>
     /// Handles a <see cref="SendEmailCommand"/> by mapping it to an <see cref="Core.Sending.Email"/>
     /// and delegating sending to <see cref="ISendingService"/>.

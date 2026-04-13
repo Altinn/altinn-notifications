@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -74,6 +75,8 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SendEmailCommandHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>
@@ -116,5 +119,7 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
                         .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new CheckEmailSendStatusHandlerPolicy(wolverineSettings));
     }
 }
