@@ -138,6 +138,8 @@ public class CheckEmailSendStatusHandlerTests
             clientMock.Object);
 
         // Assert
+        // ScheduleAsync is a Wolverine extension method that resolves to PublishAsync with DeliveryOptions.ScheduleDelay,
+        // so we verify PublishAsync since that is the interface method Moq can intercept.
         messageContextMock.Verify(
             m => m.PublishAsync(
                 It.Is<CheckEmailSendStatusCommand>(c =>

@@ -1,5 +1,5 @@
 ﻿using Altinn.Notifications.Email.Core.Sending;
-using Altinn.Notifications.Email.Integrations.Wolverine;
+using Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;

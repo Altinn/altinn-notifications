@@ -1,8 +1,7 @@
 ﻿using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
-using Altinn.Notifications.Email.Integrations.Producers;
-
+using Altinn.Notifications.Email.Integrations.Publishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -112,7 +111,7 @@ public class ServiceCollectionExtensionsTests
 
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
-        Assert.DoesNotContain(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
+        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
     }
 
     [Theory]

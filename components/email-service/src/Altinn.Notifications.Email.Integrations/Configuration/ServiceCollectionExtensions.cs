@@ -4,7 +4,7 @@ using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Producers;
-using Altinn.Notifications.Shared.Configuration;
+using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SendEmailQueueConsumer>()
+            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
@@ -99,8 +100,6 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddHostedService<EmailSendingAcceptedConsumer>();
-
             services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
