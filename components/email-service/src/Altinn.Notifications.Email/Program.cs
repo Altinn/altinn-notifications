@@ -152,6 +152,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
             tracing.AddHttpClientInstrumentation();
+            tracing.AddSource("Wolverine");
         });
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
@@ -168,10 +169,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-    if (configuration.GetValue<bool>("WolverineSettings:EnableWolverine"))
-    {
-        services.AddWolverineServices(configuration, appBuilder.Environment);
-    }
+    services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
 static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
