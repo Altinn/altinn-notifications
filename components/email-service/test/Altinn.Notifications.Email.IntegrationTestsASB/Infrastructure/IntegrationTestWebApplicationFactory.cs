@@ -32,7 +32,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException(
                 "Missing WolverineSettings configuration for ASB integration tests.");
 

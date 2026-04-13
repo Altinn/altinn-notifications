@@ -88,7 +88,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    deadReport = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                          _fixture.PostgresConnectionString,
                          unmatchedOperationId);
                     return deadReport is not null;
@@ -161,7 +161,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    deadReport = await PostgreUtil.GetDeadDeliveryReportIdByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                         _fixture.PostgresConnectionString,
                         operationId);
                     return deadReport is not null;

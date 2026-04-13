@@ -165,7 +165,7 @@ public static class PostgreUtil
     /// <summary>
     /// Looks up a dead delivery report by the messageId stored in the JSONB deliveryreport column.
     /// </summary>
-    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportIdByMessageId(string connectionString, string messageId)
+    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportByMessageId(string connectionString, string messageId)
     {
         const string sql = """
             SELECT id, channel, reason, attemptcount, resolved

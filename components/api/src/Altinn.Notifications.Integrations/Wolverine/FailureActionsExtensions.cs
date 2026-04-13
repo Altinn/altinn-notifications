@@ -71,7 +71,11 @@ public static class FailureActionsExtensions
     /// <exception cref="InvalidDataException">Thrown when the event type is not a recognized ACS email delivery report.</exception>
     private static string ExtractEmailPayload(object message)
     {
-        var command = (EmailDeliveryReportCommand)message;
+        if (message is not EmailDeliveryReportCommand command)
+        {
+            throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)}, got {message.GetType().Name}.");
+        }
+
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
         if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
@@ -89,5 +93,12 @@ public static class FailureActionsExtensions
     /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
     /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
     private static string ExtractSmsPayload(object message)
-        => JsonSerializer.Serialize((SmsDeliveryReportCommand)message);
+    {
+        if (message is not SmsDeliveryReportCommand command)
+        {
+            throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
+        }
+
+        return JsonSerializer.Serialize(command);
+    }
 }

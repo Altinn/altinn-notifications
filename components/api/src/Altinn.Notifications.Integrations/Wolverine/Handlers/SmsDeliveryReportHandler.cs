@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Shared.Commands;
@@ -22,6 +23,18 @@ public static class SmsDeliveryReportHandler
         ISmsNotificationService smsNotificationService,
         ILogger logger)
     {
+        if (string.IsNullOrWhiteSpace(command.GatewayReference))
+        {
+            logger.LogError("Received SMS delivery report with missing GatewayReference.");
+            throw new InvalidDeliveryReportException("Received SMS delivery report with missing GatewayReference.");
+        }
+
+        if (!Enum.TryParse<Core.Enums.SmsNotificationResultType>(command.SendResult, out var sendResult))
+        {
+            logger.LogError("Received SMS delivery report with unrecognized SendResult: {SendResult}", command.SendResult);
+            throw new InvalidDeliveryReportException($"Received SMS delivery report with unrecognized SendResult: '{command.SendResult}'.");
+        }
+
         logger.LogInformation(
             "Received SMS delivery report for GatewayReference: {GatewayReference}, Result: {SendResult}",
             command.GatewayReference,
@@ -31,7 +44,7 @@ public static class SmsDeliveryReportHandler
         {
             GatewayReference = command.GatewayReference,
             NotificationId = command.NotificationId,
-            SendResult = Enum.Parse<Core.Enums.SmsNotificationResultType>(command.SendResult)
+            SendResult = sendResult
         };
 
         await smsNotificationService.UpdateSendStatus(operationResult);
