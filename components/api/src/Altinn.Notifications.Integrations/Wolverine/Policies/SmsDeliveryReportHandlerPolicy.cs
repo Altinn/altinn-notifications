@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Integrations.Configuration;
@@ -28,11 +30,8 @@ internal sealed class SmsDeliveryReportHandlerPolicy(WolverineSettings settings)
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
     {
-        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SmsDeliveryReportCommand));
-        if (chain is null)
-        {
-            return;
-        }
+        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SmsDeliveryReportCommand))
+            ?? throw new UnreachableException($"No handler chain found for {nameof(SmsDeliveryReportCommand)}. Ensure the handler is registered before adding this policy.");
 
         var policy = settings.SmsDeliveryReportQueuePolicy;
 

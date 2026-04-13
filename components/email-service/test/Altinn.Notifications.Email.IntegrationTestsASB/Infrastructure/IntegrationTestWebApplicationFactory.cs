@@ -32,6 +32,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+            ?? new WolverineSettings();
+
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
         RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));

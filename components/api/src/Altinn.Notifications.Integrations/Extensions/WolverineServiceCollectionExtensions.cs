@@ -31,21 +31,25 @@ public static class WolverineServiceCollectionExtensions
     /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="config">The application configuration.</param>
-    /// <param name="env">The host environment (used for dev/prod ASB emulator detection).</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
     public static void AddWolverineServices(
         this IServiceCollection services,
-        IConfiguration config,
-        IHostEnvironment env)
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+        if (!wolverineSettings.EnableWolverine)
+        {
+            return;
+        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
-            opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
+            opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
