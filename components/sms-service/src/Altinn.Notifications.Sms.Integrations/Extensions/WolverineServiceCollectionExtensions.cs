@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 
