@@ -3,8 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
 using Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,6 +34,11 @@ public static class WolverineServiceCollectionExtensions
     {
         IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        if (!wolverineSettings.EnableWolverine)
+        {
+            return;
+        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 
