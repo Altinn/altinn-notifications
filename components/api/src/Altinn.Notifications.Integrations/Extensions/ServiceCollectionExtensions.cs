@@ -17,8 +17,11 @@ using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -103,5 +106,32 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
+    }
+
+    /// <summary>
+    /// Registers the implementation of <see cref="ISendSmsPublisher"/> based on the configuration for Wolverine. If Wolverine is enabled and properly configured, <see cref="SendSmsCommandPublisher"/> will be registered, otherwise <see cref="KafkaSendSmsPublisher"/> will be used.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="config">The configuration collection.</param>
+    public static void RegisterSendSmsPublisher(this IServiceCollection services, IConfiguration config)
+    {
+        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        bool useWolverine =
+            wolverineSettings.EnableWolverine &&
+            wolverineSettings.EnableSendSmsPublisher &&
+            !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName);
+
+        services.RemoveAll<ISendSmsPublisher>();
+
+        if (useWolverine)
+        {
+            services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<ISendSmsPublisher, KafkaSendSmsPublisher>();
+        }
     }
 }

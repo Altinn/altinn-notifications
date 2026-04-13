@@ -1,17 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
-using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -55,7 +53,7 @@ public static class WolverineServiceCollectionExtensions
 
             // Publishers
             AddSendEmailPublisher(services, wolverineSettings, opts);
-            AddSendSmsPublisher(services, wolverineSettings, opts);
+            AddSendSmsPublisher(wolverineSettings, opts);
         });
     }
 
@@ -84,29 +82,6 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
-    /// </summary>
-    private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
-    {
-        if (!wolverineSettings.EnableSendSmsPublisher)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
-        {
-            return;
-        }
-
-        // Replace the disabled publisher with the real Wolverine-based publisher
-        services.RemoveAll<ISendSmsPublisher>();
-        services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
-
-        wolverineOptions.PublishMessage<SendSmsCommand>()
-                        .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
-    }
-
-    /// <summary>
     /// Registers the Wolverine listener for the Azure Service Bus email delivery report queue.
     /// Uses <see cref="EventGridEnvelopeMapper"/> to interop with Event Grid message format.
     /// </summary>
@@ -126,4 +101,24 @@ public static class WolverineServiceCollectionExtensions
                         .InteropWith(new EventGridEnvelopeMapper())
                         .ListenerCount(wolverineSettings.ListenerCount);
     }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
+    /// </summary>
+    private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendSmsPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            return;
+        }
+       
+        wolverineOptions.PublishMessage<SendSmsCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
+    }
+
 }

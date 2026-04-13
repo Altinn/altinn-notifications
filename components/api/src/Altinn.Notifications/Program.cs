@@ -232,7 +232,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
         services.AddWolverineServices(config, builder.Environment);
     }
-    
+
+    services.RegisterSendSmsPublisher(config);
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }
