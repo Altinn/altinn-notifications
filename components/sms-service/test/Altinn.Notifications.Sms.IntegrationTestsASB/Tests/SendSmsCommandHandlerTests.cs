@@ -49,7 +49,6 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
 
         await using (factory)
         {
-            await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
             var queueName = factory.WolverineSettings.SendSmsQueueName;
 
             // Act
@@ -101,7 +100,6 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             .Initialize();
         await using (factory)
         {
-            await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
             var queueName = factory.WolverineSettings.SendSmsQueueName;
             
             // Act

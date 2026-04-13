@@ -170,11 +170,6 @@ public class SmsNotificationService : ISmsNotificationService
     /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
     private async Task ResetSendStatusToNewAsync(IEnumerable<Sms> smsNotifications)
     {
-        if (smsNotifications is null)
-        {
-            return;
-        }
-
         foreach (var sms in smsNotifications)
         {
             await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
