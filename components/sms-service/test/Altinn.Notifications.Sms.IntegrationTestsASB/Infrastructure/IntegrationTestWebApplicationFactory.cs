@@ -21,7 +21,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <summary>
     /// Gets the Wolverine settings loaded from configuration.
     /// </summary>
-    public WolverineSettings WolverineSettings { get; private set; } = null!;
+    public WolverineSettings? WolverineSettings { get; private set; }
 
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
@@ -45,6 +45,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, WolverineSettings.SmsDeliveryReportQueueName);
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        {
+            return;
+        }
+
+        await DrainDeadLetterQueuesAsync(
+            Fixture.ServiceBusConnectionString, 
+            WolverineSettings.SmsDeliveryReportQueueName);
     }
 }

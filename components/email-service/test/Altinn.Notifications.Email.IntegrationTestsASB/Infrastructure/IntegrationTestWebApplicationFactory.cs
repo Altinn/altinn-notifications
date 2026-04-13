@@ -21,7 +21,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <summary>
     /// Gets the Wolverine settings loaded from configuration.
     /// </summary>
-    public WolverineSettings? WolverineSettings { get; set; }
+    public WolverineSettings? WolverineSettings { get; private set; }
 
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
