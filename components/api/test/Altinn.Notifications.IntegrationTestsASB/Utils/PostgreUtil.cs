@@ -149,17 +149,7 @@ public static class PostgreUtil
         cmd.Parameters.AddWithValue("ref", gatewayReference);
 
         await using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
-        {
-            return null;
-        }
-
-        return new DeadDeliveryReportRow(
-            Id: await reader.GetFieldValueAsync<long>(0),
-            Channel: (DeliveryReportChannel)await reader.GetFieldValueAsync<short>(1),
-            Reason: await reader.IsDBNullAsync(2) ? null : await reader.GetFieldValueAsync<string>(2),
-            AttemptCount: await reader.GetFieldValueAsync<int>(3),
-            Resolved: await reader.GetFieldValueAsync<bool>(4));
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
     }
 
     /// <summary>
@@ -180,11 +170,11 @@ public static class PostgreUtil
         cmd.Parameters.AddWithValue("messageId", messageId);
 
         await using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
-        {
-            return null;
-        }
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
+    }
 
+    private static async Task<DeadDeliveryReportRow> ReadDeadDeliveryReportRow(NpgsqlDataReader reader)
+    {
         return new DeadDeliveryReportRow(
             Id: await reader.GetFieldValueAsync<long>(0),
             Channel: (DeliveryReportChannel)await reader.GetFieldValueAsync<short>(1),

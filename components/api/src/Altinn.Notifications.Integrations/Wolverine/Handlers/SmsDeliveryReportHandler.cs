@@ -29,7 +29,8 @@ public static class SmsDeliveryReportHandler
             throw new InvalidDeliveryReportException("Received SMS delivery report with missing GatewayReference.");
         }
 
-        if (!Enum.TryParse<Core.Enums.SmsNotificationResultType>(command.SendResult, out var sendResult))
+        if (!Enum.TryParse<Core.Enums.SmsNotificationResultType>(command.SendResult, ignoreCase: true, out var sendResult) ||
+            !Enum.IsDefined(typeof(Core.Enums.SmsNotificationResultType), sendResult))
         {
             logger.LogError("Received SMS delivery report with unrecognized SendResult: {SendResult}", command.SendResult);
             throw new InvalidDeliveryReportException($"Received SMS delivery report with unrecognized SendResult: '{command.SendResult}'.");

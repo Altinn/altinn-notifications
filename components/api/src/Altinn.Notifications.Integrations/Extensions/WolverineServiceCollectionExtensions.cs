@@ -73,7 +73,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
@@ -95,7 +96,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
@@ -119,7 +121,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
         }
 
         wolverineOptions.PublishMessage<SendEmailCommand>()

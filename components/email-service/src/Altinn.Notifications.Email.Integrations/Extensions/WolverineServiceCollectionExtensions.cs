@@ -71,7 +71,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
@@ -96,7 +97,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
         }
 
         wolverineOptions.PublishMessage<CheckEmailSendStatusCommand>()
@@ -120,7 +122,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
