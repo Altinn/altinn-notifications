@@ -11,11 +11,6 @@ using Xunit;
 
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
-/// <summary>
-/// Integration tests for the <see cref="CheckEmailSendStatusCommand"/> Wolverine handler.
-/// Boots the real host with Wolverine and ASB emulator, sends commands through the message bus,
-/// and verifies the handler polls ACS correctly and applies the configured retry policy.
-/// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture fixture)
 {
@@ -28,9 +23,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
         LastCheckedAtUtc = DateTime.UtcNow
     };
 
-    /// <summary>
-    /// Verifies that a terminal ACS result causes the handler to publish to Kafka via <see cref="ICommonProducer"/>.
-    /// </summary>
     [Theory]
     [InlineData(EmailSendResult.Delivered)]
     [InlineData(EmailSendResult.Failed)]
@@ -55,8 +47,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService<ICommonProducer>(_ => producerMock.Object)
-            .ReplaceService<IEmailServiceClient>(_ => emailClientMock.Object)
+            .ReplaceService(_ => producerMock.Object)
+            .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
         await using (factory)
@@ -66,7 +58,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             // Act
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert - Producer is called once ACS returns a terminal result
+            // Assert
             var completed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(producerCalled.Task.IsCompleted),
                 maxAttempts: 20,
@@ -75,10 +67,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
         }
     }
 
-    /// <summary>
-    /// Verifies that when ACS returns <see cref="EmailSendResult.Sending"/>, the handler reschedules
-    /// the command and eventually publishes to Kafka once a terminal result is received.
-    /// </summary>
     [Fact]
     public async Task CheckEmailSendStatus_WhenStillSending_ReschedulesAndEventuallyPublishes()
     {
@@ -100,8 +88,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService<ICommonProducer>(_ => producerMock.Object)
-            .ReplaceService<IEmailServiceClient>(_ => emailClientMock.Object)
+            .ReplaceService(_ => producerMock.Object)
+            .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
         await using (factory)
@@ -111,8 +99,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             // Act
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert - Handler reschedules on first call (Sending) and publishes on second (Delivered)
-            // Higher timeout to account for the 8-second rescheduling delay in the handler
+            // Assert - Higher timeout to account for the 8-second rescheduling delay in the handler
             var completed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(producerCalled.Task.IsCompleted),
                 maxAttempts: 40,
@@ -121,10 +108,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
         }
     }
 
-    /// <summary>
-    /// Verifies that an <see cref="InvalidOperationException"/> from the ACS client triggers the retry
-    /// policy — cooldown retries followed by scheduled retries — before the message is moved to the DLQ.
-    /// </summary>
     [Fact]
     public async Task CheckEmailSendStatus_WhenAcsClientThrows_RetriesAndMovesToDeadLetterQueue()
     {
@@ -139,7 +122,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService<IEmailServiceClient>(_ => emailClientMock.Object)
+            .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
         await using (factory)
@@ -149,7 +132,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             // Act
             await factory.SendToQueueAsync(queueName, ValidCommand());
 
-            // Assert - Message should land in DLQ after retries are exhausted
+            // Assert - Wait for message to appear in dead letter queue after retries exhaust
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
@@ -165,10 +148,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
         }
     }
 
-    /// <summary>
-    /// Verifies that a command with an empty <see cref="CheckEmailSendStatusCommand.NotificationId"/>
-    /// is moved to the DLQ immediately — <see cref="ArgumentException"/> is not in the retry policy.
-    /// </summary>
     [Fact]
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {

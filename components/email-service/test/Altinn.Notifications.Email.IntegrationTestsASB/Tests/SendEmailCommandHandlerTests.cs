@@ -10,20 +10,11 @@ using Xunit;
 
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
-/// <summary>
-/// Integration tests for the <see cref="SendEmailCommand"/> Wolverine handler.
-/// Boots the real host with Wolverine and ASB emulator, publishes commands through the message bus,
-/// and verifies the handler invokes <see cref="ISendingService"/> with the correct mapped email.
-/// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
-    /// <summary>
-    /// Verifies that a <see cref="SendEmailCommand"/> published via Wolverine is handled
-    /// end-to-end and the sending service receives a correctly mapped email with Html content type.
-    /// </summary>
     [Fact]
     public async Task HandleAsync_ValidHtmlCommand_SendingServiceReceivesMappedEmail()
     {
@@ -63,10 +54,6 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         }
     }
 
-    /// <summary>
-    /// Verifies that a <see cref="SendEmailCommand"/> with Plain content type
-    /// is correctly mapped and forwarded to the sending service.
-    /// </summary>
     [Fact]
     public async Task HandleAsync_PlainContentType_MapsCorrectly()
     {
@@ -101,11 +88,6 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         }
     }
 
-    /// <summary>
-    /// Verifies that an <see cref="InvalidOperationException"/> thrown by the sending service
-    /// triggers the retry policy — cooldown retries followed by scheduled retries — before
-    /// the message is moved to the dead letter queue.
-    /// </summary>
     [Fact]
     public async Task HandleAsync_WhenSendingServiceThrows_RetriesAndMovesToDeadLetterQueue()
     {
@@ -119,7 +101,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
-            .ReplaceService<ISendingService>(_ => sendingServiceMock.Object)
+            .ReplaceService(_ => sendingServiceMock.Object)
             .Initialize();
 
         await using (factory)
@@ -137,7 +119,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
                 ToAddress = "recipient@example.com"
             });
 
-            // Assert - Message should land in DLQ after retries are exhausted
+            // Assert - Wait for message to appear in dead letter queue after retries exhaust
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
