@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Wolverine;
 
-namespace Altinn.Notifications.Email.Integrations.Producers;
+namespace Altinn.Notifications.Email.Integrations.Publishers;
 
 /// <summary>
 /// Azure Service Bus–based implementation of <see cref="IEmailStatusCheckDispatcher"/> that dispatches a
