@@ -1,0 +1,13 @@
+{
+  "idempotencyId": "string",
+  "sendersReference": "string",
+  "recipientEmail": {
+    "emailAddress": "string",
+    "emailSettings": {
+      "subject": "string",
+      "body": "This is a plain test body for testing Email instant services",
+      "senderEmailAddress": "string",
+      "contentType": "Plain"
+    }
+  }
+}
