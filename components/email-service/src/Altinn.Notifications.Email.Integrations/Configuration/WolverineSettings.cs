@@ -25,21 +25,34 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Enables or disables the Wolverine listener responsible for consuming
-    /// <c>CheckEmailSendStatusCommand</c> messages from the Azure Service Bus polling‑loop queue.
-    /// When <c>true</c>, the email service actively consumes these commands and polls ACS for delivery status.
-    /// When <c>false</c> (default), the Kafka‑based <c>EmailSendingAcceptedConsumer</c>
-    /// remains the active mechanism for processing accepted email events.
+    /// Determines whether to consume email status check commands via Wolverine and Azure Service Bus or via Kafka.
     /// </summary>
     public bool EnableEmailStatusCheckListener { get; set; } = false;
 
     /// <summary>
-    /// ASB queue name for email status check operations (polling loop).
+    /// ASB queue name for receiving email status check commands.
+    /// Produced by this email service and consumed in a polling loop.
     /// </summary>
     public string EmailStatusCheckQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the email-status-check polling-loop queue.
+    /// Retry policy for the email status check queue.
     /// </summary>
     public QueueRetryPolicy EmailStatusCheckQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Determines whether to publish email send results via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnableEmailSendResultPublisher { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for publishing email send results.
+    /// Produced by this email service and consumed by the Notifications API.
+    /// </summary>
+    public string EmailSendResultQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the email send result queue.
+    /// </summary>
+    public QueueRetryPolicy EmailSendResultQueuePolicy { get; set; } = new();
 }

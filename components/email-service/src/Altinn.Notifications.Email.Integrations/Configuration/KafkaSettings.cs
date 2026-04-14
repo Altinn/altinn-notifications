@@ -36,6 +36,11 @@ public class KafkaSettings
     public string EmailSendingAcceptedTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the email status updated topic
+    /// </summary>
+    public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the send email queue topic
     /// </summary>
     public string SendEmailQueueTopicName { get; set; } = string.Empty;
