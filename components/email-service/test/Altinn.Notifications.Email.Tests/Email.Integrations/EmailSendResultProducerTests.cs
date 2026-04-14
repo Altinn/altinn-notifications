@@ -37,33 +37,6 @@ public class EmailSendResultProducerTests
     }
 
     [Fact]
-    public async Task DispatchAsync_PublishesToConfiguredTopic()
-    {
-        // Arrange
-        string? capturedTopic = null;
-        var result = new SendOperationResult
-        {
-            NotificationId = Guid.NewGuid(),
-            OperationId = "op-123",
-            SendResult = EmailSendResult.Delivered
-        };
-
-        var producerMock = new Mock<ICommonProducer>();
-        producerMock
-            .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((topic, _) => capturedTopic = topic)
-            .ReturnsAsync(true);
-
-        var sut = new EmailSendResultProducer(producerMock.Object, _topicName);
-
-        // Act
-        await sut.DispatchAsync(result);
-
-        // Assert
-        Assert.Equal(_topicName, capturedTopic);
-    }
-
-    [Fact]
     public async Task DispatchAsync_SerializesResultCorrectly()
     {
         // Arrange

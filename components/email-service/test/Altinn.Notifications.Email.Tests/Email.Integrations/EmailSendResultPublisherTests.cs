@@ -46,6 +46,7 @@ public class EmailSendResultPublisherTests
         Assert.Equal(notificationId, capturedCommand.NotificationId);
         Assert.Equal(operationId, capturedCommand.OperationId);
         Assert.Equal("Delivered", capturedCommand.SendResult);
+        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Once);
     }
 
     [Fact]
@@ -130,31 +131,6 @@ public class EmailSendResultPublisherTests
         // Assert
         Assert.NotNull(capturedCommand);
         Assert.Null(capturedCommand.OperationId);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_SendsExactlyOnce()
-    {
-        // Arrange
-        var result = new SendOperationResult
-        {
-            NotificationId = Guid.NewGuid(),
-            OperationId = "op-123",
-            SendResult = EmailSendResult.Delivered
-        };
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
-
-        var sut = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
-
-        // Act
-        await sut.DispatchAsync(result);
-
-        // Assert
-        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Once);
     }
 
     private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
