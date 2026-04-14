@@ -15,9 +15,9 @@ public class EmailSendResultCommandSerializationTests
     {
         var command = new EmailSendResultCommand
         {
-            OperationId = "op-123",
             SendResult = "Delivered",
-            NotificationId = Guid.Empty
+            NotificationId = Guid.Empty,
+            OperationId = "CBA49321-D68F-4F34-8386-76EAF3B446AA"
         };
 
         var serializedString = JsonSerializer.Serialize(command, _options);
@@ -34,8 +34,8 @@ public class EmailSendResultCommandSerializationTests
     {
         const string json = """
             {
-                "operationId": "op-456",
                 "sendResult": "Failed_Bounced",
+                "operationId": "153821EF-D821-444A-8D54-C0C27CC77689",
                 "notificationId": "00000000-0000-0000-0000-000000000001"
             }
             """;
@@ -43,8 +43,8 @@ public class EmailSendResultCommandSerializationTests
         var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
 
         Assert.NotNull(command);
-        Assert.Equal("op-456", command.OperationId);
         Assert.Equal("Failed_Bounced", command.SendResult);
+        Assert.Equal("153821EF-D821-444A-8D54-C0C27CC77689", command.OperationId);
         Assert.Equal(new Guid("00000000-0000-0000-0000-000000000001"), command.NotificationId);
     }
 }

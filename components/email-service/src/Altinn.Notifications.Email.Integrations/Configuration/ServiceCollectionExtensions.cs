@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
@@ -48,14 +48,17 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SendEmailQueueConsumer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<ICommonProducer, CommonProducer>()
+            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
 
-        RegisterEmailStatusCheckDispatcher(services, config, kafkaSettings);
+        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+
+        RegisterEmailSendResultDispatcher(services, wolverineSettings, kafkaSettings);
+        RegisterEmailStatusCheckDispatcher(services, wolverineSettings, kafkaSettings);
 
         return services;
     }
@@ -82,11 +85,8 @@ public static class ServiceCollectionExtensions
     /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
     /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, IConfiguration configuration, KafkaSettings kafkaSettings)
+    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
-        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-
         bool useWolverine =
              wolverineSettings.EnableWolverine &&
              wolverineSettings.EnableEmailStatusCheckListener &&
@@ -105,6 +105,32 @@ public static class ServiceCollectionExtensions
                     sp.GetRequiredService<ICommonProducer>(),
                     sp.GetRequiredService<IDateTimeService>(),
                     kafkaSettings.EmailSendingAcceptedTopicName));
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IEmailSendResultDispatcher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        bool useWolverine =
+             wolverineSettings.EnableWolverine &&
+             wolverineSettings.EnableEmailSendResultPublisher &&
+             !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName);
+
+        services.RemoveAll<IEmailSendResultDispatcher>();
+
+        if (useWolverine)
+        {
+            services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailSendResultDispatcher>(sp =>
+                new EmailSendResultProducer(
+                    sp.GetRequiredService<ICommonProducer>(),
+                    kafkaSettings.EmailStatusUpdatedTopicName));
         }
     }
 }
