@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.DependencyInjection;

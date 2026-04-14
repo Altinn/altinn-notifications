@@ -3,8 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Integrations.Wolverine.Policies;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
@@ -25,48 +26,108 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Only called when <see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c>
-    /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
+    /// Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="config">The application configuration.</param>
-    /// <param name="env">The host environment (used for dev/prod ASB emulator detection).</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
     public static void AddWolverineServices(
         this IServiceCollection services,
-        IConfiguration config,
-        IHostEnvironment env)
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+        if (!wolverineSettings.EnableWolverine)
+        {
+            return;
+        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 
-        // Set static settings on handlers before Wolverine discovers and configures them.
-        EmailDeliveryReportHandler.Settings = wolverineSettings;
-
         services.AddWolverine(opts =>
         {
-            opts.ConfigureNotificationsDefaults(env, wolverineSettings.ServiceBusConnectionString);
+            opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners (ASB queues will be auto-provisioned in production)
-            if (wolverineSettings.EnableEmailDeliveryReportListener && !string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
-            {
-                opts.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
-                    .InteropWith(new EventGridEnvelopeMapper())
-                    .ListenerCount(wolverineSettings.ListenerCount);
-            }
+            // Listeners
+            AddEmailDeliveryReportListener(wolverineSettings, opts);
+            AddSmsDeliveryReportListener(wolverineSettings, opts);
 
             // Publishers
-            if (wolverineSettings.EnableSendEmailPublisher && !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
-            {
-                opts.PublishMessage<SendEmailCommand>()
-                    .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
-            }
+            AddSendEmailPublisher(services, wolverineSettings, opts);
         });
+    }
 
-        // Replace the disabled publisher with the real Wolverine-based publisher
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus email delivery report queue.
+    /// Uses <see cref="EventGridEnvelopeMapper"/> to interop with Event Grid message format.
+    /// </summary>
+    private static void AddEmailDeliveryReportListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableEmailDeliveryReportListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
+                        .InteropWith(new EventGridEnvelopeMapper())
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new EmailDeliveryReportHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus SMS delivery report queue.
+    /// </summary>
+    private static void AddSmsDeliveryReportListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSmsDeliveryReportListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SmsDeliveryReportHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SendEmailCommand"/>,
+    /// routing outbound commands to the Azure Service Bus email send queue,
+    /// and replaces <see cref="IEmailCommandPublisher"/> with the Wolverine-based implementation.
+    /// Only active when <see cref="WolverineSettings.EnableSendEmailPublisher"/> is <c>true</c>.
+    /// </summary>
+    private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendEmailPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
+        }
+
+        wolverineOptions.PublishMessage<SendEmailCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+
         services.RemoveAll<IEmailCommandPublisher>();
         services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
     }
