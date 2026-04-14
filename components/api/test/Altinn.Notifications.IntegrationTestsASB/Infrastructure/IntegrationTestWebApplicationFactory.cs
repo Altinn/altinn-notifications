@@ -40,7 +40,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
         Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
@@ -77,7 +77,8 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         await DrainDeadLetterQueuesAsync(
             Fixture.ServiceBusConnectionString,
             WolverineSettings.EmailDeliveryReportQueueName,
-            WolverineSettings.EmailSendQueueName);
+            WolverineSettings.EmailSendQueueName,
+            WolverineSettings.SmsDeliveryReportQueueName);
     }
 
     /// <inheritdoc/>

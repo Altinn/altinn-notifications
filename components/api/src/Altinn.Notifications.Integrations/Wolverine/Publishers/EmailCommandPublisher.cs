@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 using Wolverine;
 
-namespace Altinn.Notifications.Integrations.Wolverine;
+namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes

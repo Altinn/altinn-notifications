@@ -19,9 +19,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
     /// <summary>
-    /// Gets the Wolverine settings loaded from configuration
+    /// Gets the Wolverine settings loaded from configuration.
     /// </summary>
-    public WolverineSettings WolverineSettings { get; private set; } = null!;
+    public WolverineSettings? WolverineSettings { get; private set; }
 
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
@@ -32,6 +32,10 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
+            ?? throw new InvalidOperationException(
+                "Missing WolverineSettings configuration for ASB integration tests.");
+
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
         WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
@@ -52,6 +56,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
 
         await DrainDeadLetterQueuesAsync(
             Fixture.ServiceBusConnectionString, 
+            WolverineSettings.SmsDeliveryReportQueueName,
             WolverineSettings.SendSmsQueueName);
     }
 }

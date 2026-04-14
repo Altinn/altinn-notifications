@@ -5,6 +5,7 @@
         "Name": "sbemulatorns",
         "Queues": [
           {
+            "Name": "altinn.notifications.sms.deliveryreports",
             "Name": "altinn.notifications.sms.send",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,

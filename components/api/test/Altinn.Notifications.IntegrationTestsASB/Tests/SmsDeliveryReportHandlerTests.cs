@@ -1,43 +1,50 @@
-using System.Text.Json;
-
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
-using Azure.Messaging.ServiceBus;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
+public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
     [Fact]
-    public async Task EmailDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
+    public async Task SmsDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 
         await using (factory)
         {
-            // Arrange - Create notification and set status to Succeeded with an operationId
-            // (simulates the email service having successfully sent via ACS)
-            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
-            string operationId = Guid.NewGuid().ToString();
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            // Arrange - Create notification and set status to Accepted with a gatewayReference
+            // (simulates the SMS service having successfully sent via Link Mobility)
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(factory);
+            string gatewayReference = Guid.NewGuid().ToString();
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+            await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
-            // Act - Send a raw EventGrid delivery report to the queue (simulates ACS + Event Grid)
-            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
-            await SendDeliveryReportAsync(queueName, operationId, "Delivered");
+            // Act - Send an SMS delivery report command to the queue via Wolverine (simulates the SMS service)
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = notification.Id,
+                GatewayReference = gatewayReference,
+                SendResult = "Delivered"
+            });
 
             // Assert - Poll the database until the handler updates the status to "Delivered"
             var statusUpdated = await WaitForUtils.WaitForAsync(
@@ -45,29 +52,29 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 {
                     var result = await PostgreUtil.RunSqlReturnOutput<string>(
                         _fixture.PostgresConnectionString,
-                        "SELECT result FROM notifications.emailnotifications WHERE alternateid = $1",
+                        "SELECT result FROM notifications.smsnotifications WHERE alternateid = $1",
                         new NpgsqlParameter { Value = notification.Id });
-                    return result == EmailNotificationResultType.Delivered.ToString();
+                    return result == SmsNotificationResultType.Delivered.ToString();
                 },
                 maxAttempts: 20,
                 delayMs: 500);
             Assert.True(statusUpdated, "Notification status should be updated to 'Delivered'");
 
-            // Assert - Verify operationId is preserved
-            var actualOperationId = await PostgreUtil.RunSqlReturnOutput<string>(
+            // Assert - Verify gatewayReference is preserved
+            var actualRef = await PostgreUtil.RunSqlReturnOutput<string>(
                 _fixture.PostgresConnectionString,
-                "SELECT operationid FROM notifications.emailnotifications WHERE alternateid = $1",
+                "SELECT gatewayreference FROM notifications.smsnotifications WHERE alternateid = $1",
                 new NpgsqlParameter { Value = notification.Id });
-            Assert.Equal(operationId, actualOperationId);
+            Assert.Equal(gatewayReference, actualRef);
         }
     }
 
     [Fact]
-    public async Task EmailDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
+    public async Task SmsDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
         // Arrange - Capture logs to count handler attempts via NotificationNotFoundException
         var logCapture = new LogCapture(nameof(NotificationNotFoundException));
-        string unmatchedOperationId = Guid.NewGuid().ToString();
+        string unmatchedGatewayReference = Guid.NewGuid().ToString();
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .ConfigureTestServices(services =>
@@ -76,28 +83,31 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
-            // ACS report arrives before the email service has persisted the operationId
-            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
-            // Act - Send delivery report with an operationId that doesn't match any notification
-            await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
+            // Act - Send delivery report with a gatewayReference that doesn't match any notification
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = null,
+                GatewayReference = unmatchedGatewayReference,
+                SendResult = "Delivered"
+            });
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
-            // maxAttempts is higher here to account for the full retry chain (cooldown + scheduled retries)
             DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                          _fixture.PostgresConnectionString,
-                         unmatchedOperationId);
+                         unmatchedGatewayReference);
                     return deadReport is not null;
                 },
                 maxAttempts: 40,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
-            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
             Assert.Equal(9, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
@@ -125,7 +135,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     }
 
     [Fact]
-    public async Task EmailDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
+    public async Task SmsDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
         // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
         var logCapture = new LogCapture(nameof(NotificationExpiredException));
@@ -137,40 +147,43 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
-            // Arrange - Create notification with a future expiry first, set operationId,
-            // then expire it. The v2 SQL function blocks updates on expired notifications,
-            // so we must set the operationId before expiring — simulating the real scenario
-            // where ACS sent the email (setting operationId) before the TTL elapsed.
-            string operationId = Guid.NewGuid().ToString();
-            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            // Arrange - Create notification, set gatewayReference via Accepted status,
+            // then expire it. Must set gatewayReference before expiring — the SQL function
+            // blocks updates on expired notifications.
+            string gatewayReference = Guid.NewGuid().ToString();
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(factory);
+            await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
             // Now expire the notification by backdating its expiry time
             await PostgreUtil.RunSql(
                 _fixture.PostgresConnectionString,
-                "UPDATE notifications.emailnotifications SET expirytime = now() - interval '1 minute' WHERE alternateid = $1",
+                "UPDATE notifications.smsnotifications SET expirytime = now() - interval '1 minute' WHERE alternateid = $1",
                 new NpgsqlParameter { Value = notification.Id });
 
-            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
-
             // Act - Send delivery report for the expired notification
-            await SendDeliveryReportAsync(queueName, operationId, "Delivered");
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = notification.Id,
+                GatewayReference = gatewayReference,
+                SendResult = "Delivered"
+            });
 
             // Assert - Poll the dead delivery reports table until the report appears
             DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
                 {
-                    deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                         _fixture.PostgresConnectionString,
-                        operationId);
+                        gatewayReference);
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
                 delayMs: 500);
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
             Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
-            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
             Assert.Equal(1, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
@@ -188,13 +201,13 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     }
 
     [Fact]
-    public async Task EmailDeliveryReport_WhenDatabaseThrowsNpgsqlException_RetriesAndMovesToDeadLetterQueue()
+    public async Task SmsDeliveryReport_WhenDatabaseThrowsNpgsqlException_RetriesAndMovesToDeadLetterQueue()
     {
         // Arrange - Create mock service that simulates database errors
         int attemptCount = 0;
-        var mockService = new Mock<IEmailNotificationService>();
-        mockService.Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
-            .Callback<EmailSendOperationResult>(_ => Interlocked.Increment(ref attemptCount))
+        var mockService = new Mock<ISmsNotificationService>();
+        mockService.Setup(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
+            .Callback<SmsSendOperationResult>(_ => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -203,10 +216,17 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+
+            string gatewayReference = Guid.NewGuid().ToString();
 
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
-            await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), "Delivered");
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                GatewayReference = gatewayReference,
+                SendResult = "Delivered"
+            });
 
             // Assert - Wait for message to appear in dead letter queue after retries exhaust
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
@@ -216,10 +236,10 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             Assert.NotNull(deadLetterMessage);
 
             // Assert - Dead delivery reports table should be empty (NpgsqlException goes to DLQ, not dead reports)
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            var deadReportId = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                gatewayReference);
+            Assert.Null(deadReportId);
 
             // Assert - Verify the handler was called the expected number of times
             // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
@@ -230,32 +250,38 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
-    private async Task SendDeliveryReportAsync(string queueName, string operationId, string status)
+    [Fact]
+    public async Task SmsDeliveryReport_WhenSendResultIsInvalid_GoesToDeadLetterQueueWithoutRetry()
     {
-        var eventGridEvent = new
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
         {
-            id = Guid.NewGuid().ToString(),
-            topic = "/subscriptions/test/resourceGroups/test/providers/Microsoft.Communication/communicationServices/test",
-            subject = $"sender/DoNotReply@altinn.no/message/{operationId}",
-            data = new
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+            string gatewayReference = Guid.NewGuid().ToString();
+
+            // Act - Send delivery report with a SendResult value that is not a valid enum member.
+            // Enum.Parse<SmsNotificationResultType> will throw ArgumentException, which is not
+            // in any handler chain and should go straight to DLQ with no retries.
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
             {
-                sender = "DoNotReply@altinn.no",
-                recipient = "recipient@example.com",
-                messageId = operationId,
-                status,
-                deliveryStatusDetails = new { statusMessage = "OK" },
-                deliveryAttemptTimeStamp = DateTime.UtcNow.ToString("o")
-            },
-            eventType = "Microsoft.Communication.EmailDeliveryReportReceived",
-            dataVersion = "1.0",
-            metadataVersion = "1",
-            eventTime = DateTime.UtcNow.ToString("o")
-        };
+                NotificationId = Guid.NewGuid(),
+                GatewayReference = gatewayReference,
+                SendResult = "NotARealStatus"
+            });
 
-        string body = JsonSerializer.Serialize(eventGridEvent);
+            // Assert - Message should appear in DLQ immediately (no retries for ArgumentException)
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(30));
+            Assert.NotNull(deadLetterMessage);
 
-        await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
-        await using var sender = client.CreateSender(queueName);
-        await sender.SendMessageAsync(new ServiceBusMessage(body));
+            // Assert - No dead delivery report should be created (ArgumentException is not handled by SaveDeadDeliveryReport)
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
+                _fixture.PostgresConnectionString,
+                gatewayReference);
+            Assert.Null(deadReport);
+        }
     }
 }
