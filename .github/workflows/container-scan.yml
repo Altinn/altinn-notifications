@@ -43,14 +43,20 @@ jobs:
               - 'components/api/src/**'
               - 'components/api/Dockerfile'
               - 'components/shared/src/**'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
             sms:
               - 'components/shared/src/**'
               - 'components/sms-service/src/**'
               - 'components/sms-service/Dockerfile'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
             email:
               - 'components/shared/src/**'
               - 'components/email-service/src/**'
               - 'components/email-service/Dockerfile'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
 
   scan-api:
     name: 'Scan: Notifications API'
