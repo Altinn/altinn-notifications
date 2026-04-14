@@ -31,9 +31,14 @@ public class EmailSendResultPublisher : IEmailSendResultDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(SendOperationResult result)
     {
+        if (result.NotificationId is null)
+        {
+            throw new InvalidOperationException("Cannot dispatch email send result: NotificationId is null.");
+        }
+
         var command = new EmailSendResultCommand
         {
-            NotificationId = result.NotificationId ?? Guid.Empty,
+            NotificationId = result.NotificationId.Value,
             SendResult = result.SendResult?.ToString() ?? string.Empty,
             OperationId = string.IsNullOrWhiteSpace(result.OperationId) ? null : result.OperationId
         };

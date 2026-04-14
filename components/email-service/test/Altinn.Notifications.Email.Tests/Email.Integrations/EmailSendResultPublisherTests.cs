@@ -50,7 +50,7 @@ public class EmailSendResultPublisherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenNotificationIdIsNull_CommandNotificationIdIsGuidEmpty()
+    public async Task DispatchAsync_WhenNotificationIdIsNull_ThrowsInvalidOperationException()
     {
         // Arrange
         var result = new SendOperationResult
@@ -60,21 +60,12 @@ public class EmailSendResultPublisherTests
             SendResult = EmailSendResult.Delivered
         };
 
-        EmailSendResultCommand? capturedCommand = null;
         var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
-            .Returns(ValueTask.CompletedTask);
+        var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
-        var sut = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
-
-        // Act
-        await sut.DispatchAsync(result);
-
-        // Assert
-        Assert.NotNull(capturedCommand);
-        Assert.Equal(Guid.Empty, capturedCommand.NotificationId);
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => emailSendResultPublisher.DispatchAsync(result));
+        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
     [Fact]
