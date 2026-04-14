@@ -1,9 +1,10 @@
-﻿using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Status;
 
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Core.Sending;
@@ -21,8 +22,16 @@ public class StatusServiceTests
         };
     }
 
-    [Fact]
-    public async Task UpdateSendStatus_OperationResultGenerated_PublishedToExpectedKafkaTopic()
+    [Theory]
+    [InlineData(EmailSendResult.Failed)]
+    [InlineData(EmailSendResult.Delivered)]
+    [InlineData(EmailSendResult.Failed_Bounced)]
+    [InlineData(EmailSendResult.Failed_Quarantined)]
+    [InlineData(EmailSendResult.Failed_FilteredSpam)]
+    [InlineData(EmailSendResult.Failed_TransientError)]
+    [InlineData(EmailSendResult.Failed_InvalidEmailFormat)]
+    [InlineData(EmailSendResult.Failed_SupressedRecipient)]
+    public async Task UpdateSendStatus_TerminalResult_DispatchesWithCorrectFieldsAndDoesNotProduce(EmailSendResult terminalResult)
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -33,26 +42,27 @@ public class StatusServiceTests
         };
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.GetOperationUpdate(It.IsAny<string>()))
-            .ReturnsAsync(EmailSendResult.Delivered);
+        clientMock.Setup(c => c.GetOperationUpdate(identifier.OperationId))
+            .ReturnsAsync(terminalResult);
 
         Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.EmailStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-                s.Contains("\"operationId\":\"operation-id\"") &&
-                s.Contains("\"sendResult\":\"Delivered\"") &&
-                s.Contains($"\"notificationId\":\"{id}\""))));
+        Mock<IEmailSendResultDispatcher> dispatcherMock = new();
+        dispatcherMock.Setup(d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+            r.OperationId == identifier.OperationId &&
+            r.NotificationId == id &&
+            r.SendResult == terminalResult)))
+            .Returns(Task.CompletedTask);
 
         Mock<IDateTimeService> dateTimeMock = new();
 
-        var sut = new StatusService(clientMock.Object, producerMock.Object, dateTimeMock.Object, _topicSettings);
+        var statusService = new StatusService(_topicSettings, producerMock.Object, dateTimeMock.Object, clientMock.Object, dispatcherMock.Object);
 
         // Act
-        await sut.UpdateSendStatus(identifier);
+        await statusService.UpdateSendStatus(identifier);
 
         // Assert
-        producerMock.VerifyAll();
+        dispatcherMock.VerifyAll();
+        producerMock.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -82,46 +92,49 @@ public class StatusServiceTests
                   actualProducerInput = serializedIdentifier;
               });
 
+        Mock<IEmailSendResultDispatcher> dispatcherMock = new();
         Mock<IDateTimeService> dateTimeMock = new();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(new DateTime(2023, 06, 16, 08, 00, 00, DateTimeKind.Utc));
 
-        var sut = new StatusService(clientMock.Object, producerMock.Object, dateTimeMock.Object, _topicSettings);
+        var statusService = new StatusService(_topicSettings, producerMock.Object, dateTimeMock.Object, clientMock.Object, dispatcherMock.Object);
 
         // Act
-        await sut.UpdateSendStatus(identifier);
+        await statusService.UpdateSendStatus(identifier);
 
         // Assert
         producerMock.VerifyAll();
-        Assert.Contains("\"operationId\":\"operation-id\"", actualProducerInput);
         Assert.Contains($"\"notificationId\":\"{id}\"", actualProducerInput);
+        Assert.Contains("\"operationId\":\"operation-id\"", actualProducerInput);
         Assert.Contains("\"lastStatusCheck\":\"2023-06-16T08:00:00Z\"", actualProducerInput);
+        dispatcherMock.Verify(d => d.DispatchAsync(It.IsAny<SendOperationResult>()), Times.Never);
     }
 
     [Fact]
-    public async Task UpdateSendStatus_PublishedToExpectedKafkaTopic()
+    public async Task UpdateSendStatus_WithSendOperationResult_DispatchesToStatusDispatcher()
     {
+        // Arrange
         SendOperationResult result = new()
         {
-            OperationId = "00000000-0000-0000-0000-000000000000",
-            SendResult = EmailSendResult.Delivered
+            SendResult = EmailSendResult.Delivered,
+            OperationId = "00000000-0000-0000-0000-000000000000"
         };
 
-        Mock<IEmailServiceClient> clientMock = new();
-
         Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.EmailStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-                s.Contains("\"operationId\":\"00000000-0000-0000-0000-000000000000\"") &&
-                s.Contains("\"sendResult\":\"Delivered\""))));
-        
+        Mock<IEmailServiceClient> clientMock = new();
+        Mock<IEmailSendResultDispatcher> dispatcherMock = new();
+
+        dispatcherMock.Setup(d => d.DispatchAsync(result)).Returns(Task.CompletedTask);
+
         Mock<IDateTimeService> dateTimeMock = new();
 
-        StatusService statusService = new(clientMock.Object, producerMock.Object, dateTimeMock.Object, _topicSettings);
+        StatusService statusService = new(_topicSettings, producerMock.Object, dateTimeMock.Object, clientMock.Object, dispatcherMock.Object);
 
+        // Act
         await statusService.UpdateSendStatus(result);
 
-        producerMock.VerifyAll();
-        Assert.NotNull(result);
+        // Assert
+        dispatcherMock.VerifyAll();
+        clientMock.VerifyNoOtherCalls();
+        producerMock.VerifyNoOtherCalls();
     }
 }

@@ -33,9 +33,9 @@ public class EmailSendResultPublisher : IEmailSendResultDispatcher
     {
         var command = new EmailSendResultCommand
         {
-            OperationId = result.OperationId,
             NotificationId = result.NotificationId ?? Guid.Empty,
-            SendResult = result.SendResult?.ToString() ?? string.Empty
+            SendResult = result.SendResult?.ToString() ?? string.Empty,
+            OperationId = string.IsNullOrWhiteSpace(result.OperationId) ? null : result.OperationId
         };
 
         await using var scope = _serviceProvider.CreateAsyncScope();
