@@ -32,8 +32,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
-            ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
+            ?? throw new InvalidOperationException(
+                "Missing WolverineSettings configuration for ASB integration tests.");
 
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 

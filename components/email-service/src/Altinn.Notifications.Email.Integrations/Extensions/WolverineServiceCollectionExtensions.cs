@@ -4,7 +4,6 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
@@ -24,8 +23,7 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Only called when <see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c>
-    /// (gated in Program.cs). Each listener/publisher queue is individually enabled via its own flag.
+    /// Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
@@ -74,7 +72,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
@@ -99,7 +98,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
         }
 
         wolverineOptions.PublishMessage<CheckEmailSendStatusCommand>()
@@ -123,7 +123,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
