@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
 
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Integrations.Configuration;
@@ -17,7 +17,6 @@ namespace Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
 /// configurations or behaviors to the handler chains associated with sending SMS commands, like retry policies and error handling chains.
 /// </summary>
 /// <param name="wolverineSettings">Settings used to retrieve retry and cooldown delay configuration</param>
-[ExcludeFromCodeCoverage]
 internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSettings) : IHandlerPolicy
 {
     /// <summary>
@@ -31,11 +30,8 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
     /// <param name="container">The service container used to resolve dependencies required during configuration.</param>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
     {
-        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendSmsCommand));
-        if (chain is null)
-        {
-            return;
-        }
+        var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendSmsCommand))
+            ?? throw new UnreachableException($"No handler chain found for {nameof(SendSmsCommand)}. Ensure the handler is registered before adding this policy.");
 
         chain
            .OnException<TaskCanceledException>()

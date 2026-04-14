@@ -4,8 +4,6 @@ using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 
-using Azure.Messaging.ServiceBus;
-
 using Moq;
 
 using Xunit;
@@ -49,7 +47,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
 
         await using (factory)
         {
-            var queueName = factory.WolverineSettings.SendSmsQueueName;
+            var queueName = GetQueueName(factory);
 
             // Act
             await factory.SendToQueueAsync(queueName, command);
@@ -100,7 +98,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             .Initialize();
         await using (factory)
         {
-            var queueName = factory.WolverineSettings.SendSmsQueueName;
+            var queueName = GetQueueName(factory);
             
             // Act
             await factory.SendToQueueAsync(queueName, command);
@@ -119,5 +117,51 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
                     sms.Sender == command.SenderNumber)),
                 Times.AtLeast(2)); // Expecting at least one retry
         }
+    }
+
+    /// <summary>
+    /// Verifies that when a SendSmsCommand has an empty NotificationId, the handler throws
+    /// an <see cref="InvalidOperationException"/> which is not covered by the retry policy,
+    /// causing the message to go directly to the dead letter queue without any retries.
+    /// </summary>
+    [Fact]
+    public async Task HandleAsync_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
+    {
+        // Arrange
+        var mockService = new Mock<ISendingService>();
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService(_ => mockService.Object)
+            .Initialize();
+
+        await using (factory)
+        {
+            string queueName = GetQueueName(factory);
+
+            // Act - NotificationId = Guid.Empty triggers InvalidOperationException in the handler guard clause
+            await factory.SendToQueueAsync(queueName, new SendSmsCommand
+            {
+                NotificationId = Guid.Empty,
+                MobileNumber = "+4799999999",
+                Body = "Test SMS body",
+                SenderNumber = "Altinn"
+            });
+
+            // Assert - Message should appear in DLQ quickly as InvalidOperationException is not retried by the policy
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(10));
+
+            Assert.NotNull(deadLetterMessage);
+
+            // Assert - The sending service should never have been called since the guard throws before it
+            mockService.Verify(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()), Times.Never);
+        }
+    }
+
+    private static string GetQueueName(IntegrationTestWebApplicationFactory factory)
+    {
+        return factory.WolverineSettings!.SendSmsQueueName;
     }
 }
