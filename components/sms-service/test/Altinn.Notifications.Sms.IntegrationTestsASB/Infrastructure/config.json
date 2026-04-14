@@ -6,6 +6,19 @@
         "Queues": [
           {
             "Name": "altinn.notifications.sms.deliveryreports",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT5M",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 3,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          },
+          {
             "Name": "altinn.notifications.sms.send",
             "Properties": {
               "DeadLetteringOnMessageExpiration": false,
