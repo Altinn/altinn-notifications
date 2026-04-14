@@ -11,22 +11,22 @@ export function postNotificationOrderV2(serializedOrder, token, label) {
   return http.post(endpoint, serializedOrder, params);
 }
 
-export function postSmsInstantNotificationOrderRequest(data, token) {
+export function postSmsInstantNotificationOrderRequest(data, token, label) {
   const endpoint = config.notifications.orders_sms_instant_v2;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
-  params.tags = { name: "POST SMS instant notification order request" };
+  params.tags = { name: label };
 
   const smsOrderRequest = data;
 
   return http.post(endpoint, smsOrderRequest, params);
 }
 
-export function postEmailInstantNotificationOrderRequest(data, token) {
+export function postEmailInstantNotificationOrderRequest(data, token, label) {
   const endpoint = config.notifications.orders_email_instant_v2;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
-  params.tags = { name: "POST Email instant notification order request" };
+  params.tags = { name: label };
 
   const emailOrderRequest = data;
 

@@ -4,9 +4,9 @@
   "recipientEmail": {
     "emailAddress": "string",
     "emailSettings": {
-      "subject": "string",
+      "subject": "Automated instant email test from Altinn",
       "body": "This is a plain test body for testing Email instant services",
-      "senderEmailAddress": "string",
+      "senderEmailAddress": "noreply@altinn.no",
       "contentType": "Plain"
     }
   }

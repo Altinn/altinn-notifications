@@ -37,6 +37,7 @@ import {
   get_email_shipment,
   get_sms_shipment,
   get_sms_instant_shipment,
+  get_email_instant_shipment,
   get_status_feed,
   post_email_instant_order_v2,
 } from "./threshold-labels.js";
@@ -47,6 +48,7 @@ const labels = [
   post_email_order_v2,
   post_sms_order_v2,
   post_sms_instant_order_v2,
+  post_email_instant_order_v2,
   get_email_shipment,
   get_sms_shipment,
   get_status_feed,
@@ -60,6 +62,9 @@ const smsOrderRequestJson = JSON.parse(
 );
 const smsOrderInstantRequestJson = JSON.parse(
   open("../data/orders/order-v2-sms-instant.json"),
+);
+const emailOrderInstantRequestJson = JSON.parse(
+  open("../data/orders/order-v2-email-instant.json"),
 );
 
 export const options = {
@@ -134,12 +139,19 @@ export function setup() {
     ...smsOrderInstantRequestJson,
     idempotencyId: uuidv4(),
     sendersReference,
-    recipient: {
-      ...smsOrderInstantRequestJson.recipient,
-      recipientSms: {
-        ...smsOrderInstantRequestJson.recipient.recipientSms,
-        phoneNumber: smsRecipient,
-      },
+    recipientSms: {
+      ...smsOrderInstantRequestJson.recipientSms,
+      phoneNumber: smsRecipient,
+    },
+  };
+
+  const emailOrderInstantRequest = {
+    ...emailOrderInstantRequestJson,
+    idempotencyId: uuidv4(),
+    sendersReference,
+    recipientEmail: {
+      ...emailOrderInstantRequestJson.recipientEmail,
+      emailAddress: emailRecipient,
     },
   };
 
@@ -149,6 +161,7 @@ export function setup() {
     emailOrderRequest,
     smsOrderRequest,
     smsOrderInstantRequest,
+    emailOrderInstantRequest,
   };
 }
 
@@ -252,8 +265,9 @@ function postEmailInstantNotificationOrderRequest(data) {
   );
 
   const success = check(response, {
-    "POST Email instant notification order request. Status is 201 Created": (r) =>
-      r.status === 201,
+    "POST Email instant notification order request. Status is 201 Created": (
+      r,
+    ) => r.status === 201,
     "POST Email instant notification order request. Response body contains shipmentId":
       (r) => JSON.parse(r.body).notification.shipmentId !== undefined,
   });
@@ -308,6 +322,19 @@ export function getShipmentStatus(data, shipmentId, label, type) {
         "GET SMS instant shipment details for SMS. ShipmentId property is a match":
           (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
         "Get SMS instant shipment details for SMS. Type is Instant": (
+          shipmentResponse,
+        ) => shipmentResponse.type === "Instant",
+      });
+      break;
+    case "EmailInstant":
+      check(response, {
+        "GET Email instant shipment details. Status is 200 OK": (r) =>
+          r.status === 200,
+      });
+      check(JSON.parse(response.body), {
+        "GET Email instant shipment details. ShipmentId property is a match":
+          (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+        "GET Email instant shipment details. Type is Instant": (
           shipmentResponse,
         ) => shipmentResponse.type === "Instant",
       });
@@ -378,13 +405,13 @@ export default function runTests(data) {
     get_sms_instant_shipment,
     "SMSInstant",
   );
-    
+
   // testing instant Email notification order request
   response = postEmailInstantNotificationOrderRequest(data);
   getShipmentStatus(
     data,
     JSON.parse(response).notification.shipmentId,
-    get_sms_instant_shipment,
+    get_email_instant_shipment,
     "EmailInstant",
   );
 
