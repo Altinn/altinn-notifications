@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -136,10 +137,9 @@ public class KafkaEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_InvalidSerializedEntries_Skipped()
+    public async Task PublishAsync_Batch_EntriesWithEmptyNotificationId_AreSkipped()
     {
-        // Producer can return invalid/empty entries alongside valid ones (per IKafkaProducer contract).
-        // Invalid entries that don't deserialize to a valid Email are silently skipped — same as original behavior.
+        // "{}" is valid JSON. It deserializes to an Email with Guid.Empty NotificationId and is skipped.
         var email1 = new Email(Guid.NewGuid(), "s1", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
         var email2 = new Email(Guid.NewGuid(), "s2", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
         var batch = new List<Email> { email1, email2 };
@@ -152,10 +152,24 @@ public class KafkaEmailCommandPublisherTests
 
         var result = await publisher.PublishAsync(batch, CancellationToken.None);
 
-        // "{}" deserializes to an Email with Guid.Empty NotificationId — skipped per the guard condition
         Assert.Equal(2, result.Count);
         Assert.Contains(result, e => e.NotificationId == email1.NotificationId);
         Assert.Contains(result, e => e.NotificationId == email2.NotificationId);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_MalformedSerializedEntry_ThrowsJsonException()
+    {
+        var email1 = new Email(Guid.NewGuid(), "s1", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var batch = new List<Email> { email1 };
+
+        var producer = new Mock<IKafkaProducer>();
+        producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([email1.Serialize(), "{"]);
+
+        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+
+        await Assert.ThrowsAsync<JsonException>(() => publisher.PublishAsync(batch, CancellationToken.None));
     }
 
     [Fact]
