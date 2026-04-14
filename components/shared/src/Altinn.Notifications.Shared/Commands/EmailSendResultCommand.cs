@@ -19,7 +19,8 @@ public sealed record EmailSendResultCommand
     /// The Azure Communication Services operation identifier returned when the email was submitted.
     /// </summary>
     [JsonPropertyName("operationId")]
-    public string OperationId { get; init; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OperationId { get; init; }
 
     /// <summary>
     /// The terminal send result (e.g. "Delivered", "Failed", "Failed_Bounced").

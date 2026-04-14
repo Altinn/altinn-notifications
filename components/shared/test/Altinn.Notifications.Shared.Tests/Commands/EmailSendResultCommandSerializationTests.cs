@@ -30,6 +30,23 @@ public class EmailSendResultCommandSerializationTests
     }
 
     [Fact]
+    public void EmailSendResultCommand_WhenOperationIdIsNull_OmitsOperationIdFromJson()
+    {
+        var command = new EmailSendResultCommand
+        {
+            OperationId = null,
+            SendResult = "Failed",
+            NotificationId = Guid.Empty
+        };
+
+        var serializedString = JsonSerializer.Serialize(command, _options);
+        var jsonDocument = JsonDocument.Parse(serializedString);
+        var jsonElement = jsonDocument.RootElement;
+
+        Assert.False(jsonElement.TryGetProperty("operationId", out _), "Property 'operationId' should be omitted when null.");
+    }
+
+    [Fact]
     public void EmailSendResultCommand_Deserializes_FromExpectedJsonPropertyNames()
     {
         const string json = """
@@ -46,5 +63,21 @@ public class EmailSendResultCommandSerializationTests
         Assert.Equal("Failed_Bounced", command.SendResult);
         Assert.Equal("153821EF-D821-444A-8D54-C0C27CC77689", command.OperationId);
         Assert.Equal(new Guid("00000000-0000-0000-0000-000000000001"), command.NotificationId);
+    }
+
+    [Fact]
+    public void EmailSendResultCommand_WhenOperationIdAbsentInJson_DeserializesToNull()
+    {
+        const string json = """
+            {
+                "sendResult": "Failed",
+                "notificationId": "00000000-0000-0000-0000-000000000001"
+            }
+            """;
+
+        var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
+
+        Assert.NotNull(command);
+        Assert.Null(command.OperationId);
     }
 }
