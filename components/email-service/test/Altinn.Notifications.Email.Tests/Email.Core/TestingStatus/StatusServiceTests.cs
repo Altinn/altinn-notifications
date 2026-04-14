@@ -90,7 +90,8 @@ public class StatusServiceTests
               .Callback<string, string>((topicName, serializedIdentifier) =>
               {
                   actualProducerInput = serializedIdentifier;
-              });
+              })
+              .ReturnsAsync(true);
 
         Mock<IEmailSendResultDispatcher> dispatcherMock = new();
         Mock<IDateTimeService> dateTimeMock = new();
@@ -107,6 +108,35 @@ public class StatusServiceTests
         Assert.Contains("\"operationId\":\"operation-id\"", actualProducerInput);
         Assert.Contains("\"lastStatusCheck\":\"2023-06-16T08:00:00Z\"", actualProducerInput);
         dispatcherMock.Verify(d => d.DispatchAsync(It.IsAny<SendOperationResult>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_SendResultIsSending_WhenProduceFails_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        SendNotificationOperationIdentifier identifier = new()
+        {
+            OperationId = "operation-id",
+            NotificationId = Guid.NewGuid()
+        };
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.GetOperationUpdate(It.IsAny<string>()))
+            .ReturnsAsync(EmailSendResult.Sending);
+
+        Mock<ICommonProducer> producerMock = new();
+        producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Mock<IEmailSendResultDispatcher> dispatcherMock = new();
+        Mock<IDateTimeService> dateTimeMock = new();
+        dateTimeMock.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
+
+        var statusService = new StatusService(_topicSettings, producerMock.Object, dateTimeMock.Object, clientMock.Object, dispatcherMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => statusService.UpdateSendStatus(identifier));
+        dispatcherMock.VerifyNoOtherCalls();
     }
 
     [Fact]

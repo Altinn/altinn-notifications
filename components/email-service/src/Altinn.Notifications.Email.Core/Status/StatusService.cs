@@ -51,7 +51,11 @@ public class StatusService : IStatusService
         else
         {
             operationIdentifier.LastStatusCheck = _dateTime.UtcNow();
-            await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
+            bool success = await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
+            if (!success)
+            {
+                throw new InvalidOperationException("Failed to re-queue email status-check message.");
+            }
         }
     }
 
