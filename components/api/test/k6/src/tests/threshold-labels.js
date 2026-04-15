@@ -16,7 +16,6 @@ export const post_sms_instant_order_v2 = "post_sms_instant_order_v2";
 export const get_email_instant_shipment = "get_email_instant_shipment";
 export const post_email_instant_order_v2 = "post_email_instant_order_v2";
 
-
 export const get_status_feed = "get_status_feed";
 
 export const post_valid_order = "post_valid_order";
@@ -30,8 +29,8 @@ export const post_order_without_resource_id = "post_order_without_resource_id";
  * @param {object} options - Options object containing thresholds configuration
  */
 export function setEmptyThresholds(labels, options) {
-  for (const label of labels) {
-    options.thresholds[`http_reqs{name:${label}}`] = [];
-    options.thresholds[`http_req_duration{name:${label}}`] = [];
-  }
+    for (const label of labels) {
+        options.thresholds[`http_reqs{name:${label}}`] = [];
+        options.thresholds[`http_req_duration{name:${label}}`] = [];
+    }
 }
