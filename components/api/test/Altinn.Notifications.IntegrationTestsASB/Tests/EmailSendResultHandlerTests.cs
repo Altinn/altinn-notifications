@@ -92,10 +92,11 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Wait for message to appear in dead letter queue after retries exhaust
+            var timeout = TimeSpan.FromMilliseconds(policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum()) + TimeSpan.FromSeconds(10);
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
-                TimeSpan.FromSeconds(30));
+                timeout);
             Assert.NotNull(deadLetterMessage);
 
             // Assert - Verify the handler was called exactly as many times as the policy dictates
@@ -108,7 +109,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
     public async Task EmailSendResult_WhenSendResultIsUnknown_SavesDeadDeliveryReportAndDiscardsMessage()
     {
         // Arrange - mock service to confirm the handler short-circuits before UpdateSendStatus
-        var mockService = new Mock<IEmailNotificationService>();
+        var mockService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .ReplaceService(_ => mockService.Object)
