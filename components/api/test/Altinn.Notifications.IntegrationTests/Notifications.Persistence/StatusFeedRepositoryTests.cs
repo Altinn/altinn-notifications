@@ -16,9 +16,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
-    private readonly string _creatorName = "ttd";
     private readonly List<Guid> _ordersToDelete = [];
     private readonly List<int> _fakeOrderIdsToDelete = [];
+    private readonly string _creatorName = $"ttd-{Guid.NewGuid():N}";
 
     public async ValueTask DisposeAsync()
     {
