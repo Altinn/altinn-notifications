@@ -22,6 +22,7 @@ public class WolverineSettingsTests
 
         Assert.NotNull(settings.EmailStatusCheckQueuePolicy);
         Assert.False(settings.EnableEmailStatusCheckListener);
+        Assert.False(settings.EnableEmailStatusCheckPublisher);
         Assert.Equal(string.Empty, settings.EmailStatusCheckQueueName);
 
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
@@ -37,6 +38,7 @@ public class WolverineSettingsTests
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSendEmailListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
