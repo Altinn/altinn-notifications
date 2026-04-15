@@ -20,7 +20,7 @@ using Wolverine;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine.Publishers;
+namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
 
 /// <summary>
 /// Unit tests for <see cref="EmailCommandPublisher"/>.
