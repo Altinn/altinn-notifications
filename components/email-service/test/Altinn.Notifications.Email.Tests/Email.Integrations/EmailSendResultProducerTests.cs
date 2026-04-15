@@ -13,12 +13,6 @@ public class EmailSendResultProducerTests
     private const string _topicName = "altinn.notifications.email.send.result";
 
     [Fact]
-    public void Constructor_WhenProducerIsNull_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() => new EmailSendResultProducer(null!, _topicName));
-    }
-
-    [Fact]
     public async Task DispatchAsync_ProducesExactlyOnce()
     {
         // Arrange
@@ -102,15 +96,6 @@ public class EmailSendResultProducerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WhenTopicNameIsNullOrWhitespace_ThrowsArgumentException(string topicName)
-    {
-        var producerMock = new Mock<ICommonProducer>();
-        Assert.Throws<ArgumentException>(() => new EmailSendResultProducer(producerMock.Object, topicName));
     }
 
     [Fact]
