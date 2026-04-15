@@ -109,9 +109,9 @@ public static class WolverineServiceCollectionExtensions
 
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="SendEmailCommand"/>,
-    /// routing outbound commands to the Azure Service Bus email send queue.
+    /// routing outbound commands to the Azure Service Bus email send queue,
+    /// and replaces <see cref="IEmailCommandPublisher"/> with the Wolverine-based implementation.
     /// Only active when <see cref="WolverineSettings.EnableSendEmailPublisher"/> is <c>true</c>.
-    /// The <see cref="IEmailCommandPublisher"/> DI registration is handled separately.
     /// </summary>
     private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
@@ -131,9 +131,6 @@ public static class WolverineServiceCollectionExtensions
 
         services.RemoveAll<IEmailCommandPublisher>();
         services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
-
-        wolverineOptions.PublishMessage<SendEmailCommand>()
-                        .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
     }
 
     /// <summary>

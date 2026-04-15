@@ -46,8 +46,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var fakeOrderId = 123;
-        var shipmentId = Guid.NewGuid();
-        await InsertTestDataRowForStatusFeed(fakeOrderId, "2025-5-21", shipmentId);
+        await InsertTestDataRowForStatusFeed(fakeOrderId, "2025-5-21", Guid.NewGuid());
         _fakeOrderIdsToDelete.Add(fakeOrderId);
 
         StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
@@ -56,10 +55,9 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
         // Act
         var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
-        var filteredByShipmentId = results.Where(x => x.OrderStatus.ShipmentId == shipmentId);
 
         // Assert
-        var item = Assert.Single(filteredByShipmentId);
+        var item = Assert.Single(results);
         Assert.True(item.SequenceNumber > 0);
         Assert.Equal(ProcessingLifecycle.Order_Completed, item.OrderStatus.Status);
     }
