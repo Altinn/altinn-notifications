@@ -96,18 +96,8 @@ public class EmailStatusCheckPublisherTests
 
     private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
     {
-        var scopeServiceProvider = new Mock<IServiceProvider>();
-        scopeServiceProvider.Setup(sp => sp.GetService(typeof(IMessageBus))).Returns(messageBus);
-
-        var serviceScope = new Mock<IServiceScope>();
-        serviceScope.Setup(s => s.ServiceProvider).Returns(scopeServiceProvider.Object);
-
-        var scopeFactory = new Mock<IServiceScopeFactory>();
-        scopeFactory.Setup(f => f.CreateScope()).Returns(serviceScope.Object);
-
-        var rootServiceProvider = new Mock<IServiceProvider>();
-        rootServiceProvider.Setup(sp => sp.GetService(typeof(IServiceScopeFactory))).Returns(scopeFactory.Object);
-
-        return rootServiceProvider.Object;
+        var services = new ServiceCollection();
+        services.AddSingleton(messageBus);
+        return services.BuildServiceProvider();
     }
 }

@@ -14,20 +14,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
-/// <summary>
-/// Integration tests for the email sending status Wolverine handler.
-/// Sends <see cref="EmailSendResultCommand"/> messages to the ASB queue (simulating the email service
-/// polling loop) and verifies end-to-end processing through the handler pipeline.
-/// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
-    /// <summary>
-    /// Tests the happy path: an <see cref="EmailSendResultCommand"/> with result "Delivered" is received
-    /// for a notification that exists in the database. The handler should update the status to "Delivered".
-    /// </summary>
     [Fact]
     public async Task EmailSendResult_WhenNotificationExists_UpdatesStatusToDelivered()
     {
@@ -68,10 +59,6 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
         }
     }
 
-    /// <summary>
-    /// Tests that when the database throws <see cref="NpgsqlException"/>, the handler retries
-    /// according to the configured policy and eventually moves the message to the dead letter queue.
-    /// </summary>
     [Fact]
     public async Task EmailSendResult_WhenDatabaseThrowsNpgsqlException_RetriesAndMovesToDeadLetterQueue()
     {
@@ -89,7 +76,10 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
+            var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+
+            string queueName = factory.WolverineSettings.EmailSendResultQueueName;
 
             var command = new EmailSendResultCommand
             {
@@ -108,24 +98,21 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 TimeSpan.FromSeconds(30));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(9, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 
-    /// <summary>
-    /// Tests that when the <c>SendResult</c> value is not a recognized <see cref="EmailNotificationResultType"/>,
-    /// the handler throws <see cref="ArgumentException"/>, a dead delivery report is persisted to the database,
-    /// and the message is discarded (not moved to the dead letter queue).
-    /// </summary>
     [Fact]
     public async Task EmailSendResult_WhenSendResultIsUnknown_SavesDeadDeliveryReportAndDiscardsMessage()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        // Arrange - mock service to confirm the handler short-circuits before UpdateSendStatus
+        var mockService = new Mock<IEmailNotificationService>();
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService(_ => mockService.Object)
+            .Initialize();
 
         await using (factory)
         {
@@ -161,6 +148,11 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             Assert.Equal("UNRECOGNIZED_SEND_RESULT", deadReport.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
             Assert.True(deadReportFound, "Dead delivery report should be saved when SendResult is unrecognized");
+
+            // Assert - ArgumentException fires before the service is reached; UpdateSendStatus must never be called
+            mockService.Verify(
+                s => s.UpdateSendStatus(It.IsAny<Core.Models.Notification.EmailSendOperationResult>()),
+                Times.Never);
 
             // Assert - Message is discarded, not moved to the dead letter queue
             var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(

@@ -36,10 +36,10 @@ public class EmailSendResultPublisherTests
             .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
+        var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act
-        await sut.DispatchAsync(result);
+        await emailSendResultPublisher.DispatchAsync(result);
 
         // Assert
         Assert.NotNull(capturedCommand);
@@ -86,10 +86,10 @@ public class EmailSendResultPublisherTests
             .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
+        var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act
-        await sut.DispatchAsync(result);
+        await emailSendResultPublisher.DispatchAsync(result);
 
         // Assert
         Assert.NotNull(capturedCommand);
@@ -114,10 +114,10 @@ public class EmailSendResultPublisherTests
             .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
+        var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act
-        await sut.DispatchAsync(result);
+        await emailSendResultPublisher.DispatchAsync(result);
 
         // Assert
         Assert.NotNull(capturedCommand);
@@ -126,18 +126,8 @@ public class EmailSendResultPublisherTests
 
     private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
     {
-        var scopeServiceProvider = new Mock<IServiceProvider>();
-        scopeServiceProvider.Setup(sp => sp.GetService(typeof(IMessageBus))).Returns(messageBus);
-
-        var serviceScope = new Mock<IServiceScope>();
-        serviceScope.Setup(s => s.ServiceProvider).Returns(scopeServiceProvider.Object);
-
-        var scopeFactory = new Mock<IServiceScopeFactory>();
-        scopeFactory.Setup(f => f.CreateScope()).Returns(serviceScope.Object);
-
-        var rootServiceProvider = new Mock<IServiceProvider>();
-        rootServiceProvider.Setup(sp => sp.GetService(typeof(IServiceScopeFactory))).Returns(scopeFactory.Object);
-
-        return rootServiceProvider.Object;
+        var services = new ServiceCollection();
+        services.AddSingleton(messageBus);
+        return services.BuildServiceProvider();
     }
 }
