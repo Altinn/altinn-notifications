@@ -52,19 +52,25 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                 Value = message
             });
 
-            if (result.Status != PersistenceStatus.Persisted)
+            if (result.Status == PersistenceStatus.Persisted)
             {
-                _logger.LogError("// KafkaProducer // ProduceAsync // Message not ack'd by all brokers (value: '{Message}'). Delivery status: {Status}", message, result.Status);
-                return false;
+                return true;
             }
-        }
-        catch (ProduceException<long, string> ex)
-        {
-            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, ex.DeliveryResult.Value);
+
+            _logger.LogError(
+                "// CommonProducer // ProduceAsync // Message not ack'd by all brokers. Delivery status: {Status}, Partition: {Partition}, Offset: {Offset}",
+                result.Status,
+                result.Partition.Value,
+                result.Offset.Value);
+
             return false;
         }
+        catch (ProduceException<Null, string> ex)
+        {
+            _logger.LogError(ex, "// CommonProducer // ProduceAsync // Permanent error: {ErrorReason}", ex.Error.Reason);
 
-        return true;
+            return false;
+        }
     }
 
     /// <inheritdoc/>
@@ -83,8 +89,8 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
         var topicsNotExisting = _kafkaSettings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
         foreach (string topic in topicsNotExisting)
         { 
-            adminClient.CreateTopicsAsync(new TopicSpecification[]
-            {
+            adminClient.CreateTopicsAsync(
+            [
                 new TopicSpecification()
                 {
                     Name = topic,
@@ -92,8 +98,8 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                     ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
                     Configs = _sharedClientConfig.TopicSpecification.Configs
                 }
-            }).Wait();
-            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
+            ]).Wait();
+            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic created successfully.");
         }
     }
 }

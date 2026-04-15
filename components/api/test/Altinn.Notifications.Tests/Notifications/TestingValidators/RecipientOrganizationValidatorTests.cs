@@ -231,4 +231,28 @@ public class RecipientOrganizationValidatorTests
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceAction);
     }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void Should_Have_Validation_Error_When_ResourceAction_Is_Blank_Or_Whitespace(string resourceAction)
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ChannelSchema = NotificationChannelExt.Sms,
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = resourceAction,
+            SmsSettings = new SmsSendingOptionsExt { Sender = "Test", Body = "Test" }
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceAction)
+            .WithErrorMessage("ResourceAction cannot be blank or whitespace.");
+    }
 }

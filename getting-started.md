@@ -61,12 +61,14 @@ Altinn Notifications is being migrated from Kafka to Azure Service Bus. A local 
 
 **Podman (Preferred):**
 ```bash
-podman compose -f tools/asb-emulator/docker-compose.yaml up -d
+cd tools/asb-emulator
+podman compose up -d
 ```
 
 **Docker:**
 ```bash
-docker compose -f tools/asb-emulator/docker-compose.yaml up -d
+cd tools/asb-emulator
+docker compose up -d
 ```
 
 > 🎯 **Tip:** Use [PurpleExplorer](https://github.com/philipmat/PurpleExplorer) to browse queues and messages. It supports the `UseDevelopmentEmulator=true` flag for the local emulator connection string.

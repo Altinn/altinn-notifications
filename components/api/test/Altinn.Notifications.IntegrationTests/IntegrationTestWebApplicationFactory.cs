@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.AspNetCore.Hosting;
@@ -11,12 +11,16 @@ namespace Altinn.Notifications.IntegrationTests;
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
+    private readonly string? _originalEnableWolverine = Environment.GetEnvironmentVariable("WolverineSettings__EnableWolverine");
+
     /// <summary>
     /// ConfigureWebHost for setup of configuration and test services
     /// </summary>
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
+
         IConfiguration configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
@@ -28,7 +32,10 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
             // overriding initialization of extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri!);
+            if (!string.IsNullOrEmpty(uri))
+            {
+                ResourceLinkExtensions.Initialize(uri);
+            }
         });
 
         builder.ConfigureTestServices(services =>
@@ -43,5 +50,15 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", _originalEnableWolverine);
+        }
+
+        base.Dispose(disposing);
     }
 }

@@ -6,6 +6,7 @@ using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
+using Altinn.Notifications.Sms.Integrations.Extensions;
 using Altinn.Notifications.Sms.Telemetry;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
@@ -176,6 +177,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
+    services.AddWolverineServices(configuration, appBuilder.Environment);
 
     if (appBuilder.Environment.IsDevelopment())
     {

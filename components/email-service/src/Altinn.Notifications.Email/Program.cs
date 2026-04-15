@@ -7,6 +7,7 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Extensions;
 using Altinn.Notifications.Email.Telemetry;
 
 using Azure.Identity;
@@ -153,6 +154,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
             tracing.AddHttpClientInstrumentation();
+            tracing.AddSource("Wolverine");
         });
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
@@ -169,6 +171,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
+    services.AddWolverineServices(configuration, appBuilder.Environment);
 
     if (appBuilder.Environment.IsDevelopment())
     {

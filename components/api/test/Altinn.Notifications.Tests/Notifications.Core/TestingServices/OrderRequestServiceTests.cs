@@ -1630,7 +1630,7 @@ public class OrderRequestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
-        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Title);
 
         // Verify repository Create was not called when contact information is missing
         orderRepositoryMock.Verify(
@@ -1727,7 +1727,7 @@ public class OrderRequestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
-        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Title);
 
         // Verify repository Create was not called when contact information is missing
         orderRepositoryMock.Verify(
@@ -2274,7 +2274,7 @@ public class OrderRequestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
-        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Title);
 
         // Verify the contact point service was called with SMS channel
         contactPointServiceMock.Verify(
@@ -2674,7 +2674,7 @@ public class OrderRequestServiceTests
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
-        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Title);
 
         // Verify the contact point service was called
         contactPointMock.Verify(

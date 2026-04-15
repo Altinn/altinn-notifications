@@ -181,6 +181,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddNpgsql();
 
             tracing.AddConfluentKafkaInstrumentation();
+
+            tracing.AddSource("Wolverine");
         });
 
     AddAzureMonitorTelemetryExporters(services, config);
@@ -237,6 +239,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
+    
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }

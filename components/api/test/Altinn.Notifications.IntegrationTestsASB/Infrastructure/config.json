@@ -1,0 +1,71 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Queues": [
+          {
+            "Name": "altinn.notifications.email.deliveryreports",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "altinn.notifications.sms.deliveryreports",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "altinn.notifications.email.send",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "wolverine-dead-letter-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT5M",
+              "MaxDeliveryCount": 10,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          }
+        ],
+        "Topics": []
+      }
+    ],
+    "Logging": {
+      "Type": "File"
+    }
+  }
+}

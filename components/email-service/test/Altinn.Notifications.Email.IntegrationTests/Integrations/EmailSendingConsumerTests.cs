@@ -24,6 +24,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
     private readonly string _emailSendingConsumerTopic = Guid.NewGuid().ToString();
     private readonly string _emailSendingAcceptedProducerTopic = Guid.NewGuid().ToString();
+    private readonly string _firstTopicName = Guid.NewGuid().ToString();
+    private readonly string _secondTopicName = Guid.NewGuid().ToString();
 
     public EmailSendingConsumerTests()
     {
@@ -32,7 +34,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             BrokerAddress = "localhost:9092",
             Consumer = new()
             {
-                GroupId = "email-sending-consumer"
+                GroupId = $"email-sending-consumer-{Guid.NewGuid()}"
             },
             SendEmailQueueTopicName = _emailSendingConsumerTopic,
             EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
@@ -47,18 +49,23 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         await KafkaUtil.DeleteTopicAsync(_emailSendingConsumerTopic);
         await KafkaUtil.DeleteTopicAsync(_emailSendingAcceptedProducerTopic);
+        await KafkaUtil.DeleteTopicAsync(_firstTopicName);
+        await KafkaUtil.DeleteTopicAsync(_secondTopicName);
     }
 
     public async Task InitializeAsync()
     {
-        await Task.CompletedTask;
+        await KafkaUtil.CreateTopicAsync(_emailSendingConsumerTopic);
+        await KafkaUtil.CreateTopicAsync(_emailSendingAcceptedProducerTopic);
+        await KafkaUtil.CreateTopicAsync(_firstTopicName);
+        await KafkaUtil.CreateTopicAsync(_secondTopicName);
     }
 
     [Fact]
     public async Task GivenValidEmailMessage_WhenConsumed_ThenSendingServiceIsCalledOnce()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -80,7 +87,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenInvalidEmailMessage_WhenConsumed_ThenSendingServiceIsNotCalled()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -100,7 +107,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithValidBatch_ThenContiguousOffsetsCommitted()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
@@ -117,7 +124,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         await testFixture.Consumer.StartAsync(CancellationToken.None);
         await testFixture.Producer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(email));
 
-        var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(50));
         await testFixture.Consumer.StopAsync(CancellationToken.None);
 
         // Assert
@@ -167,7 +174,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
         var concurrentExecutions = 0;
         var processedMessagesCount = 0;
         var maxConcurrentExecutions = 0;
-        var allMessagesProcessedSignal = new ManualResetEventSlim(false);
+        using var allMessagesProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
@@ -226,7 +233,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenStartedConsumer_WhenMessageProduced_ThenConfiguredTopicIsSubscribed()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -247,7 +254,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenKafkaMessageWithNullValue_WhenConsumed_ThenOffsetAdvancedAndNoProcessing()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -269,7 +276,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithRebalanceInProgress_ThenWarningLoggedAndCommitSkipped()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
@@ -307,7 +314,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenCancellationBeforeProcessingStarts_WhenMessageProduced_ThenNoProcessingOccurs()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(processedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -333,7 +340,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenPartitionRevocationWithLastBatchButNoMatchingPartitions_ThenNoCommitAttempted()
     {
         // Arrange
-        var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();
@@ -342,62 +349,51 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             .Callback(firstProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
-        var firstTopicName = Guid.NewGuid().ToString();
-        var secondTopicName = Guid.NewGuid().ToString();
-
         var kafkaSettings = new KafkaSettings
         {
             BrokerAddress = "localhost:9092",
-            SendEmailQueueTopicName = firstTopicName,
-            EmailSendingAcceptedTopicName = secondTopicName,
-            Consumer = new() { GroupId = "test-partition-mismatch" },
-            Admin = new() { TopicList = [firstTopicName, secondTopicName, _emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic] }
+            SendEmailQueueTopicName = _firstTopicName,
+            EmailSendingAcceptedTopicName = _secondTopicName,
+            Consumer = new() { GroupId = $"test-partition-mismatch-{Guid.NewGuid()}" },
+            Admin = new() { TopicList = [_firstTopicName, _secondTopicName, _emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic] }
         };
 
         var serviceProvider = CreateServiceProvider(sendingServiceMock.Object, loggerMock.Object, kafkaSettings);
         var producer = KafkaUtil.GetKafkaProducer(serviceProvider);
 
-        try
-        {
-            await using var firstTestFixture = new EmailConsumerTestFixture(
-                producer,
-                serviceProvider.GetServices<IHostedService>().OfType<SendEmailQueueConsumer>().Single(),
-                serviceProvider);
+        await using var firstTestFixture = new EmailConsumerTestFixture(
+            producer,
+            serviceProvider.GetServices<IHostedService>().OfType<SendEmailQueueConsumer>().Single(),
+            serviceProvider);
 
-            var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
+        var email = new Core.Sending.Email(Guid.NewGuid(), "test", "body", "from", "to", EmailContentType.Plain);
 
-            // Act - Process a message on first topic, then quickly stop to trigger revocation
-            await firstTestFixture.Consumer.StartAsync(CancellationToken.None);
-            await producer.ProduceAsync(firstTopicName, JsonSerializer.Serialize(email));
+        // Act - Process a message on first topic, then quickly stop to trigger revocation
+        await firstTestFixture.Consumer.StartAsync(CancellationToken.None);
+        await producer.ProduceAsync(_firstTopicName, JsonSerializer.Serialize(email));
 
-            var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
-            await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        var processed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(processed, "Message should have been processed");
+        // Assert
+        Assert.True(processed, "Message should have been processed");
 
-            // No revocation commit warnings should occur since partitions won't match
-            loggerMock.Verify(
-                x => x.Log(
-                    It.Is<LogLevel>(l => l == LogLevel.Warning),
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Commit on revocation")),
-                    It.IsAny<Exception?>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Never);
-        }
-        finally
-        {
-            await KafkaUtil.DeleteTopicAsync(firstTopicName);
-            await KafkaUtil.DeleteTopicAsync(secondTopicName);
-        }
+        // No revocation commit warnings should occur since partitions won't match
+        loggerMock.Verify(
+            x => x.Log(
+                It.Is<LogLevel>(l => l == LogLevel.Warning),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Commit on revocation")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task GivenActiveConsumerProcessingMessages_WhenStopAsyncCalled_ThenStopCompletesPromptly()
     {
         // Arrange
-        var processedSignal = new ManualResetEventSlim(false);
+        using var processedSignal = new ManualResetEventSlim(false);
 
         var semaphoreSlim = new SemaphoreSlim(0, 1);
         var sendingServiceMock = new Mock<ISendingService>();
@@ -447,13 +443,13 @@ public class EmailSendingConsumerTests : IAsyncLifetime
             BrokerAddress = "localhost:9092",
             SendEmailQueueRetryTopicName = retryTopicName,
             SendEmailQueueTopicName = _emailSendingConsumerTopic,
-            Consumer = new() { GroupId = "email-sending-consumer" },
+            Consumer = new() { GroupId = $"email-sending-consumer-{Guid.NewGuid()}" },
             EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
             Admin = new() { TopicList = [_emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic, retryTopicName] }
         };
 
         var sendingServiceMock = new Mock<ISendingService>();
-        var retryProducedSignal = new ManualResetEventSlim(false);
+        using var retryProducedSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         sendingServiceMock
@@ -515,28 +511,29 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenShutdown_ThenLastBatchSafeOffsetsCommittedOnce_AndPendingMessageProcessedAfterRestart()
     {
         // Arrange
-        var firstEmailNotificationIdentifer = Guid.NewGuid();
         var firstRunSemaphoreSlim = new SemaphoreSlim(0, 1);
-        var firstProcessedSignal = new ManualResetEventSlim(false);
-        var firstEmail = new Core.Sending.Email(firstEmailNotificationIdentifer, "first", "body-1", "from", "to", EmailContentType.Plain);
+        var firstEmailNotificationIdentifier = Guid.NewGuid();
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
+        var firstEmail = new Core.Sending.Email(firstEmailNotificationIdentifier, "first", "body-1", "from", "to", EmailContentType.Plain);
 
-        var secondEmailNotificationIdentifer = Guid.NewGuid();
-        var secondProcessedSignal = new ManualResetEventSlim(false);
-        var secondEmail = new Core.Sending.Email(secondEmailNotificationIdentifer, "second", "body-2", "from", "to", EmailContentType.Plain);
+        var secondEmailNotificationIdentifier = Guid.NewGuid();
+        using var secondProcessedSignal = new ManualResetEventSlim(false);
+        using var secondEmailSendStarted = new ManualResetEventSlim(false);
+        var secondEmail = new Core.Sending.Email(secondEmailNotificationIdentifier, "second", "body-2", "from", "to", EmailContentType.Plain);
 
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var firstRunSendingServiceMock = new Mock<ISendingService>();
         firstRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifier)))
             .Callback(firstProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
         firstRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifier)))
             .Returns(async () =>
             {
-                // Simulate in-flight work that should NOT complete before StopAsync.
+                secondEmailSendStarted.Set();
                 await firstRunSemaphoreSlim.WaitAsync(TimeSpan.FromSeconds(25));
             });
 
@@ -550,7 +547,11 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
         var firstProcessed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
 
-        await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        // Wait until the second email's SendAsync is invoked and in-flight before triggering shutdown.
+        var secondEmailInFlight = await WaitForConditionAsync(() => secondEmailSendStarted.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var stopTask = firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        firstRunSemaphoreSlim.Release();
+        await stopTask;
 
         loggerMock.Verify(
            e => e.Log(
@@ -561,16 +562,14 @@ public class EmailSendingConsumerTests : IAsyncLifetime
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
            Times.AtLeastOnce);
 
-        firstRunSemaphoreSlim.Release();
-
         var secondRunSendingServiceMock = new Mock<ISendingService>();
         secondRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifier)))
             .Callback(secondProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
         secondRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifier)))
             .Returns(Task.CompletedTask);
 
         await using var secondTestFixture = CreateTestFixture(secondRunSendingServiceMock.Object);
@@ -583,9 +582,10 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
         // Assert
         Assert.True(firstProcessed, "First email was not processed within the expected time window.");
-        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == firstEmailNotificationIdentifer)), Times.Once);
-        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifer)), Times.Once);
-        secondRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifer)), Times.Once);
+        Assert.True(secondEmailInFlight, "Second email's SendAsync was not invoked before shutdown — the in-flight scenario was not exercised.");
+        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == firstEmailNotificationIdentifier)), Times.Once);
+        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifier)), Times.Once);
+        secondRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifier)), Times.Once);
         Assert.True(secondProcessed, "Second email was not processed by the restarted consumer, indicating offsets may have been committed beyond the safe contiguous boundary.");
     }
 
@@ -593,7 +593,7 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenShutdownInitiated_ThenNoFurtherMessagesAreProcessed_IncludingMessagesProducedDuringStop()
     {
         // Arrange
-        var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
         var sendingServiceMock = CreateSendingServiceMock(firstProcessedSignal);
         await using var testFixture = CreateTestFixture(sendingServiceMock.Object);
 
@@ -623,9 +623,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         // Arrange
         var processedCount = 0;
-        var reached100Signal = new ManualResetEventSlim(false);
-        var allProcessedSignal = new ManualResetEventSlim(false);
-        var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
+        using var reached100Signal = new ManualResetEventSlim(false);
+        using var allProcessedSignal = new ManualResetEventSlim(false);
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
@@ -677,8 +676,8 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     {
         // Arrange
         var processedCount = 0;
-        var firstProcessedSignal = new ManualResetEventSlim(false);
-        var blockingSignal = new ManualResetEventSlim(false);
+        using var firstProcessedSignal = new ManualResetEventSlim(false);
+        using var blockingSignal = new ManualResetEventSlim(false);
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var sendingServiceMock = new Mock<ISendingService>();

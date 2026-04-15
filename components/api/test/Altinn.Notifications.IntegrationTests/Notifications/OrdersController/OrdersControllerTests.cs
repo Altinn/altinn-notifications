@@ -72,7 +72,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             null,
             null,
             new ProcessingStatus(),
-            OrderType.Notification);
+            OrderType.Notification,
+            null);
 
         _requestResponse = new()
         {
@@ -555,6 +556,70 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
 
         var invalidRequest = _orderRequest;
         invalidRequest.NotificationChannel = null;
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(invalidRequest), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
+
+    [Fact]
+    public async Task Post_ResourceActionWithoutResourceId_ReturnsBadRequest()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        var invalidRequest = new NotificationOrderRequestExt
+        {
+            NotificationChannel = NotificationChannelExt.Email,
+            EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+            Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+            ResourceId = null,
+            ResourceAction = "read"
+        };
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(invalidRequest), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
+
+    [Fact]
+    public async Task Post_BlankResourceAction_ReturnsBadRequest()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        var invalidRequest = new NotificationOrderRequestExt
+        {
+            NotificationChannel = NotificationChannelExt.Email,
+            EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+            Recipients = [new RecipientExt { EmailAddress = "test@test.com" }],
+            ResourceId = "urn:altinn:resource:test",
+            ResourceAction = "   "
+        };
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {

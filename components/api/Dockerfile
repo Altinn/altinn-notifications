@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.23@sha256:d17d8d6511aee3dd54b4d9e8e03d867b1c3df28fb518ee9dd69e50305b7af4ee AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.201-alpine3.23@sha256:a65df8d9ad0661a1a785a4f26188b3a2826540d448df317ac69cfb6e801e1592 AS build
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
@@ -16,7 +16,7 @@ COPY components/shared/src ./components/shared/src
 RUN dotnet publish -c Release -o out ./components/api/src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.2-alpine3.23@sha256:8e21337e482e353c958681789872b3451e966e07c259b9a6f9a8b7902749a785 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.5-alpine3.23@sha256:8c7671a6f0f984d0c102ee70d61e8010857de032b320561dea97cc5781aea5f8 AS final
 WORKDIR /app
 EXPOSE 5090
 

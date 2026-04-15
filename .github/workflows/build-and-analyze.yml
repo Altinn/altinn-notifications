@@ -70,28 +70,34 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
           filters: |
             api:
+              - 'global.json'
               - 'components/api/src/**'
+              - 'components/api/Altinn.Notifications.API.slnx'
               - 'components/api/test/Altinn.Notifications.Tests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
-              - 'components/api/Altinn.Notifications.API.slnx'
+              - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
             shared:
+              - 'global.json'
               - 'components/shared/src/**'
               - 'components/shared/test/**'
               - 'components/shared/Altinn.Notifications.Shared.slnx'
             sms:
+              - 'global.json'
               - 'components/sms-service/src/**'
               - 'components/sms-service/test/**'
               - 'components/sms-service/Altinn.Notifications.Sms.slnx'
             email:
+              - 'global.json'
               - 'components/email-service/src/**'
               - 'components/email-service/test/**'
               - 'components/email-service/Altinn.Notifications.Email.slnx'
             tools:
+              - 'global.json'
               - 'tools/src/**'
               - 'tools/test/**'
               - 'tools/Altinn.Notifications.Tools.slnx'
@@ -157,7 +163,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
@@ -176,7 +182,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:18.3@sha256:69e8582b781cb44fa4557b98ed586fe68361e320d9b12f9707494335634f4f3d
+        image: postgres:18.3@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -189,7 +195,7 @@ jobs:
         ports:
           - 5432:5432
       kafka:
-        image: confluentinc/cp-kafka:8.1.1@sha256:d20bd62f01826c454e88530efc6d73654cb4697182f37206742b96c7b947236e
+        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         ports:
           - 9092:9092
         env:
@@ -242,9 +248,18 @@ jobs:
           --logger "trx;LogFileName=api-integration.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API ASB integration tests
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration-asb/ \
+          --logger "trx;LogFileName=api-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-api
           path: TestResults/
@@ -260,7 +275,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-api
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -297,7 +312,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-shared
           path: TestResults/
@@ -313,7 +328,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-shared
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -334,7 +349,7 @@ jobs:
       checks: write
     services:
       kafka:
-        image: confluentinc/cp-kafka:8.1.1@sha256:d20bd62f01826c454e88530efc6d73654cb4697182f37206742b96c7b947236e
+        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         ports:
           - 9092:9092
         env:
@@ -379,9 +394,18 @@ jobs:
           --logger "trx;LogFileName=email-integration.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run Email ASB integration tests
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-integration-asb/ \
+          --logger "trx;LogFileName=email-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-email
           path: TestResults/
@@ -397,7 +421,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-email
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -418,7 +442,7 @@ jobs:
       checks: write
     services:
       kafka:
-        image: confluentinc/cp-kafka:8.1.1@sha256:d20bd62f01826c454e88530efc6d73654cb4697182f37206742b96c7b947236e
+        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         ports:
           - 9092:9092
         env:
@@ -463,9 +487,18 @@ jobs:
           --logger "trx;LogFileName=sms-integration.trx" \
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run SMS ASB integration tests
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-integration-asb/ \
+          --logger "trx;LogFileName=sms-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-sms
           path: TestResults/
@@ -481,7 +514,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-sms
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -502,7 +535,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:18.3@sha256:69e8582b781cb44fa4557b98ed586fe68361e320d9b12f9707494335634f4f3d
+        image: postgres:18.3@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -538,7 +571,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-tools
           path: TestResults/
@@ -554,7 +587,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-tools
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -587,7 +620,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
@@ -595,35 +628,35 @@ jobs:
             nuget-${{ runner.os }}-
       - name: Download Shared coverage
         if: needs.test-shared.result == 'success'
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-shared
           path: coverage/shared
         continue-on-error: true
       - name: Download API coverage
         if: needs.test-api.result == 'success'
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-api
           path: coverage/api
         continue-on-error: true
       - name: Download SMS coverage
         if: needs.test-sms.result == 'success'
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-sms
           path: coverage/sms
         continue-on-error: true
       - name: Download Email coverage
         if: needs.test-email.result == 'success'
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-email
           path: coverage/email
         continue-on-error: true
       - name: Download Tools coverage
         if: needs.test-tools.result == 'success'
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-tools
           path: coverage/tools
@@ -638,7 +671,7 @@ jobs:
           dotnet-sonarscanner begin \
             /k:"Altinn_altinn-notifications" \
             /o:"altinn" \
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
             /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
@@ -663,7 +696,7 @@ jobs:
             dotnet build tools/Altinn.Notifications.Tools.slnx -c Release -v q
           fi
 
-          dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
   status-check:
     permissions:

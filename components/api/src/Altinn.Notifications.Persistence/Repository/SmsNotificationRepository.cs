@@ -144,6 +144,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             NotificationChannel.Sms,
             notificationId,
             gatewayReference,
+            statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
             SendStatusIdentifierType.GatewayReference);
     }
 }

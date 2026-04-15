@@ -50,4 +50,17 @@ public abstract class RecipientBaseExt
     /// </remarks>
     [JsonPropertyName("smsSettings")]
     public SmsSendingOptionsExt? SmsSettings { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
+    /// </summary>
+    /// <example>urn:altinn:resource:org_example_app</example>
+    [JsonPropertyName("resourceId")]
+    public string? ResourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the action to authorize against the resource. Defaults to "read" when not specified.
+    /// </summary>
+    [JsonPropertyName("resourceAction")]
+    public string? ResourceAction { get; set; }
 }

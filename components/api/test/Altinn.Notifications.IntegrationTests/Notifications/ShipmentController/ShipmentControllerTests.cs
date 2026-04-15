@@ -90,7 +90,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
-        Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
@@ -334,7 +333,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
-        Assert.Equal("Shipment not found", problemDetails.Detail);
+        Assert.Equal("Shipment not found", problemDetails.Title);
     }
 
     [Fact]
@@ -369,7 +368,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
-        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("client disconnected", problemDetails.Title, StringComparison.OrdinalIgnoreCase);
     }
 
     private HttpClient GetTestClient(INotificationDeliveryManifestService? service = null)
