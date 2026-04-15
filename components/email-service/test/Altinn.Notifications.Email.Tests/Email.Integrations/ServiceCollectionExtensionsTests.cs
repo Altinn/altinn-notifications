@@ -151,10 +151,10 @@ public class ServiceCollectionExtensionsTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_RegistersKafkaDispatcher(string? queueName)
+    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
-        // Both feature flags are on, but EmailStatusCheckQueueName is blank — the ASB transport
-        // would be half-configured, so we must fall back to the Kafka dispatcher.
+        // Both feature flags are on, but EmailStatusCheckQueueName is blank — fail fast rather than
+        // silently falling back to Kafka, to surface misconfiguration at startup.
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -170,13 +170,8 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection services = new ServiceCollection();
 
-        services.AddIntegrationServices(config);
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
-        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
+        Assert.Equal("EmailStatusCheckQueueName must be configured when EnableEmailStatusCheckListener is enabled.", exception.Message);
     }
 }
