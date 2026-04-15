@@ -115,13 +115,10 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    public void AddIntegrationServices_WolverineNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enableStatusCheckListener, bool enableStatusCheckPublisher)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AddIntegrationServices_WolverineNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enableStatusCheckPublisher)
     {
         // Arrange
         var config = new ConfigurationBuilder()
@@ -167,7 +164,6 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })

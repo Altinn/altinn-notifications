@@ -65,6 +65,7 @@ public class WolverineSettingsTests
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.EmailSendQueuePolicy.GetScheduleDelays());
 
         Assert.True(settings.EnableEmailStatusCheckListener);
+        Assert.True(settings.EnableEmailStatusCheckPublisher);
         Assert.Equal("altinn.notifications.email.check-send-status", settings.EmailStatusCheckQueueName);
         Assert.Contains(TimeSpan.FromMilliseconds(500), settings.EmailStatusCheckQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(30000), settings.EmailStatusCheckQueuePolicy.GetScheduleDelays());
