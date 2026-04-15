@@ -15,7 +15,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Integrations.Wolverine.Publishers;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Logging;
@@ -759,7 +759,7 @@ public class SmsNotificationServiceTests
 
         if (producer != null)
         {
-            commandPublisher = new KafkaSendSmsPublisher(producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+            commandPublisher = new KafkaSendSmsPublisher(producer, _smsQueueTopicName);
         }
 
         repository ??= new Mock<ISmsNotificationRepository>().Object;

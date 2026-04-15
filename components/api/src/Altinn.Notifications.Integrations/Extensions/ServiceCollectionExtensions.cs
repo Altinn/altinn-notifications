@@ -13,6 +13,7 @@ using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
@@ -21,7 +22,6 @@ using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -37,13 +37,12 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection(nameof(KafkaSettings))
+        KafkaSettings kafkaSettings = config.GetSection(nameof(KafkaSettings))
             .Get<KafkaSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
-        .AddSingleton<ISendSmsPublisher, KafkaSendSmsPublisher>()
         .AddHostedService<SmsStatusConsumer>()
         .AddHostedService<SmsStatusRetryConsumer>()
         .AddHostedService<EmailStatusConsumer>()
@@ -54,6 +53,8 @@ public static class ServiceCollectionExtensions
         .AddHostedService<SmsPublishBackgroundService>()
         .AddHostedService<EmailPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
+
+        RegisterSendSmsPublisher(services, config, kafkaSettings);
     }
 
     /// <summary>
@@ -109,11 +110,12 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the implementation of <see cref="ISendSmsPublisher"/> based on the configuration for Wolverine. If Wolverine is enabled and properly configured, <see cref="SendSmsCommandPublisher"/> will be registered, otherwise <see cref="KafkaSendSmsPublisher"/> will be used.
+    /// Registers the correct <see cref="ISendSmsPublisher"/> implementation based on Wolverine settings.
+    /// Reads <see cref="WolverineSettings"/> once and uses an if/else to register either
+    /// the ASB-backed <see cref="SendSmsCommandPublisher"/> or the Kafka-backed
+    /// <see cref="KafkaSendSmsPublisher"/>. Exactly one transport path is always active.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="config">The configuration collection.</param>
-    public static void RegisterSendSmsPublisher(this IServiceCollection services, IConfiguration config)
+    private static void RegisterSendSmsPublisher(IServiceCollection services, IConfiguration config, KafkaSettings kafkaSettings)
     {
         IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
@@ -131,7 +133,10 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddSingleton<ISendSmsPublisher, KafkaSendSmsPublisher>();
+            services.AddSingleton<ISendSmsPublisher>(sp =>
+                new KafkaSendSmsPublisher(
+                    sp.GetRequiredService<IKafkaProducer>(),
+                    kafkaSettings.SmsQueueTopicName));
         }
     }
 }

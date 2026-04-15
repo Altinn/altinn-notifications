@@ -2,16 +2,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Integrations.Wolverine.Publishers;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine.Publishers;
+namespace Altinn.Notifications.Tests.Notifications.Integrations.Kafka.Publishers;
 
 public class KafkaSendSmsPublisherTests
 {
@@ -36,8 +34,7 @@ public class KafkaSendSmsPublisherTests
             })
             .ReturnsAsync(true);
 
-        var kafkaSettings = Options.Create(new KafkaSettings { SmsQueueTopicName = _topicName });
-        var publisher = new KafkaSendSmsPublisher(producerMock.Object, kafkaSettings);
+        var publisher = new KafkaSendSmsPublisher(producerMock.Object, _topicName);
 
         // Act
         var result = await publisher.PublishAsync(sms, CancellationToken.None);
