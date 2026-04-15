@@ -87,15 +87,16 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        bool useWolverine =
-             wolverineSettings.EnableWolverine &&
-             wolverineSettings.EnableEmailStatusCheckListener &&
-             !string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName);
-
         services.RemoveAll<IEmailStatusCheckDispatcher>();
 
-        if (useWolverine)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckListener)
         {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
+            }
+
             services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
         }
         else
@@ -114,15 +115,16 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        bool useWolverine =
-             wolverineSettings.EnableWolverine &&
-             wolverineSettings.EnableEmailSendResultPublisher &&
-             !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName);
-
         services.RemoveAll<IEmailSendResultDispatcher>();
 
-        if (useWolverine)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailSendResultPublisher)
         {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
+            }
+
             services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
         }
         else
