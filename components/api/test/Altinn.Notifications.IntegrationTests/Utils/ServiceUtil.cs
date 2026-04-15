@@ -1,5 +1,4 @@
 using Altinn.Notifications.Core.Extensions;
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -102,10 +100,6 @@ public static class ServiceUtil
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
 
-        // Ensure only one instance of ISendSmsPublisher is registered, and replace it with a test spy implementation.
-        services.RemoveAll<ISendSmsPublisher>();
-        services.AddSingleton<ISendSmsPublisher, SpySendSmsPublisher>();
-
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();
 
@@ -128,9 +122,9 @@ public static class ServiceUtil
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
-        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
+        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment
