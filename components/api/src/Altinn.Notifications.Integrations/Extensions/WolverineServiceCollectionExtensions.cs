@@ -4,11 +4,13 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
@@ -54,7 +56,7 @@ public static class WolverineServiceCollectionExtensions
             AddSmsDeliveryReportListener(wolverineSettings, opts);
 
             // Publishers
-            AddSendEmailPublisher(wolverineSettings, opts);
+            AddSendEmailPublisher(services, wolverineSettings, opts);
             AddSendSmsPublisher(wolverineSettings, opts);
         });
     }
@@ -111,7 +113,7 @@ public static class WolverineServiceCollectionExtensions
     /// Only active when <see cref="WolverineSettings.EnableSendEmailPublisher"/> is <c>true</c>.
     /// The <see cref="IEmailCommandPublisher"/> DI registration is handled separately.
     /// </summary>
-    private static void AddSendEmailPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendEmailPublisher)
         {
@@ -123,6 +125,12 @@ public static class WolverineServiceCollectionExtensions
             throw new InvalidOperationException(
                 $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
         }
+
+        wolverineOptions.PublishMessage<SendEmailCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+
+        services.RemoveAll<IEmailCommandPublisher>();
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
 
         wolverineOptions.PublishMessage<SendEmailCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
