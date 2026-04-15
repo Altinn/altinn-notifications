@@ -149,7 +149,8 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
         }
 
         wolverineOptions.PublishMessage<EmailSendResultCommand>()

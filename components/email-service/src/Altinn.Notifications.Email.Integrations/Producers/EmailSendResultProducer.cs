@@ -31,6 +31,8 @@ public class EmailSendResultProducer : IEmailSendResultDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(SendOperationResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         bool success = await _producer.ProduceAsync(_topicName, result.Serialize());
         if (!success)
         {
