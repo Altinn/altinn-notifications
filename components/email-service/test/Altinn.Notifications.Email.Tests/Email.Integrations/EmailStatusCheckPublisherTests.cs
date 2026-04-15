@@ -94,7 +94,7 @@ public class EmailStatusCheckPublisherTests
         await Assert.ThrowsAsync<ArgumentException>(() => emailStatusCheckPublisher.DispatchAsync(Guid.NewGuid(), operationId));
     }
 
-    private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
+    private static ServiceProvider CreateServiceProvider(IMessageBus messageBus)
     {
         var services = new ServiceCollection();
         services.AddSingleton(messageBus);

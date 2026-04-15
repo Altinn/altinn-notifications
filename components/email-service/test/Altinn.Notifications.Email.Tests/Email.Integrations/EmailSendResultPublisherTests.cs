@@ -134,7 +134,7 @@ public class EmailSendResultPublisherTests
         messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
-    private static IServiceProvider CreateServiceProvider(IMessageBus messageBus)
+    private static ServiceProvider CreateServiceProvider(IMessageBus messageBus)
     {
         var services = new ServiceCollection();
         services.AddSingleton(messageBus);
