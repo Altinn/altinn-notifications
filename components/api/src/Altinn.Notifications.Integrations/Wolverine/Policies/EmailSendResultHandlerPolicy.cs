@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -21,9 +21,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Policies;
 /// Wolverine handler policy that configures error handling for the <see cref="EmailSendResultCommand"/> handler chain.
 /// </summary>
 /// <param name="settings">Wolverine settings used to retrieve retry and cooldown delay configuration.</param>
-[ExcludeFromCodeCoverage]
 internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) : IHandlerPolicy
 {
+    private const string _unrecognizedSendResultReason = "UNRECOGNIZED_SEND_RESULT";
+
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
     {
@@ -41,5 +42,9 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
+
+        chain
+            .OnException<ArgumentException>()
+            .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.AzureCommunicationServices);
     }
 }

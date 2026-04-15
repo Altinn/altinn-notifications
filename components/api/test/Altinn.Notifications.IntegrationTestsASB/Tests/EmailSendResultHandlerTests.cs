@@ -119,36 +119,57 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
 
     /// <summary>
     /// Tests that when the <c>SendResult</c> value is not a recognized <see cref="EmailNotificationResultType"/>,
-    /// the handler throws <see cref="ArgumentException"/> and the message is moved immediately to the dead letter
-    /// queue without retrying (ArgumentException is not in the retry policy).
+    /// the handler throws <see cref="ArgumentException"/>, a dead delivery report is persisted to the database,
+    /// and the message is discarded (not moved to the dead letter queue).
     /// </summary>
     [Fact]
-    public async Task EmailSendResult_WhenSendResultIsUnknown_MovesToDeadLetterQueueWithoutRetry()
+    public async Task EmailSendResult_WhenSendResultIsUnknown_SavesDeadDeliveryReportAndDiscardsMessage()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 
         await using (factory)
         {
+            string operationId = Guid.NewGuid().ToString();
             string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
             var command = new EmailSendResultCommand
             {
                 NotificationId = Guid.NewGuid(),
-                OperationId = Guid.NewGuid().ToString(),
+                OperationId = operationId,
                 SendResult = "UnknownResultValue_XYZ"
             };
 
             // Act - Send command with an unrecognized SendResult value
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert - Message should appear in DLQ quickly (no retries for ArgumentException)
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            // Assert - Dead delivery report should be saved to the database
+            DeadDeliveryReportRow? deadReport = null;
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByOperationId(
+                        _fixture.PostgresConnectionString,
+                        operationId);
+                    return deadReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+
+            Assert.NotNull(deadReport);
+            Assert.False(deadReport.Resolved);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.Equal("UNRECOGNIZED_SEND_RESULT", deadReport.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.True(deadReportFound, "Dead delivery report should be saved when SendResult is unrecognized");
+
+            // Assert - Message is discarded, not moved to the dead letter queue
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
-                TimeSpan.FromSeconds(10));
-            Assert.NotNull(deadLetterMessage);
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — unrecognized SendResult is saved to dead delivery reports, not DLQ");
 
-            // Assert - Queue itself should be empty (not retried)
+            // Assert - Queue itself is empty (no retries; ArgumentException is not retried)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
