@@ -234,7 +234,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
         // Override the Maskinporten-backed condition client with a plain HttpClient for local dev.
         // This avoids requiring Maskinporten credentials when running against local mock services.
-        services.AddHttpClient<IConditionClient, SendConditionClient>(); //TODO: Why is SendConditionClient added here?
+        services.AddHttpClient<IConditionClient, SendConditionClient>(); // TODO: Why is SendConditionClient added here?
     }
 
     services.AddKafkaServices(config);
