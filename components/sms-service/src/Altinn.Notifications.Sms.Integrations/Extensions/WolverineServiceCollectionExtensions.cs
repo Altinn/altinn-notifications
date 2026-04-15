@@ -48,11 +48,11 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Publishers
-            AddSmsDeliveryReportPublisher(wolverineSettings, opts);
-
             // Listeners
             AddSendSmsListener(wolverineSettings, opts);
+
+            // Publishers
+            AddSmsDeliveryReportPublisher(wolverineSettings, opts);
         });
     }
 
