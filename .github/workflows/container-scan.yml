@@ -6,11 +6,15 @@ on:
     paths:
       - 'components/*/src/**'
       - 'components/*/Dockerfile'
+      - '.trivyignore.yaml'
+      - '.github/workflows/container-scan.yml'
   pull_request:
     branches: [main]
     paths:
       - 'components/*/src/**'
       - 'components/*/Dockerfile'
+      - '.trivyignore.yaml'
+      - '.github/workflows/container-scan.yml'
   schedule:
     - cron: '0 8 * * 1,4'
 
@@ -39,17 +43,23 @@ jobs:
               - 'components/api/src/**'
               - 'components/api/Dockerfile'
               - 'components/shared/src/**'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
             sms:
               - 'components/shared/src/**'
               - 'components/sms-service/src/**'
               - 'components/sms-service/Dockerfile'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
             email:
               - 'components/shared/src/**'
               - 'components/email-service/src/**'
               - 'components/email-service/Dockerfile'
+              - '.trivyignore.yaml'
+              - '.github/workflows/container-scan.yml'
 
   scan-api:
-    name: "Scan: Notifications API"
+    name: 'Scan: Notifications API'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
@@ -68,12 +78,14 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+          TRIVY_SHOW_SUPPRESSED: true
 
   scan-email:
-    name: "Scan: Email Delivery Service"
+    name: 'Scan: Email Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.email == 'true'
     runs-on: ubuntu-latest
@@ -92,12 +104,14 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+          TRIVY_SHOW_SUPPRESSED: true
 
   scan-sms:
-    name: "Scan: SMS Delivery Service"
+    name: 'Scan: SMS Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.sms == 'true'
     runs-on: ubuntu-latest
@@ -116,6 +130,8 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
           TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
+          TRIVY_SHOW_SUPPRESSED: true
