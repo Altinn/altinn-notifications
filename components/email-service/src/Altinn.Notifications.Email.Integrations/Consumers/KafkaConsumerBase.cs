@@ -100,13 +100,15 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         {
             SignalShutdownStarted();
 
+            var snapshotBatch = _lastProcessedBatch;
+
             if (_internalCancellationSource != null)
             {
                 await _internalCancellationSource.CancelAsync();
             }
 
-            var lastBatchNormalizedOffsets = _lastProcessedBatch != null
-                ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
+            var lastBatchNormalizedOffsets = snapshotBatch != null
+                ? CalculateContiguousCommitOffsets(snapshotBatch.CommitReadyOffsets, snapshotBatch.PolledConsumeResults)
                 : [];
 
             if (lastBatchNormalizedOffsets.Count > 0 && !IsConsumerClosed)
