@@ -249,6 +249,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
           -v q \
@@ -395,6 +396,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
           -v q \
@@ -488,6 +490,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
           -v q \
