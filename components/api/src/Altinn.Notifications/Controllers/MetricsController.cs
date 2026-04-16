@@ -64,6 +64,30 @@ namespace Altinn.Notifications.Controllers
             Response.Headers["X-Environment"] = response.Environment;
 
             return File(response.FileStream, "application/octet-stream", response.FileName);
-        }        
+        }
+
+        /// <summary>
+        /// Endpoint for triggering generation of daily email metrics
+        /// </summary>
+        /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+        [HttpPost]
+        [Route("email")]
+        [Produces("application/octet-stream")]
+        [ServiceFilter(typeof(MetricsApiKeyFilter))]
+        public async Task<ActionResult> GetEmailDailyMetrics(CancellationToken cancellationToken)
+        {
+            var data = await _metricsService.GetDailyEmailMetrics(cancellationToken);
+
+            var response = await _metricsService.GetParquetFile(data, cancellationToken);
+            HttpContext.Response.RegisterForDispose(response.FileStream);
+
+            Response.Headers["X-File-Hash"] = response.FileHash;
+            Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
+            Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
+            Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
+            Response.Headers["X-Environment"] = response.Environment;
+
+            return File(response.FileStream, "application/octet-stream", response.FileName);
+        }
     }
 }

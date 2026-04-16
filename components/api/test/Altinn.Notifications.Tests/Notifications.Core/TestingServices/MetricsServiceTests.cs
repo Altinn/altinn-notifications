@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         public async Task GetDailySmsMetrics_ReturnsValueFromRepository()
         {
             // Arrange
-            var expected = new DailySmsMetrics
+            var expected = new DailyMetrics<DailySmsMetricsRecord>
             {
                 Year = DateTime.UtcNow.Year,
                 Month = DateTime.UtcNow.Month,
@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            DailySmsMetrics actual = await service.GetDailySmsMetrics(CancellationToken.None);
+            DailyMetrics<DailySmsMetricsRecord> actual = await service.GetDailySmsMetrics(CancellationToken.None);
 
             // Assert
             Assert.Same(expected, actual);
@@ -58,7 +58,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         public async Task GetParquetFile_ReturnsMetricsSummary_WithStreamHashAndSizeAndEnvironment()
         {
             // Arrange
-            var metrics = new DailySmsMetrics
+            var metrics = new DailyMetrics<DailySmsMetricsRecord>
             {
                 Year = 2026,
                 Month = 1,
@@ -98,7 +98,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithEnvironmentUnknown()
         {
             // Arrange
-            var metrics = new DailySmsMetrics
+            var metrics = new DailyMetrics<DailySmsMetricsRecord>
             {
                 Year = 2026,
                 Month = 1,

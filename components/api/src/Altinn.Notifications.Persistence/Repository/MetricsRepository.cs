@@ -17,6 +17,7 @@ namespace Altinn.Notifications.Persistence.Repository
 
         private const string _getMonthlytMetric = "SELECT * FROM notifications.get_metrics_v2($1, $2);";  // month, year
         private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics($1, $2, $3);";  // day, month, year
+        private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics($1, $2, $3);";  // day, month, year
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsRepository"/> class.
@@ -62,9 +63,9 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
-        public async Task<DailySmsMetrics> GetDailySmsMetrics(int day, int month, int year, CancellationToken cancellationToken)
+        public async Task<DailyMetrics<DailySmsMetricsRecord>> GetDailySmsMetrics(int day, int month, int year, CancellationToken cancellationToken)
         {
-            DailySmsMetrics metrics = new()
+            DailyMetrics<DailySmsMetricsRecord> metrics = new()
             {
                 Day = day,
                 Month = month,
@@ -98,6 +99,44 @@ namespace Altinn.Notifications.Persistence.Repository
                     };
 
                     metrics.Metrics.Add(smsRow);
+                }
+            }
+
+            return metrics;
+        }
+
+        /// <inheritdoc/>
+        public async Task<DailyMetrics<DailyEmailMetricsRecord>> GetDailyEmailMetrics(int day, int month, int year, CancellationToken cancellationToken)
+        {
+            DailyMetrics<DailyEmailMetricsRecord> metrics = new()
+            {
+                Day = day,
+                Month = month,
+                Year = year
+            };
+
+            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getDailyEmailMetric);
+
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, day);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, month);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, year);
+            await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    DailyEmailMetricsRecord emailRow = new()
+                    {
+                        EmailId = reader.GetValue<long>("email_id"),
+                        ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
+                        SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
+                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
+                        CreatorName = reader.GetValue<string>("creatorname"),
+                        ResourceId = reader.GetValue<string?>("resourceid"),
+                        Result = reader.GetValue<string>("result"),
+                        OperationId = reader.GetValue<string?>("operationid") ?? string.Empty,
+                    };
+
+                    metrics.Metrics.Add(emailRow);
                 }
             }
 
