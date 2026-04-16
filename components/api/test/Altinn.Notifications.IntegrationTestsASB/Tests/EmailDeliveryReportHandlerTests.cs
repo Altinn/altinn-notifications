@@ -230,6 +230,48 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         }
     }
 
+    [Fact]
+    public async Task EmailDeliveryReport_WhenNotificationExists_PersistsDeliveryReportJsonToDatabase()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            // Arrange — create a notification and set it to Succeeded with a known operationId
+            // so the handler can resolve it by operationId (simulates ACS round-trip)
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            string operationId = Guid.NewGuid().ToString();
+            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+
+            // Act — send a delivery report through the queue (simulates ACS + Event Grid)
+            await SendDeliveryReportAsync(queueName, operationId, "Delivered");
+
+            // Assert — poll until the handler has written the delivery_report JSONB column
+            string? persistedReport = null;
+            var reportPersisted = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(
+                        _fixture.PostgresConnectionString,
+                        "SELECT delivery_report::text FROM notifications.emailnotifications WHERE alternateid = $1",
+                        new NpgsqlParameter { Value = notification.Id });
+
+                    return persistedReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+
+            Assert.True(reportPersisted, "The delivery_report column should be populated after the handler runs");
+            Assert.NotNull(persistedReport);
+
+            // Assert — the persisted JSON contains the expected messageId from the delivery report
+            using var doc = JsonDocument.Parse(persistedReport!);
+            Assert.Equal(operationId, doc.RootElement.GetProperty("messageId").GetString());
+        }
+    }
+
     private async Task SendDeliveryReportAsync(string queueName, string operationId, string status)
     {
         var eventGridEvent = new
