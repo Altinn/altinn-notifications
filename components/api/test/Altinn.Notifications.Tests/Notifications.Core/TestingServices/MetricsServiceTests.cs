@@ -55,6 +55,32 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task GetDailyEmailMetrics_ReturnsValueFromRepository()
+        {
+            // Arrange
+            var expected = new DailyMetrics<DailyEmailMetricsRecord>
+            {
+                Year = DateTime.UtcNow.Year,
+                Month = DateTime.UtcNow.Month,
+                Day = DateTime.UtcNow.Day,
+                Metrics = new List<DailyEmailMetricsRecord>()
+            };
+
+            _metricsRepositoryMock
+                .Setup(r => r.GetDailyEmailMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expected);
+
+            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+
+            // Act
+            DailyMetrics<DailyEmailMetricsRecord> actual = await service.GetDailyEmailMetrics(CancellationToken.None);
+
+            // Assert
+            Assert.Same(expected, actual);
+            _metricsRepositoryMock.Verify(r => r.GetDailyEmailMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
         public async Task GetParquetFile_ReturnsMetricsSummary_WithStreamHashAndSizeAndEnvironment()
         {
             // Arrange
