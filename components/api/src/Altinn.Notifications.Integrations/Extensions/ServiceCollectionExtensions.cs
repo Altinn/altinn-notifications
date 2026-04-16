@@ -1,4 +1,4 @@
-﻿using Altinn.ApiClients.Maskinporten.Extensions;
+using Altinn.ApiClients.Maskinporten.Extensions;
 using Altinn.ApiClients.Maskinporten.Services;
 using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Common.PEP.Clients;
@@ -13,12 +13,15 @@ using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -34,7 +37,7 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection(nameof(KafkaSettings))
+        KafkaSettings kafkaSettings = config.GetSection(nameof(KafkaSettings))
             .Get<KafkaSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
@@ -50,6 +53,8 @@ public static class ServiceCollectionExtensions
         .AddHostedService<SmsPublishBackgroundService>()
         .AddHostedService<EmailPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
+
+        RegisterEmailCommandPublisher(services, config, kafkaSettings);
     }
 
     /// <summary>
@@ -102,5 +107,34 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
+    }
+
+    /// <summary>
+    /// Registers the correct <see cref="IEmailCommandPublisher"/> implementation based on Wolverine settings.
+    /// Reads <see cref="WolverineSettings"/> once and uses an if/else to register either
+    /// the ASB-backed <see cref="EmailCommandPublisher"/> or the Kafka-backed
+    /// <see cref="KafkaEmailCommandPublisher"/>. Exactly one transport path is always active.
+    /// </summary>
+    private static void RegisterEmailCommandPublisher(IServiceCollection services, IConfiguration config, KafkaSettings kafkaSettings)
+    {
+        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        bool useWolverine =
+            wolverineSettings.EnableWolverine &&
+            wolverineSettings.EnableSendEmailPublisher &&
+            !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName);
+
+        if (useWolverine)
+        {
+            services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailCommandPublisher>(sp =>
+                new KafkaEmailCommandPublisher(
+                    sp.GetRequiredService<IKafkaProducer>(),
+                    kafkaSettings.EmailQueueTopicName));
+        }
     }
 }

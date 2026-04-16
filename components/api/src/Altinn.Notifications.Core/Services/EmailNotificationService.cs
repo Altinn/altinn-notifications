@@ -1,6 +1,3 @@
-using System.Collections.Immutable;
-using System.Text.Json;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -18,38 +15,21 @@ namespace Altinn.Notifications.Core.Services;
 /// <summary>
 /// Implementation of <see cref="IEmailNotificationService"/>.
 /// </summary>
-public class EmailNotificationService : IEmailNotificationService
+/// <remarks>
+/// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
+/// </remarks>
+public class EmailNotificationService(
+    IGuidService guidService,
+    IDateTimeService dateTimeService,
+    IEmailCommandPublisher emailCommandPublisher,
+    IOptions<NotificationConfig> notificationConfig,
+    IEmailNotificationRepository emailNotificationRepository) : IEmailNotificationService
 {
-    private readonly IGuidService _guidService;
-    private readonly int _emailPublishBatchSize;
-    private readonly string _emailSendTopicName;
-    private readonly IKafkaProducer _kafkaProducer;
-    private readonly IDateTimeService _dateTimeService;
-    private readonly bool _sendEmailNotificationsViaWolverine;
-    private readonly IEmailCommandPublisher _emailCommandPublisher;
-    private readonly IEmailNotificationRepository _emailNotificationRepository;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
-    /// </summary>
-    public EmailNotificationService(
-        IGuidService guidService,
-        IKafkaProducer kafkaProducer,
-        IDateTimeService dateTimeService,
-        IOptions<KafkaSettings> kafkaSettings,
-        IEmailCommandPublisher emailCommandPublisher,
-        IOptions<NotificationConfig> notificationConfig,
-        IEmailNotificationRepository emailNotificationRepository)
-    {
-        _guidService = guidService;
-        _kafkaProducer = kafkaProducer;
-        _dateTimeService = dateTimeService;
-        _emailCommandPublisher = emailCommandPublisher;
-        _emailNotificationRepository = emailNotificationRepository;
-        _emailSendTopicName = kafkaSettings.Value.EmailQueueTopicName;
-        _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
-        _sendEmailNotificationsViaWolverine = notificationConfig.Value.EnableSendEmailPublisher;
-    }
+    private readonly IGuidService _guidService = guidService;
+    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
+    private readonly IDateTimeService _dateTimeService = dateTimeService;
+    private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
+    private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
 
     /// <inheritdoc/>
     public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
@@ -101,13 +81,10 @@ public class EmailNotificationService : IEmailNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (_sendEmailNotificationsViaWolverine)
+                var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
+                foreach (var email in unpublishedEmails)
                 {
-                    await PublishEmailNotificationsViaWolverine(newEmailNotifications, cancellationToken);
-                }
-                else
-                {
-                    await PublishEmailNotificationsViaKafka(newEmailNotifications, cancellationToken);
+                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
                 }
             }
             catch (OperationCanceledException)
@@ -154,50 +131,6 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         foreach (var email in emails)
-        {
-            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-        }
-    }
-
-    /// <summary>
-    /// Publishes email notifications to a Kafka topic and resets the send status to
-    /// <see cref="EmailNotificationResultType.New"/> for any notifications that
-    /// the producer failed to deliver.
-    /// </summary>
-    /// <param name="emailNotifications">The email notifications to publish.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous publish operation.</returns>
-    private async Task PublishEmailNotificationsViaKafka(List<Email> emailNotifications, CancellationToken cancellationToken)
-    {
-        var serializedEmailNotifications = emailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
-
-        var unpublishedEmailNotifications = await _kafkaProducer.ProduceAsync(_emailSendTopicName, serializedEmailNotifications, cancellationToken);
-
-        foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
-        {
-            var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
-            if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
-            {
-                continue;
-            }
-
-            await _emailNotificationRepository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
-        }
-    }
-
-    /// <summary>
-    /// Publishes email notifications to Azure Service Bus via Wolverine and resets
-    /// the send status to <see cref="EmailNotificationResultType.New"/> for any
-    /// notifications that failed to publish.
-    /// </summary>
-    /// <param name="emailNotifications">The email notifications to publish.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous publish operation.</returns>
-    private async Task PublishEmailNotificationsViaWolverine(List<Email> emailNotifications, CancellationToken cancellationToken)
-    {
-        var unpublishedEmails = await _emailCommandPublisher.PublishAsync(emailNotifications, cancellationToken);
-
-        foreach (var email in unpublishedEmails)
         {
             await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
         }
