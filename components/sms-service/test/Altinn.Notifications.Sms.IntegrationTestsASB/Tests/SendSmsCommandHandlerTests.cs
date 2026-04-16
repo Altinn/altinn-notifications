@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Shared.Commands;
+﻿using System.Threading;
+
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
@@ -34,11 +36,11 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             SenderNumber = "Altinn"
         };
 
-        bool sendAsyncCalled = false;
+        int sendAsyncCallCount = 0;
         var mockService = new Mock<ISendingService>();
         mockService
             .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()))
-            .Callback(() => sendAsyncCalled = true)
+            .Callback(() => Interlocked.Increment(ref sendAsyncCallCount))
             .Returns(Task.CompletedTask);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -54,7 +56,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
 
             // Assert
             bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(sendAsyncCalled),
+                () => Task.FromResult(Volatile.Read(ref sendAsyncCallCount) > 0),
                 maxAttempts: 20,
                 delayMs: 500);
 
@@ -86,28 +88,31 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             Body = "Integration test SMS body",
             SenderNumber = "Altinn"
         };
+
         int callCount = 0;
         var mockService = new Mock<ISendingService>();
         mockService
             .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()))
-            .Callback(() => callCount++)
+            .Callback(() => Interlocked.Increment(ref callCount))
             .ThrowsAsync(new TaskCanceledException("Transient error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .ReplaceService(_ => mockService.Object)
             .Initialize();
+
         await using (factory)
         {
             var queueName = GetQueueName(factory);
-            
+
             // Act
             await factory.SendToQueueAsync(queueName, command);
-            
+
             // Assert
             bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(callCount >= 2), // Expecting at least one retry
+                () => Task.FromResult(Volatile.Read(ref callCount) >= 2), // Expecting at least one retry
                 maxAttempts: 20,
                 delayMs: 500);
+
             Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
             mockService.Verify(
                 s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>

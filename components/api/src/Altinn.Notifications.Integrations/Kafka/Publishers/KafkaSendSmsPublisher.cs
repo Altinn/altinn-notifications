@@ -4,6 +4,7 @@ using System.Text.Json;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 
@@ -16,10 +17,12 @@ namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 /// </remarks>
 /// <param name="kafkaProducer">The Kafka producer used to publish messages.</param>
 /// <param name="topicName">The Kafka topic to publish SMS commands to.</param>
-internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string topicName) : ISendSmsPublisher
+/// <param name="logger">The logger used to log information and errors.</param>
+internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string topicName, ILogger<KafkaSendSmsPublisher>? logger = null) : ISendSmsPublisher
 {
     private readonly IKafkaProducer _kafkaProducer = kafkaProducer;
     private readonly string _topicName = topicName;
+    private readonly ILogger<KafkaSendSmsPublisher>? _logger = logger;
 
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
@@ -48,6 +51,10 @@ internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string
             if (deserialized is not null && deserialized.NotificationId != Guid.Empty)
             {
                 failedSms.Add(deserialized);
+            }
+            else
+            {
+                _logger?.LogWarning("Failed to deserialize unpublished SMS message or NotificationId was empty. Raw: {RawMessage}", unpublished);
             }
         }
 
