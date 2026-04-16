@@ -125,8 +125,6 @@ public static class ServiceCollectionExtensions
             wolverineSettings.EnableSendSmsPublisher &&
             !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName);
 
-        services.RemoveAll<ISendSmsPublisher>();
-
         if (useWolverine)
         {
             services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
