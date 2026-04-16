@@ -182,12 +182,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -357,12 +352,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -531,12 +521,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -619,12 +604,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -802,12 +782,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
