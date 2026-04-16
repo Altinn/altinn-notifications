@@ -50,6 +50,25 @@ services:
       timeout: 10s
       retries: 10
 
+  # Azure Service Bus emulator (for Wolverine message transport)
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Str0ng!Passw0rd_ChangeMe"
+
+  servicebus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    volumes:
+      - ../../tools/asb-emulator/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: "Str0ng!Passw0rd_ChangeMe"
+      ACCEPT_EULA: "Y"
+      SQL_WAIT_INTERVAL: 15
+    depends_on:
+      - mssql
+
   mock-services:
     build:
       context: ../..
@@ -77,6 +96,7 @@ services:
       PostgreSQLSettings__NotificationsDbPwd: Password
       PostgreSQLSettings__MigrationScriptPath: /app/Altinn.Notifications.Persistence/Migration
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       PlatformSettings__ApiProfileEndpoint: http://mock-services:5030/profile/api/v1/
       PlatformSettings__ApiRegisterEndpoint: http://mock-services:5020/register/api/v1/
       PlatformSettings__ApiAuthorizationEndpoint: http://mock-services:5050/authorization/api/v1/
@@ -89,6 +109,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      servicebus-emulator:
+        condition: service_started
       mock-services:
         condition: service_started
 
@@ -101,9 +123,12 @@ services:
       ASPNETCORE_URLS: http://+:5190
       MockSettings__EnableMockEmailProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
         condition: service_healthy
+      servicebus-emulator:
+        condition: service_started
 
   sms-service:
     build:
@@ -114,9 +139,12 @@ services:
       ASPNETCORE_URLS: http://+:5170
       MockSettings__EnableMockSmsProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
         condition: service_healthy
+      servicebus-emulator:
+        condition: service_started
 
 volumes:
   coverage-data:
