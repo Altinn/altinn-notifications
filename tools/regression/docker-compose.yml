@@ -23,6 +23,8 @@ services:
       retries: 10
     tmpfs:
       - /var/lib/postgresql/data  # RAM-backed for speed
+    volumes:
+      - ./pg-init:/docker-entrypoint-initdb.d
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -73,6 +75,7 @@ services:
       PostgreSQLSettings__ConnectionString: Host=postgres;Port=5432;Username=platform_notifications_admin;Password=Password;Database=notificationsdb
       PostgreSQLSettings__NotificationsDbAdminPwd: Password
       PostgreSQLSettings__NotificationsDbPwd: Password
+      PostgreSQLSettings__MigrationScriptPath: /app/Altinn.Notifications.Persistence/Migration
       KafkaSettings__BrokerAddress: kafka:29092
       PlatformSettings__ApiProfileEndpoint: http://mock-services:5030/profile/api/v1/
       PlatformSettings__ApiRegisterEndpoint: http://mock-services:5020/register/api/v1/
