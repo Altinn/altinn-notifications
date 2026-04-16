@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
@@ -65,7 +66,8 @@ public static class EmailDeliveryReportHandler
         var operationResult = new EmailSendOperationResult()
         {
             OperationId = deliveryReport.MessageId,
-            SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString())
+            SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString()),
+            DeliveryReport = JsonSerializer.Serialize(deliveryReport)
         };
 
         await emailNotificationService.UpdateSendStatus(operationResult);
