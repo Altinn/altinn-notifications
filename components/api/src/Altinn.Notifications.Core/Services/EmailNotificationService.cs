@@ -135,7 +135,11 @@ public class EmailNotificationService : IEmailNotificationService
             sendOperationResult.SendResult = EmailNotificationResultType.New;
         }
 
-        await _emailNotificationRepository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+        await _emailNotificationRepository.UpdateSendStatus(
+            sendOperationResult.NotificationId,
+            (EmailNotificationResultType)sendOperationResult.SendResult!,
+            sendOperationResult.OperationId,
+            sendOperationResult.DeliveryReport);
     }
 
     /// <summary>
