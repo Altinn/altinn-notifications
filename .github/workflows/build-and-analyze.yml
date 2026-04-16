@@ -388,6 +388,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
           -v q \
@@ -482,6 +483,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
           -v q \
