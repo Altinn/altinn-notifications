@@ -95,6 +95,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5190
+      MockSettings__EnableMockEmailProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
     depends_on:
       kafka:
@@ -107,6 +108,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5170
+      MockSettings__EnableMockSmsProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
     depends_on:
       kafka:

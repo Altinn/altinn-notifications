@@ -173,7 +173,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
-    if (appBuilder.Environment.IsDevelopment())
+    if (configuration.GetValue<bool>("MockSettings:EnableMockEmailProvider"))
     {
         // Override Azure Communication Services client with a mock for local dev.
         services.AddSingleton<IEmailServiceClient, MockEmailServiceClient>();

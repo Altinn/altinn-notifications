@@ -36,12 +36,14 @@ MOCK_PID=$!
 echo "Starting Email service (port 5190, dev mode with MockEmailServiceClient)..."
 ASPNETCORE_URLS="http://localhost:5190" \
 ASPNETCORE_ENVIRONMENT="Development" \
+MockSettings__EnableMockEmailProvider="true" \
 dotnet run --no-launch-profile --project "$ROOT_DIR/components/email-service/src/Altinn.Notifications.Email" &
 EMAIL_PID=$!
 
 echo "Starting SMS service (port 5170, dev mode with MockSmsClient)..."
 ASPNETCORE_URLS="http://localhost:5170" \
 ASPNETCORE_ENVIRONMENT="Development" \
+MockSettings__EnableMockSmsProvider="true" \
 dotnet run --no-launch-profile --project "$ROOT_DIR/components/sms-service/src/Altinn.Notifications.Sms" &
 SMS_PID=$!
 

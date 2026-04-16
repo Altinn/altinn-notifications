@@ -179,7 +179,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
-    if (appBuilder.Environment.IsDevelopment())
+    if (configuration.GetValue<bool>("MockSettings:EnableMockSmsProvider"))
     {
         // Override Link Mobility client with a mock for local dev.
         services.AddSingleton<ISmsClient, MockSmsClient>();
