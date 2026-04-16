@@ -2,25 +2,21 @@
 using Altinn.Notifications.Sms.Core.Sending;
 
 using Microsoft.Extensions.Logging;
-using Wolverine.Attributes;
 
 namespace Altinn.Notifications.Sms.Integrations.Wolverine.Handlers;
 
 /// <summary>
-/// Provides functionality to handle commands for sending SMS messages asynchronously.
+/// Wolverine handler for <see cref="SendSmsCommand"/> messages received from Azure Service Bus.
 /// </summary>
-/// <remarks>This static class is intended to process SMS sending commands. All members are thread-safe and can be
-/// used concurrently. Ensure that the provided command contains valid data before invoking handler methods.</remarks>
-[WolverineHandler]
 public static class SendSmsCommandHandler
 {
     /// <summary>
-    /// Handles a <see cref="SendSmsCommand"/> by converting it to an <see cref="Sms"/>
-    /// and forwarding it to the sending service.
+    /// Handles a <see cref="SendSmsCommand"/> by mapping it to an <see cref="Sms"/>
+    /// and delegating sending to <see cref="ISendingService"/>.
     /// </summary>
     /// <param name="command">The incoming send-sms command.</param>
-    /// <param name="sendingService">The sms sending service.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="sendingService">The service responsible for sending the SMS.</param>
+    /// <param name="logger">The logger used to record processing errors.</param>
     public static async Task HandleAsync(
         SendSmsCommand command,
         ISendingService sendingService,
@@ -44,10 +40,31 @@ public static class SendSmsCommandHandler
             NotificationId = command.NotificationId
         };
 
-        await sendingService.SendAsync(sms);
+        try
+        {
+            await sendingService.SendAsync(sms);
 
-        logger.LogInformation(
-            "Successfully dispatched SMS for NotificationId: {NotificationId}",
-            command.NotificationId);
+            logger.LogInformation(
+                "Successfully dispatched SMS for NotificationId: {NotificationId}",
+                command.NotificationId);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogOnSendSmsFailed(logger, ex, command.NotificationId);
+
+            throw;
+        }
+    }
+
+    private static void LogOnSendSmsFailed(ILogger logger, Exception exception, Guid notificationId)
+    {
+        logger.LogError(
+            exception,
+            "SendSmsCommandHandler failed to send SMS for NotificationId: {NotificationId}.",
+            notificationId);
     }
 }

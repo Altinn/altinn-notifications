@@ -229,7 +229,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
-    services.RegisterSendSmsPublisher(config);
+    
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }

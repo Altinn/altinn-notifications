@@ -46,6 +46,11 @@ public class KafkaSettings
     public string EmailQueueTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the general SMS queue topic
+    /// </summary>
+    public string SmsQueueTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the email status updated topic
     /// </summary>
     public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;

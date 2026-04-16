@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -84,7 +82,11 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                await Publish(newSmsNotifications, cancellationToken);
+                var unpublishedSms = await _smsPublisher.PublishAsync(newSmsNotifications, cancellationToken);
+                foreach (var sms in unpublishedSms)
+                {
+                    await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -100,32 +102,6 @@ public class SmsNotificationService : ISmsNotificationService
             }
         }
         while (newSmsNotifications.Count > 0);
-    }
-
-    /// <summary>
-    /// Publishes a collection of SMS notifications via the configured transport and resets the send status
-    /// to <see cref="SmsNotificationResultType.New"/> for any notifications that failed to publish.
-    /// </summary>
-    /// <remarks>
-    /// The underlying transport is determined by the registered <see cref="ISendSmsPublisher"/> implementation,
-    /// which is either Kafka-based or Azure Service Bus via Wolverine.
-    /// </remarks>
-    /// <param name="newSmsNotifications">The SMS notifications to publish.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous publish operation.</returns>
-    private async Task Publish(List<Sms> newSmsNotifications, CancellationToken cancellationToken)
-    {
-        var unpublishedSmsNotifications = await _smsPublisher.PublishAsync([.. newSmsNotifications], cancellationToken);
-
-        foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
-        {
-            if (unpublishedSmsNotification == null || unpublishedSmsNotification.NotificationId == Guid.Empty)
-            {
-                continue;
-            }
-
-            await _repository.UpdateSendStatus(unpublishedSmsNotification.NotificationId, SmsNotificationResultType.New);
-        }
     }
 
     /// <inheritdoc/>

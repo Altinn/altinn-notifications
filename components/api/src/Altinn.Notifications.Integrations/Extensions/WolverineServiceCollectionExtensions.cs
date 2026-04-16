@@ -7,10 +7,12 @@ using Altinn.Notifications.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -129,13 +131,13 @@ public static class WolverineServiceCollectionExtensions
 
         services.RemoveAll<IEmailCommandPublisher>();
         services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
-
-        wolverineOptions.PublishMessage<SendEmailCommand>()
-                        .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
     }
 
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
+    /// routing outbound commands to the Azure Service Bus SMS send queue.
+    /// Only active when <see cref="WolverineSettings.EnableSendSmsPublisher"/> is <c>true</c>.
+    /// The <see cref="ISendSmsPublisher"/> DI registration is handled separately.
     /// </summary>
     private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
@@ -146,11 +148,11 @@ public static class WolverineServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
         }
-       
+
         wolverineOptions.PublishMessage<SendSmsCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
     }
-
 }

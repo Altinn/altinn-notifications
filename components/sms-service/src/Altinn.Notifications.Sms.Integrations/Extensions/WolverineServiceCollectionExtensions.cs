@@ -40,11 +40,6 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
-        if (!wolverineSettings.EnableWolverine)
-        {
-            return;
-        }
-
         services.Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
@@ -53,29 +48,31 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
+            // Listeners
+            AddSendSmsListener(wolverineSettings, opts);
+
             // Publishers
             AddSmsDeliveryReportPublisher(wolverineSettings, opts);
-
-            // Listeners: 
-            AddSendSmsListener(opts, wolverineSettings);
         });
     }
 
-    private static void AddSendSmsListener(WolverineOptions opts, WolverineSettings wolverineSettings)
+    private static void AddSendSmsListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (wolverineSettings.EnableSendSmsListener)
+        if (!wolverineSettings.EnableSendSmsListener)
         {
-            if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.SendSmsQueueName)} must be set when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
-            }
-
-            opts.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
-                .ListenerCount(wolverineSettings.ListenerCount);
-
-            opts.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
+            return;
         }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>

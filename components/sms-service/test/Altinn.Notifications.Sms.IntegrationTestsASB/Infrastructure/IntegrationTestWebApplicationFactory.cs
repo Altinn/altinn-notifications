@@ -38,9 +38,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
 
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
-        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
-           ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
-
         RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));

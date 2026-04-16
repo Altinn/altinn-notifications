@@ -33,12 +33,15 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
         var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendSmsCommand))
             ?? throw new UnreachableException($"No handler chain found for {nameof(SendSmsCommand)}. Ensure the handler is registered before adding this policy.");
 
+        var policy = wolverineSettings.SendSmsQueuePolicy;
+
         chain
-           .OnException<TaskCanceledException>()
-           .Or<TimeoutException>()
+           .OnException<TimeoutException>()
            .Or<ServiceBusException>()
-           .RetryWithCooldown(wolverineSettings.SendSmsQueuePolicy.GetCooldownDelays())
-           .Then.ScheduleRetry(wolverineSettings.SendSmsQueuePolicy.GetScheduleDelays())
+           .Or<TaskCanceledException>()
+           .Or<InvalidOperationException>()
+           .RetryWithCooldown(policy.GetCooldownDelays())
+           .Then.ScheduleRetry(policy.GetScheduleDelays())
            .Then.MoveToErrorQueue();
     }
 }
