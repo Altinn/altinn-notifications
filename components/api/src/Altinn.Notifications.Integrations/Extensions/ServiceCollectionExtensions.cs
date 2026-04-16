@@ -125,8 +125,6 @@ public static class ServiceCollectionExtensions
             wolverineSettings.EnableSendEmailPublisher &&
             !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName);
 
-        services.RemoveAll<IEmailCommandPublisher>();
-
         if (useWolverine)
         {
             services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
