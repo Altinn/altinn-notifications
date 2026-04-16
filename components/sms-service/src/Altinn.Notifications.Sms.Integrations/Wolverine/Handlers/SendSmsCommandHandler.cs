@@ -28,6 +28,10 @@ public static class SendSmsCommandHandler
             throw new InvalidOperationException("Received SendSmsCommand with missing NotificationId.");
         }
 
+        logger.LogInformation(
+            "Processing SendSmsCommand for NotificationId: {NotificationId}",
+            command.NotificationId);
+
         var sms = new Core.Sending.Sms
         {
             Recipient = command.MobileNumber,
@@ -39,6 +43,10 @@ public static class SendSmsCommandHandler
         try
         {
             await sendingService.SendAsync(sms);
+
+            logger.LogInformation(
+                "Successfully dispatched SMS for NotificationId: {NotificationId}",
+                command.NotificationId);
         }
         catch (OperationCanceledException)
         {
