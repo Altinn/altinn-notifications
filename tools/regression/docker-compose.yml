@@ -54,6 +54,7 @@ services:
       dockerfile: tools/regression/Dockerfile.mock-services
     environment:
       TriggerScheduler__ApiBaseUrl: http://api:5090
+      MOCK_OIDC_BASE_URL: http://mock-services:5101
     depends_on:
       kafka:
         condition: service_healthy

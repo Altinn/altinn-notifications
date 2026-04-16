@@ -153,7 +153,7 @@ app.MapGet("/api/GetEnterpriseToken", (HttpContext context) =>
 // OIDC Discovery endpoint
 app.MapGet("/authentication/api/v1/openid/.well-known/openid-configuration", (HttpContext context) =>
 {
-    string baseUrl = "http://localhost:5101";
+    string baseUrl = Environment.GetEnvironmentVariable("MOCK_OIDC_BASE_URL") ?? "http://localhost:5101";
     var discovery = new
     {
         issuer = "UnitTest",
