@@ -88,18 +88,26 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
         var topicsNotExisting = _kafkaSettings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
         foreach (string topic in topicsNotExisting)
-        { 
-            adminClient.CreateTopicsAsync(
-            [
-                new TopicSpecification()
-                {
-                    Name = topic,
-                    NumPartitions = _sharedClientConfig.TopicSpecification.NumPartitions,
-                    ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
-                    Configs = _sharedClientConfig.TopicSpecification.Configs
-                }
-            ]).Wait();
-            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic created successfully.");
+        {
+            try
+            {
+                adminClient.CreateTopicsAsync(
+                [
+                    new TopicSpecification()
+                    {
+                        Name = topic,
+                        NumPartitions = _sharedClientConfig.TopicSpecification.NumPartitions,
+                        ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
+                        Configs = _sharedClientConfig.TopicSpecification.Configs
+                    }
+                ]).Wait();
+                _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic created successfully.");
+            }
+            catch (AggregateException ex) when (ex.InnerException is CreateTopicsException cte
+                && cte.Results.Any(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+            {
+                _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' already exists, skipping.", topic);
+            }
         }
     }
 }
