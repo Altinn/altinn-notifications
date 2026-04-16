@@ -101,6 +101,48 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.NotNull(summary);
             Assert.NotNull(summary.FileStream);
             Assert.False(string.IsNullOrWhiteSpace(summary.FileName));
+            Assert.Contains("sms", summary.FileName);
+            Assert.Equal("UnitTest", summary.Environment);
+            Assert.Equal(metrics.Metrics.Count, summary.TotalFileTransferCount);
+            Assert.NotEqual(DateTimeOffset.MinValue, summary.GeneratedAt);
+
+            // Read the returned stream to compute expected hash/size
+            await using (summary.FileStream)
+            {
+                using var ms = new MemoryStream();
+                await summary.FileStream.CopyToAsync(ms, TestContext.Current.CancellationToken);
+                byte[] bytes = ms.ToArray();
+
+                string expectedHash = Convert.ToBase64String(MD5.HashData(bytes));
+                long expectedSize = bytes.Length;
+
+                Assert.Equal(expectedSize, summary.FileSizeBytes);
+                Assert.Equal(expectedHash, summary.FileHash);
+            }
+        }
+
+        [Fact]
+        public async Task GetParquetFile_ReturnsMetricsSummary_WithStreamHashAndSizeAndEnvironmentForEmail()
+        {
+            // Arrange
+            var metrics = new DailyMetrics<DailyEmailMetricsRecord>
+            {
+                Year = 2026,
+                Month = 1,
+                Day = 15,
+                Metrics = new List<DailyEmailMetricsRecord>() // empty list is fine for serialization
+            };
+
+            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+
+            // Act
+            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
+
+            // Assert - basic invariants
+            Assert.NotNull(summary);
+            Assert.NotNull(summary.FileStream);
+            Assert.False(string.IsNullOrWhiteSpace(summary.FileName));
+            Assert.Contains("email", summary.FileName);
             Assert.Equal("UnitTest", summary.Environment);
             Assert.Equal(metrics.Metrics.Count, summary.TotalFileTransferCount);
             Assert.NotEqual(DateTimeOffset.MinValue, summary.GeneratedAt);
