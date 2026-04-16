@@ -346,6 +346,31 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_CancellationAfterPublishBeforeNextFetch_NoStatusResets()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .SetupSequence(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([_email, _email]) // First fetch returns a batch to process
+            .ThrowsAsync(new OperationCanceledException()); // Second fetch simulates cancellation between iterations
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        publisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        using var cts = new CancellationTokenSource();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cts.Token));
+
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotifications_AllEmailsPublishedSuccessfully_NoStatusResets()
     {
         // Arrange
