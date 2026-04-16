@@ -7,10 +7,12 @@ WORKDIR /src
 COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj              components/sms-service/src/Altinn.Notifications.Sms/
 COPY components/sms-service/src/Altinn.Notifications.Sms.Core/*.csproj         components/sms-service/src/Altinn.Notifications.Sms.Core/
 COPY components/sms-service/src/Altinn.Notifications.Sms.Integrations/*.csproj components/sms-service/src/Altinn.Notifications.Sms.Integrations/
+COPY components/shared/src/Altinn.Notifications.Shared/*.csproj               components/shared/src/Altinn.Notifications.Shared/
 RUN dotnet restore components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 # Build
 COPY components/sms-service/src/ components/sms-service/src/
+COPY components/shared/src/ components/shared/src/
 RUN dotnet publish components/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj \
     -c Release -o /app --no-restore
 

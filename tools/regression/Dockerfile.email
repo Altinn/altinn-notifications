@@ -7,10 +7,12 @@ WORKDIR /src
 COPY components/email-service/src/Altinn.Notifications.Email/*.csproj              components/email-service/src/Altinn.Notifications.Email/
 COPY components/email-service/src/Altinn.Notifications.Email.Core/*.csproj         components/email-service/src/Altinn.Notifications.Email.Core/
 COPY components/email-service/src/Altinn.Notifications.Email.Integrations/*.csproj components/email-service/src/Altinn.Notifications.Email.Integrations/
+COPY components/shared/src/Altinn.Notifications.Shared/*.csproj                   components/shared/src/Altinn.Notifications.Shared/
 RUN dotnet restore components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Build
 COPY components/email-service/src/ components/email-service/src/
+COPY components/shared/src/ components/shared/src/
 RUN dotnet publish components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj \
     -c Release -o /app --no-restore
 
