@@ -70,7 +70,7 @@ $COMPOSE -f "$COMPOSE_FILE" up --build -d
 echo ""
 echo "=== Waiting for API to be ready ==="
 API_URL="http://localhost:5090/health"
-MAX_WAIT=120
+MAX_WAIT=240
 ELAPSED=0
 while ! curl -sf "$API_URL" >/dev/null 2>&1; do
     if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
