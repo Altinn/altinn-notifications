@@ -29,9 +29,9 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Sets result status of an email notification and update operation id
+    /// Sets result status of an email notification, updates the operation id, and persists the raw delivery report.
     /// </summary>
-    public Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null);
+    public Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null);
 
     /// <summary>
     /// Retrieves all processed email recipients for an order
