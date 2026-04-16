@@ -55,7 +55,6 @@ public static class WolverineServiceCollectionExtensions
 
             // Publishers
             AddSendEmailPublisher(wolverineSettings, opts);
-            AddSendEmailPublisher(services, wolverineSettings, opts);
             AddSendSmsPublisher(wolverineSettings, opts);
         });
     }
