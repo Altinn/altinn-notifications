@@ -1,5 +1,5 @@
 # Use the official .NET SDK image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/sdk:10.0.200-alpine3.23@sha256:a0116e63beedf9197c3d491eb224aea9ae7d1692079eda9eebe2809f06d580e3 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.202-alpine3.23@sha256:732cd42c6f659814c9804ad7b05c7f761e83ef8379c5b2fdc3af673353caff73 AS build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -20,7 +20,7 @@ RUN dotnet publish -c Release -o out \
     ./components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.4-alpine3.23@sha256:512d643dce0e7daa25c85407eb4e14dbea33b72e4a7792427949666636934019 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.6-alpine3.23@sha256:1201dde897ab436b7c6b386f6dbd4f9a3ca0245f9c5a8aac8f8bcdccb4c7d484 AS final
 EXPOSE 5091
 WORKDIR /app
 COPY --from=build /app/out ./

@@ -511,28 +511,29 @@ public class EmailSendingConsumerTests : IAsyncLifetime
     public async Task GivenShutdown_ThenLastBatchSafeOffsetsCommittedOnce_AndPendingMessageProcessedAfterRestart()
     {
         // Arrange
-        var firstEmailNotificationIdentifer = Guid.NewGuid();
         var firstRunSemaphoreSlim = new SemaphoreSlim(0, 1);
+        var firstEmailNotificationIdentifier = Guid.NewGuid();
         using var firstProcessedSignal = new ManualResetEventSlim(false);
-        var firstEmail = new Core.Sending.Email(firstEmailNotificationIdentifer, "first", "body-1", "from", "to", EmailContentType.Plain);
+        var firstEmail = new Core.Sending.Email(firstEmailNotificationIdentifier, "first", "body-1", "from", "to", EmailContentType.Plain);
 
-        var secondEmailNotificationIdentifer = Guid.NewGuid();
+        var secondEmailNotificationIdentifier = Guid.NewGuid();
         using var secondProcessedSignal = new ManualResetEventSlim(false);
-        var secondEmail = new Core.Sending.Email(secondEmailNotificationIdentifer, "second", "body-2", "from", "to", EmailContentType.Plain);
+        using var secondEmailSendStarted = new ManualResetEventSlim(false);
+        var secondEmail = new Core.Sending.Email(secondEmailNotificationIdentifier, "second", "body-2", "from", "to", EmailContentType.Plain);
 
         var loggerMock = new Mock<ILogger<SendEmailQueueConsumer>>();
 
         var firstRunSendingServiceMock = new Mock<ISendingService>();
         firstRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifier)))
             .Callback(firstProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
         firstRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifier)))
             .Returns(async () =>
             {
-                // Simulate in-flight work that should NOT complete before StopAsync.
+                secondEmailSendStarted.Set();
                 await firstRunSemaphoreSlim.WaitAsync(TimeSpan.FromSeconds(25));
             });
 
@@ -546,7 +547,11 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
         var firstProcessed = await WaitForConditionAsync(() => firstProcessedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
 
-        await firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        // Wait until the second email's SendAsync is invoked and in-flight before triggering shutdown.
+        var secondEmailInFlight = await WaitForConditionAsync(() => secondEmailSendStarted.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var stopTask = firstTestFixture.Consumer.StopAsync(CancellationToken.None);
+        firstRunSemaphoreSlim.Release();
+        await stopTask;
 
         loggerMock.Verify(
            e => e.Log(
@@ -557,16 +562,14 @@ public class EmailSendingConsumerTests : IAsyncLifetime
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
            Times.AtLeastOnce);
 
-        firstRunSemaphoreSlim.Release();
-
         var secondRunSendingServiceMock = new Mock<ISendingService>();
         secondRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == secondEmailNotificationIdentifier)))
             .Callback(secondProcessedSignal.Set)
             .Returns(Task.CompletedTask);
 
         secondRunSendingServiceMock
-            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifer)))
+            .Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == firstEmailNotificationIdentifier)))
             .Returns(Task.CompletedTask);
 
         await using var secondTestFixture = CreateTestFixture(secondRunSendingServiceMock.Object);
@@ -579,9 +582,10 @@ public class EmailSendingConsumerTests : IAsyncLifetime
 
         // Assert
         Assert.True(firstProcessed, "First email was not processed within the expected time window.");
-        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == firstEmailNotificationIdentifer)), Times.Once);
-        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifer)), Times.Once);
-        secondRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifer)), Times.Once);
+        Assert.True(secondEmailInFlight, "Second email's SendAsync was not invoked before shutdown — the in-flight scenario was not exercised.");
+        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == firstEmailNotificationIdentifier)), Times.Once);
+        firstRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifier)), Times.Once);
+        secondRunSendingServiceMock.Verify(e => e.SendAsync(It.Is<Core.Sending.Email>(m => m.NotificationId == secondEmailNotificationIdentifier)), Times.Once);
         Assert.True(secondProcessed, "Second email was not processed by the restarted consumer, indicating offsets may have been committed beyond the safe contiguous boundary.");
     }
 

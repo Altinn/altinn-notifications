@@ -4,8 +4,6 @@ using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
-using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,7 +24,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <summary>
     /// Gets the Wolverine settings loaded from configuration.
     /// </summary>
-    public WolverineSettings WolverineSettings { get; private set; } = null!;
+    public WolverineSettings? WolverineSettings { get; private set; }
 
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
@@ -42,7 +40,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
-        WolverineSettings = configuration.GetSection("WolverineSettings").Get<WolverineSettings>()
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
         Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
@@ -63,14 +61,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return dataSourceBuilder.Build();
         }));
 
-        var consumersToRemove = services
-            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-            .ToList();
-
-        foreach (var descriptor in consumersToRemove)
-        {
-            services.Remove(descriptor);
-        }
+        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
     }
@@ -83,33 +74,11 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return;
         }
 
-        string[] queueNames = [WolverineSettings.EmailDeliveryReportQueueName];
-        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
-
-        try
-        {
-            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-
-            foreach (var queueName in queueNames)
-            {
-                await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
-
-                while (true)
-                {
-                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                    if (message == null)
-                    {
-                        break;
-                    }
-
-                    await receiver.CompleteMessageAsync(message);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
-        }
+        await DrainDeadLetterQueuesAsync(
+            Fixture.ServiceBusConnectionString,
+            WolverineSettings.EmailDeliveryReportQueueName,
+            WolverineSettings.EmailSendQueueName,
+            WolverineSettings.SmsDeliveryReportQueueName);
     }
 
     /// <inheritdoc/>

@@ -1,7 +1,9 @@
 using System.Text.Json;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Shared.Commands;
 
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -18,34 +20,85 @@ public static class FailureActionsExtensions
     /// <summary>
     /// Configures the failure policy to save a dead delivery report when all retries are exhausted.
     /// </summary>
-    public static IAdditionalActions SaveDeadDeliveryReport(this IFailureActions failureActions, string reason)
+    /// <param name="failureActions">The failure actions to extend.</param>
+    /// <param name="reason">Reason code stored on the dead delivery report.</param>
+    /// <param name="channel">The delivery channel; determines how the report payload is extracted.</param>
+    public static IAdditionalActions SaveDeadDeliveryReport(
+        this IFailureActions failureActions,
+        string reason,
+        DeliveryReportChannel channel)
     {
         return failureActions.CustomAction(
             async (runtime, envelope, exception) =>
             {
-                var command = (EmailDeliveryReportCommand)envelope.Envelope!.Message!;
-                var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
+                var innerEnvelope = envelope.Envelope
+                    ?? throw new InvalidDataException("Wolverine envelope is null.");
 
-                if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
+                var message = innerEnvelope.Message
+                    ?? throw new InvalidDataException("Envelope message is null.");
+
+                string payload = channel switch
                 {
-                    var deliveryReport = (AcsEmailDeliveryReportReceivedEventData)systemEvent;
-                    var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
+                    DeliveryReportChannel.AzureCommunicationServices => ExtractEmailPayload(message),
+                    DeliveryReportChannel.LinkMobility => ExtractSmsPayload(message),
+                    _ => throw new NotSupportedException($"No payload extractor registered for channel {channel}")
+                };
 
-                    var deadDeliveryReport = new DeadDeliveryReport
-                    {
-                        Channel = Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
-                        FirstSeen = envelope.Envelope.SentAt.UtcDateTime,
-                        LastAttempt = DateTime.UtcNow,
-                        AttemptCount = Math.Max(1, envelope.Envelope.Attempts),
-                        Resolved = false,
-                        DeliveryReport = JsonSerializer.Serialize(deliveryReport),
-                        Reason = reason,
-                        Message = exception.Message
-                    };
+                var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
 
-                    await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
-                }
+                var deadDeliveryReport = new DeadDeliveryReport
+                {
+                    Channel = channel,
+                    FirstSeen = innerEnvelope.SentAt.UtcDateTime,
+                    LastAttempt = DateTime.UtcNow,
+                    AttemptCount = Math.Max(1, innerEnvelope.Attempts),
+                    Resolved = false,
+                    DeliveryReport = payload,
+                    Reason = reason,
+                    Message = exception.Message
+                };
+
+                await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
             },
             "Save Dead Delivery Report");
+    }
+
+    /// <summary>
+    /// Extracts and serializes the email delivery report payload from a Wolverine message.
+    /// </summary>
+    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="EmailDeliveryReportCommand"/>.</param>
+    /// <returns>A JSON-serialized string of the <see cref="AcsEmailDeliveryReportReceivedEventData"/>.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the event type is not a recognized ACS email delivery report.</exception>
+    private static string ExtractEmailPayload(object message)
+    {
+        if (message is not EmailDeliveryReportCommand command)
+        {
+            throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)}, got {message.GetType().Name}.");
+        }
+
+        var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
+
+        if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
+            && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+        {
+            return JsonSerializer.Serialize(deliveryReport);
+        }
+
+        throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
+    }
+
+    /// <summary>
+    /// Serializes the SMS delivery report payload from a Wolverine message.
+    /// </summary>
+    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
+    /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
+    private static string ExtractSmsPayload(object message)
+    {
+        if (message is not SmsDeliveryReportCommand command)
+        {
+            throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
+        }
+
+        return JsonSerializer.Serialize(command);
     }
 }

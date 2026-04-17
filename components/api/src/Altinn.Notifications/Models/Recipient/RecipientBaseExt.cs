@@ -54,6 +54,7 @@ public abstract class RecipientBaseExt
     /// <summary>
     /// Gets or sets an optional resource identifier for authorization and auditing purposes.
     /// </summary>
+    /// <example>urn:altinn:resource:org_example_app</example>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
 

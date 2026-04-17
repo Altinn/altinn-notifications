@@ -1,8 +1,7 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Consumers;
-
-using Azure.Messaging.ServiceBus;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +18,11 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration.
+    /// </summary>
+    public WolverineSettings? WolverineSettings { get; private set; }
+
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
@@ -28,16 +32,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
+            ?? throw new InvalidOperationException(
+                "Missing WolverineSettings configuration for ASB integration tests.");
+
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
-        var consumersToRemove = services
-            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-            .ToList();
-
-        foreach (var descriptor in consumersToRemove)
-        {
-            services.Remove(descriptor);
-        }
+        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
@@ -45,25 +46,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        try
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
         {
-            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
-
-            while (true)
-            {
-                var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                if (message == null)
-                {
-                    break;
-                }
-
-                await receiver.CompleteMessageAsync(message);
-            }
+            return;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[SmsFactory] DLQ drain failed (non-fatal): {ex.Message}");
-        }
+
+        await DrainDeadLetterQueuesAsync(
+            Fixture.ServiceBusConnectionString, 
+            WolverineSettings.SmsDeliveryReportQueueName);
     }
 }

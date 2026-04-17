@@ -1,8 +1,7 @@
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-
-using Azure.Messaging.ServiceBus;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +18,11 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixture fixture)
     : IntegrationTestWebApplicationFactoryBase<Program, IntegrationTestWebApplicationFactory>(fixture)
 {
+    /// <summary>
+    /// Gets the Wolverine settings loaded from configuration.
+    /// </summary>
+    public WolverineSettings? WolverineSettings { get; private set; }
+
     /// <inheritdoc/>
     protected override Dictionary<string, string?> GetFixtureConfigOverrides() => new()
     {
@@ -28,16 +32,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services)
     {
+        WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
+            ?? throw new InvalidOperationException(
+                "Missing WolverineSettings configuration for ASB integration tests.");
+
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
-        var consumersToRemove = services
-            .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-            .ToList();
-
-        foreach (var descriptor in consumersToRemove)
-        {
-            services.Remove(descriptor);
-        }
+        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
 
         services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
@@ -45,25 +46,14 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        try
+        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
         {
-            await using var client = new ServiceBusClient(Fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver("smoke-test/$deadletterqueue");
-
-            while (true)
-            {
-                var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
-                if (message == null)
-                {
-                    break;
-                }
-
-                await receiver.CompleteMessageAsync(message);
-            }
+            return;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[EmailFactory] DLQ drain failed (non-fatal): {ex.Message}");
-        }
+
+        await DrainDeadLetterQueuesAsync(
+            Fixture.ServiceBusConnectionString,
+            WolverineSettings.EmailSendQueueName,
+            WolverineSettings.EmailStatusCheckQueueName);
     }
 }
