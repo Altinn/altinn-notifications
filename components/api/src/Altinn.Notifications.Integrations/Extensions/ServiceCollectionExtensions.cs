@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
         .AddHostedService<EmailPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
 
+        RegisterSmsCommandPublisher(services, config, kafkaSettings);
         RegisterEmailCommandPublisher(services, config, kafkaSettings);
     }
 
@@ -135,6 +136,35 @@ public static class ServiceCollectionExtensions
                 new KafkaEmailCommandPublisher(
                     sp.GetRequiredService<IKafkaProducer>(),
                     kafkaSettings.EmailQueueTopicName));
+        }
+    }
+
+    /// <summary>
+    /// Registers the correct <see cref="ISendSmsPublisher"/> implementation based on Wolverine settings.
+    /// Reads <see cref="WolverineSettings"/> once and uses an if/else to register either
+    /// the ASB-backed <see cref="SendSmsCommandPublisher"/> or the Kafka-backed
+    /// <see cref="KafkaSendSmsPublisher"/>. Exactly one transport path is always active.
+    /// </summary>
+    private static void RegisterSmsCommandPublisher(IServiceCollection services, IConfiguration config, KafkaSettings kafkaSettings)
+    {
+        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        bool useWolverine =
+            wolverineSettings.EnableWolverine &&
+            wolverineSettings.EnableSendSmsPublisher &&
+            !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName);
+
+        if (useWolverine)
+        {
+            services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<ISendSmsPublisher>(sp =>
+                new KafkaSendSmsPublisher(
+                    sp.GetRequiredService<IKafkaProducer>(),
+                    kafkaSettings.SmsQueueTopicName));
         }
     }
 }

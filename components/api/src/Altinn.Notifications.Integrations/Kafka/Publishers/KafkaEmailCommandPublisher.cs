@@ -5,6 +5,8 @@ using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 
+using Microsoft.Extensions.Logging;
+
 namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 
 /// <summary>

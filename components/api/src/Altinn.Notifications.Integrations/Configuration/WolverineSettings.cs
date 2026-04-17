@@ -30,7 +30,13 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether to consume email delivery reports via Wolverine and Azure Service Bus or via Kafka.
+    /// ASB queue name used for publishing sms messages.
+    /// Produced by the API and consumed by the SMS Service and service provider.
+    /// </summary>
+    public string SendSmsQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether to enable the email delivery report queue listener.
     /// </summary>
     public bool EnableEmailDeliveryReportListener { get; set; } = false;
 
@@ -44,6 +50,16 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email delivery report queue.
     /// </summary>
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int SmsPublishConcurrency { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the SMS publisher is enabled.
+    /// </summary>
+    public bool EnableSendSmsPublisher { get; set; } = false;
 
     /// <summary>
     /// Whether to enable the SMS delivery report queue listener.

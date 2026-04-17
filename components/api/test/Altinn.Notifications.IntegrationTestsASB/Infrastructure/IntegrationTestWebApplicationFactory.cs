@@ -78,6 +78,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             Fixture.ServiceBusConnectionString,
             WolverineSettings.EmailSendQueueName,
             WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.SendSmsQueueName,
             WolverineSettings.SmsDeliveryReportQueueName,
             WolverineSettings.EmailDeliveryReportQueueName);
     }
