@@ -17,12 +17,10 @@ namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 /// </remarks>
 /// <param name="kafkaProducer">The Kafka producer used to publish messages.</param>
 /// <param name="topicName">The Kafka topic to publish SMS commands to.</param>
-/// <param name="logger">The logger used to log information and errors.</param>
-internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string topicName, ILogger<KafkaSendSmsPublisher>? logger = null) : ISendSmsPublisher
+internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string topicName) : ISendSmsPublisher
 {
     private readonly IKafkaProducer _kafkaProducer = kafkaProducer;
     private readonly string _topicName = topicName;
-    private readonly ILogger<KafkaSendSmsPublisher>? _logger = logger;
 
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
@@ -51,10 +49,6 @@ internal sealed class KafkaSendSmsPublisher(IKafkaProducer kafkaProducer, string
             if (deserialized is not null && deserialized.NotificationId != Guid.Empty)
             {
                 failedSms.Add(deserialized);
-            }
-            else
-            {
-                _logger?.LogWarning("Failed to deserialize unpublished SMS message or NotificationId was empty. Raw: {RawMessage}", unpublished);
             }
         }
 

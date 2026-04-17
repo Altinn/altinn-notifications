@@ -18,12 +18,10 @@ namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 /// </remarks>
 /// <param name="kafkaProducer">The Kafka producer used to publish messages.</param>
 /// <param name="topicName">The Kafka topic to publish email commands to.</param>
-/// <param name="logger">The logger used to log information and errors.</param>
-internal sealed class KafkaEmailCommandPublisher(IKafkaProducer kafkaProducer, string topicName, ILogger<KafkaEmailCommandPublisher>? logger = null) : IEmailCommandPublisher
+internal sealed class KafkaEmailCommandPublisher(IKafkaProducer kafkaProducer, string topicName) : IEmailCommandPublisher
 {
     private readonly IKafkaProducer _kafkaProducer = kafkaProducer;
     private readonly string _topicName = topicName;
-    private readonly ILogger<KafkaEmailCommandPublisher>? _logger = logger;
 
     /// <inheritdoc/>
     public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
@@ -52,10 +50,6 @@ internal sealed class KafkaEmailCommandPublisher(IKafkaProducer kafkaProducer, s
             if (deserialized is not null && deserialized.NotificationId != Guid.Empty)
             {
                 failedEmails.Add(deserialized);
-            }
-            else
-            {
-                _logger?.LogWarning("Failed to deserialize unpublished SMS message or NotificationId was empty. Raw: {RawMessage}", unpublished);
             }
         }
 

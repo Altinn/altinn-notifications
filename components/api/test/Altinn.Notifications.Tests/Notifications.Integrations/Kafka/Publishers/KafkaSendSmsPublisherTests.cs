@@ -21,7 +21,7 @@ public class KafkaSendSmsPublisherTests
     private const string _topicName = "altinn.notifications.sms.send";
 
     private static KafkaSendSmsPublisher CreatePublisher(IKafkaProducer producer) =>
-        new(producer, _topicName, NullLogger<KafkaSendSmsPublisher>.Instance);
+        new(producer, _topicName);
 
     [Fact]
     public async Task PublishAsync_ValidResult_ProducesToCorrectTopic()
