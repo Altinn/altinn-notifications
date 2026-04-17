@@ -174,7 +174,7 @@ public class ServiceCollectionExtensionsTests
 
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
-        Assert.Equal("EmailStatusCheckQueueName must be configured when EnableEmailStatusCheckListener is enabled.", exception.Message);
+        Assert.Equal("EmailStatusCheckQueueName must be configured when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
     }
 
     [Fact]
