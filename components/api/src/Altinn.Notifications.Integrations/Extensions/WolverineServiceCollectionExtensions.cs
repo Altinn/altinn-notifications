@@ -55,6 +55,7 @@ public static class WolverineServiceCollectionExtensions
 
             // Publishers
             AddSendEmailPublisher(wolverineSettings, opts);
+            AddSendSmsPublisher(wolverineSettings, opts);
         });
     }
 
@@ -125,5 +126,28 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.PublishMessage<SendEmailCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
+    /// routing outbound commands to the Azure Service Bus SMS send queue.
+    /// Only active when <see cref="WolverineSettings.EnableSendSmsPublisher"/> is <c>true</c>.
+    /// The <see cref="ISendSmsPublisher"/> DI registration is handled separately.
+    /// </summary>
+    private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendSmsPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
+        }
+
+        wolverineOptions.PublishMessage<SendSmsCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
     }
 }
