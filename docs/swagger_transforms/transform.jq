@@ -7,7 +7,7 @@
 | .servers |= map(select(.url | contains("localhost") | not))
 | .servers |= map(.url |= sub("altinn.no/"; "altinn.no/notifications/api/v1"))
 | del(.paths."/tests/sendcondition")
-| del(.paths."/metrics")
+| del(.paths."/metrics", .paths."/metrics/sms", .paths."/metrics/email")
 | del(.tags)
 | .tags += [{"name": "Deprecated", "description": "Legacy endpoints. Still supported, but going forward please use '/future/*' endpoints instead."}]
 | .tags += [{"name": "Order", "description": "Create notifications (queued processing)"}]
