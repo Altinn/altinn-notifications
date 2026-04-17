@@ -108,9 +108,12 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert
+            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
+            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
+            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
             bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref callCount) >= 2), // Expecting at least one retry
-                maxAttempts: 20,
+                () => Task.FromResult(Volatile.Read(ref callCount) >= 9),
+                maxAttempts: 40,
                 delayMs: 500);
 
             Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
@@ -120,7 +123,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
                     sms.Recipient == command.MobileNumber &&
                     sms.Message == command.Body &&
                     sms.Sender == command.SenderNumber)),
-                Times.AtLeast(2)); // Expecting at least one retry
+                Times.Exactly(9));
         }
     }
 

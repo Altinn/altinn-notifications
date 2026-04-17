@@ -36,11 +36,6 @@ public class WolverineSettings : WolverineSettingsBase
     public string SendSmsQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the sms send queue.
-    /// </summary>
-    public QueueRetryPolicy SendSmsQueuePolicy { get; set; } = new();
-
-    /// <summary>
     /// Whether to enable the email delivery report queue listener.
     /// </summary>
     public bool EnableEmailDeliveryReportListener { get; set; } = false;
