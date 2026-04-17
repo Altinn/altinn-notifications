@@ -76,3 +76,79 @@ Behavior:
 
 Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
+
+-- v3 adds _deliveryreport jsonb and writes it conditionally (only when not expired),
+-- mirroring the delivery_report column added to emailnotifications for channel symmetry.
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v3(
+    _result          text,
+    _gatewayreference text,
+    _alternateid     uuid,
+    _deliveryreport  jsonb
+)
+RETURNS TABLE (
+    alternateid  uuid,
+    was_updated  boolean,
+    is_expired   boolean
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF _alternateid IS NULL AND _gatewayreference IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    UPDATE notifications.smsnotifications
+    SET
+        result = CASE
+            WHEN expirytime > now() THEN _result::smsnotificationresulttype
+            ELSE result
+        END,
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime
+        END,
+        gatewayreference = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_gatewayreference, gatewayreference)
+            ELSE gatewayreference
+        END,
+        delivery_report = CASE
+            WHEN expirytime > now() THEN _deliveryreport
+            ELSE delivery_report
+        END
+    WHERE
+        (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
+        (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
+    RETURNING
+        smsnotifications.alternateid,
+        (expirytime > now()) AS was_updated,
+        (expirytime <= now()) AS is_expired;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updatesmsnotification_v3 IS
+'Updates an SMS notification result, resulttime, gatewayreference, and delivery_report
+by alternateid or by gatewayreference, with expiry time validation.
+
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid
+is used for lookup; _gatewayreference may still populate the row via COALESCE.
+
+Return values:
+- alternateid:  The UUID of the notification (NULL if not found)
+- was_updated:  true if values were modified (notification not expired), false otherwise
+- is_expired:   true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- All four fields are conditionally modified only when expirytime > now()
+- If expired:   UPDATE executes but keeps existing values, returns (alternateid, false, true)
+- If not found: returns (NULL, false, false)
+- If found and not expired: modifies values and returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely
+identifies at most one row when non-null.';
