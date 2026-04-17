@@ -67,7 +67,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         
         var date = DateTime.UtcNow;
 
-        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date.AddDays(-1));
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date);
         _orderIdsToDelete.Add(order.Id);
 
         // Act
@@ -95,7 +95,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
 
         var date = DateTime.UtcNow;
 
-        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date.AddDays(-1));
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date);
         _orderIdsToDelete.Add(order.Id);
 
         // Act

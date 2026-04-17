@@ -27,7 +27,7 @@ BEGIN
 
      -- operator status
 ,   email.result::text as result -- status of the delivery (error, but with an operationid may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
-,   email.operationid -- reference at ACS (a reference likely means that ACS bills for this — but not necessarily)
+,   email.operationid -- reference at ACS (a reference likely means that ACS bills for this - but not necessarily)
 
 from notifications.emailnotifications as email
          inner join notifications.orders orders on orders._id = email._orderid
