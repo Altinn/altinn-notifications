@@ -34,6 +34,12 @@ public class WolverineSettings : WolverineSettingsBase
     public bool EnableEmailStatusCheckListener { get; set; } = false;
 
     /// <summary>
+    /// Enables or disables the publisher responsible for sending <c>CheckEmailSendStatusCommand</c> messages independently of the listener activation, allowing
+    /// the listener to be enabled without the publisher and vice versa. This is useful for testing and allows for flexibility in how the polling loop is triggered.
+    /// </summary>
+    public bool EnableEmailStatusCheckPublisher { get; set; } = false;
+
+    /// <summary>
     /// ASB queue name for email status check operations (polling loop).
     /// </summary>
     public string EmailStatusCheckQueueName { get; set; } = string.Empty;
