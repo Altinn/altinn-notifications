@@ -124,7 +124,11 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task UpdateSendStatus(SmsSendOperationResult sendOperationResult)
     {
-        await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
+        await _repository.UpdateSendStatus(
+            sendOperationResult.NotificationId,
+            sendOperationResult.SendResult,
+            sendOperationResult.GatewayReference,
+            sendOperationResult.DeliveryReport);
     }
 
     /// <summary>
