@@ -97,7 +97,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
             })
             .Build();
@@ -119,7 +119,7 @@ public class ServiceCollectionExtensionsTests
     [InlineData(false, false)]
     [InlineData(false, true)]
     [InlineData(true, false)]
-    public void AddIntegrationServices_WolverineNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enableStatusCheck)
+    public void AddIntegrationServices_WolverineNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enableStatusCheckPublisher)
     {
         // Arrange
         var config = new ConfigurationBuilder()
@@ -130,7 +130,8 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = enableStatusCheck.ToString(),
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = enableStatusCheckPublisher.ToString(),
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
             })
             .Build();
 
@@ -164,7 +165,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })
             .Build();
@@ -257,5 +258,38 @@ public class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
         Assert.Equal("EmailSendResultQueueName must be configured when EnableEmailSendResultPublisher is enabled.", exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_ListenerOnPublisherOff_RegistersKafkaDispatcher()
+    {
+        // Transition scenario: the ASB listener remains active to drain inflight messages,
+        // while the publisher is switched back to Kafka.
+        // Note: ASB listener activation (via Wolverine) is verified in integration tests —
+        // this test only covers dispatcher (IEmailStatusCheckDispatcher) registration.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",   // ASB listener active, draining inflight messages
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false", // publisher switched back to Kafka
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor.ImplementationType);       // Not EmailStatusCheckPublisher (ASB)
+        Assert.NotNull(descriptor.ImplementationFactory); // Factory = Kafka path
+        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 }

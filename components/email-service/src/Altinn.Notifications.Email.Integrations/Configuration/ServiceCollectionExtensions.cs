@@ -89,12 +89,12 @@ public static class ServiceCollectionExtensions
     {
         services.RemoveAll<IEmailStatusCheckDispatcher>();
 
-        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckListener)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckPublisher)
         {
             if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
+                    $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
             }
 
             services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
