@@ -1,5 +1,5 @@
 using System.Text.Json;
-
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -81,7 +81,7 @@ public static class FailureActionsExtensions
         if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
             && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
         {
-            return JsonSerializer.Serialize(deliveryReport);
+            return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
         }
 
         throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
@@ -99,6 +99,6 @@ public static class FailureActionsExtensions
             throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
         }
 
-        return JsonSerializer.Serialize(command);
+        return JsonSerializer.Serialize(command, JsonSerializerOptionsProvider.Options);
     }
 }
