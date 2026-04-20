@@ -44,7 +44,7 @@ internal sealed class SmsSendResultHandlerPolicy(WolverineSettings settings) : I
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<UnrecognizedSendResultException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.LinkMobility);
     }
 }

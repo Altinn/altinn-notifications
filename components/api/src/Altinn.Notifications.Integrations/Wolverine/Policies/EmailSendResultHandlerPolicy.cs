@@ -44,7 +44,7 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<UnrecognizedSendResultException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.AzureCommunicationServices);
     }
 }
