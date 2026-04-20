@@ -55,5 +55,4 @@ public class WolverineSettings : WolverineSettingsBase
     /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailSendResultQueueName { get; set; } = string.Empty;
-
 }
