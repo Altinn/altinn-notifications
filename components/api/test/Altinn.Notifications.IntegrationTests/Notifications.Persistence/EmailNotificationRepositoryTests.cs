@@ -640,7 +640,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert — delivery report JSON is persisted and round-trips correctly
         string reportSql = $@"
-            SELECT delivery_report::text FROM notifications.emailnotifications
+            SELECT deliveryreport::text FROM notifications.emailnotifications
             WHERE alternateid = '{emailNotification.Id}'";
 
         string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(reportSql);
@@ -672,9 +672,9 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         // Act — no delivery report supplied
         await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Succeeded, operationId, deliveryReport: null);
 
-        // Assert — delivery_report column should remain NULL
+        // Assert — deliveryreport column should remain NULL
         string sql = $@"
-            SELECT delivery_report::text FROM notifications.emailnotifications
+            SELECT deliveryreport::text FROM notifications.emailnotifications
             WHERE alternateid = '{emailNotification.Id}'";
 
         string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(sql);
