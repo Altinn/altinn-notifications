@@ -15,32 +15,23 @@ public class SendingService : ISendingService
     private readonly ICommonProducer _producer;
     private readonly IEmailServiceClient _emailServiceClient;
     private readonly IEmailStatusCheckDispatcher _emailStatusCheckDispatcher;
+    private readonly IEmailSendResultDispatcher _emailSendingStatusDispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SendingService"/> class.
     /// </summary>
-    /// <param name="emailServiceClient">
-    /// The client used to submit email send requests to Azure Communication Services.
-    /// </param>
-    /// <param name="producer">
-    /// The Kafka producer responsible for publishing error events and email status updates.
-    /// </param>
-    /// <param name="emailStatusCheckDispatcher">
-    /// The dispatcher used to initiate ACS operation status tracking after a successful email submission.
-    /// </param>
-    /// <param name="settings">
-    /// Configuration settings specifying the Kafka topics used for error reporting and status updates.
-    /// </param>
     public SendingService(
         TopicSettings settings,
         ICommonProducer producer,
         IEmailServiceClient emailServiceClient,
-        IEmailStatusCheckDispatcher emailStatusCheckDispatcher)
+        IEmailStatusCheckDispatcher emailStatusCheckDispatcher,
+        IEmailSendResultDispatcher emailSendingStatusDispatcher)
     {
         _settings = settings;
         _producer = producer;
         _emailServiceClient = emailServiceClient;
         _emailStatusCheckDispatcher = emailStatusCheckDispatcher;
+        _emailSendingStatusDispatcher = emailSendingStatusDispatcher;
     }
 
     /// <inheritdoc/>
@@ -79,7 +70,7 @@ public class SendingService : ISendingService
                     SendResult = emailSendFailResponse.SendResult
                 };
 
-                await _producer.ProduceAsync(_settings.EmailStatusUpdatedTopicName, operationResult.Serialize());
+                await _emailSendingStatusDispatcher.DispatchAsync(operationResult);
             });
     }
 }

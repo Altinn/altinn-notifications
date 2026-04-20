@@ -76,10 +76,11 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
 
         await DrainDeadLetterQueuesAsync(
             Fixture.ServiceBusConnectionString,
-            WolverineSettings.EmailDeliveryReportQueueName,
             WolverineSettings.EmailSendQueueName,
+            WolverineSettings.EmailSendResultQueueName,
             WolverineSettings.SendSmsQueueName,
-            WolverineSettings.SmsDeliveryReportQueueName);
+            WolverineSettings.SmsDeliveryReportQueueName,
+            WolverineSettings.EmailDeliveryReportQueueName);
     }
 
     /// <inheritdoc/>

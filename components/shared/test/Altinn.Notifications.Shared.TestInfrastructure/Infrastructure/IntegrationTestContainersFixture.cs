@@ -107,7 +107,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 .WithNetworkAliases("mssql")
                 .WithEnvironment("ACCEPT_EULA", "Y")
                 .WithEnvironment("MSSQL_SA_PASSWORD", _mssqlSaPassword)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("SQL Server is now ready for client connections"))
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("SQL Server is now ready for client connections", s => s.WithTimeout(TimeSpan.FromMinutes(5))))
                 .WithAutoRemove(true)
                 .Build();
 
@@ -132,7 +132,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
                 .WithEnvironment("SQL_WAIT_INTERVAL", "5")
                 .WithBindMount(configPath, "/ServiceBus_Emulator/ConfigFiles/Config.json", AccessMode.ReadOnly)
                 .WithPortBinding(5672, true)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Emulator Service is Successfully Up!"))
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Emulator Service is Successfully Up!", s => s.WithTimeout(TimeSpan.FromMinutes(5))))
                 .WithAutoRemove(true)
                 .Build();
 
