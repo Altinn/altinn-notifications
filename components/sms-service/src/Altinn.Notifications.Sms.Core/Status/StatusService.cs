@@ -16,6 +16,8 @@ public class StatusService(ISmsDeliveryReportPublisher deliveryReportPublisher) 
     /// <inheritdoc/>
     public async Task UpdateStatusAsync(DrMessage message)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         var result = new SendOperationResult
         {
             GatewayReference = message.Reference,
@@ -30,10 +32,10 @@ public class StatusService(ISmsDeliveryReportPublisher deliveryReportPublisher) 
     {
         return JsonSerializer.Serialize(new
         {
-            reference = message.Reference, // <REF>
-            receiver = message.Receiver,   // <RCV>
-            state = message.State.ToString(), // <STATE>
-            deliveryTime = message.Deliverytime // <DELIVERYTIME>
+            reference = message.Reference,
+            receiver = message.Receiver,
+            state = message.State.ToString(),
+            deliveryTime = message.Deliverytime
         });
     }
 }
