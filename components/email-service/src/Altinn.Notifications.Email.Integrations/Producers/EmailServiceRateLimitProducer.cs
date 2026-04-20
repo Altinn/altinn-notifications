@@ -27,6 +27,12 @@ public class EmailServiceRateLimitProducer : IEmailServiceRateLimitDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(GenericServiceUpdate update)
     {
-        await _producer.ProduceAsync(_topicName, update.Serialize());
+        ArgumentNullException.ThrowIfNull(update);
+
+        bool success = await _producer.ProduceAsync(_topicName, update.Serialize());
+        if (!success)
+        {
+            throw new InvalidOperationException("Failed to publish email service rate limit update.");
+        }
     }
 }

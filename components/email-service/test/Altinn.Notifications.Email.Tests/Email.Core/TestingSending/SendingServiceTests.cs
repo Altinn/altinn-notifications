@@ -1,4 +1,3 @@
-using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
@@ -8,184 +7,169 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Email.Tests.Email.Core.Sending
+namespace Altinn.Notifications.Email.Tests.Email.Core.Sending;
+
+public class SendingServiceTests
 {
-    public class SendingServiceTests
+    [Fact]
+    public async Task SendAsync_InvalidEmailAddress_DispatchesStatusResult()
     {
-        private readonly TopicSettings _topicSettings;
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Notifications.Email.Core.Sending.Email email =
+        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
-        public SendingServiceTests()
-        {
-            _topicSettings = new()
-            {
-                EmailStatusUpdatedTopicName = "EmailStatusUpdatedTopicName",
-                AltinnServiceUpdateTopicName = "AltinnServiceUpdateTopicName",
-                EmailSendingAcceptedTopicName = "EmailSendingAcceptedTopicName"
-            };
-        }
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_InvalidEmailFormat });
 
-        [Fact]
-        public async Task SendAsync_OperationIdentifierGenerated_DelegatedToSendingAcceptedPublisher()
-        {
-            // Arrange
-            Guid id = Guid.NewGuid();
-            Notifications.Email.Core.Sending.Email email =
-            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-            Mock<IEmailServiceClient> clientMock = new();
-            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-                .ReturnsAsync("operation-id");
+        var sendingService = new SendingService(clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
-            Mock<ICommonProducer> producerMock = new();
-            Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
-            sendingAcceptedPublisherMock
-                .Setup(p => p.DispatchAsync(id, "operation-id"))
-                .Returns(Task.CompletedTask);
+        // Act
+        await sendingService.SendAsync(email);
 
-            Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        // Assert
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.OperationId == string.Empty &&
+                r.SendResult == EmailSendResult.Failed_InvalidEmailFormat)),
+            Times.Once);
 
-            var sendingService = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object);
+        statusDispatcherMock.VerifyNoOtherCalls();
+        sendingAcceptedPublisherMock.VerifyNoOtherCalls();
+        emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
 
-            // Act
-            await sendingService.SendAsync(email);
+    [Fact]
+    public async Task SendAsync_OperationIdentifierGenerated_DelegatedToSendingAcceptedPublisher()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Notifications.Email.Core.Sending.Email email =
+        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
-            // Assert
-            sendingAcceptedPublisherMock.Verify(p => p.DispatchAsync(id, "operation-id"), Times.Once);
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .ReturnsAsync("operation-id");
 
-            producerMock.VerifyNoOtherCalls();
-            statusDispatcherMock.VerifyNoOtherCalls();
-            sendingAcceptedPublisherMock.VerifyNoOtherCalls();
-        }
+        Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+        sendingAcceptedPublisherMock
+            .Setup(p => p.DispatchAsync(id, "operation-id"))
+            .Returns(Task.CompletedTask);
 
-        [Fact]
-        public async Task SendAsync_InvalidEmailAddress_DispatchesStatusResult()
-        {
-            // Arrange
-            Guid id = Guid.NewGuid();
-            Notifications.Email.Core.Sending.Email email =
-            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-            Mock<IEmailServiceClient> clientMock = new();
-            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-                .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_InvalidEmailFormat });
+        var sendingService = new SendingService(clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
-            Mock<ICommonProducer> producerMock = new();
-            Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
-            Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
-            statusDispatcherMock
-                .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
-                .Returns(Task.CompletedTask);
+        // Act
+        await sendingService.SendAsync(email);
 
-            var sendingService = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object);
+        // Assert
+        sendingAcceptedPublisherMock.Verify(p => p.DispatchAsync(id, "operation-id"), Times.Once);
 
-            // Act
-            await sendingService.SendAsync(email);
+        statusDispatcherMock.VerifyNoOtherCalls();
+        sendingAcceptedPublisherMock.VerifyNoOtherCalls();
+        emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
 
-            // Assert
-            statusDispatcherMock.Verify(
-                d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
-                    r.NotificationId == id &&
-                    r.OperationId == string.Empty &&
-                    r.SendResult == EmailSendResult.Failed_InvalidEmailFormat)),
-                Times.Once);
+    [Fact]
+    public async Task SendAsync_Failed_TransientError_DispatchesEmailServiceRateLimitAndStatusResult()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Notifications.Email.Core.Sending.Email email =
+        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
-            producerMock.VerifyNoOtherCalls();
-            statusDispatcherMock.VerifyNoOtherCalls();
-            sendingAcceptedPublisherMock.VerifyNoOtherCalls();
-        }
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_TransientError, IntermittentErrorDelay = 1000 });
 
-        [Theory]
-        [InlineData(EmailSendResult.Failed)]
-        [InlineData(EmailSendResult.Failed_Bounced)]
-        [InlineData(EmailSendResult.Failed_Quarantined)]
-        [InlineData(EmailSendResult.Failed_FilteredSpam)]
-        [InlineData(EmailSendResult.Failed_SupressedRecipient)]
-        public async Task SendAsync_NonTransientFailure_DispatchesStatusResultWithCorrectValues(EmailSendResult failResult)
-        {
-            // Arrange
-            Guid id = Guid.NewGuid();
-            Notifications.Email.Core.Sending.Email email =
-            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
 
-            Mock<IEmailServiceClient> clientMock = new();
-            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-                .ReturnsAsync(new EmailClientErrorResponse { SendResult = failResult });
+        Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
+        emailServiceRateLimitDispatcherMock.Setup(d => d.DispatchAsync(
+            It.Is<GenericServiceUpdate>(u =>
+                u.Source == "platform-notifications-email" &&
+                u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded)))
+            .Returns(Task.CompletedTask);
 
-            Mock<ICommonProducer> producerMock = new();
-            Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
-            Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
-            statusDispatcherMock
-                .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
-                .Returns(Task.CompletedTask);
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
-            var sendingService = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object);
+        // Act
+        await sendingService.SendAsync(email);
 
-            // Act
-            await sendingService.SendAsync(email);
+        // Assert - rate limit signal goes via dispatcher
+        emailServiceRateLimitDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<GenericServiceUpdate>(u =>
+                u.Source == "platform-notifications-email" &&
+                u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded)),
+            Times.Once);
 
-            // Assert
-            statusDispatcherMock.Verify(
-                d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
-                    r.NotificationId == id &&
-                    r.OperationId == string.Empty &&
-                    r.SendResult == failResult)),
-                Times.Once);
+        // Assert - status result goes via dispatcher
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.OperationId == string.Empty &&
+                r.SendResult == EmailSendResult.Failed_TransientError)),
+            Times.Once);
 
-            producerMock.VerifyNoOtherCalls();
-            checkDispatcherMock.VerifyNoOtherCalls();
-            statusDispatcherMock.VerifyNoOtherCalls();
-        }
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
+        emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
 
-        [Fact]
-        public async Task SendAsync_Failed_TransientError_PublishesServiceUpdateToKafkaAndDispatchesStatusResult()
-        {
-            // Arrange
-            Guid id = Guid.NewGuid();
-            Notifications.Email.Core.Sending.Email email =
-            new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+    [Theory]
+    [InlineData(EmailSendResult.Failed)]
+    [InlineData(EmailSendResult.Failed_Bounced)]
+    [InlineData(EmailSendResult.Failed_Quarantined)]
+    [InlineData(EmailSendResult.Failed_FilteredSpam)]
+    [InlineData(EmailSendResult.Failed_SupressedRecipient)]
+    public async Task SendAsync_NonTransientFailure_DispatchesStatusResultWithCorrectValues(EmailSendResult failResult)
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Notifications.Email.Core.Sending.Email email =
+        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
-            Mock<IEmailServiceClient> clientMock = new();
-            clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-                .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_TransientError, IntermittentErrorDelay = 1000 });
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .ReturnsAsync(new EmailClientErrorResponse { SendResult = failResult });
 
-            Mock<ICommonProducer> producerMock = new();
-            producerMock
-                .Setup(p => p.ProduceAsync(
-                    It.Is<string>(s => s.Equals(_topicSettings.AltinnServiceUpdateTopicName)),
-                    It.Is<string>(s =>
-                        s.Contains("\"source\":\"platform-notifications-email\"") &&
-                        s.Contains("\"schema\":\"ResourceLimitExceeded\""))))
-                .ReturnsAsync(true);
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-            Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
-            Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
-            statusDispatcherMock
-                .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
-                .Returns(Task.CompletedTask);
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
-            var sendingService = new SendingService(_topicSettings, producerMock.Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object);
+        // Act
+        await sendingService.SendAsync(email);
 
-            // Act
-            await sendingService.SendAsync(email);
+        // Assert
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.OperationId == string.Empty &&
+                r.SendResult == failResult)),
+            Times.Once);
 
-            // Assert - service update goes to Kafka
-            producerMock.Verify(
-                p => p.ProduceAsync(
-                    _topicSettings.AltinnServiceUpdateTopicName,
-                    It.Is<string>(s => s.Contains("ResourceLimitExceeded"))),
-                Times.Once);
-            producerMock.VerifyNoOtherCalls();
-
-            // Assert - status result goes via dispatcher
-            statusDispatcherMock.Verify(
-                d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
-                    r.NotificationId == id &&
-                    r.OperationId == string.Empty &&
-                    r.SendResult == EmailSendResult.Failed_TransientError)),
-                Times.Once);
-
-            checkDispatcherMock.VerifyNoOtherCalls();
-            statusDispatcherMock.VerifyNoOtherCalls();
-        }
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
+        emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
     }
 }
