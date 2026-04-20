@@ -53,6 +53,7 @@ public static class WolverineServiceCollectionExtensions
 
             // Publishers
             AddSmsDeliveryReportPublisher(wolverineSettings, opts);
+            AddSmsSendResultPublisher(wolverineSettings, opts);
         });
     }
 
@@ -94,5 +95,27 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.PublishMessage<SmsDeliveryReportCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="SmsSendResultCommand"/>,
+    /// routing outbound commands to the Azure Service Bus SMS send result queue consumed by the API.
+    /// Only active when <see cref="WolverineSettings.EnableSmsSendResultPublisher"/> is <c>true</c>.
+    /// </summary>
+    private static void AddSmsSendResultPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSmsSendResultPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultPublisher)} is enabled.");
+        }
+
+        wolverineOptions.PublishMessage<SmsSendResultCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName);
     }
 }
