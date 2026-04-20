@@ -92,4 +92,20 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email send result queue.
     /// </summary>
     public QueueRetryPolicy EmailSendResultQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Determines whether to consume SMS send results via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnableSmsSendResultListener { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for receiving SMS send results.
+    /// Produced by the SMS service and consumed by this API.
+    /// </summary>
+    public string SmsSendResultQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the SMS send result queue.
+    /// </summary>
+    public QueueRetryPolicy SmsSendResultQueuePolicy { get; set; } = new();
 }
