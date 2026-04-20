@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v3(
     _result text,
     _operationid text,
     _alternateid uuid,
-    _deliveryreport jsonb DEFAULT NULL
+    _deliveryreport jsonb
 )
 RETURNS TABLE (
     alternateid uuid,
@@ -131,46 +131,37 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    -- Handle case where neither identifier is provided
     IF _alternateid IS NULL AND _operationid IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
     END IF;
 
-    -- Single UPDATE with conditional logic based on expiry time
     RETURN QUERY
     UPDATE notifications.emailnotifications
     SET
-        -- Update result only if not expired, otherwise keep existing value
         result = CASE
             WHEN expirytime > now() THEN _result::emailnotificationresulttype
             ELSE result
         END,
-        -- Update resulttime only if not expired, otherwise keep existing value
         resulttime = CASE
             WHEN expirytime > now() THEN now()
             ELSE resulttime
         END,
-        -- Update operationid only if not expired and alternateid was provided
         operationid = CASE
             WHEN expirytime > now() AND _alternateid IS NOT NULL
             THEN COALESCE(_operationid, operationid)
             ELSE operationid
         END,
+        -- Always overwritten, including with NULL: observational gateway data
         deliveryreport = _deliveryreport
     WHERE
-        -- Match by alternateid (takes priority) OR by operationid (fallback)
-        -- Strict precedence: if alternateid is provided, only use that
         (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
         (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
     RETURNING
         emailnotifications.alternateid,
-        -- was_updated is true only if the notification was not expired at UPDATE time
         (expirytime > now()) AS was_updated,
-        -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= now()) AS is_expired;
 
-    -- If RETURNING didn't return any rows, the notification was not found
     IF NOT FOUND THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
     END IF;
@@ -191,8 +182,7 @@ Return values:
 
 Behavior:
 - result, resulttime, operationid are conditionally modified only when expirytime > now()
-- deliveryreport is ALWAYS written unconditionally: it is observational gateway data
-  that must be preserved regardless of expiry state
+- deliveryreport is always overwritten unconditionally, including with NULL
 - If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
 - If found and not expired: modifies all values and returns (alternateid, true, false)

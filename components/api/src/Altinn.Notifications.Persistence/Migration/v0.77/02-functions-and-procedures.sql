@@ -2182,7 +2182,7 @@ CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v3(
     _result text,
     _operationid text,
     _alternateid uuid,
-    _deliveryreport jsonb DEFAULT NULL
+    _deliveryreport jsonb
 )
 RETURNS TABLE (
     alternateid uuid,
@@ -2192,46 +2192,37 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    -- Handle case where neither identifier is provided
     IF _alternateid IS NULL AND _operationid IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
     END IF;
 
-    -- Single UPDATE with conditional logic based on expiry time
     RETURN QUERY
     UPDATE notifications.emailnotifications
     SET
-        -- Update result only if not expired, otherwise keep existing value
         result = CASE
             WHEN expirytime > now() THEN _result::emailnotificationresulttype
             ELSE result
         END,
-        -- Update resulttime only if not expired, otherwise keep existing value
         resulttime = CASE
             WHEN expirytime > now() THEN now()
             ELSE resulttime
         END,
-        -- Update operationid only if not expired and alternateid was provided
         operationid = CASE
             WHEN expirytime > now() AND _alternateid IS NOT NULL
             THEN COALESCE(_operationid, operationid)
             ELSE operationid
         END,
+        -- Always overwritten, including with NULL: observational gateway data
         deliveryreport = _deliveryreport
     WHERE
-        -- Match by alternateid (takes priority) OR by operationid (fallback)
-        -- Strict precedence: if alternateid is provided, only use that
         (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
         (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
     RETURNING
         emailnotifications.alternateid,
-        -- was_updated is true only if the notification was not expired at UPDATE time
         (expirytime > now()) AS was_updated,
-        -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= now()) AS is_expired;
 
-    -- If RETURNING didn't return any rows, the notification was not found
     IF NOT FOUND THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
     END IF;
@@ -2252,8 +2243,7 @@ Return values:
 
 Behavior:
 - result, resulttime, operationid are conditionally modified only when expirytime > now()
-- deliveryreport is ALWAYS written unconditionally: it is observational gateway data
-  that must be preserved regardless of expiry state
+- deliveryreport is always overwritten unconditionally, including with NULL
 - If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
 - If found and not expired: modifies all values and returns (alternateid, true, false)
@@ -2431,18 +2421,17 @@ Behavior:
 Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
 
--- v3 adds _deliveryreport jsonb,
--- mirroring the delivery_report column added to emailnotifications for channel symmetry.
+-- v3 adds _deliveryreport jsonb, mirroring updateemailnotification_v3 for channel symmetry.
 CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v3(
-    _result          text,
+    _result           text,
     _gatewayreference text,
-    _alternateid     uuid,
-    _deliveryreport  jsonb
+    _alternateid      uuid,
+    _deliveryreport   jsonb
 )
 RETURNS TABLE (
-    alternateid  uuid,
-    was_updated  boolean,
-    is_expired   boolean
+    alternateid uuid,
+    was_updated boolean,
+    is_expired  boolean
 )
 LANGUAGE plpgsql
 AS $$
@@ -2468,9 +2457,8 @@ BEGIN
             THEN COALESCE(_gatewayreference, gatewayreference)
             ELSE gatewayreference
         END,
-        -- delivery_report is always persisted: it is observational gateway data
-        -- that must be stored regardless of whether the notification has expired
-        delivery_report = _deliveryreport
+        -- Always overwritten, including with NULL: observational gateway data
+        deliveryreport = _deliveryreport
     WHERE
         (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
         (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
@@ -2486,21 +2474,20 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.updatesmsnotification_v3 IS
-'Updates an SMS notification result, resulttime, gatewayreference, and delivery_report
+'Updates an SMS notification''s result, resulttime, gatewayreference, and deliveryreport
 by alternateid or by gatewayreference, with expiry time validation.
 
 Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid
 is used for lookup; _gatewayreference may still populate the row via COALESCE.
 
 Return values:
-- alternateid:  The UUID of the notification (NULL if not found)
-- was_updated:  true if values were modified (notification not expired), false otherwise
-- is_expired:   true if the notification has passed its expiry time (expirytime <= now())
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if values were modified (notification not expired), false otherwise
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
 - result, resulttime, gatewayreference are conditionally modified only when expirytime > now()
-- delivery_report is ALWAYS written unconditionally: it is observational gateway data
-  that must be preserved regardless of expiry state
+- deliveryreport is always overwritten unconditionally, including with NULL
 - If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
 - If found and not expired: modifies all values and returns (alternateid, true, false)
