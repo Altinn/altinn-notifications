@@ -23,18 +23,28 @@ public class SwaggerDefaultValues : ISchemaFilter
             return;
         }
 
+        // Cast to concrete OpenApiSchema to access settable properties
+        if (schema is not OpenApiSchema openApiSchema)
+        {
+            return;
+        }
+
+        var patternAttr = context.MemberInfo
+            .GetCustomAttributes(typeof(OpenApiPatternAttribute), true)
+            .OfType<OpenApiPatternAttribute>()
+            .FirstOrDefault();
+
+        if (patternAttr != null)
+        {
+            openApiSchema.Pattern = patternAttr.Pattern;
+        }
+
         var defaultValue = context.MemberInfo
             .GetCustomAttributes(typeof(DefaultValueAttribute), true)
             .OfType<DefaultValueAttribute>()
             .FirstOrDefault();
 
         if (defaultValue == null || schema.Default != null)
-        {
-            return;
-        }
-
-        // Cast to concrete OpenApiSchema to access the settable Default property
-        if (schema is not OpenApiSchema openApiSchema)
         {
             return;
         }

@@ -250,12 +250,12 @@ public static class RecipientRules
     }
 
     /// <summary>
-    /// Validates that the resource ID starts with "urn:altinn:resource".
+    /// Validates that the resource ID starts with "urn:altinn:resource:".
     /// </summary>
     /// <param name="resourceId">A string representation of a valid resource id</param>
     /// <returns>true if the resource id is a valid full resource id</returns>
     internal static bool BeValidResourceId(string resourceId)
     {
-        return resourceId.StartsWith("urn:altinn:resource");
+        return resourceId.StartsWith("urn:altinn:resource:");
     }
 }
