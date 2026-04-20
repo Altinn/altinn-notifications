@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Sms.Integrations.Configuration;
+﻿using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Producers;
+using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,5 +62,131 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Null(exception);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AddIntegrationServices_WolverineDeliveryReportPublisherNotFullyEnabled_RegistersKafkaPublisher(bool enableWolverine, bool enableDeliveryReportPublisher)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = enableDeliveryReportPublisher.ToString(),
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsDeliveryReportPublisher));
+
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_WolverineEnabledButDeliveryReportQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = "true",
+                ["WolverineSettings:SmsDeliveryReportQueueName"] = queueName,
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("SmsDeliveryReportQueueName must be configured when EnableSmsDeliveryReportPublisher is enabled.", exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineAndSendResultPublisherEnabled_RegistersSmsSendResultPublisher()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
+                ["WolverineSettings:SmsSendResultQueueName"] = "altinn.notifications.sms.send.result",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsSendResultDispatcher));
+
+        Assert.NotNull(descriptor);
+        Assert.Equal(typeof(SmsSendResultPublisher), descriptor.ImplementationType);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AddIntegrationServices_WolverineSendResultPublisherNotFullyEnabled_RegistersKafkaProducer(bool enableWolverine, bool enableSendResultPublisher)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = enableSendResultPublisher.ToString(),
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsSendResultDispatcher));
+
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_WolverineEnabledButSendResultQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
+                ["WolverineSettings:SmsSendResultQueueName"] = queueName,
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("SmsSendResultQueueName must be configured when EnableSmsSendResultPublisher is enabled.", exception.Message);
     }
 }
