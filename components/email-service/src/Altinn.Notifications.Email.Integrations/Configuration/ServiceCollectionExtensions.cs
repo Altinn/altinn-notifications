@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
 
         RegisterEmailSendResultDispatcher(services, wolverineSettings, kafkaSettings);
         RegisterEmailStatusCheckDispatcher(services, wolverineSettings, kafkaSettings);
+        RegisterEmailServiceRateLimitDispatcher(services, wolverineSettings, kafkaSettings);
 
         return services;
     }
@@ -128,6 +129,31 @@ public static class ServiceCollectionExtensions
                 new EmailSendResultProducer(
                     sp.GetRequiredService<ICommonProducer>(),
                     kafkaSettings.EmailStatusUpdatedTopicName));
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IEmailServiceRateLimitDispatcher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterEmailServiceRateLimitDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailServiceRateLimitPublisher)
+        {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailServiceRateLimitDispatcher>(sp =>
+                new EmailServiceRateLimitProducer(
+                    sp.GetRequiredService<ICommonProducer>(),
+                    kafkaSettings.AltinnServiceUpdateTopicName));
         }
     }
 }

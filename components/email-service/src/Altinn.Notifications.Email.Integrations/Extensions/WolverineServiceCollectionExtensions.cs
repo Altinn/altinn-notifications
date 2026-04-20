@@ -53,6 +53,7 @@ public static class WolverineServiceCollectionExtensions
             // Publishers
             AddEmailSendResultPublisher(wolverineSettings, opts);
             AddEmailStatusCheckPublisher(wolverineSettings, opts);
+            AddEmailServiceRateLimitPublisher(wolverineSettings, opts);
         });
     }
 
@@ -155,5 +156,27 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.PublishMessage<CheckEmailSendStatusCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName);
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="EmailServiceRateLimitCommand"/>, routing
+    /// outbound commands to the Azure Service Bus service update queue consumed by the API.
+    /// This method is invoked only when <see cref="WolverineSettings.EnableEmailServiceRateLimitPublisher"/> is <c>true</c>.
+    /// </summary>
+    private static void AddEmailServiceRateLimitPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableEmailServiceRateLimitPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitPublisher)} is enabled.");
+        }
+
+        wolverineOptions.PublishMessage<EmailServiceRateLimitCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName);
     }
 }
