@@ -61,6 +61,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var failedMessage = await SendAsync(sms, messageBus);
                 if (failedMessage is not null)
                 {

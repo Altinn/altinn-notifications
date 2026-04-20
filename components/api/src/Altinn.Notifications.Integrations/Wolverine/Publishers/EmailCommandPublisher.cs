@@ -56,6 +56,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var failedEmail = await SendAsync(email, messageBus);
                 if (failedEmail is not null)
                 {
