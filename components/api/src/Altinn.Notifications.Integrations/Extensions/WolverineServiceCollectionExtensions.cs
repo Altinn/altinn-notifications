@@ -52,6 +52,7 @@ public static class WolverineServiceCollectionExtensions
 
             // Listeners
             AddEmailSendResultListener(wolverineSettings, opts);
+            AddSmsSendResultListener(wolverineSettings, opts);
             AddSmsDeliveryReportListener(wolverineSettings, opts);
             AddEmailDeliveryReportListener(wolverineSettings, opts);
 
@@ -83,6 +84,30 @@ public static class WolverineServiceCollectionExtensions
                         .ListenerCount(wolverineSettings.ListenerCount);
 
         wolverineOptions.Policies.Add(new EmailSendResultHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus SMS send result queue,
+    /// enabling the API to consume <see cref="SmsSendResultCommand"/> messages
+    /// published by the SMS service.
+    /// </summary>
+    private static void AddSmsSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSmsSendResultListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SmsSendResultHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>
