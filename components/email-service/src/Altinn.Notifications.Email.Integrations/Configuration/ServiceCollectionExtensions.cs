@@ -8,7 +8,6 @@ using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Altinn.Notifications.Email.Integrations.Configuration;
 
