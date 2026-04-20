@@ -56,6 +56,7 @@ public abstract class RecipientBaseExt
     /// </summary>
     /// <example>urn:altinn:resource:org_example_app</example>
     [JsonPropertyName("resourceId")]
+    [RegularExpression("^urn:altinn:resource.+$")]
     public string? ResourceId { get; set; }
 
     /// <summary>
