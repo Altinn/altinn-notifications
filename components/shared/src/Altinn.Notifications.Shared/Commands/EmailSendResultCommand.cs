@@ -10,7 +10,6 @@ public sealed record EmailSendResultCommand
 {
     /// <summary>
     /// The unique identifier of the email notification this result belongs to.
-    /// A <see langword="null"/> value indicates the notification could not be correlated.
     /// </summary>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; } = Guid.Empty;

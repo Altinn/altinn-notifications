@@ -10,7 +10,6 @@ public sealed record SmsSendResultCommand
 {
     /// <summary>
     /// The unique identifier of the SMS notification this result belongs to.
-    /// A <see langword="null"/> value indicates the notification could not be correlated.
     /// </summary>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; } = Guid.Empty;
