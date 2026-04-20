@@ -157,12 +157,7 @@ BEGIN
             THEN COALESCE(_operationid, operationid)
             ELSE operationid
         END,
-        -- Update deliveryreport only if not expired and a value was provided
-        deliveryreport = CASE
-            WHEN expirytime > now() AND _deliveryreport IS NOT NULL
-            THEN _deliveryreport
-            ELSE deliveryreport
-        END
+        deliveryreport = _deliveryreport
     WHERE
         -- Match by alternateid (takes priority) OR by operationid (fallback)
         -- Strict precedence: if alternateid is provided, only use that
@@ -183,9 +178,11 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.updateemailnotification_v3 IS
-'Updates an email notification''s result, resulttime, and deliveryreport by alternateid or by operationid, with expiry time validation.
+'Updates an email notification''s result, resulttime, operationid, and deliveryreport
+by alternateid or by operationid, with expiry time validation.
 
-Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used
+for lookup; _operationid may still populate the row via COALESCE.
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
@@ -193,12 +190,12 @@ Return values:
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- Single UPDATE operation with implicit row-level locking
-- CASE expressions conditionally modify fields only when expirytime > now()
-- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
+- result, resulttime, operationid are conditionally modified only when expirytime > now()
+- deliveryreport is ALWAYS written unconditionally: it is observational gateway data
+  that must be preserved regardless of expiry state
+- If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
-- If found and not expired: modifies values and returns (alternateid, true, false)
+- If found and not expired: modifies all values and returns (alternateid, true, false)
 
-Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are conditionally overwritten when not expired; operationid is only set when a non-null _operationid is supplied and notification is not expired.
-deliveryreport is only set when a non-null _deliveryreport is supplied and notification is not expired; existing value is preserved otherwise.';
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies
+at most one row when non-null.';

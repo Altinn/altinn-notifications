@@ -77,7 +77,7 @@ Behavior:
 Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
 
--- v3 adds _deliveryreport jsonb and writes it conditionally (only when not expired),
+-- v3 adds _deliveryreport jsonb,
 -- mirroring the delivery_report column added to emailnotifications for channel symmetry.
 CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v3(
     _result          text,
@@ -114,10 +114,9 @@ BEGIN
             THEN COALESCE(_gatewayreference, gatewayreference)
             ELSE gatewayreference
         END,
-        delivery_report = CASE
-            WHEN expirytime > now() THEN _deliveryreport
-            ELSE delivery_report
-        END
+        -- delivery_report is always persisted: it is observational gateway data
+        -- that must be stored regardless of whether the notification has expired
+        delivery_report = _deliveryreport
     WHERE
         (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
         (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
@@ -145,10 +144,12 @@ Return values:
 - is_expired:   true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- All four fields are conditionally modified only when expirytime > now()
-- If expired:   UPDATE executes but keeps existing values, returns (alternateid, false, true)
+- result, resulttime, gatewayreference are conditionally modified only when expirytime > now()
+- delivery_report is ALWAYS written unconditionally: it is observational gateway data
+  that must be preserved regardless of expiry state
+- If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
-- If found and not expired: modifies values and returns (alternateid, true, false)
+- If found and not expired: modifies all values and returns (alternateid, true, false)
 
 Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely
 identifies at most one row when non-null.';
