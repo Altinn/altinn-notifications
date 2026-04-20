@@ -30,10 +30,10 @@ public class StatusService(ISmsDeliveryReportPublisher deliveryReportPublisher) 
     {
         return JsonSerializer.Serialize(new
         {
-            reference = message.Reference, // <REF>   — confirmed
-            receiver = message.Receiver,   // <RCV>   — verify property name
-            state = message.State.ToString(), // <STATE> — confirmed
-            deliveryTime = message.Deliverytime // <DELIVERYTIME> — verify property name
+            reference = message.Reference, // <REF>
+            receiver = message.Receiver,   // <RCV>
+            state = message.State.ToString(), // <STATE>
+            deliveryTime = message.Deliverytime // <DELIVERYTIME>
         });
     }
 }
