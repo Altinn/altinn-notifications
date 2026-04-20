@@ -1,4 +1,3 @@
-using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
@@ -11,27 +10,24 @@ namespace Altinn.Notifications.Email.Core.Sending;
 /// </summary>
 public class SendingService : ISendingService
 {
-    private readonly TopicSettings _settings;
-    private readonly ICommonProducer _producer;
     private readonly IEmailServiceClient _emailServiceClient;
     private readonly IEmailStatusCheckDispatcher _emailStatusCheckDispatcher;
     private readonly IEmailSendResultDispatcher _emailSendingStatusDispatcher;
+    private readonly IEmailServiceRateLimitDispatcher _emailServiceRateLimitDispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SendingService"/> class.
     /// </summary>
     public SendingService(
-        TopicSettings settings,
-        ICommonProducer producer,
         IEmailServiceClient emailServiceClient,
         IEmailStatusCheckDispatcher emailStatusCheckDispatcher,
-        IEmailSendResultDispatcher emailSendingStatusDispatcher)
+        IEmailSendResultDispatcher emailSendingStatusDispatcher,
+        IEmailServiceRateLimitDispatcher emailServiceRateLimitDispatcher)
     {
-        _settings = settings;
-        _producer = producer;
         _emailServiceClient = emailServiceClient;
         _emailStatusCheckDispatcher = emailStatusCheckDispatcher;
         _emailSendingStatusDispatcher = emailSendingStatusDispatcher;
+        _emailServiceRateLimitDispatcher = emailServiceRateLimitDispatcher;
     }
 
     /// <inheritdoc/>
@@ -61,7 +57,7 @@ public class SendingService : ISendingService
                         Schema = AltinnServiceUpdateSchema.ResourceLimitExceeded
                     };
 
-                    await _producer.ProduceAsync(_settings.AltinnServiceUpdateTopicName, genericServiceUpdate.Serialize());
+                    await _emailServiceRateLimitDispatcher.DispatchAsync(genericServiceUpdate);
                 }
 
                 var operationResult = new SendOperationResult
