@@ -17,9 +17,16 @@ export function postSmsInstantNotificationOrderRequest(data, token, label) {
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
   params.tags = { name: label };
 
-  const smsOrderRequest = data;
+  return http.post(endpoint, data, params);
+}
 
-  return http.post(endpoint, smsOrderRequest, params);
+export function postSmsInstantNotificationOrderRequestOld(data, token, label) {
+  const endpoint = config.notifications.orders_sms_instant_old_v2;
+
+  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: label };
+
+  return http.post(endpoint, data, params);
 }
 
 export function postEmailInstantNotificationOrderRequest(data, token, label) {
@@ -28,9 +35,7 @@ export function postEmailInstantNotificationOrderRequest(data, token, label) {
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
   params.tags = { name: label };
 
-  const emailOrderRequest = data;
-
-  return http.post(endpoint, emailOrderRequest, params);
+  return http.post(endpoint, data, params);
 }
 
 export function getShipment(orderId, token, label) {

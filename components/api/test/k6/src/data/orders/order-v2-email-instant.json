@@ -6,7 +6,6 @@
     "emailSettings": {
       "subject": "Automated instant email test from Altinn",
       "body": "This is a plain test body for testing Email instant services",
-      "senderEmailAddress": "noreply@altinn.no",
       "contentType": "Plain"
     }
   }
