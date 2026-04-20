@@ -98,15 +98,17 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
+            SignalShutdownStarted();
+
+            var snapshotBatch = _lastProcessedBatch;
+
             if (_internalCancellationSource != null)
             {
                 await _internalCancellationSource.CancelAsync();
             }
 
-            SignalShutdownStarted();
-
-            var lastBatchNormalizedOffsets = _lastProcessedBatch != null
-                ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
+            var lastBatchNormalizedOffsets = snapshotBatch != null
+                ? CalculateContiguousCommitOffsets(snapshotBatch.CommitReadyOffsets, snapshotBatch.PolledConsumeResults)
                 : [];
 
             if (lastBatchNormalizedOffsets.Count > 0 && !IsConsumerClosed)

@@ -64,27 +64,34 @@ public static class FailureActionsExtensions
     }
 
     /// <summary>
-    /// Extracts and serializes the email delivery report payload from a Wolverine message.
+    /// Extracts and serializes the email payload from a Wolverine message.
+    /// Supports both <see cref="EmailDeliveryReportCommand"/> (Event Grid reports) and
+    /// <see cref="EmailSendResultCommand"/> (email service polling results).
     /// </summary>
-    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="EmailDeliveryReportCommand"/>.</param>
-    /// <returns>A JSON-serialized string of the <see cref="AcsEmailDeliveryReportReceivedEventData"/>.</returns>
-    /// <exception cref="InvalidDataException">Thrown when the event type is not a recognized ACS email delivery report.</exception>
+    /// <param name="message">The raw Wolverine message object.</param>
+    /// <returns>A JSON-serialized string of the underlying payload.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the message type is unrecognized or the event data cannot be extracted.</exception>
     private static string ExtractEmailPayload(object message)
     {
-        if (message is not EmailDeliveryReportCommand command)
+        if (message is EmailDeliveryReportCommand reportCommand)
         {
-            throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)}, got {message.GetType().Name}.");
+            var eventGridEvent = EventGridEvent.Parse(reportCommand.Message.Body);
+
+            if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
+                && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+            {
+                return JsonSerializer.Serialize(deliveryReport);
+            }
+
+            throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
         }
 
-        var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
-
-        if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
-            && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+        if (message is EmailSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(deliveryReport);
+            return JsonSerializer.Serialize(sendResultCommand);
         }
 
-        throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
+        throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)} or {nameof(EmailSendResultCommand)}, got {message.GetType().Name}.");
     }
 
     /// <summary>

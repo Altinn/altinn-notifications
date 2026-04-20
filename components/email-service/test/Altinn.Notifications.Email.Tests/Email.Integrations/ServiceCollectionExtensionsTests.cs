@@ -2,6 +2,7 @@
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Publishers;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -152,10 +153,10 @@ public class ServiceCollectionExtensionsTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_RegistersKafkaDispatcher(string? queueName)
+    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
-        // Both feature flags are on, but EmailStatusCheckQueueName is blank — the ASB transport
-        // would be half-configured, so we must fall back to the Kafka dispatcher.
+        // Both feature flags are on, but EmailStatusCheckQueueName is blank — fail fast rather than
+        // silently falling back to Kafka, to surface misconfiguration at startup.
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -171,14 +172,92 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection services = new ServiceCollection();
 
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("EmailStatusCheckQueueName must be configured when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineAndSendResultPublisherEnabled_RegistersEmailSendResultPublisher()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["WolverineSettings:EmailSendResultQueueName"] = "email-send-result-queue",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
         services.AddIntegrationServices(config);
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailSendResultDispatcher));
+
+        Assert.NotNull(descriptor);
+        Assert.Equal(typeof(EmailSendResultPublisher), descriptor.ImplementationType);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AddIntegrationServices_WolverineSendResultPublisherNotFullyEnabled_RegistersKafkaProducer(bool enableWolverine, bool enableSendResultPublisher)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = enableSendResultPublisher.ToString(),
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddIntegrationServices(config);
+
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailSendResultDispatcher));
 
         Assert.NotNull(descriptor);
         Assert.Null(descriptor.ImplementationType);
         Assert.NotNull(descriptor.ImplementationFactory);
-        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_WolverineEnabledButSendResultQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    {
+        // Both feature flags are on, but EmailSendResultQueueName is blank — fail fast to surface
+        // misconfiguration at startup rather than silently falling back to Kafka.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["WolverineSettings:EmailSendResultQueueName"] = queueName,
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("EmailSendResultQueueName must be configured when EnableEmailSendResultPublisher is enabled.", exception.Message);
     }
 
     [Fact]

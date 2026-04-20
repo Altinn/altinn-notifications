@@ -46,17 +46,43 @@ public static class WolverineServiceCollectionExtensions
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
-            opts.Policies.AllListeners(x => x.ProcessInline());
+
             opts.Policies.AllSenders(x => x.SendInline());
+            opts.Policies.AllListeners(x => x.ProcessInline());
 
             // Listeners
-            AddEmailDeliveryReportListener(wolverineSettings, opts);
+            AddEmailSendResultListener(wolverineSettings, opts);
             AddSmsDeliveryReportListener(wolverineSettings, opts);
+            AddEmailDeliveryReportListener(wolverineSettings, opts);
 
             // Publishers
             AddSendEmailPublisher(wolverineSettings, opts);
             AddSendSmsPublisher(wolverineSettings, opts);
         });
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus email send result queue,
+    /// enabling the API to consume <see cref="EmailSendResultCommand"/> messages
+    /// published by the email service.
+    /// </summary>
+    private static void AddEmailSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableEmailSendResultListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendResultQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new EmailSendResultHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>
