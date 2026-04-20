@@ -13,7 +13,7 @@ export const get_email_shipment = "get_email_shipment";
 export const get_sms_instant_shipment = "get_sms_instant_shipment";
 export const post_sms_instant_order_v2 = "post_sms_instant_order_v2";
 
-export const get_sms_instant_shipment_old = "get_sms_instant_shipment";
+export const get_sms_instant_shipment_old = "get_sms_instant_shipment_old";
 export const post_sms_instant_order_old_v2 = "post_sms_instant_order_old_v2";
 
 export const get_email_instant_shipment = "get_email_instant_shipment";

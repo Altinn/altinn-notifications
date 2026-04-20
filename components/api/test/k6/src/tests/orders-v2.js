@@ -41,6 +41,7 @@ import {
   get_email_instant_shipment,
   get_status_feed,
   post_email_instant_order_v2,
+  get_sms_instant_shipment_old,
 } from "./threshold-labels.js";
 import { scopes } from "../shared/variables.js";
 import { getEmailRecipient, getSmsRecipient } from "../shared/functions.js";
@@ -51,6 +52,9 @@ const labels = [
   post_sms_instant_order_v2,
   post_sms_instant_order_old_v2,
   post_email_instant_order_v2,
+  get_sms_instant_shipment,
+  get_sms_instant_shipment_old,
+  get_email_instant_shipment,
   get_email_shipment,
   get_sms_shipment,
   get_status_feed,
@@ -482,7 +486,7 @@ export default function runTests(data) {
   getShipmentStatus(
     data,
     JSON.parse(response).notification.shipmentId,
-    get_sms_instant_shipment,
+    get_sms_instant_shipment_old,
     "SMSOldInstant",
   );
 
