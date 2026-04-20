@@ -56,8 +56,4 @@ public class WolverineSettings : WolverineSettingsBase
     /// </summary>
     public string EmailSendResultQueueName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Retry policy for the email send result queue.
-    /// </summary>
-    public QueueRetryPolicy EmailSendResultQueuePolicy { get; set; } = new();
 }
