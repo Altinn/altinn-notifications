@@ -35,22 +35,25 @@ public class SmsSendResultPublisher : ISmsSendResultDispatcher
 
         if (result.SendResult is null)
         {
-            throw new InvalidOperationException("Cannot dispatch SMS send result: SendResult is null.");
+            throw new ArgumentException("SendResult must be set before dispatching.", nameof(result));
         }
 
         if (result.NotificationId is null)
         {
-            throw new InvalidOperationException("Cannot dispatch SMS send result: NotificationId is null.");
+            throw new ArgumentException("NotificationId must be set before dispatching.", nameof(result));
         }
 
         if (result.NotificationId == Guid.Empty)
         {
-            throw new InvalidOperationException("Cannot dispatch SMS send result: NotificationId is empty.");
+            throw new ArgumentException("NotificationId must not be empty.", nameof(result));
         }
 
         var command = new SmsSendResultCommand
         {
             NotificationId = result.NotificationId.Value,
+            
+            // SendResult.ToString() is the wire format; SmsNotificationResultType on the API side
+            // must have matching member names — any divergence will be treated as an unrecognized result.
             SendResult = result.SendResult.Value.ToString(),
             GatewayReference = string.IsNullOrWhiteSpace(result.GatewayReference) ? null : result.GatewayReference
         };

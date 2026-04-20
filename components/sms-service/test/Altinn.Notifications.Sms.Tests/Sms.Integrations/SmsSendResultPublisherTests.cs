@@ -86,7 +86,7 @@ public class SmsSendResultPublisherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenSendResultIsNull_ThrowsInvalidOperationException()
+    public async Task DispatchAsync_WhenSendResultIsNull_ThrowsArgumentException()
     {
         // Arrange
         var result = new SendOperationResult
@@ -100,12 +100,12 @@ public class SmsSendResultPublisherTests
         var sut = new SmsSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.DispatchAsync(result));
         messageBusMock.Verify(b => b.SendAsync(It.IsAny<SmsSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenNotificationIdIsNull_ThrowsInvalidOperationException()
+    public async Task DispatchAsync_WhenNotificationIdIsNull_ThrowsArgumentException()
     {
         // Arrange
         var result = new SendOperationResult
@@ -119,12 +119,12 @@ public class SmsSendResultPublisherTests
         var sut = new SmsSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.DispatchAsync(result));
         messageBusMock.Verify(b => b.SendAsync(It.IsAny<SmsSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenNotificationIdIsEmpty_ThrowsInvalidOperationException()
+    public async Task DispatchAsync_WhenNotificationIdIsEmpty_ThrowsArgumentException()
     {
         // Arrange
         var result = new SendOperationResult
@@ -138,7 +138,7 @@ public class SmsSendResultPublisherTests
         var sut = new SmsSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.DispatchAsync(result));
         messageBusMock.Verify(b => b.SendAsync(It.IsAny<SmsSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
