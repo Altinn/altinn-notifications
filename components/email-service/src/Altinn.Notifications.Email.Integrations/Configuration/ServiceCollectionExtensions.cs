@@ -87,8 +87,6 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        services.RemoveAll<IEmailStatusCheckDispatcher>();
-
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckPublisher)
         {
             if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
@@ -115,8 +113,6 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        services.RemoveAll<IEmailSendResultDispatcher>();
-
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailSendResultPublisher)
         {
             if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
