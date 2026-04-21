@@ -95,7 +95,9 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
             var policy = factory.WolverineSettings.EmailServiceRateLimitQueuePolicy;
 
+            var totalPolicyDelayMs = policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum();
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+            var deadLetterWaitTimeout = TimeSpan.FromMilliseconds(totalPolicyDelayMs) + TimeSpan.FromSeconds(10);
 
             // Act
             await factory.SendToQueueAsync(queueName, new EmailServiceRateLimitCommand
@@ -108,7 +110,7 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
-                TimeSpan.FromSeconds(30));
+                deadLetterWaitTimeout);
             Assert.NotNull(deadLetterMessage);
 
             await WaitForUtils.WaitForAsync(() => Task.FromResult(attemptCount >= expectedAttempts), maxAttempts: 10, delayMs: 200);
