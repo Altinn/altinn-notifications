@@ -293,7 +293,7 @@ function postSmsInstantNotificationOrderRequestOld(data) {
   const response = futureOrdersApi.postSmsInstantNotificationOrderRequestOld(
     JSON.stringify(data.smsOrderInstantOldRequest),
     data.token,
-    post_sms_instant_order_v2,
+    post_sms_instant_order_old_v2,
   );
 
   const success = check(response, {
