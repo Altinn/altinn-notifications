@@ -29,20 +29,14 @@ public class OpenApiSchemaEnrichmentFilter : ISchemaFilter
             return;
         }
 
-        var patternAttr = context.MemberInfo
-            .GetCustomAttributes(typeof(OpenApiPatternAttribute), true)
-            .OfType<OpenApiPatternAttribute>()
-            .FirstOrDefault();
+        var patternAttr = GetAttribute<OpenApiPatternAttribute>(context);
 
         if (patternAttr != null)
         {
             openApiSchema.Pattern = patternAttr.Pattern;
         }
 
-        var defaultValue = context.MemberInfo
-            .GetCustomAttributes(typeof(DefaultValueAttribute), true)
-            .OfType<DefaultValueAttribute>()
-            .FirstOrDefault();
+        var defaultValue = GetAttribute<DefaultValueAttribute>(context);
 
         if (defaultValue == null || schema.Default != null)
         {
@@ -65,5 +59,12 @@ public class OpenApiSchemaEnrichmentFilter : ISchemaFilter
         {
             openApiSchema.Default = stringValue;
         }
+    }
+
+    private T? GetAttribute<T>(SchemaFilterContext context)
+    {
+        return context.MemberInfo.GetCustomAttributes(typeof(T), true)
+            .OfType<T>()
+            .FirstOrDefault();
     }
 }
