@@ -97,41 +97,67 @@ public class EmailSendResultPublisherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenNotificationIdIsNull_ThrowsArgumentException()
+    public async Task DispatchAsync_WhenNotificationIdIsNull_SendsCommandWithEmptyNotificationIdAndOperationId()
     {
         // Arrange
+        const string operationId = "acs-op-delivery-123";
+
         var result = new SendOperationResult
         {
             NotificationId = null,
-            OperationId = "op-123",
+            OperationId = operationId,
             SendResult = EmailSendResult.Delivered
         };
 
+        EmailSendResultCommand? capturedCommand = null;
         var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
+            .Returns(ValueTask.CompletedTask);
+
         var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => emailSendResultPublisher.DispatchAsync(result));
-        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
+        // Act
+        await emailSendResultPublisher.DispatchAsync(result);
+
+        // Assert
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(Guid.Empty, capturedCommand.NotificationId);
+        Assert.Equal(operationId, capturedCommand.OperationId);
+        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Once);
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenNotificationIdIsEmpty_ThrowsArgumentException()
+    public async Task DispatchAsync_WhenNotificationIdIsEmpty_SendsCommandWithEmptyNotificationIdAndOperationId()
     {
         // Arrange
+        const string operationId = "acs-op-delivery-456";
+
         var result = new SendOperationResult
         {
             NotificationId = Guid.Empty,
-            OperationId = "op-123",
+            OperationId = operationId,
             SendResult = EmailSendResult.Delivered
         };
 
+        EmailSendResultCommand? capturedCommand = null;
         var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Callback<EmailSendResultCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
+            .Returns(ValueTask.CompletedTask);
+
         var emailSendResultPublisher = new EmailSendResultPublisher(CreateServiceProvider(messageBusMock.Object));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => emailSendResultPublisher.DispatchAsync(result));
-        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
+        // Act
+        await emailSendResultPublisher.DispatchAsync(result);
+
+        // Assert
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(Guid.Empty, capturedCommand.NotificationId);
+        Assert.Equal(operationId, capturedCommand.OperationId);
+        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailSendResultCommand>(), It.IsAny<DeliveryOptions?>()), Times.Once);
     }
 
     private static ServiceProvider CreateServiceProvider(IMessageBus messageBus)
