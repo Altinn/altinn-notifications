@@ -132,6 +132,29 @@ public static class PostgreUtil
     }
 
     /// <summary>
+    /// Looks up a dead delivery report by the operationId stored in the JSONB deliveryreport column.
+    /// Used to verify <see cref="Altinn.Notifications.Shared.Commands.EmailSendResultCommand"/> payloads
+    /// that were saved when an unrecognized SendResult was encountered.
+    /// </summary>
+    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportByOperationId(string connectionString, string operationId)
+    {
+        const string sql = """
+            SELECT id, channel, reason, attemptcount, resolved
+            FROM notifications.deaddeliveryreports
+            WHERE deliveryreport ->> 'operationId' = @operationId
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("operationId", operationId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
+    }
+
+    /// <summary>
     /// Looks up a dead delivery report by the gatewayReference stored in the JSONB deliveryreport column.
     /// </summary>
     public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportByGatewayReference(string connectionString, string gatewayReference)

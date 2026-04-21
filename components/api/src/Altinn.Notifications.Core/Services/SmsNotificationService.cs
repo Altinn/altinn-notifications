@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -18,29 +16,26 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class SmsNotificationService : ISmsNotificationService
 {
-    private readonly IGuidService _guid;
+    private readonly IGuidService _guidService;
     private readonly int _publishBatchSize;
-    private readonly IKafkaProducer _producer;
-    private readonly string _smsQueueTopicName;
-    private readonly IDateTimeService _dateTime;
+    private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
+    private readonly ISendSmsPublisher _smsPublisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
     /// </summary>
     public SmsNotificationService(
-        IGuidService guid,
-        IKafkaProducer producer,
-        IDateTimeService dateTime,
+        IGuidService guidService,
+        IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
-        IOptions<KafkaSettings> kafkaSettings,
+        ISendSmsPublisher smsPublisher,
         IOptions<NotificationConfig> notificationConfig)
     {
-        _guid = guid;
-        _dateTime = dateTime;
-        _producer = producer;
+        _guidService = guidService;
+        _dateTimeService = dateTimeService;
         _repository = repository;
-        _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
+        _smsPublisher = smsPublisher;
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
@@ -87,27 +82,21 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var serializedSmsNotifications = newSmsNotifications.Select(readyToSendSms => readyToSendSms.Serialize());
-
-                var unpublishedSmsNotifications = await _producer.ProduceAsync(_smsQueueTopicName, [.. serializedSmsNotifications], cancellationToken);
-
-                foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
+                var unpublishedSms = await _smsPublisher.PublishAsync(newSmsNotifications, cancellationToken);
+                foreach (var sms in unpublishedSms)
                 {
-                    var deserializedSmsNotification = JsonSerializer.Deserialize<Sms>(unpublishedSmsNotification, JsonSerializerOptionsProvider.Options);
-                    if (deserializedSmsNotification == null || deserializedSmsNotification.NotificationId == Guid.Empty)
-                    {
-                        continue;
-                    }
-
-                    await _repository.UpdateSendStatus(deserializedSmsNotification.NotificationId, SmsNotificationResultType.New);
+                    await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
                 }
             }
             catch (OperationCanceledException)
             {
-                foreach (var newSmsNotification in newSmsNotifications)
-                {
-                    await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
-                }
+                await ResetSendStatusToNewAsync(newSmsNotifications);
+
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                await ResetSendStatusToNewAsync(newSmsNotifications);
 
                 throw;
             }
@@ -142,12 +131,29 @@ public class SmsNotificationService : ISmsNotificationService
         var smsNotification = new SmsNotification()
         {
             OrderId = orderId,
-            Id = _guid.NewGuid(),
+            Id = _guidService.NewGuid(),
             Recipient = recipient,
             RequestedSendTime = requestedSendTime,
-            SendResult = new(resultType, _dateTime.UtcNow())
+            SendResult = new(resultType, _dateTimeService.UtcNow())
         };
 
         await _repository.AddNotification(smsNotification, expiryDateTime, count);
+    }
+
+    /// <summary>
+    /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
+    /// </summary>
+    /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
+    private async Task ResetSendStatusToNewAsync(IEnumerable<Sms> smsNotifications)
+    {
+        if (smsNotifications is null)
+        {
+            return;
+        }
+
+        foreach (var sms in smsNotifications)
+        {
+            await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+        }
     }
 }

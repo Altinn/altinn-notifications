@@ -240,6 +240,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
           -v q \
@@ -249,6 +250,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
           -v q \
@@ -259,7 +261,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-api
           path: TestResults/
@@ -275,7 +277,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-api
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -312,7 +314,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-shared
           path: TestResults/
@@ -328,7 +330,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-shared
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -386,6 +388,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
           -v q \
@@ -395,6 +398,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
           -v q \
@@ -405,7 +409,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-email
           path: TestResults/
@@ -421,7 +425,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-email
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -479,6 +483,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
           -v q \
@@ -488,6 +493,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
           -v q \
@@ -498,7 +504,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-sms
           path: TestResults/
@@ -514,7 +520,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-sms
           path: '**/TestResults/**/coverage.opencover.xml'
@@ -571,7 +577,7 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-tools
           path: TestResults/
@@ -587,7 +593,7 @@ jobs:
           find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-tools
           path: '**/TestResults/**/coverage.opencover.xml'
