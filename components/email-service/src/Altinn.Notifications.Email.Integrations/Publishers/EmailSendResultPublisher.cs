@@ -31,24 +31,19 @@ public class EmailSendResultPublisher : IEmailSendResultDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(SendOperationResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         if (result.SendResult is null)
         {
-            throw new InvalidOperationException("Cannot dispatch email send result: SendResult is null.");
-        }
-
-        if (result.NotificationId is null)
-        {
-            throw new InvalidOperationException("Cannot dispatch email send result: NotificationId is null.");
-        }
-
-        if (result.NotificationId == Guid.Empty)
-        {
-            throw new InvalidOperationException("Cannot dispatch email send result: NotificationId is empty.");
+            throw new ArgumentException("SendResult must be set before dispatching.", nameof(result));
         }
 
         var command = new EmailSendResultCommand
         {
-            NotificationId = result.NotificationId.Value,
+            NotificationId = result.NotificationId.GetValueOrDefault(),
+            
+            // SendResult.ToString() is the wire format; EmailNotificationResultType on the API side
+            // must have matching member names — any divergence will be treated as an unrecognized result.
             SendResult = result.SendResult.Value.ToString(),
             OperationId = string.IsNullOrWhiteSpace(result.OperationId) ? null : result.OperationId
         };
