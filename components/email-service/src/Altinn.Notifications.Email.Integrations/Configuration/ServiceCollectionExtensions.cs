@@ -99,6 +99,12 @@ public static class ServiceCollectionExtensions
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.EmailSendingAcceptedTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.EmailSendingAcceptedTopicName)} must be configured when the Wolverine email status check publisher is disabled.");
+            }
+
             services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
                 new EmailStatusCheckProducer(
                     sp.GetRequiredService<ICommonProducer>(),
@@ -125,6 +131,12 @@ public static class ServiceCollectionExtensions
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.EmailStatusUpdatedTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.EmailStatusUpdatedTopicName)} must be configured when the Wolverine email send result publisher is disabled.");
+            }
+
             services.AddSingleton<IEmailSendResultDispatcher>(sp =>
                 new EmailSendResultProducer(
                     sp.GetRequiredService<ICommonProducer>(),
@@ -150,6 +162,12 @@ public static class ServiceCollectionExtensions
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.AltinnServiceUpdateTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.AltinnServiceUpdateTopicName)} must be configured when the Wolverine email service rate limit publisher is disabled.");
+            }
+
             services.AddSingleton<IEmailServiceRateLimitDispatcher>(sp =>
                 new EmailServiceRateLimitProducer(
                     sp.GetRequiredService<ICommonProducer>(),

@@ -94,6 +94,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -127,6 +129,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
@@ -162,6 +166,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
