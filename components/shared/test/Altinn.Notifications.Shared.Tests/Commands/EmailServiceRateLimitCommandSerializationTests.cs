@@ -15,8 +15,8 @@ public class EmailServiceRateLimitCommandSerializationTests
     {
         var command = new EmailServiceRateLimitCommand
         {
-            Source = "platform-notifications-email",
-            Data = "{}"
+            Data = "{}",
+            Source = "platform-notifications-email"
         };
 
         var json = JsonSerializer.Serialize(command, _options);
@@ -31,8 +31,8 @@ public class EmailServiceRateLimitCommandSerializationTests
     {
         const string json = """
             {
-                "source": "platform-notifications-email",
-                "data": "{}"
+                "data": "{}",
+                "source": "platform-notifications-email"
             }
             """;
 

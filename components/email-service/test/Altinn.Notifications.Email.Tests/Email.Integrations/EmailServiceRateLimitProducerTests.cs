@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Producers;
@@ -57,9 +59,15 @@ public class EmailServiceRateLimitProducerTests
 
         // Assert
         Assert.NotNull(capturedMessage);
-        Assert.Contains("platform-notifications-email", capturedMessage);
-        Assert.Contains("ResourceLimitExceeded", capturedMessage);
-        Assert.Contains("azure-communication-services-email", capturedMessage);
+
+        var deserialized = JsonSerializer.Deserialize<GenericServiceUpdate>(capturedMessage, new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } });
+        Assert.NotNull(deserialized);
+        Assert.Equal(update.Source, deserialized.Source);
+        Assert.Equal(AltinnServiceUpdateSchema.ResourceLimitExceeded, deserialized.Schema);
+
+        var rateLimitData = JsonSerializer.Deserialize<ResourceLimitExceeded>(deserialized.Data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.NotNull(rateLimitData);
+        Assert.Equal("azure-communication-services-email", rateLimitData.Resource);
     }
 
     [Fact]

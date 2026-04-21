@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
@@ -106,16 +108,19 @@ public class SendingServiceTests
                 u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded)))
             .Returns(Task.CompletedTask);
 
+        var testStart = DateTime.UtcNow;
+
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(email);
 
-        // Assert - rate limit signal goes via dispatcher
+        // Assert - rate limit signal goes via dispatcher with correct payload
         emailServiceRateLimitDispatcherMock.Verify(
             d => d.DispatchAsync(It.Is<GenericServiceUpdate>(u =>
                 u.Source == "platform-notifications-email" &&
-                u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded)),
+                u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded &&
+                VerifyRateLimitData(u.Data, testStart, delaySeconds: 1000))),
             Times.Once);
 
         // Assert - status result goes via dispatcher
@@ -171,5 +176,14 @@ public class SendingServiceTests
         checkDispatcherMock.VerifyNoOtherCalls();
         statusDispatcherMock.VerifyNoOtherCalls();
         emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    private static bool VerifyRateLimitData(string json, DateTime testStart, int delaySeconds)
+    {
+        var data = JsonSerializer.Deserialize<ResourceLimitExceeded>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return data != null &&
+               data.Resource == "azure-communication-services-email" &&
+               data.ResetTime >= testStart.AddSeconds(delaySeconds) &&
+               data.ResetTime <= testStart.AddSeconds(delaySeconds + 5);
     }
 }
