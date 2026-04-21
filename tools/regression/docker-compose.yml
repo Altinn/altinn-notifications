@@ -50,15 +50,18 @@ services:
       timeout: 10s
       retries: 10
 
-  # Azure Service Bus emulator (for Wolverine message transport)
+  # Azure Service Bus emulator (for Wolverine message transport).
+  # Only started when compose is invoked with --profile asb (driven by run-regression.sh --asynch=asb).
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["asb"]
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Str0ng!Passw0rd_ChangeMe"
 
   servicebus-emulator:
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    profiles: ["asb"]
     volumes:
       - ../../tools/asb-emulator/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json
     ports:
@@ -101,7 +104,11 @@ services:
       PostgreSQLSettings__NotificationsDbPwd: Password
       PostgreSQLSettings__MigrationScriptPath: /app/Altinn.Notifications.Persistence/Migration
       KafkaSettings__BrokerAddress: kafka:29092
-      WolverineSettings__EnableWolverine: "false"
+      # Wolverine/ASB flags — driven by ENABLE_WOLVERINE set by run-regression.sh --asynch=
+      WolverineSettings__EnableWolverine: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableSendEmailPublisher: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableEmailDeliveryReportListener: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableSmsDeliveryReportListener: "${ENABLE_WOLVERINE:-false}"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       PlatformSettings__ApiProfileEndpoint: http://mock-services:5030/profile/api/v1/
       PlatformSettings__ApiRegisterEndpoint: http://mock-services:5020/register/api/v1/
@@ -115,8 +122,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      servicebus-emulator:
-        condition: service_started
       mock-services:
         condition: service_started
 
@@ -129,13 +134,14 @@ services:
       ASPNETCORE_URLS: http://+:5190
       MockSettings__EnableMockEmailProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
-      WolverineSettings__EnableWolverine: "false"
+      # Wolverine/ASB flags — driven by ENABLE_WOLVERINE set by run-regression.sh --asynch=
+      WolverineSettings__EnableWolverine: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableSendEmailListener: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableEmailStatusCheckListener: "${ENABLE_WOLVERINE:-false}"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
         condition: service_healthy
-      servicebus-emulator:
-        condition: service_started
 
   sms-service:
     build:
@@ -146,11 +152,11 @@ services:
       ASPNETCORE_URLS: http://+:5170
       MockSettings__EnableMockSmsProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
-      WolverineSettings__EnableWolverine: "false"
+      # Wolverine/ASB flags — driven by ENABLE_WOLVERINE set by run-regression.sh --asynch=
+      WolverineSettings__EnableWolverine: "${ENABLE_WOLVERINE:-false}"
+      WolverineSettings__EnableSmsDeliveryReportPublisher: "${ENABLE_WOLVERINE:-false}"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
         condition: service_healthy
-      servicebus-emulator:
-        condition: service_started
 

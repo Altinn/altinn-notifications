@@ -7,22 +7,46 @@
 #   - reportgenerator (dotnet tool)
 #
 # Usage:
-#   bash tools/regression/run-regression.sh
+#   bash tools/regression/run-regression.sh [--asynch=kafka|asb] [--help]
 #
-# The script will:
-#   1. Swap .dockerignore for a regression-permissive version
-#   2. Build and start all containers
-#   3. Wait for services to be ready
-#   4. Run Bruno regression tests
-#   5. Stop containers (flushes coverage data)
-#   6. Generate coverage report
-#   7. Restore original .dockerignore
+# Options:
+#   --asynch=kafka   (default) All async messaging flows over Kafka; Wolverine disabled.
+#                    Only 7 containers start (no MSSQL / ASB emulator) — faster.
+#   --asynch=asb     Wolverine enabled across all services; email send commands and
+#                    email/SMS delivery reports flow over Azure Service Bus (emulator).
+#                    9 containers start (adds mssql + servicebus-emulator).
+#   --help, -h       Show this usage block.
 #
 # Results are written to:
 #   TestResults/<date>_<seq>/bruno/results.txt
 #   TestResults/<date>_<seq>/code-coverage/index.html
 
 set -euo pipefail
+
+# --- CLI parsing ---
+ASYNCH_MODE="kafka"
+for arg in "$@"; do
+    case "$arg" in
+        --asynch=kafka|--asynch=asb) ASYNCH_MODE="${arg#--asynch=}" ;;
+        --help|-h)
+            sed -n '2,22p' "$0"
+            exit 0
+            ;;
+        *)
+            echo "ERROR: unknown arg '$arg' (expected --asynch=kafka or --asynch=asb)" >&2
+            exit 2
+            ;;
+    esac
+done
+
+COMPOSE_PROFILE_ARGS=()
+if [ "$ASYNCH_MODE" = "asb" ]; then
+    export ENABLE_WOLVERINE=true
+    COMPOSE_PROFILE_ARGS=(--profile asb)
+else
+    export ENABLE_WOLVERINE=false
+fi
+echo "Async transport mode: $ASYNCH_MODE"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -60,7 +84,7 @@ cleanup() {
     echo ""
     echo "=== Stopping containers (coverage data will be flushed) ==="
     cd "$SCRIPT_DIR"
-    $COMPOSE -f "$COMPOSE_FILE" down --volumes 2>/dev/null || true
+    $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" down --volumes 2>/dev/null || true
 
     # Keep the bind-mount scratch dir around for diagnostics if something went wrong;
     # it's overwritten at the start of the next run and is .gitignore'd.
@@ -86,30 +110,36 @@ rm -rf "$COVERAGE_BIND_DIR"
 mkdir -p "$COVERAGE_BIND_DIR"
 
 # --- Step 2: Build and start containers ---
-echo ""
-echo "=== Building and starting containers ==="
+# In ASB mode we start the emulator stack FIRST and wait for AMQP, so that
+# when the API starts its Wolverine bootstrap can connect immediately.
 cd "$SCRIPT_DIR"
-$COMPOSE -f "$COMPOSE_FILE" up --build -d
+if [ "$ASYNCH_MODE" = "asb" ]; then
+    echo ""
+    echo "=== Starting ASB emulator stack (mssql + servicebus-emulator) ==="
+    $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" up --build -d mssql servicebus-emulator
+
+    echo ""
+    echo "=== Waiting for ASB emulator (AMQP port 5672) ==="
+    ASB_WAIT=0
+    while ! (echo > /dev/tcp/localhost/5672) 2>/dev/null; do
+        if [ "$ASB_WAIT" -ge 120 ]; then
+            echo "ERROR: ASB emulator did not become ready within 120s"
+            $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" logs servicebus-emulator | tail -20
+            exit 1
+        fi
+        sleep 3
+        ASB_WAIT=$((ASB_WAIT + 3))
+        printf "."
+    done
+    echo ""
+    echo "ASB emulator ready (took ${ASB_WAIT}s)"
+fi
+
+echo ""
+echo "=== Building and starting remaining containers ==="
+$COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" up --build -d
 
 # --- Step 3: Wait for services to be ready ---
-
-# ASB emulator takes a while (MSSQL must start first, then emulator initializes).
-# Wolverine blocks ASP.NET startup until it can connect, so we wait for AMQP port first.
-echo ""
-echo "=== Waiting for ASB emulator (AMQP port 5672) ==="
-ASB_WAIT=0
-while ! (echo > /dev/tcp/localhost/5672) 2>/dev/null; do
-    if [ "$ASB_WAIT" -ge 120 ]; then
-        echo "ERROR: ASB emulator did not become ready within 120s"
-        $COMPOSE -f "$COMPOSE_FILE" logs servicebus-emulator | tail -20
-        exit 1
-    fi
-    sleep 3
-    ASB_WAIT=$((ASB_WAIT + 3))
-    printf "."
-done
-echo ""
-echo "ASB emulator ready (took ${ASB_WAIT}s)"
 
 echo ""
 echo "=== Waiting for API to be ready ==="
@@ -120,7 +150,7 @@ while ! curl -sf "$API_URL" >/dev/null 2>&1; do
     if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
         echo "ERROR: API did not become ready within ${MAX_WAIT}s"
         echo "Checking container logs:"
-        $COMPOSE -f "$COMPOSE_FILE" logs api | tail -30
+        $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" logs api | tail -30
         exit 1
     fi
     sleep 2
@@ -138,7 +168,7 @@ echo ""
 echo "=== Running Bruno regression tests ==="
 cd "$ROOT_DIR/components/api/test/bruno"
 
-JWT=$($COMPOSE -f "$COMPOSE_FILE" exec -T mock-services \
+JWT=$($COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" exec -T mock-services \
     sh -c 'wget -qO- --header="Authorization: Basic bW9jazptb2Nr" \
     "http://localhost:5101/api/GetEnterpriseToken?env=local&scopes=altinn:serviceowner/notifications.create&org=ttd"' 2>/dev/null || echo "")
 
@@ -151,7 +181,7 @@ fi
 if [ -z "$JWT" ] || [ ${#JWT} -lt 100 ]; then
     echo "ERROR: Failed to obtain JWT token"
     echo "Check mock-services logs:"
-    $COMPOSE -f "$COMPOSE_FILE" logs mock-services | tail -20
+    $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" logs mock-services | tail -20
     exit 1
 fi
 echo "JWT obtained (${#JWT} chars)"
@@ -166,7 +196,7 @@ npx @usebruno/cli run regression -r --env "v2 local" --env-var "jwt=$JWT" --env-
 echo ""
 echo "=== Stopping API container (graceful shutdown to flush coverage) ==="
 cd "$SCRIPT_DIR"
-$COMPOSE -f "$COMPOSE_FILE" stop api
+$COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" stop api
 # Give the kernel a moment to sync the bind-mount write
 sleep 2
 
@@ -179,7 +209,7 @@ else
     echo "Contents of $COVERAGE_BIND_DIR:"
     ls -la "$COVERAGE_BIND_DIR" 2>/dev/null || true
     echo "Last 30 lines of API logs:"
-    $COMPOSE -f "$COMPOSE_FILE" logs api 2>&1 | tail -30 || true
+    $COMPOSE "${COMPOSE_PROFILE_ARGS[@]}" -f "$COMPOSE_FILE" logs api 2>&1 | tail -30 || true
 fi
 
 # Preserve dotnet-coverage diagnostic log alongside the cobertura file (if produced)
