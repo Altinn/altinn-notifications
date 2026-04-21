@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.OpenApi;
@@ -8,13 +8,13 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Altinn.Notifications.Swagger;
 
 /// <summary>
-/// Schema filter to properly handle default values in Swagger.
+/// Schema filter that enriches OpenAPI schemas with pattern constraints and default values.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public class SwaggerDefaultValues : ISchemaFilter
+public class OpenApiSchemaEnrichmentFilter : ISchemaFilter
 {
     /// <summary>
-    /// Applies default value handling to the schema
+    /// Applies pattern constraints and default value handling to the schema.
     /// </summary>
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
