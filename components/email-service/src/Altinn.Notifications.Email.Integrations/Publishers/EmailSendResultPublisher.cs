@@ -38,19 +38,9 @@ public class EmailSendResultPublisher : IEmailSendResultDispatcher
             throw new ArgumentException("SendResult must be set before dispatching.", nameof(result));
         }
 
-        if (result.NotificationId is null)
-        {
-            throw new ArgumentException("NotificationId must be set before dispatching.", nameof(result));
-        }
-
-        if (result.NotificationId == Guid.Empty)
-        {
-            throw new ArgumentException("NotificationId must not be empty.", nameof(result));
-        }
-
         var command = new EmailSendResultCommand
         {
-            NotificationId = result.NotificationId.Value,
+            NotificationId = result.NotificationId.GetValueOrDefault(),
             
             // SendResult.ToString() is the wire format; EmailNotificationResultType on the API side
             // must have matching member names — any divergence will be treated as an unrecognized result.
