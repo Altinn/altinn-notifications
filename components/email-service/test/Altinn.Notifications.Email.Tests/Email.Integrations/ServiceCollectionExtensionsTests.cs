@@ -371,6 +371,7 @@ public class ServiceCollectionExtensionsTests
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
                 ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
                 ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = enablePublisher.ToString(),
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
