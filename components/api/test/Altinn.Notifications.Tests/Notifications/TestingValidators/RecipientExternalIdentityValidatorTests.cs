@@ -139,6 +139,29 @@ public class RecipientExternalIdentityValidatorTests
     }
 
     [Fact]
+    public void Validate_PrefixOnlyResourceId_ReturnsError()
+    {
+        // Arrange
+        var recipient = new RecipientExternalIdentityExt
+        {
+            ChannelSchema = NotificationChannelExt.Email,
+            ResourceId = "urn:altinn:resource:",
+            ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com",
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Body = "Test body",
+                Subject = "Test subject"
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(r => r.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
+    }
+
+    [Fact]
     public void Validate_NullResourceId_NoError()
     {
         // Arrange
