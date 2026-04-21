@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations;
 
 public class EmailServiceRateLimitPublisherTests
 {
-    private static GenericServiceUpdate ValidUpdate() => new()
+    private static GenericServiceUpdate ValidRateLimitMessage() => new()
     {
         Source = "platform-notifications-email",
         Schema = AltinnServiceUpdateSchema.ResourceLimitExceeded,
@@ -22,20 +22,10 @@ public class EmailServiceRateLimitPublisherTests
     };
 
     [Fact]
-    public async Task DispatchAsync_WhenNullUpdate_ThrowsArgumentNullException()
-    {
-        var messageBusMock = new Mock<IMessageBus>();
-        var sut = new EmailServiceRateLimitPublisher(CreateServiceProvider(messageBusMock.Object));
-
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.DispatchAsync(null!));
-        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailServiceRateLimitCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
-    }
-
-    [Fact]
     public async Task DispatchAsync_SendsCommandWithCorrectFields()
     {
         // Arrange
-        var update = ValidUpdate();
+        var rateLimitMessage = ValidRateLimitMessage();
         EmailServiceRateLimitCommand? capturedCommand = null;
 
         var messageBusMock = new Mock<IMessageBus>();
@@ -44,16 +34,26 @@ public class EmailServiceRateLimitPublisherTests
             .Callback<EmailServiceRateLimitCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
             .Returns(ValueTask.CompletedTask);
 
-        var sut = new EmailServiceRateLimitPublisher(CreateServiceProvider(messageBusMock.Object));
+        var emailServiceRateLimitPublisher = new EmailServiceRateLimitPublisher(CreateServiceProvider(messageBusMock.Object));
 
         // Act
-        await sut.DispatchAsync(update);
+        await emailServiceRateLimitPublisher.DispatchAsync(rateLimitMessage);
 
         // Assert
         Assert.NotNull(capturedCommand);
-        Assert.Equal(update.Source, capturedCommand.Source);
-        Assert.Equal(update.Data, capturedCommand.Data);
+        Assert.Equal(rateLimitMessage.Data, capturedCommand.Data);
+        Assert.Equal(rateLimitMessage.Source, capturedCommand.Source);
         messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailServiceRateLimitCommand>(), It.IsAny<DeliveryOptions?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenNullUpdate_ThrowsArgumentNullException()
+    {
+        var messageBusMock = new Mock<IMessageBus>();
+        var emailServiceRateLimitPublisher = new EmailServiceRateLimitPublisher(CreateServiceProvider(messageBusMock.Object));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => emailServiceRateLimitPublisher.DispatchAsync(null!));
+        messageBusMock.Verify(b => b.SendAsync(It.IsAny<EmailServiceRateLimitCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
 
     private static ServiceProvider CreateServiceProvider(IMessageBus messageBus)

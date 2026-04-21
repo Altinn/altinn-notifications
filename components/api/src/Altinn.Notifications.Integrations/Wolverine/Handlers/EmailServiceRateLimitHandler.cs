@@ -22,7 +22,7 @@ public static class EmailServiceRateLimitHandler
             command.Source);
 
         await serviceUpdateService.HandleServiceUpdate(
-            command.Source.ToLower().Trim(),
+            command.Source.ToLowerInvariant().Trim(),
             AltinnServiceUpdateSchema.ResourceLimitExceeded,
             command.Data);
     }
