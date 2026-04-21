@@ -1,73 +1,30 @@
-# Version Control
+# Regression-specific .dockerignore — more permissive than production.
+# This file is copied to repo root during regression builds.
+
 .git/
-.gitattributes
-.gitignore
-
-# GitHub & CI/CD
 .github/
-
-# IDE & Editor
 **/*.csproj.user
-**/*.dcproj
-**/launchSettings.json
 *.suo
 *.user
 .idea/
 .vs/
 .vscode/
-
-# Build Outputs
 **/bin/
 **/obj/
 **/out/
 **/publish/
-
-# Tests
-**/*IntegrationTests/
-**/*Tests/
 **/TestResults/
 **/coverage/
-**/test/
-**/tests/
-
-# Development Tools
-tools/
-
-# Documentation
-*.md
 docs/
-
-# Configuration (not needed in container)
-**/appsettings.Development.json
-**/appsettings.Local.json
-.editorconfig
-LICENSE
-global.json
-renovate.json
-stylecop.json
-
-# NuGet
-**/*.nupkg
-**/nuget.config
-**/packages/
-
-# Temporary & Log Files
+.DS_Store
+Thumbs.db
+**/secrets/
+**/.env
+**/Dockerfile*
+docker-compose*.yml
 *.cache
 *.log
 *.temp
 *.tmp
-
-# OS Files
-.DS_Store
-Thumbs.db
-
-# Secrets & Certificates (should never be in container)
-*.pfx
-*.pem
-*.key
-**/secrets/
-
-# Docker (prevent recursive context)
-**/.env
-**/Dockerfile*
-docker-compose*.yml
+**/*.nupkg
+**/packages/

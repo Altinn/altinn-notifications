@@ -17,13 +17,29 @@
 #   5. Stop containers (flushes coverage data)
 #   6. Generate coverage report
 #   7. Restore original .dockerignore
+#
+# Results are written to:
+#   TestResults/<date>_<seq>/bruno/results.txt
+#   TestResults/<date>_<seq>/code-coverage/index.html
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-REPORT_DIR="$ROOT_DIR/TestResults/regression-report"
+
+# --- Build a unique output directory: TestResults/yyyy-mm-dd_NNN ---
+DATE_PREFIX=$(date +%Y-%m-%d)
+SEQ=1
+while [ -d "$ROOT_DIR/TestResults/${DATE_PREFIX}_$(printf '%03d' $SEQ)" ]; do
+    SEQ=$((SEQ + 1))
+done
+RUN_DIR="$ROOT_DIR/TestResults/${DATE_PREFIX}_$(printf '%03d' $SEQ)"
+BRUNO_DIR="$RUN_DIR/bruno"
+COVERAGE_DIR="$RUN_DIR/code-coverage"
+mkdir -p "$BRUNO_DIR" "$COVERAGE_DIR"
+
+echo "Results will be written to: $RUN_DIR"
 
 # Detect container runtime
 if command -v podman-compose &>/dev/null; then
@@ -46,6 +62,9 @@ cleanup() {
     cd "$SCRIPT_DIR"
     $COMPOSE -f "$COMPOSE_FILE" down --volumes 2>/dev/null || true
 
+    # Keep the bind-mount scratch dir around for diagnostics if something went wrong;
+    # it's overwritten at the start of the next run and is .gitignore'd.
+
     # Restore original .dockerignore
     if [ -f "$ROOT_DIR/.dockerignore.prod" ]; then
         mv "$ROOT_DIR/.dockerignore.prod" "$ROOT_DIR/.dockerignore"
@@ -60,16 +79,41 @@ cp "$ROOT_DIR/.dockerignore" "$ROOT_DIR/.dockerignore.prod"
 cp "$SCRIPT_DIR/.dockerignore" "$ROOT_DIR/.dockerignore"
 echo "Swapped .dockerignore for regression build"
 
+# Prepare host-side coverage bind mount (API writes cobertura XML here).
+# Creating it up front prevents Docker from creating it as root-owned on Linux.
+COVERAGE_BIND_DIR="$SCRIPT_DIR/coverage-output"
+rm -rf "$COVERAGE_BIND_DIR"
+mkdir -p "$COVERAGE_BIND_DIR"
+
 # --- Step 2: Build and start containers ---
 echo ""
 echo "=== Building and starting containers ==="
 cd "$SCRIPT_DIR"
 $COMPOSE -f "$COMPOSE_FILE" up --build -d
 
-# --- Step 3: Wait for API to be ready ---
+# --- Step 3: Wait for services to be ready ---
+
+# ASB emulator takes a while (MSSQL must start first, then emulator initializes).
+# Wolverine blocks ASP.NET startup until it can connect, so we wait for AMQP port first.
+echo ""
+echo "=== Waiting for ASB emulator (AMQP port 5672) ==="
+ASB_WAIT=0
+while ! (echo > /dev/tcp/localhost/5672) 2>/dev/null; do
+    if [ "$ASB_WAIT" -ge 120 ]; then
+        echo "ERROR: ASB emulator did not become ready within 120s"
+        $COMPOSE -f "$COMPOSE_FILE" logs servicebus-emulator | tail -20
+        exit 1
+    fi
+    sleep 3
+    ASB_WAIT=$((ASB_WAIT + 3))
+    printf "."
+done
+echo ""
+echo "ASB emulator ready (took ${ASB_WAIT}s)"
+
 echo ""
 echo "=== Waiting for API to be ready ==="
-API_URL="http://localhost:5090/health"
+API_URL="http://127.0.0.1:5090/health"
 MAX_WAIT=240
 ELAPSED=0
 while ! curl -sf "$API_URL" >/dev/null 2>&1; do
@@ -94,21 +138,12 @@ echo ""
 echo "=== Running Bruno regression tests ==="
 cd "$ROOT_DIR/components/api/test/bruno"
 
-# Mock-services token endpoint is only accessible through the API's forwarded port
-# We need to reach mock-services directly — it's exposed through the compose network
-# but not port-mapped. Instead, fetch a token from the host side.
-# The mock-services Kestrel is NOT port-mapped, so we generate a token via curl to the
-# API health endpoint first, then use the mock-services container directly.
-#
-# Simpler approach: port-map the token endpoint temporarily, or inject JWT as env var.
-# For now, use docker exec to fetch the token from inside the network:
 JWT=$($COMPOSE -f "$COMPOSE_FILE" exec -T mock-services \
     sh -c 'wget -qO- --header="Authorization: Basic bW9jazptb2Nr" \
     "http://localhost:5101/api/GetEnterpriseToken?env=local&scopes=altinn:serviceowner/notifications.create&org=ttd"' 2>/dev/null || echo "")
 
 if [ -z "$JWT" ] || [ ${#JWT} -lt 100 ]; then
     echo "WARNING: Could not fetch JWT via container exec, trying curl fallback..."
-    # Fallback: try if mock-services port is somehow reachable
     JWT=$(curl -sf -u mock:mock \
         "http://localhost:5101/api/GetEnterpriseToken?env=local&scopes=altinn:serviceowner/notifications.create&org=ttd" 2>/dev/null || echo "")
 fi
@@ -121,54 +156,58 @@ if [ -z "$JWT" ] || [ ${#JWT} -lt 100 ]; then
 fi
 echo "JWT obtained (${#JWT} chars)"
 
-npx @usebruno/cli run regression -r --env "v2 local" --env-var "jwt=$JWT"
-TEST_EXIT=$?
+# Run Bruno and tee output to both console and results file
+npx @usebruno/cli run regression -r --env "v2 local" --env-var "jwt=$JWT" --env-var "host=http://127.0.0.1:5090" 2>&1 | tee "$BRUNO_DIR/results.txt" && TEST_EXIT=0 || TEST_EXIT=$?
 
-# --- Step 5: Stop containers to flush coverage ---
+# --- Step 5: Stop API container to flush coverage ---
+# docker-compose stop honours stop_signal (SIGINT) + stop_grace_period (30s) from the compose file.
+# ASP.NET Core treats SIGINT as graceful shutdown, which lets dotnet-coverage write /coverage/api.cobertura.xml
+# before the container exits. The file lands on the host via bind mount - no docker cp needed.
 echo ""
-echo "=== Stopping containers ==="
+echo "=== Stopping API container (graceful shutdown to flush coverage) ==="
 cd "$SCRIPT_DIR"
-
-# Send SIGTERM to api container to flush coverage gracefully
 $COMPOSE -f "$COMPOSE_FILE" stop api
-sleep 3
+# Give the kernel a moment to sync the bind-mount write
+sleep 2
 
-# Extract coverage file from volume
-COVERAGE_FILE="$ROOT_DIR/TestResults/regression-coverage.cobertura.xml"
-mkdir -p "$ROOT_DIR/TestResults"
+COVERAGE_FILE="$COVERAGE_DIR/regression-coverage.cobertura.xml"
+if [ -f "$COVERAGE_BIND_DIR/api.cobertura.xml" ]; then
+    mv "$COVERAGE_BIND_DIR/api.cobertura.xml" "$COVERAGE_FILE"
+    echo "Coverage file captured: $COVERAGE_FILE"
+else
+    echo "WARNING: $COVERAGE_BIND_DIR/api.cobertura.xml not found after API stop."
+    echo "Contents of $COVERAGE_BIND_DIR:"
+    ls -la "$COVERAGE_BIND_DIR" 2>/dev/null || true
+    echo "Last 30 lines of API logs:"
+    $COMPOSE -f "$COMPOSE_FILE" logs api 2>&1 | tail -30 || true
+fi
 
-# Copy coverage from the named volume
-CONTAINER_ID=$($COMPOSE -f "$COMPOSE_FILE" ps -q api 2>/dev/null || echo "")
-if [ -n "$CONTAINER_ID" ]; then
-    # podman/docker cp from stopped container
-    if command -v podman &>/dev/null; then
-        podman cp "$CONTAINER_ID:/coverage/api.cobertura.xml" "$COVERAGE_FILE" 2>/dev/null || true
-    else
-        docker cp "$CONTAINER_ID:/coverage/api.cobertura.xml" "$COVERAGE_FILE" 2>/dev/null || true
-    fi
+# Preserve dotnet-coverage diagnostic log alongside the cobertura file (if produced)
+if [ -f "$COVERAGE_BIND_DIR/dotnet-coverage.log" ]; then
+    mv "$COVERAGE_BIND_DIR/dotnet-coverage.log" "$COVERAGE_DIR/dotnet-coverage.log"
 fi
 
 # --- Step 6: Generate report ---
 if [ -f "$COVERAGE_FILE" ]; then
     echo ""
     echo "=== Generating coverage report ==="
-    mkdir -p "$REPORT_DIR"
     reportgenerator \
         -reports:"$COVERAGE_FILE" \
-        -targetdir:"$REPORT_DIR" \
+        -targetdir:"$COVERAGE_DIR" \
         -reporttypes:"TextSummary;Html" \
         -assemblyfilters:"+Altinn.Notifications*"
 
     echo ""
     echo "=== Coverage Summary ==="
-    cat "$REPORT_DIR/Summary.txt"
-    echo ""
-    echo "Full HTML report: $REPORT_DIR/index.html"
+    cat "$COVERAGE_DIR/Summary.txt"
 else
     echo "WARNING: No coverage file found. Coverage collection may have failed."
 fi
 
 echo ""
 echo "=== Done ==="
+echo "Results:  $RUN_DIR"
+echo "  Bruno:    $BRUNO_DIR/results.txt"
+echo "  Coverage: $COVERAGE_DIR/index.html"
 echo "Tests exit code: $TEST_EXIT"
 exit $TEST_EXIT

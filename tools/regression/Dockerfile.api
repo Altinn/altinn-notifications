@@ -18,11 +18,16 @@ COPY components/shared/src/ components/shared/src/
 RUN dotnet publish components/api/src/Altinn.Notifications/Altinn.Notifications.csproj \
     -c Release -o /app --no-restore
 
-# Runtime with coverage tool
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS final
+# Runtime with coverage tool.
+# IMPORTANT: final stage must be Debian/glibc (not Alpine/musl). dotnet-coverage's native
+# profiler (libInstrumentationEngine.so) does not reliably initialize on musl libc, which
+# produces empty <packages /> output and the warning "Profiler was not initialized".
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS final
 
-# Install coverage tool
-RUN dotnet tool install --global dotnet-coverage
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libxml2 \
+    && rm -rf /var/lib/apt/lists/* \
+    && dotnet tool install --global dotnet-coverage
 ENV PATH="$PATH:/root/.dotnet/tools"
 
 WORKDIR /app
@@ -37,9 +42,13 @@ COPY components/api/src/Altinn.Notifications/Views/ Views/
 
 EXPOSE 5090
 
-# Entrypoint: run with coverage collection, output to /coverage volume
+# Entrypoint: run with coverage collection, output to /coverage volume.
+# --log-file/--log-level gives us diagnostics when profiler attach fails.
+# Pass the command as ONE string arg after the options - this is the form in the MS docs that
+# reliably attaches the CoreCLR profiler to the child process.
 ENTRYPOINT ["dotnet-coverage", "collect", \
     "--output", "/coverage/api.cobertura.xml", \
     "--output-format", "cobertura", \
-    "--", \
-    "dotnet", "Altinn.Notifications.dll"]
+    "--log-file", "/coverage/dotnet-coverage.log", \
+    "--log-level", "Verbose", \
+    "dotnet Altinn.Notifications.dll"]

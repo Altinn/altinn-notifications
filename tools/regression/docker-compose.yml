@@ -61,6 +61,8 @@ services:
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
     volumes:
       - ../../tools/asb-emulator/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json
+    ports:
+      - "5672:5672"
     environment:
       SQL_SERVER: mssql
       MSSQL_SA_PASSWORD: "Str0ng!Passw0rd_ChangeMe"
@@ -84,6 +86,9 @@ services:
     build:
       context: ../..
       dockerfile: tools/regression/Dockerfile.api
+    init: true  # use tini so SIGINT/SIGTERM is forwarded to dotnet (lets dotnet-coverage flush)
+    stop_signal: SIGINT  # ASP.NET Core treats SIGINT as graceful shutdown; SIGTERM can skip coverage flush
+    stop_grace_period: 30s
     ports:
       - "5090:5090"
     environment:
@@ -96,6 +101,7 @@ services:
       PostgreSQLSettings__NotificationsDbPwd: Password
       PostgreSQLSettings__MigrationScriptPath: /app/Altinn.Notifications.Persistence/Migration
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__EnableWolverine: "false"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       PlatformSettings__ApiProfileEndpoint: http://mock-services:5030/profile/api/v1/
       PlatformSettings__ApiRegisterEndpoint: http://mock-services:5020/register/api/v1/
@@ -103,7 +109,7 @@ services:
       PlatformSettings__ApiShortMessageServiceEndpoint: http://sms-service:5170/notifications/sms/api/v1/
       PlatformSettings__ApiInstantEmailServiceEndpoint: http://email-service:5190/notifications/email/api/v1/
     volumes:
-      - coverage-data:/coverage
+      - ./coverage-output:/coverage
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,6 +129,7 @@ services:
       ASPNETCORE_URLS: http://+:5190
       MockSettings__EnableMockEmailProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__EnableWolverine: "false"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
@@ -139,6 +146,7 @@ services:
       ASPNETCORE_URLS: http://+:5170
       MockSettings__EnableMockSmsProvider: "true"
       KafkaSettings__BrokerAddress: kafka:29092
+      WolverineSettings__EnableWolverine: "false"
       WolverineSettings__ServiceBusConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
     depends_on:
       kafka:
@@ -146,5 +154,3 @@ services:
       servicebus-emulator:
         condition: service_started
 
-volumes:
-  coverage-data:
