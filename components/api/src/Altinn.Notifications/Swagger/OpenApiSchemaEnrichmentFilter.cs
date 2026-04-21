@@ -61,7 +61,7 @@ public class OpenApiSchemaEnrichmentFilter : ISchemaFilter
         }
     }
 
-    private T? GetAttribute<T>(SchemaFilterContext context)
+    private static T? GetAttribute<T>(SchemaFilterContext context)
     {
         return context.MemberInfo.GetCustomAttributes(typeof(T), true)
             .OfType<T>()
