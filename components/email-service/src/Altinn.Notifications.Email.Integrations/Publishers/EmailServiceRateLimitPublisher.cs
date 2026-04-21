@@ -31,6 +31,8 @@ public class EmailServiceRateLimitPublisher : IEmailServiceRateLimitDispatcher
     /// <inheritdoc/>
     public async Task DispatchAsync(GenericServiceUpdate update)
     {
+        ArgumentNullException.ThrowIfNull(update);
+
         var command = new EmailServiceRateLimitCommand
         {
             Data = update.Data,
