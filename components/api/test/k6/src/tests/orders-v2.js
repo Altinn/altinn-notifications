@@ -73,6 +73,20 @@ export function setup() {
     const emailRecipient = getEmailRecipient();
     const smsRecipient = getSmsRecipient();
 
+    
+    // needed for instant notifications
+    if (!smsRecipient) {
+        stopIterationOnFail("smsRecipient is required for SMS instant orders — set the 'smsRecipient' env var", false);
+    }
+
+    if (!emailRecipient) {
+        stopIterationOnFail("emailRecipient is required for email instant orders — set the 'emailRecipient' env var", false);
+    }
+
+    smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
+    emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
+
+
     // used with notification email orders if applicable
     const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
 
@@ -81,13 +95,7 @@ export function setup() {
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
-    if (emailRecipient == null) {
-        // unset recipientEmail object when no email recipient is provided
-        emailOrderRequestJson.recipient["recipientEmail"] = undefined;
-    }
-    else {
-        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
-    }
+
 
     if (ninRecipient == null) {
         // unset recipientPerson object when no national identity number is provided
@@ -97,18 +105,6 @@ export function setup() {
         emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
     }
 
-    if (smsRecipient != null) {
-        smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
-    }
-
-    // needed for instant notifications
-    if (!smsRecipient) {
-        stopIterationOnFail("smsRecipient is required for SMS instant orders — set the 'smsRecipient' env var", false);
-    }
-
-    if (!emailRecipient) {
-        stopIterationOnFail("emailRecipient is required for email instant orders — set the 'emailRecipient' env var", false);
-    }
 
     const emailOrderRequest = { ...emailOrderRequestJson, idempotencyId: idempotencyIdEmail };
 
