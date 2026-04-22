@@ -14,6 +14,10 @@ public class EmailServiceRateLimitProducerTests
 {
     private const string _topicName = "altinn.platform.service.updated";
 
+    private static readonly JsonSerializerOptions _caseInsensitiveOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static readonly JsonSerializerOptions _caseInsensitiveWithEnumOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
+
     private static GenericServiceUpdate ValidUpdate() => new()
     {
         Source = "platform-notifications-email",
@@ -60,12 +64,12 @@ public class EmailServiceRateLimitProducerTests
         // Assert
         Assert.NotNull(capturedMessage);
 
-        var deserialized = JsonSerializer.Deserialize<GenericServiceUpdate>(capturedMessage, new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } });
+        var deserialized = JsonSerializer.Deserialize<GenericServiceUpdate>(capturedMessage, _caseInsensitiveWithEnumOptions);
         Assert.NotNull(deserialized);
         Assert.Equal(update.Source, deserialized.Source);
         Assert.Equal(AltinnServiceUpdateSchema.ResourceLimitExceeded, deserialized.Schema);
 
-        var rateLimitData = JsonSerializer.Deserialize<ResourceLimitExceeded>(deserialized.Data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var rateLimitData = JsonSerializer.Deserialize<ResourceLimitExceeded>(deserialized.Data, _caseInsensitiveOptions);
         Assert.NotNull(rateLimitData);
         Assert.Equal("azure-communication-services-email", rateLimitData.Resource);
     }
