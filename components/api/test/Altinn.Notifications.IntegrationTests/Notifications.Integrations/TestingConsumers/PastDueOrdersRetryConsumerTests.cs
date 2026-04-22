@@ -151,8 +151,6 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         var mockPreferredChannelProcessingService = new Mock<IPreferredChannelProcessingService>();
         var mockEmailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
         var mockConditionClient = new Mock<IConditionClient>();
-        var mockKafkaProducer = new Mock<IKafkaProducer>();
-
         var orderProcessingService = new OrderProcessingService(
             orderRepository,
             mockEmailProcessingService.Object,
@@ -160,11 +158,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             mockPreferredChannelProcessingService.Object,
             mockEmailAndSmsProcessingService.Object,
             mockConditionClient.Object,
-            mockKafkaProducer.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                PastDueOrdersTopicName = "past-due-orders"
-            }),
+            new Mock<IPastDueOrderPublisher>().Object,
             mockOrderProcessingLogger.Object);
 
         using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, null);
@@ -241,7 +235,6 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
         var mockPreferredChannelProcessingService = new Mock<IPreferredChannelProcessingService>();
         var mockEmailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
         var mockConditionClient = new Mock<IConditionClient>();
-        var mockKafkaProducer = new Mock<IKafkaProducer>();
         var mockOrderProcessingLogger = new Mock<ILogger<OrderProcessingService>>();
 
         // Configure mocks to throw exception when processing retry
@@ -256,11 +249,7 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
             mockPreferredChannelProcessingService.Object,
             mockEmailAndSmsProcessingService.Object,
             mockConditionClient.Object,
-            mockKafkaProducer.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                PastDueOrdersTopicName = "past-due-orders"
-            }),
+            new Mock<IPastDueOrderPublisher>().Object,
             mockOrderProcessingLogger.Object);
 
         using var consumerRetryService = CreateRetryConsumerService(orderProcessingService, null);

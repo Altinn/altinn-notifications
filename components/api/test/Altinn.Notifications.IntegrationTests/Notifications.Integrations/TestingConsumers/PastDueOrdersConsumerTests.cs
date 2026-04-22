@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 
 using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
@@ -141,8 +140,7 @@ public class PastDueOrdersConsumerTests : IAsyncLifetime
             new Mock<IPreferredChannelProcessingService>().Object,
             new Mock<IEmailAndSmsOrderProcessingService>().Object,
             new Mock<IConditionClient>().Object,
-            new Mock<IKafkaProducer>().Object,
-            Options.Create(new KafkaSettings { PastDueOrdersTopicName = _pastDueOrdersTopicName }),
+            new Mock<IPastDueOrderPublisher>().Object,
             NullLogger<OrderProcessingService>.Instance);
 
         return new PastDueOrdersConsumer(
