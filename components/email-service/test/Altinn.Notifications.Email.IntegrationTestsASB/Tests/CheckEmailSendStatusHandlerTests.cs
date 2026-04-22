@@ -49,6 +49,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(terminalResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
             .ReplaceService(_ => producerMock.Object)
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
@@ -132,6 +133,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(EmailSendResult.Delivered);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
             .ReplaceService(_ => producerMock.Object)
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
