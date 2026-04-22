@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
 
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
@@ -9,8 +7,8 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -25,8 +23,7 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
     private readonly IEmailAndSmsOrderProcessingService _emailAndSmsProcessingService;
     private readonly IConditionClient _conditionClient;
-    private readonly IKafkaProducer _producer;
-    private readonly string _pastDueOrdersTopic;
+    private readonly IPastDueOrderPublisher _pastDueOrderPublisher;
     private readonly ILogger<OrderProcessingService> _logger;
 
     /// <summary>
@@ -39,8 +36,7 @@ public class OrderProcessingService : IOrderProcessingService
         IPreferredChannelProcessingService preferredChannelProcessingService,
         IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
-        IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings,
+        IPastDueOrderPublisher pastDueOrderPublisher,
         ILogger<OrderProcessingService> logger)
     {
         _orderRepository = orderRepository;
@@ -49,8 +45,7 @@ public class OrderProcessingService : IOrderProcessingService
         _preferredChannelProcessingService = preferredChannelProcessingService;
         _emailAndSmsProcessingService = emailAndSmsProcessingService;
         _conditionClient = conditionClient;
-        _producer = producer;
-        _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
+        _pastDueOrderPublisher = pastDueOrderPublisher;
         _logger = logger;
     }
 
@@ -74,18 +69,10 @@ public class OrderProcessingService : IOrderProcessingService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
-                var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
-
-                foreach (var unpublishedPastDueOrder in unpublishedPastDueOrders)
+                var failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
+                foreach (var order in failedOrders)
                 {
-                    var deserializePastDueOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedPastDueOrder, JsonSerializerOptionsProvider.Options);
-                    if (deserializePastDueOrder == null || deserializePastDueOrder.Id == Guid.Empty)
-                    {
-                        continue;
-                    }
-
-                    await _orderRepository.SetProcessingStatus(deserializePastDueOrder.Id, OrderProcessingStatus.Registered);
+                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
                 }
             }
             catch (OperationCanceledException)
