@@ -49,7 +49,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(terminalResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .ReplaceService(_ => producerMock.Object)
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
@@ -86,8 +85,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(terminalResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -135,7 +132,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(EmailSendResult.Delivered);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .ReplaceService(_ => producerMock.Object)
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
@@ -169,7 +165,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ThrowsAsync(new InvalidOperationException("Simulated ACS error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -200,7 +195,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .Initialize();
 
         await using (factory)

@@ -45,7 +45,6 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
             });
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailServiceRateLimitPublisher", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -97,7 +96,6 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
             .ReturnsAsync(successResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailServiceRateLimitPublisher", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -140,7 +138,6 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = nonTransientResult });
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailServiceRateLimitPublisher", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
