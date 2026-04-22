@@ -18,7 +18,9 @@
 #   --help, -h       Show this usage block.
 #
 # Results are written to:
-#   TestResults/<date>_<seq>/bruno/results.txt
+#   TestResults/<date>_<seq>/bruno/results.txt             (human-readable stdout)
+#   TestResults/<date>_<seq>/bruno/results.json            (Bruno --reporter-json output)
+#   TestResults/<date>_<seq>/bruno/results-summary.json    (diff-stable, if jq available)
 #   TestResults/<date>_<seq>/code-coverage/index.html
 
 set -euo pipefail
@@ -29,7 +31,7 @@ for arg in "$@"; do
     case "$arg" in
         --asynch=kafka|--asynch=asb) ASYNCH_MODE="${arg#--asynch=}" ;;
         --help|-h)
-            sed -n '2,22p' "$0"
+            sed -n '2,24p' "$0"
             exit 0
             ;;
         *)
@@ -186,8 +188,35 @@ if [ -z "$JWT" ] || [ ${#JWT} -lt 100 ]; then
 fi
 echo "JWT obtained (${#JWT} chars)"
 
-# Run Bruno and tee output to both console and results file
-npx @usebruno/cli run regression -r --env "v2 local" --env-var "jwt=$JWT" --env-var "host=http://127.0.0.1:5090" 2>&1 | tee "$BRUNO_DIR/results.txt" && TEST_EXIT=0 || TEST_EXIT=$?
+# Run Bruno and tee output to both console and results file.
+# --reporter-json emits a structured per-request result file for diffing between runs.
+npx @usebruno/cli run regression -r \
+    --env "v2 local" \
+    --env-var "jwt=$JWT" \
+    --env-var "host=http://127.0.0.1:5090" \
+    --reporter-json "$BRUNO_DIR/results.json" \
+    2>&1 | tee "$BRUNO_DIR/results.txt" && TEST_EXIT=0 || TEST_EXIT=$?
+
+# Produce a diff-stable summary by stripping non-deterministic fields (timings, timestamps).
+# Skipped silently if jq isn't installed. Use --reporter-json file directly if you want the raw view.
+if command -v jq >/dev/null 2>&1 && [ -f "$BRUNO_DIR/results.json" ]; then
+    jq -S 'del(.. |
+             .responseTime?,
+             .runtime?,
+             .duration?,
+             .timings?,
+             .timestamp?,
+             .requestSentTimestamp?,
+             .responseReceivedTimestamp?,
+             .startTime?,
+             .endTime?,
+             .startedAt?,
+             .completedAt?,
+             .iterationData?)' \
+        "$BRUNO_DIR/results.json" > "$BRUNO_DIR/results-summary.json" \
+        && echo "Diff-friendly summary written: $BRUNO_DIR/results-summary.json" \
+        || echo "WARNING: jq summary step failed (raw results.json is still available)"
+fi
 
 # --- Step 5: Stop API container to flush coverage ---
 # docker-compose stop honours stop_signal (SIGINT) + stop_grace_period (30s) from the compose file.
@@ -237,7 +266,11 @@ fi
 echo ""
 echo "=== Done ==="
 echo "Results:  $RUN_DIR"
-echo "  Bruno:    $BRUNO_DIR/results.txt"
-echo "  Coverage: $COVERAGE_DIR/index.html"
+echo "  Bruno text:    $BRUNO_DIR/results.txt"
+echo "  Bruno JSON:    $BRUNO_DIR/results.json"
+if [ -f "$BRUNO_DIR/results-summary.json" ]; then
+    echo "  Bruno summary: $BRUNO_DIR/results-summary.json (diff-stable)"
+fi
+echo "  Coverage:      $COVERAGE_DIR/index.html"
 echo "Tests exit code: $TEST_EXIT"
 exit $TEST_EXIT
