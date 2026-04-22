@@ -107,5 +107,11 @@ public class MetricsRepositoryTests : IAsyncLifetime
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
         Assert.Equal(orgName, metrics.CreatorName);
+        Assert.NotEmpty(metrics.RequestedSendTime);
+        Assert.Equal("Delivered", metrics.Result);
+        Assert.Equal("local-testing", metrics.SendersReference);
+        Assert.Null(metrics.ResourceId);
+        Assert.Empty(metrics.OperationId);
+        Assert.NotEmpty(metrics.ShipmentId);
     }
 }
