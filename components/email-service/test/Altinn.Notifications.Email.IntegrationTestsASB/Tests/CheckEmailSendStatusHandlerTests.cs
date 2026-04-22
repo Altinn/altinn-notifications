@@ -3,6 +3,7 @@ using System.Text.Json;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
@@ -50,7 +51,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService(_ => producerMock.Object)
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -134,7 +135,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService(_ => producerMock.Object)
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
