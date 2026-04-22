@@ -26,7 +26,7 @@ public class RecipientPersonValidatorTests
 
         // act
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
-        
+
         // assert
         actual.ShouldHaveValidationErrorFor(recipient => recipient.NationalIdentityNumber).WithErrorMessage(errorMessage);
     }
@@ -108,7 +108,7 @@ public class RecipientPersonValidatorTests
 
         // act
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
-        
+
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
     }
@@ -147,6 +147,24 @@ public class RecipientPersonValidatorTests
 
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
+
+    [Fact]
+    public void Should_Not_Validate_ResourceId_When_Only_Prefix()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ResourceId = "urn:altinn:resource:",
+            ChannelSchema = NotificationChannelExt.Sms,
+        };
+
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
     }
 
     [Theory]
