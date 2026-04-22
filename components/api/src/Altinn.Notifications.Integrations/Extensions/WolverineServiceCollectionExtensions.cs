@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Integrations;
 
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
+using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
@@ -54,10 +55,12 @@ public static class WolverineServiceCollectionExtensions
             AddEmailSendResultListener(wolverineSettings, opts);
             AddSmsDeliveryReportListener(wolverineSettings, opts);
             AddEmailDeliveryReportListener(wolverineSettings, opts);
+            AddPastDueOrderListener(wolverineSettings, opts);
 
             // Publishers
             AddSendEmailPublisher(wolverineSettings, opts);
             AddSendSmsPublisher(wolverineSettings, opts);
+            AddPastDueOrderPublisher(wolverineSettings, opts);
         });
     }
 
@@ -175,5 +178,52 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.PublishMessage<SendSmsCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus past-due orders queue,
+    /// enabling the API to consume <see cref="ProcessPastDueOrderCommand"/> messages
+    /// it published itself.
+    /// </summary>
+    private static void AddPastDueOrderListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnablePastDueOrderListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new ProcessPastDueOrderHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="ProcessPastDueOrderCommand"/>,
+    /// routing outbound commands to the Azure Service Bus past-due orders queue.
+    /// Only active when <see cref="WolverineSettings.EnablePastDueOrderPublisher"/> is <c>true</c>.
+    /// The <see cref="IPastDueOrderPublisher"/> DI registration is handled separately.
+    /// </summary>
+    private static void AddPastDueOrderPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnablePastDueOrderPublisher)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+        }
+
+        wolverineOptions.PublishMessage<ProcessPastDueOrderCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName);
     }
 }
