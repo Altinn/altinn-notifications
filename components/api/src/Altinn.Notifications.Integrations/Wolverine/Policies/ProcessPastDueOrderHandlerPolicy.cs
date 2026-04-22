@@ -1,5 +1,6 @@
 using System.Diagnostics;
 
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 
@@ -38,6 +39,11 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
             .Or<NpgsqlException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.MoveToErrorQueue();
+
+        chain
+            .OnException<PlatformDependencyException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.MoveToErrorQueue();
     }
 }
