@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Swagger;
 
 namespace Altinn.Notifications.Models.Recipient;
 
@@ -56,6 +57,7 @@ public abstract class RecipientBaseExt
     /// </summary>
     /// <example>urn:altinn:resource:org_example_app</example>
     [JsonPropertyName("resourceId")]
+    [OpenApiPattern("^urn:altinn:resource:.+$")]
     public string? ResourceId { get; set; }
 
     /// <summary>
