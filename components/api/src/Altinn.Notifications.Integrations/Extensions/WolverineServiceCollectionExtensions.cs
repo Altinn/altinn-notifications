@@ -61,7 +61,6 @@ public static class WolverineServiceCollectionExtensions
             // Publishers
             AddSendSmsPublisher(wolverineSettings, opts);
             AddSendEmailPublisher(wolverineSettings, opts);
-            AddSendSmsPublisher(wolverineSettings, opts);
             AddPastDueOrderPublisher(wolverineSettings, opts);
         });
     }
