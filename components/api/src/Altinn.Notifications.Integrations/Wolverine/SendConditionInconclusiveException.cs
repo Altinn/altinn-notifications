@@ -6,4 +6,4 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// On the retry attempt <see cref="Core.Services.OrderProcessingService.ProcessOrderRetry"/> is called,
 /// which proceeds regardless of the condition result.
 /// </summary>
-internal sealed class SendConditionInconclusiveException(string message) : Exception(message);
+public sealed class SendConditionInconclusiveException(string message) : Exception(message);
