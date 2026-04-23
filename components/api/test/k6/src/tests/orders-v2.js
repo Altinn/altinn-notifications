@@ -97,12 +97,12 @@ export function setup() {
 
 
 
-    if (ninRecipient == null) {
-        // unset recipientPerson object when no national identity number is provided
-        emailOrderRequestJson.recipient["recipientPerson"] = undefined;
-    }
-    else {
+    //can only have one active recipient
+    if (ninRecipient != null && !emailRecipient) {
         emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
+    } else {
+          // unset recipientPerson object when no national identity number is provided
+        emailOrderRequestJson.recipient["recipientPerson"] = undefined;
     }
 
 
