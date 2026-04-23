@@ -77,18 +77,18 @@ public static class FailureActionsExtensions
         {
             var eventGridEvent = EventGridEvent.Parse(reportCommand.Message.Body);
 
-        if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
-            && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
-        {
-            return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
-        }
+            if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
+               && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+            {
+                return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
+            }
 
             throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
         }
 
         if (message is EmailSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(sendResultCommand);
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
         }
 
         throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)} or {nameof(EmailSendResultCommand)}, got {message.GetType().Name}.");

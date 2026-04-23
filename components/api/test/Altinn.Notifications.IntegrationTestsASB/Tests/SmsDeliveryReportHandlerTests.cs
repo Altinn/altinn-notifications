@@ -336,9 +336,11 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             Assert.True(reportPersisted, "The delivery_report column should be populated after the handler runs");
             Assert.NotNull(persistedReport);
 
-            // Assert — the persisted JSON contains the expected reference from the delivery report
+            // Assert — the persisted JSON contains the expected fields from the delivery report
             using var doc = JsonDocument.Parse(persistedReport!);
             Assert.Equal(gatewayReference, doc.RootElement.GetProperty("reference").GetString());
+            Assert.Equal("+4799999999", doc.RootElement.GetProperty("receiver").GetString());
+            Assert.Equal("Delivered", doc.RootElement.GetProperty("state").GetString());
         }
     }
 }

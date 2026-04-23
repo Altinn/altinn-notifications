@@ -94,6 +94,16 @@ public static class PostgreUtil
 
         if (await reader.IsDBNullAsync(0))
         {
+            var type = typeof(T);
+            bool isNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+            if (!isNullable)
+            {
+                throw new InvalidOperationException(
+                    $"Column 0 is NULL but T is non-nullable value type '{type.Name}'. " +
+                    $"Use '{type.Name}?' if a NULL result is expected.");
+            }
+
             return default!;
         }
 
