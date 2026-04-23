@@ -7,7 +7,10 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Publishers;
+
+using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -22,7 +25,7 @@ public class KafkaPastDueOrderPublisherTests
     private static NotificationOrder CreateOrder() => new() { Id = Guid.NewGuid() };
 
     private static KafkaPastDueOrderPublisher CreatePublisher(IKafkaProducer producer) =>
-        new(producer, _topicName);
+        new(producer, Options.Create(new KafkaSettings { PastDueOrdersTopicName = _topicName }));
 
     [Fact]
     public async Task PublishAsync_EmptyList_ReturnsEmptyListWithoutCallingProducer()

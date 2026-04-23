@@ -58,7 +58,7 @@ public static class ServiceCollectionExtensions
 
         RegisterSmsCommandPublisher(services, wolverineSettings, kafkaSettings);
         RegisterEmailCommandPublisher(services, wolverineSettings, kafkaSettings);
-        RegisterPastDueOrderPublisher(services, wolverineSettings, kafkaSettings);
+        RegisterPastDueOrderPublisher(services, wolverineSettings);
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public static class ServiceCollectionExtensions
     /// Registers the appropriate <see cref="IPastDueOrderPublisher"/> implementation
     /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    private static void RegisterPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnablePastDueOrderPublisher)
         {
@@ -134,10 +134,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddSingleton<IPastDueOrderPublisher>(sp =>
-                new KafkaPastDueOrderPublisher(
-                    sp.GetRequiredService<IKafkaProducer>(),
-                    kafkaSettings.PastDueOrdersTopicName));
+            services.AddSingleton<IPastDueOrderPublisher, KafkaPastDueOrderPublisher>();
         }
     }
 
