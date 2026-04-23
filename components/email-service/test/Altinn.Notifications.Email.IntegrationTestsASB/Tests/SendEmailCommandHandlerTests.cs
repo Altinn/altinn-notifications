@@ -31,7 +31,6 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
 
@@ -70,7 +69,6 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         };
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .ReplaceService<ISendingService>(_ => sendingService)
             .Initialize();
 
@@ -100,7 +98,6 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
             .ThrowsAsync(new InvalidOperationException("Simulated sending failure"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableSendEmailListener", "true")
             .ReplaceService(_ => sendingServiceMock.Object)
             .Initialize();
 
