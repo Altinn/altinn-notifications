@@ -72,6 +72,7 @@ namespace Altinn.Notifications.Persistence.Repository
             };
 
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getDailySmsMetric);
+            pgcom.CommandTimeout = 300; // 5 minutes
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, day);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, month);
