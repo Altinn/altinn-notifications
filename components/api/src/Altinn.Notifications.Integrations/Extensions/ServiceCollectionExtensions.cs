@@ -121,6 +121,12 @@ public static class ServiceCollectionExtensions
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnablePastDueOrderPublisher)
         {
+            if (!wolverineSettings.EnablePastDueOrderListener)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EnablePastDueOrderListener)} must be enabled when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+            }
+
             if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
             {
                 throw new InvalidOperationException(
