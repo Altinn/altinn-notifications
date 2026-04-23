@@ -62,7 +62,7 @@ public class RecipientOrganizationValidatorTests
 
         // act
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
-        
+
         // assert
         actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
@@ -166,6 +166,24 @@ public class RecipientOrganizationValidatorTests
 
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
+
+    [Fact]
+    public void Should_Not_Validate_ResourceId_When_Only_Prefix()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ResourceId = "urn:altinn:resource:",
+            ChannelSchema = NotificationChannelExt.EmailPreferred,
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
     }
 
     [Theory]
