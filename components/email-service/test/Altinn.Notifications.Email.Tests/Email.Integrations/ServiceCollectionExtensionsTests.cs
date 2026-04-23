@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Publishers;
@@ -94,6 +94,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -127,6 +129,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
@@ -162,6 +166,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -188,6 +194,7 @@ public class ServiceCollectionExtensionsTests
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["WolverineSettings:EmailSendResultQueueName"] = "email-send-result-queue",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
             })
@@ -215,6 +222,8 @@ public class ServiceCollectionExtensionsTests
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
                 ["WolverineSettings:EnableEmailSendResultPublisher"] = enableSendResultPublisher.ToString(),
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
@@ -272,6 +281,8 @@ public class ServiceCollectionExtensionsTests
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -291,5 +302,99 @@ public class ServiceCollectionExtensionsTests
         Assert.Null(descriptor.ImplementationType);       // Not EmailStatusCheckPublisher (ASB)
         Assert.NotNull(descriptor.ImplementationFactory); // Factory = Kafka path
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
+    }
+
+    [Fact]
+    public void AddIntegrationServices_EmailServiceRateLimitPublisherEnabled_RegistersAsbDispatcher()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.service.ratelimit",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        services.AddIntegrationServices(config);
+
+        // Assert
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
+        Assert.NotNull(descriptor);
+        Assert.Equal(typeof(EmailServiceRateLimitPublisher), descriptor.ImplementationType);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void AddIntegrationServices_EmailServiceRateLimitPublisherEnabledButQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = queueName,
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+        Assert.Equal(
+            "EmailServiceRateLimitQueueName must be configured when EnableEmailServiceRateLimitPublisher is enabled.",
+            exception.Message);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public void AddIntegrationServices_EmailServiceRateLimitPublisherNotFullyEnabled_RegistersKafkaDispatcher(bool enableWolverine, bool enablePublisher)
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = enablePublisher.ToString(),
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.service.ratelimit",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        services.AddIntegrationServices(config);
+
+        // Assert
+        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
     }
 }
