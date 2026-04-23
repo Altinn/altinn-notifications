@@ -2,6 +2,7 @@ using System.Diagnostics;
 
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 
 using Azure.Messaging.ServiceBus;
@@ -32,9 +33,7 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
         var policy = settings.PastDueOrdersQueuePolicy;
 
         chain
-            .OnException<InvalidOperationException>()
-            .Or<TaskCanceledException>()
-            .Or<TimeoutException>()
+            .OnException<TimeoutException>()
             .Or<ServiceBusException>()
             .Or<NpgsqlException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
@@ -42,8 +41,9 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<PlatformDependencyException>()
-            .RetryWithCooldown(policy.GetCooldownDelays())
+            .OnException<SendConditionInconclusiveException>()
+            .Or<PlatformDependencyException>()
+            .ScheduleRetry(TimeSpan.FromMinutes(1))
             .Then.MoveToErrorQueue();
     }
 }

@@ -11,5 +11,5 @@ public sealed record ProcessPastDueOrderCommand
     /// <summary>
     /// Gets the notification order to be processed.
     /// </summary>
-    public NotificationOrder Order { get; init; } = null!;
+    public required NotificationOrder Order { get; init; }
 }

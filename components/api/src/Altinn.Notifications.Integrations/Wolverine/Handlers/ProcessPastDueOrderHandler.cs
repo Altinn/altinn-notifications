@@ -41,7 +41,7 @@ public static class ProcessPastDueOrderHandler
                 "Send condition check inconclusive for order {OrderId}, scheduling retry.",
                 command.Order.Id);
 
-            throw new InvalidOperationException(
+            throw new SendConditionInconclusiveException(
                 $"Send condition check inconclusive for order {command.Order.Id}. Scheduling retry.");
         }
     }

@@ -64,7 +64,7 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
     [Fact]
     public async Task ProcessPastDueOrder_WhenSendConditionIsInconclusive_ProcessOrderRetryCalledOnRetry()
     {
-        // Arrange - ProcessOrder returns inconclusive (triggers InvalidOperationException + retry).
+        // Arrange - ProcessOrder returns inconclusive (triggers SendConditionInconclusiveException + scheduled retry).
         // ProcessOrderRetry succeeds, so the message should be processed without going to DLQ.
         int processOrderCallCount = 0;
         int processOrderRetryCallCount = 0;
@@ -146,10 +146,11 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             });
 
             // Assert - message moves to DLQ after all retries exhausted
+            var dlqTimeout = TimeSpan.FromMilliseconds(policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum() + 10_000);
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
-                TimeSpan.FromSeconds(30));
+                dlqTimeout);
             Assert.NotNull(deadLetterMessage);
 
             // Assert - ProcessOrder called once (attempt 1), ProcessOrderRetry called on all retry attempts

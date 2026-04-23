@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -115,7 +116,7 @@ public class KafkaPastDueOrderPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_ProducerReturnsInvalidJson_IgnoresInvalidEntries()
+    public async Task PublishAsync_ProducerReturnsPayloadWithEmptyId_IgnoresEntry()
     {
         // Arrange — "{}" deserializes to Id = Guid.Empty and must be filtered out
         var order = CreateOrder();
@@ -134,5 +135,27 @@ public class KafkaPastDueOrderPublisherTests
         // Assert
         Assert.Single(result);
         Assert.Equal(order.Id, result[0].Id);
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("[1,2,3]")]
+    public async Task PublishAsync_ProducerReturnsMalformedPayload_ThrowsJsonException(string malformed)
+    {
+        // Arrange — producer returns a payload that cannot be deserialized as NotificationOrder
+        var order = CreateOrder();
+        var orders = new List<NotificationOrder> { order };
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([malformed]);
+
+        var publisher = CreatePublisher(producerMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<JsonException>(() => publisher.PublishAsync(orders, CancellationToken.None));
     }
 }

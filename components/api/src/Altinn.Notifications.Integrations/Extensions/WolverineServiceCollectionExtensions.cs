@@ -242,6 +242,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (!wolverineSettings.EnablePastDueOrderListener)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EnablePastDueOrderListener)} must be enabled when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
         {
             throw new InvalidOperationException(

@@ -59,6 +59,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             pastDueOrders = [];
 
+            IReadOnlyList<NotificationOrder>? failedOrders = null;
             try
             {
                 pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
@@ -69,7 +70,7 @@ public class OrderProcessingService : IOrderProcessingService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
+                failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
                 foreach (var order in failedOrders)
                 {
                     await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
@@ -77,9 +78,13 @@ public class OrderProcessingService : IOrderProcessingService
             }
             catch (OperationCanceledException)
             {
-                foreach (var pastDueOrder in pastDueOrders)
+                // If PublishAsync completed, only reset orders it reported as failed — published orders
+                // must not be reset or they will be re-enqueued and processed twice.
+                // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
+                var ordersToReset = failedOrders ?? pastDueOrders;
+                foreach (var order in ordersToReset)
                 {
-                    await _orderRepository.SetProcessingStatus(pastDueOrder.Id, OrderProcessingStatus.Registered);
+                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
                 }
 
                 throw;
