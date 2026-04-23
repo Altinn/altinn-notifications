@@ -55,4 +55,14 @@ public class WolverineSettings : WolverineSettingsBase
     /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailSendResultQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Determines whether to publish Altinn service update messages via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnableEmailServiceRateLimitPublisher { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for publishing Altinn service update notifications.
+    /// </summary>
+    public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
 }

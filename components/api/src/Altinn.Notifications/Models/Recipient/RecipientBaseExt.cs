@@ -53,7 +53,7 @@ public abstract class RecipientBaseExt
     public SmsSendingOptionsExt? SmsSettings { get; set; }
 
     /// <summary>
-    /// An optional URN-formatted resource identifier for authorization and auditing purposes. Prefix 'urn:altinn:resource' is required.
+    /// An optional URN-formatted resource identifier for authorization and auditing purposes. Prefix 'urn:altinn:resource:' is required.
     /// </summary>
     /// <example>urn:altinn:resource:org_example_app</example>
     [JsonPropertyName("resourceId")]

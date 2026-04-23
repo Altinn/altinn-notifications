@@ -55,10 +55,11 @@ public static class WolverineServiceCollectionExtensions
             AddSmsSendResultListener(wolverineSettings, opts);
             AddSmsDeliveryReportListener(wolverineSettings, opts);
             AddEmailDeliveryReportListener(wolverineSettings, opts);
+            AddEmailServiceRateLimitListener(wolverineSettings, opts);
 
             // Publishers
-            AddSendEmailPublisher(wolverineSettings, opts);
             AddSendSmsPublisher(wolverineSettings, opts);
+            AddSendEmailPublisher(wolverineSettings, opts);
         });
     }
 
@@ -154,6 +155,29 @@ public static class WolverineServiceCollectionExtensions
                         .ListenerCount(wolverineSettings.ListenerCount);
 
         wolverineOptions.Policies.Add(new SmsDeliveryReportHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus service update queue.
+    /// Published by the email service when Azure Communication Services returns HTTP 429.
+    /// </summary>
+    private static void AddEmailServiceRateLimitListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableEmailServiceRateLimitListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new EmailServiceRateLimitHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>

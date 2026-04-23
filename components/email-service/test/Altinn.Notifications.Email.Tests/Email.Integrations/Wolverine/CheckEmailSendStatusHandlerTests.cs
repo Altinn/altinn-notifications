@@ -57,9 +57,8 @@ public class CheckEmailSendStatusHandlerTests
     }
 
     [Theory]
-    [InlineData(EmailSendResult.Delivered)]
     [InlineData(EmailSendResult.Failed)]
-
+    [InlineData(EmailSendResult.Delivered)]
     [InlineData(EmailSendResult.Failed_Bounced)]
     [InlineData(EmailSendResult.Failed_Quarantined)]
     [InlineData(EmailSendResult.Failed_FilteredSpam)]

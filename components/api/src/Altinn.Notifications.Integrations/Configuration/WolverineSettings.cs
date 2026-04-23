@@ -108,4 +108,21 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the SMS send result queue.
     /// </summary>
     public QueueRetryPolicy SmsSendResultQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Whether to enable the email service rate limit queue listener.
+    /// Consumes messages published by the email service when ACS returns HTTP 429.
+    /// </summary>
+    public bool EnableEmailServiceRateLimitListener { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for receiving email service rate limit notifications.
+    /// Published by the email service and consumed by the API to update service availability.
+    /// </summary>
+    public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the email service rate limit queue.
+    /// </summary>
+    public QueueRetryPolicy EmailServiceRateLimitQueuePolicy { get; set; } = new();
 }
