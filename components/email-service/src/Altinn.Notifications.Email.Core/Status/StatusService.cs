@@ -9,28 +9,27 @@ namespace Altinn.Notifications.Email.Core;
 /// </summary>
 public class StatusService : IStatusService
 {
-    private readonly IEmailServiceClient _emailServiceClient;
     private readonly TopicSettings _settings;
     private readonly ICommonProducer _producer;
     private readonly IDateTimeService _dateTime;
+    private readonly IEmailServiceClient _emailServiceClient;
+    private readonly IEmailSendResultDispatcher _emailSendResultDispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatusService"/> class.
     /// </summary>
-    /// <param name="emailServiceClient">A client that can perform actual mail sending.</param>
-    /// <param name="producer">A kafka producer.</param>
-    /// <param name="dateTime">A datetime service.</param>
-    /// <param name="settings">The topic settings.</param>
     public StatusService(
-        IEmailServiceClient emailServiceClient,
+        TopicSettings settings,
         ICommonProducer producer,
         IDateTimeService dateTime,
-        TopicSettings settings)
+        IEmailServiceClient emailServiceClient,
+        IEmailSendResultDispatcher emailSendResultDispatcher)
     {
-        _emailServiceClient = emailServiceClient;
-        _producer = producer;
         _settings = settings;
+        _producer = producer;
         _dateTime = dateTime;
+        _emailServiceClient = emailServiceClient;
+        _emailSendResultDispatcher = emailSendResultDispatcher;
     }
 
     /// <inheritdoc/>
@@ -42,23 +41,27 @@ public class StatusService : IStatusService
         {
             var operationResult = new SendOperationResult()
             {
-                NotificationId = operationIdentifier.NotificationId,
+                SendResult = result,
                 OperationId = operationIdentifier.OperationId,
-                SendResult = result
+                NotificationId = operationIdentifier.NotificationId
             };
 
-            await _producer.ProduceAsync(_settings.EmailStatusUpdatedTopicName, operationResult.Serialize());
+            await _emailSendResultDispatcher.DispatchAsync(operationResult);
         }
         else
         {
             operationIdentifier.LastStatusCheck = _dateTime.UtcNow();
-            await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
+            bool success = await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
+            if (!success)
+            {
+                throw new InvalidOperationException("Failed to re-queue email status-check message.");
+            }
         }
     }
 
     /// <inheritdoc/>
     public async Task UpdateSendStatus(SendOperationResult sendOperationResult)
     {
-        await _producer.ProduceAsync(_settings.EmailStatusUpdatedTopicName, sendOperationResult.Serialize());
+        await _emailSendResultDispatcher.DispatchAsync(sendOperationResult);
     }
 }

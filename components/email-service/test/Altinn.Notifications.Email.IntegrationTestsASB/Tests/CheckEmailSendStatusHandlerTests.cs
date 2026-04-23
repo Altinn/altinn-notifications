@@ -1,7 +1,11 @@
+using System.Text.Json;
+
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
@@ -46,8 +50,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(terminalResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService(_ => producerMock.Object)
+            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -64,6 +68,49 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
                 maxAttempts: 20,
                 delayMs: 500);
             Assert.True(completed, "Handler should publish to Kafka when ACS returns a terminal result");
+        }
+    }
+
+    [Theory]
+    [InlineData(EmailSendResult.Failed)]
+    [InlineData(EmailSendResult.Delivered)]
+    [InlineData(EmailSendResult.Failed_Bounced)]
+    [InlineData(EmailSendResult.Failed_FilteredSpam)]
+    public async Task CheckEmailSendStatus_WhenTerminalResult_PublishesToAsbQueue(EmailSendResult terminalResult)
+    {
+        // Arrange
+        var command = ValidCommand();
+
+        var emailClientMock = new Mock<IEmailServiceClient>();
+        emailClientMock
+            .Setup(c => c.GetOperationUpdate(command.SendOperationId))
+            .ReturnsAsync(terminalResult);
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService(_ => emailClientMock.Object)
+            .Initialize();
+
+        await using (factory)
+        {
+            string checkQueueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+            string statusQueueName = factory.WolverineSettings!.EmailSendResultQueueName;
+
+            // Act
+            await factory.SendToQueueAsync(checkQueueName, command);
+
+            // Assert - message should arrive on the sending status queue
+            var receivedMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                statusQueueName,
+                TimeSpan.FromSeconds(15));
+
+            Assert.NotNull(receivedMessage);
+
+            var statusCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(receivedMessage.Body.ToString());
+            Assert.NotNull(statusCommand);
+            Assert.Equal(command.NotificationId, statusCommand.NotificationId);
+            Assert.Equal(command.SendOperationId, statusCommand.OperationId);
+            Assert.Equal(terminalResult.ToString(), statusCommand.SendResult);
         }
     }
 
@@ -87,8 +134,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(EmailSendResult.Delivered);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService(_ => producerMock.Object)
+            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -121,7 +168,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ThrowsAsync(new InvalidOperationException("Simulated ACS error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -152,7 +198,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .Initialize();
 
         await using (factory)

@@ -36,6 +36,11 @@ public class KafkaSettings
     public string EmailSendingAcceptedTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the email status updated topic
+    /// </summary>
+    public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the send email queue topic
     /// </summary>
     public string SendEmailQueueTopicName { get; set; } = string.Empty;
@@ -44,6 +49,11 @@ public class KafkaSettings
     /// The name of the send email queue retry  topic
     /// </summary>    
     public string SendEmailQueueRetryTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the Altinn service update topic.
+    /// </summary>
+    public string AltinnServiceUpdateTopicName { get; set; } = string.Empty;
 }
 
 /// <summary>

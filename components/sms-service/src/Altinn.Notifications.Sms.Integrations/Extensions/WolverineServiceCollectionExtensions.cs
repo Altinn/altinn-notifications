@@ -3,11 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -48,11 +48,31 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners: none configured yet.
+            // Listeners
+            AddSendSmsListener(wolverineSettings, opts);
 
             // Publishers
             AddSmsDeliveryReportPublisher(wolverineSettings, opts);
         });
+    }
+
+    private static void AddSendSmsListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (!wolverineSettings.EnableSendSmsListener)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
+                        .ListenerCount(wolverineSettings.ListenerCount);
+
+        wolverineOptions.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>

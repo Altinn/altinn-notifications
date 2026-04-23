@@ -70,14 +70,14 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     IncludeXmlComments(options);
-    
+
     options.EnableAnnotations();
     options.UseInlineDefinitionsForEnums();
-    options.SchemaFilter<SwaggerDefaultValues>();
+    options.SchemaFilter<OpenApiSchemaEnrichmentFilter>();
     options.OperationFilter<AddResponseHeadersFilter>();
-    
+
     options.ExampleFilters();
-    
+
     options.AddServer(new OpenApiServer()
     {
         Url = "https://platform.tt02.altinn.no/",
@@ -229,7 +229,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
-    
+
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }
