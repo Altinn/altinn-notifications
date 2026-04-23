@@ -255,7 +255,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 {
                     persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(
                         _fixture.PostgresConnectionString,
-                        "SELECT delivery_report::text FROM notifications.emailnotifications WHERE alternateid = $1",
+                        "SELECT deliveryreport::text FROM notifications.emailnotifications WHERE alternateid = $1",
                         new NpgsqlParameter { Value = notification.Id });
 
                     return persistedReport is not null;

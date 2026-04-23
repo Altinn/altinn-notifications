@@ -92,6 +92,11 @@ public static class PostgreUtil
             throw new InvalidOperationException("Query returned no rows.");
         }
 
+        if (await reader.IsDBNullAsync(0))
+        {
+            return default!;
+        }
+
         return await reader.GetFieldValueAsync<T>(0);
     }
 
