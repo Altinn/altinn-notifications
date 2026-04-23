@@ -10,7 +10,8 @@ services:
       KAFKA_BROKERCONNECT: "broker:29092"
       JVM_OPTS: "-Xms16M -Xmx48M -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
     depends_on:
-      - "broker"
+      broker:
+        condition: service_healthy
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -36,3 +37,9 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     restart: always
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
