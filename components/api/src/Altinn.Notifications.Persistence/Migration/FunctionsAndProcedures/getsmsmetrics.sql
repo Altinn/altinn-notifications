@@ -20,7 +20,7 @@ BEGIN
     -- references and correlation
     sms._id as sms_id --unique per number/"functional SMS"
 ,   sms.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
-,   orders.notificationorder.sendersreference as senders_reference --senders reference (not necessarily unique)
+,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
 ,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
 ,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
 ,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
