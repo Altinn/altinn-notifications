@@ -130,4 +130,10 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the past-due orders queue.
     /// </summary>
     public QueueRetryPolicy PastDueOrdersQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Delay in milliseconds before the single scheduled retry for inconclusive send conditions
+    /// and platform dependency failures.
+    /// </summary>
+    public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
 }

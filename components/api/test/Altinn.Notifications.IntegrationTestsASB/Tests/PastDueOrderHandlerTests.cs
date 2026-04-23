@@ -85,7 +85,8 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
 
         await using (factory)
         {
-            string queueName = factory.WolverineSettings!.PastDueOrdersQueueName;
+            var settings = factory.WolverineSettings!;
+            string queueName = settings.PastDueOrdersQueueName;
 
             // Act - send command directly to the queue
             await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand
@@ -94,10 +95,11 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             });
 
             // Assert - ProcessOrderRetry called once on the retry attempt
+            const int pollDelayMs = 500;
             var retryProcessed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(processOrderRetryCallCount == 1),
-                maxAttempts: 20,
-                delayMs: 500);
+                maxAttempts: (settings.PastDueOrdersRetryDelayMs + 5000) / pollDelayMs,
+                delayMs: pollDelayMs);
             Assert.True(retryProcessed, "ProcessOrderRetry should be called once on the retry");
             Assert.Equal(1, processOrderCallCount);
 
