@@ -46,7 +46,7 @@ public static class PostgreUtil
     /// <summary>
     /// Updates the send status of an email notification.
     /// </summary>
-    public static async Task UpdateSendStatus(
+    public static async Task UpdateEmailSendStatus(
         IntegrationTestWebApplicationFactory factory,
         Guid notificationId,
         EmailNotificationResultType resultType,

@@ -33,7 +33,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             // (simulates the email service having successfully sent via ACS)
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             // Act - Send a raw EventGrid delivery report to the queue (simulates ACS + Event Grid)
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
@@ -143,7 +143,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             // where ACS sent the email (setting operationId) before the TTL elapsed.
             string operationId = Guid.NewGuid().ToString();
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             // Now expire the notification by backdating its expiry time
             await PostgreUtil.RunSql(
@@ -241,7 +241,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             // so the handler can resolve it by operationId (simulates ACS round-trip)
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
