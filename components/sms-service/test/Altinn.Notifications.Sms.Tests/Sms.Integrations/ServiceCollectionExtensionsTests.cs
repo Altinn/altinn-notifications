@@ -1,10 +1,14 @@
-﻿using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using Altinn.Notifications.Sms.Core.Configuration;
+using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Producers;
 using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+using Moq;
 
 namespace Altinn.Notifications.Sms.Tests.Sms.Integrations;
 
@@ -81,14 +85,13 @@ public class ServiceCollectionExtensionsTests
             .Build();
 
         IServiceCollection services = new ServiceCollection();
-
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
+        services.AddSingleton(new TopicSettings());
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsDeliveryReportPublisher));
+        var publisher = services.BuildServiceProvider().GetRequiredService<ISmsDeliveryReportPublisher>();
 
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.IsType<KafkaSmsDeliveryReportPublisher>(publisher);
     }
 
     [Theory]
@@ -156,14 +159,13 @@ public class ServiceCollectionExtensionsTests
             .Build();
 
         IServiceCollection services = new ServiceCollection();
-
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
+        services.AddSingleton(new TopicSettings());
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsSendResultDispatcher));
+        var dispatcher = services.BuildServiceProvider().GetRequiredService<ISmsSendResultDispatcher>();
 
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.IsType<SmsSendResultProducer>(dispatcher);
     }
 
     [Theory]

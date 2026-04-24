@@ -26,10 +26,6 @@ public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixtur
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
-    /// <summary>
-    /// Happy path: the ASB publisher serializes a <see cref="SendOperationResult"/>
-    /// into a flat <see cref="SmsSendResultCommand"/> and sends it to the configured queue.
-    /// </summary>
     [Fact]
     public async Task DispatchAsync_WhenEnabled_SendsCommandToQueue()
     {
@@ -66,11 +62,6 @@ public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixtur
         }
     }
 
-    /// <summary>
-    /// End-to-end: <see cref="ISendingService"/> accepts the SMS via a mocked
-    /// <see cref="ISmsClient"/>, and the resulting <see cref="SendOperationResult"/>
-    /// is published by the ASB dispatcher as a flat command on the queue.
-    /// </summary>
     [Fact]
     public async Task SendingService_WhenPublisherEnabled_PublishesSendResultToQueue()
     {
