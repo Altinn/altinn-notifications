@@ -22,7 +22,7 @@ public sealed record SmsSendResultCommand
     public string? GatewayReference { get; init; }
 
     /// <summary>
-    /// The terminal send result (e.g. "Accepted", "Failed", "Failed_InvalidRecipient").
+    /// The transient send result (e.g. "Accepted", "Failed", "Failed_InvalidRecipient").
     /// </summary>
     [JsonPropertyName("sendResult")]
     public string SendResult { get; init; } = string.Empty;

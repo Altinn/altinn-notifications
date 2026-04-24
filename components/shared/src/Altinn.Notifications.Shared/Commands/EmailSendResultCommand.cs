@@ -22,7 +22,7 @@ public sealed record EmailSendResultCommand
     public string? OperationId { get; init; }
 
     /// <summary>
-    /// The terminal send result (e.g. "Delivered", "Failed", "Failed_Bounced").
+    /// The transient send result (e.g. "Sending", "Succeeded", "Failed").
     /// </summary>
     [JsonPropertyName("sendResult")]
     public string SendResult { get; init; } = string.Empty;
