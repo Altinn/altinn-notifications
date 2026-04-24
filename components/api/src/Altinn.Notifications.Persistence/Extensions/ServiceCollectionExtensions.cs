@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
         .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
+        .AddSingleton<IDashboardRepository, DashboardRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()
