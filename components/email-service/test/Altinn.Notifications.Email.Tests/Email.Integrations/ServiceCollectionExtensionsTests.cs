@@ -1,10 +1,15 @@
+using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
+using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+using Moq;
 
 using Xunit;
 
@@ -143,13 +148,13 @@ public class ServiceCollectionExtensionsTests
 
         // Act
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton(new Mock<ICommonProducer>().Object));
+        services.AddSingleton(new Mock<IDateTimeService>().Object);
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
+        var dispatcher = services.BuildServiceProvider().GetRequiredService<IEmailStatusCheckDispatcher>();
 
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.IsType<EmailStatusCheckProducer>(dispatcher);
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 
@@ -216,6 +221,7 @@ public class ServiceCollectionExtensionsTests
     [InlineData(true, false)]
     public void AddIntegrationServices_WolverineSendResultPublisherNotFullyEnabled_RegistersKafkaProducer(bool enableWolverine, bool enableSendResultPublisher)
     {
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -232,13 +238,13 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton(new Mock<ICommonProducer>().Object));
+        var dispatcher = services.BuildServiceProvider().GetRequiredService<IEmailSendResultDispatcher>();
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailSendResultDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
+        // Assert
+        Assert.IsType<EmailSendResultProducer>(dispatcher);
     }
 
     [Theory]
@@ -294,13 +300,14 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton(new Mock<ICommonProducer>().Object));
+        services.AddSingleton(new Mock<IDateTimeService>().Object);
+        var dispatcher = services.BuildServiceProvider().GetRequiredService<IEmailStatusCheckDispatcher>();
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);       // Not EmailStatusCheckPublisher (ASB)
-        Assert.NotNull(descriptor.ImplementationFactory); // Factory = Kafka path
+        // Assert
+        Assert.IsType<EmailStatusCheckProducer>(dispatcher);
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer));
     }
 
@@ -390,11 +397,10 @@ public class ServiceCollectionExtensionsTests
 
         // Act
         services.AddIntegrationServices(config);
+        services.Replace(ServiceDescriptor.Singleton(new Mock<ICommonProducer>().Object));
+        var dispatcher = services.BuildServiceProvider().GetRequiredService<IEmailServiceRateLimitDispatcher>();
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
-        Assert.NotNull(descriptor);
-        Assert.Null(descriptor.ImplementationType);
-        Assert.NotNull(descriptor.ImplementationFactory);
+        Assert.IsType<EmailServiceRateLimitProducer>(dispatcher);
     }
 }

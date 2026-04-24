@@ -35,4 +35,15 @@ public class WolverineSettings : WolverineSettingsBase
     /// Consumed by the API service's <c>SmsDeliveryReportHandler</c>.
     /// </summary>
     public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Determines whether to publish SMS send results via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnableSmsSendResultPublisher { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for publishing SMS send results.
+    /// Produced by this SMS service and consumed by the Notifications API.
+    /// </summary>
+    public string SmsSendResultQueueName { get; set; } = string.Empty;
 }

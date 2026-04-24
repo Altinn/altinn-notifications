@@ -1,19 +1,19 @@
-using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Sms.Core.Status;
 
-namespace Altinn.Notifications.Email.Core.Dependencies;
+namespace Altinn.Notifications.Sms.Core.Dependencies;
 
 /// <summary>
-/// Provides functionality for dispatching the transient result of an email send operation
+/// Provides functionality for dispatching the transient result of an SMS send operation
 /// to the Notifications API so the notification status can be updated.
 /// </summary>
-public interface IEmailSendResultDispatcher
+public interface ISmsSendResultDispatcher
 {
     /// <summary>
     /// Dispatches a transient <see cref="SendOperationResult"/> to the Notifications API.
     /// </summary>
     /// <param name="result">
-    /// The transient result of the email send operation, containing the notification identifier,
-    /// the Azure Communication Services operation identifier, and the send result.
+    /// The transient result of the SMS send operation, containing the notification identifier,
+    /// the SMS gateway reference, and the send result.
     /// </param>
     /// <returns>A <see cref="Task"/> representing the asynchronous dispatch operation.</returns>
     Task DispatchAsync(SendOperationResult result);
