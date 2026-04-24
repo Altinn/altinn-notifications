@@ -30,7 +30,7 @@ public static class SmsSendResultHandler
                 command.NotificationId,
                 command.GatewayReference);
 
-            throw new UnrecognizedSendResultException($"Unrecognized SendResult value: '{command.SendResult}'");
+            throw new ArgumentException($"Unrecognized SendResult value: '{command.SendResult}'");
         }
 
         var operationResult = new SmsSendOperationResult

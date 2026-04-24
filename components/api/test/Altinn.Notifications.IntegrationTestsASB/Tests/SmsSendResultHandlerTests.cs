@@ -151,7 +151,7 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
             Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
             Assert.True(deadReportFound, "Dead delivery report should be saved when SendResult is unrecognized");
 
-            // Assert - UnrecognizedSendResultException fires before the service is reached; UpdateSendStatus must never be called
+            // Assert - ArgumentException fires before the service is reached; UpdateSendStatus must never be called
             mockService.Verify(
                 s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()),
                 Times.Never);
@@ -163,7 +163,7 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — unrecognized SendResult is saved to dead delivery reports, not DLQ");
 
-            // Assert - Queue itself is empty (no retries; UnrecognizedSendResultException is not retried)
+            // Assert - Queue itself is empty (no retries; ArgumentException is not retried)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
