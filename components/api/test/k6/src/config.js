@@ -7,8 +7,7 @@ const baseUrls = {
     tt02: "tt02.altinn.no",
     yt01: "yt01.altinn.cloud",
     at22: "at22.altinn.cloud",
-    at23: "at23.altinn.cloud",
-    at24: "at24.altinn.cloud"
+    at23: "at23.altinn.cloud"
 };
 
 // Base URLs for Maskinporten authentication service in different environments.
