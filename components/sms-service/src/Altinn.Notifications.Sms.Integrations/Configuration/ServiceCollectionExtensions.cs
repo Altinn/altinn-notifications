@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Shared.Configuration;
+using Altinn.Notifications.Shared.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Consumers;
@@ -8,7 +8,6 @@ using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Altinn.Notifications.Sms.Integrations.Configuration;
 
@@ -47,7 +46,10 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IAltinnGatewayClient, AltinnGatewayClient>()
             .AddSingleton(smsGatewaySettings);
 
-        RegisterSmsDeliveryReportPublisher(services, config);
+        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+
+        RegisterSmsDeliveryReportPublisher(services, wolverineSettings);
+        RegisterSmsSendResultDispatcher(services, wolverineSettings);
 
         return services;
     }
@@ -61,27 +63,22 @@ public static class ServiceCollectionExtensions
     /// <list type="bullet">
     ///   <item><description><see cref="WolverineSettingsBase.EnableWolverine"/> is <c>true</c></description></item>
     ///   <item><description><see cref="WolverineSettings.EnableSmsDeliveryReportPublisher"/> is <c>true</c></description></item>
-    ///   <item><description><see cref="WolverineSettings.SmsDeliveryReportQueueName"/> is non-empty</description></item>
     /// </list>
     /// the <see cref="AsbSmsDeliveryReportPublisher"/> (Azure Service Bus via Wolverine) is registered.
     /// Otherwise, the Kafka-based <see cref="KafkaSmsDeliveryReportPublisher"/> is registered.
     /// This matches the guard used in <see cref="Extensions.WolverineServiceCollectionExtensions"/> so that
     /// exactly one fully-configured transport path is active at a time.
     /// </remarks>
-    private static void RegisterSmsDeliveryReportPublisher(IServiceCollection services, IConfiguration config)
+    private static void RegisterSmsDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
-        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-
-        bool useWolverine =
-            wolverineSettings.EnableWolverine &&
-            wolverineSettings.EnableSmsDeliveryReportPublisher &&
-            !string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName);
-
-        services.RemoveAll<ISmsDeliveryReportPublisher>();
-
-        if (useWolverine)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSmsDeliveryReportPublisher)
         {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} is enabled.");
+            }
+
             services.AddSingleton<ISmsDeliveryReportPublisher>(sp =>
                 new AsbSmsDeliveryReportPublisher(sp));
         }
@@ -89,6 +86,31 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISmsDeliveryReportPublisher>(sp =>
                 new KafkaSmsDeliveryReportPublisher(
+                    sp.GetRequiredService<ICommonProducer>(),
+                    sp.GetRequiredService<TopicSettings>().SmsStatusUpdatedTopicName));
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="ISmsSendResultDispatcher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterSmsSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSmsSendResultPublisher)
+        {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<ISmsSendResultDispatcher, SmsSendResultPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<ISmsSendResultDispatcher>(sp =>
+                new SmsSendResultProducer(
                     sp.GetRequiredService<ICommonProducer>(),
                     sp.GetRequiredService<TopicSettings>().SmsStatusUpdatedTopicName));
         }

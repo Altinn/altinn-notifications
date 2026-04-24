@@ -95,17 +95,25 @@ public static class FailureActionsExtensions
     }
 
     /// <summary>
-    /// Serializes the SMS delivery report payload from a Wolverine message.
+    /// Extracts and serializes the SMS payload from a Wolverine message.
+    /// Supports both <see cref="SmsDeliveryReportCommand"/> (LinkMobility delivery reports) and
+    /// <see cref="SmsSendResultCommand"/> (SMS service send results).
     /// </summary>
-    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
-    /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
+    /// <param name="message">The raw Wolverine message object.</param>
+    /// <returns>A JSON-serialized string of the underlying payload.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the message type is unrecognized.</exception>
     private static string ExtractSmsPayload(object message)
     {
-        if (message is not SmsDeliveryReportCommand command)
+        if (message is SmsDeliveryReportCommand deliveryReportCommand)
         {
-            throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
+            return JsonSerializer.Serialize(deliveryReportCommand, JsonSerializerOptionsProvider.Options);
         }
 
-        return JsonSerializer.Serialize(command, JsonSerializerOptionsProvider.Options);
+        if (message is SmsSendResultCommand sendResultCommand)
+        {
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
+        }
+
+        throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)} or {nameof(SmsSendResultCommand)}, got {message.GetType().Name}.");
     }
 }
