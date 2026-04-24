@@ -31,7 +31,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        return await SendAsync(email, messageBus);
+        return await SendAsync(email, messageBus, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -57,7 +57,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var failedEmail = await SendAsync(email, messageBus);
+                var failedEmail = await SendAsync(email, messageBus, cancellationToken);
                 if (failedEmail is not null)
                 {
                     failedEmails.Add(failedEmail);
@@ -77,11 +77,12 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
     /// </summary>
     /// <param name="email">The email notification to send.</param>
     /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>
     /// <see langword="null"/> if the command was dispatched successfully;
     /// otherwise the original <paramref name="email"/> if an error occurred.
     /// </returns>
-    private async Task<Email?> SendAsync(Email email, IMessageBus messageBus)
+    private async Task<Email?> SendAsync(Email email, IMessageBus messageBus, CancellationToken cancellationToken)
     {
         var sendEmailCommand = new SendEmailCommand
         {
@@ -95,6 +96,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await messageBus.SendAsync(sendEmailCommand);
 
             return null;
