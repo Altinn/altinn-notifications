@@ -79,7 +79,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
-            string queueName = factory.WolverineSettings.EmailSendResultQueueName;
+            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
             var command = new EmailSendResultCommand
             {

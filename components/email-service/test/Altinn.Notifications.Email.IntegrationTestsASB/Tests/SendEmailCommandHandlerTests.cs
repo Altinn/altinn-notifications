@@ -105,7 +105,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         {
             var policy = factory.WolverineSettings!.EmailSendQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings.EmailSendQueueName;
+            string queueName = factory.WolverineSettings!.EmailSendQueueName;
 
             // Act
             await factory.SendToEndpointAsync(queueName, new SendEmailCommand

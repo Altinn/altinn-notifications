@@ -175,7 +175,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
         {
             var policy = factory.WolverineSettings!.EmailStatusCheckQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings.EmailStatusCheckQueueName;
+            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
 
             // Act
             await factory.SendToQueueAsync(queueName, ValidCommand());

@@ -85,7 +85,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         {
             var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             // Act - Send delivery report with a gatewayReference that doesn't match any notification
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
@@ -217,7 +217,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
         {
             var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings.SmsDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             string gatewayReference = Guid.NewGuid().ToString();
 

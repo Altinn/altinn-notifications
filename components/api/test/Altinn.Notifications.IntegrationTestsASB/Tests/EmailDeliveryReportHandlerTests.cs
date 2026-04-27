@@ -80,7 +80,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
             // ACS report arrives before the email service has persisted the operationId
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report with an operationId that doesn't match any notification
             await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
@@ -204,7 +204,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         {
             var policy = factory.WolverineSettings!.EmailDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings.EmailDeliveryReportQueueName;
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
             await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), "Delivered");
