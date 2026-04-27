@@ -97,7 +97,7 @@ public class MetricsApiKeyFilterTests
         var filter = new MetricsApiKeyFilter(config, logger);
 
         var headers = new HeaderDictionary { ["X-API-Key"] = "provided" };
-        var context = CreateAuthorizationContext("/notifications/api/v1/metrics/sms", headers);
+        var context = CreateAuthorizationContext("/notifications/api/v1/metrics/email", headers);
 
         // Act
         await filter.OnAuthorizationAsync(context);
@@ -117,7 +117,7 @@ public class MetricsApiKeyFilterTests
         var filter = new MetricsApiKeyFilter(config, logger);
 
         var headers = new HeaderDictionary { ["X-API-Key"] = "invalid" };
-        var context = CreateAuthorizationContext("/notifications/api/v1/metrics/sms", headers);
+        var context = CreateAuthorizationContext("/notifications/api/v1/metrics/email", headers);
 
         // Act
         await filter.OnAuthorizationAsync(context);
@@ -128,20 +128,22 @@ public class MetricsApiKeyFilterTests
         Assert.Equal("Invalid API key", errorValue);
     }
 
-    [Fact]
-    public async Task OnAuthorizationAsync_MetricsPath_ValidApiKey_AllowsRequest()
+    [Theory]
+    [InlineData("/notifications/api/v1/metrics/email")]
+    [InlineData("/notifications/api/v1/metrics/sms")]
+    public async Task OnAuthorizationAsync_MetricsPath_ValidApiKey_AllowsRequest(string path)
     {
         // Arrange
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["MetricsApiKey"] = "expected" }).Build();
         var logger = Mock.Of<ILogger<MetricsApiKeyFilter>>();
         var filter = new MetricsApiKeyFilter(config, logger);
-
+    
         var headers = new HeaderDictionary { ["X-API-Key"] = "expected" };
-        var context = CreateAuthorizationContext("/notifications/api/v1/metrics/sms", headers);
-
+        var context = CreateAuthorizationContext(path, headers);
+    
         // Act
         await filter.OnAuthorizationAsync(context);
-
+    
         // Assert
         Assert.Null(context.Result);
     }

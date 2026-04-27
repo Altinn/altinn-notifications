@@ -1,4 +1,3 @@
-﻿using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Shared;
 using Altinn.Notifications.Sms.Core.Status;
@@ -11,17 +10,15 @@ namespace Altinn.Notifications.Sms.Core.Sending;
 public class SendingService : ISendingService
 {
     private readonly ISmsClient _smsClient;
-    private readonly TopicSettings _settings;
-    private readonly ICommonProducer _producer;
+    private readonly ISmsSendResultDispatcher _smsSendResultDispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SendingService"/> class.
     /// </summary>
-    public SendingService(ISmsClient smsClient, ICommonProducer producer, TopicSettings settings)
+    public SendingService(ISmsClient smsClient, ISmsSendResultDispatcher smsSendResultDispatcher)
     {
-        _producer = producer;
-        _settings = settings;
         _smsClient = smsClient;
+        _smsSendResultDispatcher = smsSendResultDispatcher;
     }
 
     /// <inheritdoc/>
@@ -58,23 +55,14 @@ public class SendingService : ISendingService
                 operationResult.GatewayReference = gatewayReference;
                 operationResult.SendResult = SmsSendResult.Accepted;
 
-                await PublishSendResult(operationResult);
+                await _smsSendResultDispatcher.DispatchAsync(operationResult);
             },
             async smsSendFailResponse =>
             {
                 operationResult.GatewayReference = string.Empty;
                 operationResult.SendResult = smsSendFailResponse.SendResult;
 
-                await PublishSendResult(operationResult);
+                await _smsSendResultDispatcher.DispatchAsync(operationResult);
             });
-    }
-
-    /// <summary>
-    /// Publishes the result of the send operation to the configured topic.
-    /// </summary>
-    /// <param name="operationResult">The result of the send operation to be published.</param>
-    private async Task PublishSendResult(SendOperationResult operationResult)
-    {
-        await _producer.ProduceAsync(_settings.SmsStatusUpdatedTopicName, operationResult.Serialize());
     }
 }

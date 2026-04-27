@@ -1,4 +1,3 @@
-﻿using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Status;
@@ -9,44 +8,38 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Core.Sending;
 
 public class SendingServiceTests
 {
-    private readonly TopicSettings _topicSettings;
-
-    public SendingServiceTests()
-    {
-        _topicSettings = new()
-        {
-            SmsStatusUpdatedTopicName = "SmsStatusUpdatedTopicName"
-        };
-    }
-
     [Fact]
     public async Task SendAsync_CustomTimeToLive_GatewayReferenceGenerated_SendingAccepted()
     {
         // Arrange
         var timeToLiveInSeconds = 5400;
         Guid notificationId = Guid.NewGuid();
+        const string gatewayReference = "457418CB-FFDE-482C-BD53-1E8885CF87EF";
 
         Notifications.Sms.Core.Sending.Sms sms = new(notificationId, "sender", "recipient", "message");
 
         Mock<ISmsClient> clientMock = new();
         clientMock.Setup(c => c.SendAsync(It.IsAny<Notifications.Sms.Core.Sending.Sms>(), timeToLiveInSeconds))
-            .ReturnsAsync("457418CB-FFDE-482C-BD53-1E8885CF87EF");
+            .ReturnsAsync(gatewayReference);
 
-        Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.SmsStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-            s.Contains("\"sendResult\":\"Accepted\"") &&
-            s.Contains($"\"notificationId\":\"{notificationId}\"") &&
-            s.Contains("\"gatewayReference\":\"457418CB-FFDE-482C-BD53-1E8885CF87EF\""))));
+        Mock<ISmsSendResultDispatcher> dispatcherMock = new();
+        dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
 
-        var sendingService = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+        var sendingService = new SendingService(clientMock.Object, dispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(sms, timeToLiveInSeconds);
 
         // Assert
-        producerMock.VerifyAll();
+        dispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == notificationId &&
+                r.GatewayReference == gatewayReference &&
+                r.SendResult == SmsSendResult.Accepted)),
+            Times.Once);
+        dispatcherMock.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -54,31 +47,35 @@ public class SendingServiceTests
     {
         // Arrange
         Guid notificationId = Guid.NewGuid();
+        const string gatewayReference = "gateway-reference";
         Notifications.Sms.Core.Sending.Sms sms = new(notificationId, "sender", "recipient", "message");
 
         Mock<ISmsClient> clientMock = new();
         clientMock.Setup(c => c.SendAsync(It.IsAny<Notifications.Sms.Core.Sending.Sms>()))
-            .ReturnsAsync("gateway-reference");
+            .ReturnsAsync(gatewayReference);
 
-        Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.SmsStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-            s.Contains("\"gatewayReference\":\"gateway-reference\"") &&
-            s.Contains("\"sendResult\":\"Accepted\"") &&
-            s.Contains($"\"notificationId\":\"{notificationId}\""))));
+        Mock<ISmsSendResultDispatcher> dispatcherMock = new();
+        dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
 
-        var sendingService = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+        var sendingService = new SendingService(clientMock.Object, dispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(sms);
 
         // Assert
-        producerMock.VerifyAll();
+        dispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == notificationId &&
+                r.GatewayReference == gatewayReference &&
+                r.SendResult == SmsSendResult.Accepted)),
+            Times.Once);
+        dispatcherMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task SendAsync_CustomTimeToLive_InvalidRecipient_PublishedToExpectedKafkaTopic()
+    public async Task SendAsync_CustomTimeToLive_InvalidRecipient_DispatchesFailureResult()
     {
         // Arrange
         var timeToLiveInSeconds = 12600;
@@ -87,26 +84,30 @@ public class SendingServiceTests
 
         Mock<ISmsClient> clientMock = new();
         clientMock.Setup(c => c.SendAsync(It.IsAny<Notifications.Sms.Core.Sending.Sms>(), timeToLiveInSeconds))
-        .ReturnsAsync(new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidRecipient, ErrorMessage = "Receiver is invalid" });
+            .ReturnsAsync(new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidRecipient, ErrorMessage = "Receiver is invalid" });
 
-        Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.SmsStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-            s.Contains($"\"notificationId\":\"{notificationId}\"") &&
-            s.Contains("\"sendResult\":\"Failed_InvalidRecipient\""))));
+        Mock<ISmsSendResultDispatcher> dispatcherMock = new();
+        dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
 
-        var sendingService = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+        var sendingService = new SendingService(clientMock.Object, dispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(sms, timeToLiveInSeconds);
 
         // Assert
-        producerMock.VerifyAll();
+        dispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == notificationId &&
+                r.GatewayReference == string.Empty &&
+                r.SendResult == SmsSendResult.Failed_InvalidRecipient)),
+            Times.Once);
+        dispatcherMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task SendAsync_DefaultTimeToLive_InvalidRecipient_PublishedToExpectedKafkaTopic()
+    public async Task SendAsync_DefaultTimeToLive_InvalidRecipient_DispatchesFailureResult()
     {
         // Arrange
         Guid notificationId = Guid.NewGuid();
@@ -114,21 +115,25 @@ public class SendingServiceTests
 
         Mock<ISmsClient> clientMock = new();
         clientMock.Setup(c => c.SendAsync(It.IsAny<Notifications.Sms.Core.Sending.Sms>()))
-        .ReturnsAsync(new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidRecipient, ErrorMessage = "Receiver is invalid" });
+            .ReturnsAsync(new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidRecipient, ErrorMessage = "Receiver is invalid" });
 
-        Mock<ICommonProducer> producerMock = new();
-        producerMock.Setup(p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(nameof(_topicSettings.SmsStatusUpdatedTopicName))),
-            It.Is<string>(s =>
-            s.Contains($"\"notificationId\":\"{notificationId}\"") &&
-            s.Contains("\"sendResult\":\"Failed_InvalidRecipient\""))));
+        Mock<ISmsSendResultDispatcher> dispatcherMock = new();
+        dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
 
-        var sendingService = new SendingService(clientMock.Object, producerMock.Object, _topicSettings);
+        var sendingService = new SendingService(clientMock.Object, dispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(sms);
 
         // Assert
-        producerMock.VerifyAll();
+        dispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == notificationId &&
+                r.GatewayReference == string.Empty &&
+                r.SendResult == SmsSendResult.Failed_InvalidRecipient)),
+            Times.Once);
+        dispatcherMock.VerifyNoOtherCalls();
     }
 }
