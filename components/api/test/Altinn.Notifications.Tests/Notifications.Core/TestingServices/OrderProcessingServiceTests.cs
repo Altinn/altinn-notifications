@@ -325,19 +325,15 @@ public class OrderProcessingServiceTests
         var fetchedBatch = CreateOrderBatch(10, "cancel-after-fetch");
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock
-            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fetchedBatch);
-
-        var publisherMock = new Mock<IPastDueOrderPublisher>();
-        var service = GetTestService(orderRepository: orderRepositoryMock.Object, publisher: publisherMock.Object);
-
         using var cancellationTokenSource = new CancellationTokenSource();
 
         orderRepositoryMock
             .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
             .Callback(cancellationTokenSource.Cancel)
             .ReturnsAsync(fetchedBatch);
+
+        var publisherMock = new Mock<IPastDueOrderPublisher>();
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, publisher: publisherMock.Object);
 
         // Act + Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.StartProcessingPastDueOrders(cancellationTokenSource.Token));
