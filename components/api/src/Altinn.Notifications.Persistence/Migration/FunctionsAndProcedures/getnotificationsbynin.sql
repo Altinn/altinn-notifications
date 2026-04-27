@@ -7,9 +7,9 @@ CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin
 RETURNS TABLE (
     notificationid uuid,
     _orderid bigint,
+    sendersreference text,
     creatorname text,
     resourceid text,
-    sendersreference text,
     requestedsendtime timestamptz,
     recipientorgno text,
     recipientnin text,
@@ -25,9 +25,9 @@ BEGIN
         SELECT
             e.alternateid AS notificationid,
             o._id AS _orderid,
+            o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
-            o.sendersreference,
             o.requestedsendtime,
             e.recipientorgno,
             e.recipientnin,
@@ -45,9 +45,9 @@ BEGIN
         SELECT
             s.alternateid AS notificationid,
             o._id AS _orderid,
+            o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
-            o.sendersreference,
             o.requestedsendtime,
             s.recipientorgno,
             s.recipientnin,
