@@ -11,6 +11,7 @@ public class DashboardRepository : IDashboardRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
     /// </summary>
