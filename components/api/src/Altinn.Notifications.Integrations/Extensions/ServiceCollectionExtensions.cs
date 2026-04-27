@@ -21,7 +21,7 @@ using Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -54,8 +54,11 @@ public static class ServiceCollectionExtensions
         .AddHostedService<EmailPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
 
-        RegisterSmsCommandPublisher(services, config, kafkaSettings);
-        RegisterEmailCommandPublisher(services, config, kafkaSettings);
+        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+
+        RegisterSmsCommandPublisher(services, wolverineSettings, kafkaSettings);
+        RegisterEmailCommandPublisher(services, wolverineSettings, kafkaSettings);
+        RegisterPastDueOrderPublisher(services, wolverineSettings);
     }
 
     /// <summary>
@@ -111,23 +114,50 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the correct <see cref="IEmailCommandPublisher"/> implementation based on Wolverine settings.
-    /// Reads <see cref="WolverineSettings"/> once and uses an if/else to register either
-    /// the ASB-backed <see cref="EmailCommandPublisher"/> or the Kafka-backed
-    /// <see cref="KafkaEmailCommandPublisher"/>. Exactly one transport path is always active.
+    /// Registers the appropriate <see cref="IPastDueOrderPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterEmailCommandPublisher(IServiceCollection services, IConfiguration config, KafkaSettings kafkaSettings)
+    private static void RegisterPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
-        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-
-        bool useWolverine =
-            wolverineSettings.EnableWolverine &&
-            wolverineSettings.EnableSendEmailPublisher &&
-            !string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName);
-
-        if (useWolverine)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnablePastDueOrderPublisher)
         {
+            if (!wolverineSettings.EnablePastDueOrderListener)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EnablePastDueOrderListener)} must be enabled when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+            }
+
+            if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<IPastDueOrderPublisher>(sp =>
+                new PastDueOrderPublisher(
+                    sp.GetRequiredService<ILogger<PastDueOrderPublisher>>(),
+                    sp));
+        }
+        else
+        {
+            services.AddSingleton<IPastDueOrderPublisher, KafkaPastDueOrderPublisher>();
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IEmailCommandPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterEmailCommandPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSendEmailPublisher)
+        {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
+            }
+
             services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
         }
         else
@@ -140,23 +170,19 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the correct <see cref="ISendSmsPublisher"/> implementation based on Wolverine settings.
-    /// Reads <see cref="WolverineSettings"/> once and uses an if/else to register either
-    /// the ASB-backed <see cref="SendSmsCommandPublisher"/> or the Kafka-backed
-    /// <see cref="KafkaSendSmsPublisher"/>. Exactly one transport path is always active.
+    /// Registers the appropriate <see cref="ISendSmsPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterSmsCommandPublisher(IServiceCollection services, IConfiguration config, KafkaSettings kafkaSettings)
+    private static void RegisterSmsCommandPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
     {
-        IConfigurationSection wolverineSection = config.GetSection(nameof(WolverineSettings));
-        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-
-        bool useWolverine =
-            wolverineSettings.EnableWolverine &&
-            wolverineSettings.EnableSendSmsPublisher &&
-            !string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName);
-
-        if (useWolverine)
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSendSmsPublisher)
         {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
+            }
+
             services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
         }
         else

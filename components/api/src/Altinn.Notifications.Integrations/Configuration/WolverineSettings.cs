@@ -125,4 +125,31 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email service rate limit queue.
     /// </summary>
     public QueueRetryPolicy EmailServiceRateLimitQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Determines whether to publish past-due order commands via Wolverine and Azure Service Bus or via Kafka.
+    /// </summary>
+    public bool EnablePastDueOrderPublisher { get; set; } = false;
+
+    /// <summary>
+    /// Determines whether to listen for past-due order commands from the Azure Service Bus queue.
+    /// </summary>
+    public bool EnablePastDueOrderListener { get; set; } = false;
+
+    /// <summary>
+    /// ASB queue name for past-due order processing commands.
+    /// Both produced and consumed by this API (internal queue).
+    /// </summary>
+    public string PastDueOrdersQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the past-due orders queue.
+    /// </summary>
+    public QueueRetryPolicy PastDueOrdersQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Delay in milliseconds before the single scheduled retry for inconclusive send conditions
+    /// and platform dependency failures.
+    /// </summary>
+    public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
 }
