@@ -97,11 +97,12 @@ export function setup() {
 
 
 
-    //can only have one active recipient
-    if (ninRecipient != null && !emailRecipient) {
+    // non-instant supports NIN lookup; prefer it over direct email when provided
+    if (ninRecipient != null) {
         emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
-    } else {
-          // unset recipientPerson object when no national identity number is provided
+        emailOrderRequestJson.recipient["recipientEmail"] = undefined;
+    }
+    else {
         emailOrderRequestJson.recipient["recipientPerson"] = undefined;
     }
 
