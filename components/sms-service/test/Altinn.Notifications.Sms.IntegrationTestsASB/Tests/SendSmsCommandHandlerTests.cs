@@ -102,17 +102,16 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SendSmsQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             var queueName = GetQueueName(factory);
 
             // Act
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
             bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref callCount) >= 9),
+                () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
                 maxAttempts: 40,
                 delayMs: 500);
 
@@ -123,7 +122,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
                     sms.Recipient == command.MobileNumber &&
                     sms.Message == command.Body &&
                     sms.Sender == command.SenderNumber)),
-                Times.Exactly(9));
+                Times.Exactly(expectedAttempts));
         }
     }
 
