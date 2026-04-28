@@ -80,7 +80,7 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
             var policy = factory.WolverineSettings!.SmsSendResultQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
-            string queueName = factory.WolverineSettings.SmsSendResultQueueName;
+            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
 
             var command = new SmsSendResultCommand
             {

@@ -31,7 +31,8 @@ public class AsbSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : I
         {
             NotificationId = result.NotificationId,
             GatewayReference = result.GatewayReference,
-            SendResult = result.SendResult.Value.ToString()
+            SendResult = result.SendResult.Value.ToString(),
+            DeliveryReport = result.DeliveryReport
         };
 
         await using var scope = _serviceProvider.CreateAsyncScope();

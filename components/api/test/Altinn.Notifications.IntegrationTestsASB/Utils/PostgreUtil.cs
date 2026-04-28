@@ -46,7 +46,7 @@ public static class PostgreUtil
     /// <summary>
     /// Updates the send status of an email notification.
     /// </summary>
-    public static async Task UpdateSendStatus(
+    public static async Task UpdateEmailSendStatus(
         IntegrationTestWebApplicationFactory factory,
         Guid notificationId,
         EmailNotificationResultType resultType,
@@ -90,6 +90,21 @@ public static class PostgreUtil
         if (!await reader.ReadAsync())
         {
             throw new InvalidOperationException("Query returned no rows.");
+        }
+
+        if (await reader.IsDBNullAsync(0))
+        {
+            var type = typeof(T);
+            bool isNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+            if (!isNullable)
+            {
+                throw new InvalidOperationException(
+                    $"Column 0 is NULL but T is non-nullable value type '{type.Name}'. " +
+                    $"Use '{type.Name}?' if a NULL result is expected.");
+            }
+
+            return default!;
         }
 
         return await reader.GetFieldValueAsync<T>(0);

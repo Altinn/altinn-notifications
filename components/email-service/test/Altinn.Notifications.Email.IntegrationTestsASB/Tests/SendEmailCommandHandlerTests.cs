@@ -103,6 +103,8 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.EmailSendQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.EmailSendQueueName;
 
             // Act
@@ -123,12 +125,9 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
                 TimeSpan.FromSeconds(30));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms) = 3 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 3 scheduled retries = 7 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(7, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 }
