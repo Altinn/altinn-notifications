@@ -2,6 +2,7 @@ using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Telemetry;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
 
         services
+            .AddSingleton<DeliveryReportMetrics>()
             .AddSingleton<IGuidService, GuidService>()
             .AddSingleton<IMetricsService, MetricsService>()
             .AddSingleton<IKeywordsService, KeywordsService>()
