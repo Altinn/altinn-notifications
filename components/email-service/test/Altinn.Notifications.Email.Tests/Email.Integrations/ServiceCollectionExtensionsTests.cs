@@ -104,6 +104,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
             })
@@ -120,6 +121,34 @@ public class ServiceCollectionExtensionsTests
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineEnabledButListenerDisabled_ThrowsInvalidOperationException()
+    {
+        // Publisher requires the listener to be active — publishing to the status check queue without a
+        // listener consuming it would silently drop messages.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "false",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("EnableEmailStatusCheckListener must be enabled when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
     }
 
     [Theory]
@@ -176,6 +205,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })
