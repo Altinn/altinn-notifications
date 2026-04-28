@@ -131,35 +131,44 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Handle case where neither identifier is provided
     IF _alternateid IS NULL AND _operationid IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
     END IF;
 
+    -- Single UPDATE with conditional logic based on expiry time
     RETURN QUERY
     UPDATE notifications.emailnotifications
     SET
+        -- Update result only if not expired, otherwise keep existing value
         result = CASE
             WHEN expirytime > now() THEN _result::emailnotificationresulttype
             ELSE result
         END,
+        -- Update resulttime only if not expired, otherwise keep existing value
         resulttime = CASE
             WHEN expirytime > now() THEN now()
             ELSE resulttime
         END,
+        -- Update operationid only if not expired and alternateid was provided
         operationid = CASE
             WHEN expirytime > now() AND _alternateid IS NOT NULL
             THEN COALESCE(_operationid, operationid)
             ELSE operationid
         END,
-        -- Always overwritten, including with NULL: observational gateway data
+        -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
         deliveryreport = _deliveryreport
     WHERE
+        -- Match by alternateid (takes priority) OR by operationid (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
         (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
         (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
     RETURNING
         emailnotifications.alternateid,
+        -- was_updated reflects whether status fields were modified; deliveryreport writes do not affect this flag
         (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= now()) AS is_expired;
 
     IF NOT FOUND THEN
@@ -177,15 +186,20 @@ for lookup; _operationid may still populate the row via COALESCE.
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if values were modified (notification not expired), false otherwise
+- was_updated: true if status fields (result, resulttime, operationid) were modified (notification not expired), false otherwise
+             NOTE: deliveryreport is always written and does not affect this flag
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- result, resulttime, operationid are conditionally modified only when expirytime > now()
-- deliveryreport is always overwritten unconditionally, including with NULL
-- If expired:   UPDATE executes but keeps existing status values, returns (alternateid, false, true)
-- If not found: returns (NULL, false, false)
-- If found and not expired: modifies all values and returns (alternateid, true, false)
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify status fields only when expirytime > now()
+- deliveryreport is always overwritten unconditionally, including with NULL (observational data, not subject to expiry)
+- If expired:   UPDATE executes, status fields unchanged, deliveryreport written; returns (alternateid, false, true)
+- If not found: returns (NULL, false, false); deliveryreport is not written
+- If found and not expired: all fields modified; returns (alternateid, true, false)
 
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies
-at most one row when non-null.';
+at most one row when non-null.
+Overwrite policy: result, resulttime, and operationid are conditionally overwritten when not expired;
+operationid is only set when a non-null _operationid is supplied and notification is not expired;
+deliveryreport is always overwritten regardless of expiry.';
