@@ -1,0 +1,26 @@
+meta {
+  name: status-feed-negative-seq
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq=-1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  seq: -1
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("mentions validation error for seq", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("seq");
+  });
+}

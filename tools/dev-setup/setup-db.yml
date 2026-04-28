@@ -1,0 +1,17 @@
+---
+services:
+  postgres:
+    image: docker.io/library/postgres:17
+    container_name: altinn-notifications-db
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: platform_notifications_admin
+      POSTGRES_PASSWORD: Password
+      POSTGRES_DB: notificationsdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform_notifications_admin -d notificationsdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped

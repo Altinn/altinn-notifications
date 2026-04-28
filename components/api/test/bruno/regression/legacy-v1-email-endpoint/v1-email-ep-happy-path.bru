@@ -1,0 +1,50 @@
+meta {
+  name: v1-email-ep-happy-path
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "sendersReference": "regression-v1-email-ep-{{senders_reference_guid}}",
+    "subject": "(REGRESSION) V1 Email Endpoint Happy Path",
+    "body": "(REGRESSION) V1 email endpoint test",
+    "contentType": "Plain",
+    "recipients": [
+      {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 202) {
+    const location = res.headers["location"];
+    if (location) {
+      const parts = location.split("/");
+      bru.setVar("v1EmailEpOrderId", parts[parts.length - 1]);
+    }
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+
+  test("response has orderId", function() {
+    expect(res.body).to.have.property("orderId");
+  });
+
+  test("Location header is set", function() {
+    expect(res.headers).to.have.property("location");
+  });
+}

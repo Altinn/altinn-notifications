@@ -1,0 +1,39 @@
+meta {
+  name: future-idempotency-returns-200
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "regression-future-idempotency-fixed-001",
+    "sendersReference": "regression-{{senders_reference_guid}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(REGRESSION) Future Email Idempotency",
+          "body": "(REGRESSION) Idempotency test",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+script:pre-request {
+  // Fixed idempotency ID is set directly in the body above
+}
+
+tests {
+  test("should return 200 or 201", function() {
+    expect([200, 201]).to.include(res.status);
+  });
+}

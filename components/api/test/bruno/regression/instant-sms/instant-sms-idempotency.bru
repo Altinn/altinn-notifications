@@ -1,0 +1,36 @@
+meta {
+  name: instant-sms-idempotency
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+script:pre-request {
+  bru.setVar("fixed_idempotency_id", "regression-idempotency-sms-fixed-001");
+}
+
+body:json {
+  {
+    "idempotencyId": "{{fixed_idempotency_id}}",
+    "sendersReference": "regression-sms-idempotency",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 120,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) Idempotency SMS test"
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 200 or 201 (idempotent)", function() {
+    expect(res.status).to.be.oneOf([200, 201]);
+  });
+}

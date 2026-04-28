@@ -1,0 +1,36 @@
+meta {
+  name: instant-sms-ttl-too-low
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-sms-ttl-low",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 59,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) TTL too low test"
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("should mention valid TTL range", function() {
+    expect(JSON.stringify(res.body)).to.include("between 60 and 172800");
+  });
+}

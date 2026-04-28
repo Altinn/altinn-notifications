@@ -1,0 +1,21 @@
+meta {
+  name: shipment-get-nonexistent
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 00000000-0000-0000-0000-000000000000
+}
+
+tests {
+  test("returns 404 Not Found", function() {
+    expect(res.status).to.equal(404);
+  });
+}

@@ -1,0 +1,37 @@
+meta {
+  name: instant-email-idempotency
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+script:pre-request {
+  bru.setVar("fixed_idempotency_id", "regression-idempotency-email-fixed-001");
+}
+
+body:json {
+  {
+    "idempotencyId": "{{fixed_idempotency_id}}",
+    "sendersReference": "regression-email-{{senders_reference_guid}}",
+    "recipientEmail": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(REGRESSION) Instant Email Idempotency",
+        "body": "(REGRESSION) Idempotency test body",
+        "contentType": "Plain",
+        "senderEmailAddress": "noreply@altinn.no"
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 200 or 201", function() {
+    expect([200, 201]).to.include(res.status);
+  });
+}

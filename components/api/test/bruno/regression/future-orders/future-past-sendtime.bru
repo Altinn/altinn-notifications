@@ -1,0 +1,44 @@
+meta {
+  name: future-past-sendtime
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-{{senders_reference_guid}}",
+    "requestedSendTime": "2020-01-01T00:00:00Z",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(REGRESSION) Future Email Past SendTime",
+          "body": "(REGRESSION) Test past send time",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error should mention must be in the future", function() {
+    const body = res.getBody();
+    const bodyString = JSON.stringify(body).toLowerCase();
+    expect(bodyString).to.satisfy(function(s) {
+      return s.includes("must be in the future") || s.includes("must be greater than");
+    });
+  });
+}

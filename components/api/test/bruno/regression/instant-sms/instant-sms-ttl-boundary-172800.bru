@@ -1,0 +1,32 @@
+meta {
+  name: instant-sms-ttl-boundary-172800
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-sms-ttl-boundary-172800",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 172800,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) TTL boundary 172800 test"
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 201 Created (TTL=172800 is valid boundary)", function() {
+    expect(res.status).to.equal(201);
+  });
+}

@@ -1,0 +1,17 @@
+meta {
+  name: trigger-terminateexpired
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/trigger/terminateexpirednotifications
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

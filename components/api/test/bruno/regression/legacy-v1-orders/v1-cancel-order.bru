@@ -1,0 +1,21 @@
+meta {
+  name: v1-cancel-order
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/cancel
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{v1OrderId}}
+}
+
+tests {
+  test("returns 200 OK or 409 Conflict", function() {
+    expect(res.status).to.be.oneOf([200, 409]);
+  });
+}

@@ -1,0 +1,38 @@
+meta {
+  name: email-no-domain
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-validation-email-no-domain",
+    "recipientEmail": {
+      "emailAddress": "test@",
+      "emailSettings": {
+        "subject": "(REGRESSION) Email No Domain",
+        "body": "(REGRESSION) Email no domain test",
+        "contentType": "Plain",
+        "senderEmailAddress": "noreply@altinn.no"
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions email", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("email");
+  });
+}

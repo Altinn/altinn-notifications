@@ -1,0 +1,40 @@
+meta {
+  name: channel-emailandsms-missing-email
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-{{senders_reference_guid}}",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "EmailAndSms",
+        "smsSettings": {
+          "sendingTimePolicy": "Anytime",
+          "body": "(REGRESSION) Channel schema test - {{random_idempotency_id}}"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 when EmailAndSms is missing emailSettings", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("should mention EmailSettings must be set", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("emailsettings must be set");
+  });
+}

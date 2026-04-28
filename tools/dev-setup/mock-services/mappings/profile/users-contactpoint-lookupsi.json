@@ -1,0 +1,29 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/profile/api/v1/users/contactpoint/lookupsi"
+        }
+      ]
+    },
+    "Methods": ["POST"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "contactPointsList": [
+        {
+          "externalIdentity": "urn:altinn:person:identifier-no:12345678901",
+          "isReserved": false,
+          "mobileNumber": "+4799999999",
+          "email": "test@example.com"
+        }
+      ]
+    }
+  }
+}

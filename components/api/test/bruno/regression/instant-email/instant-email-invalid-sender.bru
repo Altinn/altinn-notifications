@@ -1,0 +1,38 @@
+meta {
+  name: instant-email-invalid-sender
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-email-{{senders_reference_guid}}",
+    "recipientEmail": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(REGRESSION) Instant Email Invalid Sender",
+        "body": "(REGRESSION) Invalid sender test body",
+        "contentType": "Plain",
+        "senderEmailAddress": "bad"
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions invalid email address", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("invalid email address");
+  });
+}

@@ -1,0 +1,32 @@
+meta {
+  name: v1-sms-happy-path
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "Sms",
+    "smsTemplate": {
+      "body": "(REGRESSION) V1 SMS direct test"
+    },
+    "recipients": [
+      {
+        "mobileNumber": "{{process.env.TESTDATA_MY_PHONE}}"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+}

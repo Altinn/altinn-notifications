@@ -1,0 +1,41 @@
+meta {
+  name: channel-preferred-missing-sms
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-{{senders_reference_guid}}",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "SmsPreferred",
+        "emailSettings": {
+          "subject": "(REGRESSION) Channel Schema Test",
+          "body": "(REGRESSION) Channel schema test - {{random_idempotency_id}}",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 when SmsPreferred is missing smsSettings", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("should mention SmsSettings must be set", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("smssettings must be set");
+  });
+}

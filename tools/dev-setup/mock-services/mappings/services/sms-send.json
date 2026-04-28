@@ -1,0 +1,22 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/notifications/sms/api/v1/instantmessage/send"
+        }
+      ]
+    },
+    "Methods": ["POST"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "notificationId": "00000000-0000-0000-0000-000000000002"
+    }
+  }
+}

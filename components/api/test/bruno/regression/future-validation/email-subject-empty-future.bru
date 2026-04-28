@@ -1,0 +1,40 @@
+meta {
+  name: email-subject-empty-future
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "Email",
+        "emailSettings": {
+          "subject": "",
+          "body": "(REGRESSION) Validation test",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions subject", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("subject");
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: v1-get-order-by-sendersref
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders?sendersReference=regression-v1-ref
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has orders", function() {
+    expect(res.body).to.have.property("count");
+  });
+}
