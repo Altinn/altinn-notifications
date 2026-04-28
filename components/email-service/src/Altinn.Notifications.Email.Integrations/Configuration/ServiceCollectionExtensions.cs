@@ -88,6 +88,12 @@ public static class ServiceCollectionExtensions
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckPublisher)
         {
+            if (!wolverineSettings.EnableEmailStatusCheckListener)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EnableEmailStatusCheckListener)} must be enabled when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
+            }
+
             if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
             {
                 throw new InvalidOperationException(
