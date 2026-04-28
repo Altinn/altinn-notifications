@@ -1,4 +1,3 @@
-using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
@@ -105,11 +104,7 @@ public static class ServiceCollectionExtensions
                     $"{nameof(KafkaSettings.EmailSendingAcceptedTopicName)} must be configured when the Wolverine email status check publisher is disabled.");
             }
 
-            services.AddSingleton<IEmailStatusCheckDispatcher>(sp =>
-                new EmailStatusCheckProducer(
-                    sp.GetRequiredService<ICommonProducer>(),
-                    sp.GetRequiredService<IDateTimeService>(),
-                    kafkaSettings.EmailSendingAcceptedTopicName));
+            services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckProducer>();
         }
     }
 
@@ -137,10 +132,7 @@ public static class ServiceCollectionExtensions
                     $"{nameof(KafkaSettings.EmailStatusUpdatedTopicName)} must be configured when the Wolverine email send result publisher is disabled.");
             }
 
-            services.AddSingleton<IEmailSendResultDispatcher>(sp =>
-                new EmailSendResultProducer(
-                    sp.GetRequiredService<ICommonProducer>(),
-                    kafkaSettings.EmailStatusUpdatedTopicName));
+            services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultProducer>();
         }
     }
 
@@ -168,10 +160,7 @@ public static class ServiceCollectionExtensions
                     $"{nameof(KafkaSettings.AltinnServiceUpdateTopicName)} must be configured when the Wolverine email service rate limit publisher is disabled.");
             }
 
-            services.AddSingleton<IEmailServiceRateLimitDispatcher>(sp =>
-                new EmailServiceRateLimitProducer(
-                    sp.GetRequiredService<ICommonProducer>(),
-                    kafkaSettings.AltinnServiceUpdateTopicName));
+            services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitProducer>();
         }
     }
 }

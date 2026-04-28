@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Moq;
@@ -27,7 +28,7 @@ public class EmailSendResultProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var sut = new EmailSendResultProducer(producerMock.Object, _topicName);
+        var sut = new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);
@@ -58,7 +59,7 @@ public class EmailSendResultProducerTests
             .Callback<string, string>((_, msg) => capturedMessage = msg)
             .ReturnsAsync(true);
 
-        var sut = new EmailSendResultProducer(producerMock.Object, _topicName);
+        var sut = new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);
@@ -73,7 +74,7 @@ public class EmailSendResultProducerTests
     [Fact]
     public async Task DispatchAsync_WhenResultIsNull_ThrowsArgumentNullException()
     {
-        var emailSendResultProducer = new EmailSendResultProducer(new Mock<ICommonProducer>().Object, _topicName);
+        var emailSendResultProducer = new EmailSendResultProducer(new Mock<ICommonProducer>().Object, new KafkaSettings { EmailStatusUpdatedTopicName = _topicName });
         await Assert.ThrowsAsync<ArgumentNullException>(() => emailSendResultProducer.DispatchAsync(null!));
     }
 
@@ -92,7 +93,7 @@ public class EmailSendResultProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var sut = new EmailSendResultProducer(producerMock.Object, _topicName);
+        var sut = new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
@@ -116,7 +117,7 @@ public class EmailSendResultProducerTests
             .Callback<string, string>((_, msg) => capturedMessage = msg)
             .ReturnsAsync(true);
 
-        var sut = new EmailSendResultProducer(producerMock.Object, _topicName);
+        var sut = new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);
