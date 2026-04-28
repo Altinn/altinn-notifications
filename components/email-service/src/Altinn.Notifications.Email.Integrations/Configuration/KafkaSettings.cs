@@ -49,6 +49,11 @@ public class KafkaSettings
     /// The name of the send email queue retry  topic
     /// </summary>    
     public string SendEmailQueueRetryTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the Altinn service update topic.
+    /// </summary>
+    public string AltinnServiceUpdateTopicName { get; set; } = string.Empty;
 }
 
 /// <summary>
