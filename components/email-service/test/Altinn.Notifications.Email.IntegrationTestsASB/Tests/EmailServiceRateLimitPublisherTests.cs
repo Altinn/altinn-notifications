@@ -51,7 +51,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
         await using (factory)
         {
             string emailSendQueueName = factory.WolverineSettings!.EmailSendQueueName;
-            string emailServiceRateLimitQueueName = factory.WolverineSettings.EmailServiceRateLimitQueueName;
+            string emailServiceRateLimitQueueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
 
             // Act
             await factory.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
@@ -102,7 +102,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
         await using (factory)
         {
             string emailSendQueueName = factory.WolverineSettings!.EmailSendQueueName;
-            string emailServiceRateLimitQueueName = factory.WolverineSettings.EmailServiceRateLimitQueueName;
+            string emailServiceRateLimitQueueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
 
             // Act
             await factory.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
@@ -144,7 +144,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
         await using (factory)
         {
             string emailSendQueueName = factory.WolverineSettings!.EmailSendQueueName;
-            string emailServiceRateLimitQueueName = factory.WolverineSettings.EmailServiceRateLimitQueueName;
+            string emailServiceRateLimitQueueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
 
             // Act
             await factory.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());

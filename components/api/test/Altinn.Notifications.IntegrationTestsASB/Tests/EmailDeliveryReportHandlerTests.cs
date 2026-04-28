@@ -76,6 +76,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.EmailDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+
             // ACS report arrives before the email service has persisted the operationId
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
@@ -83,7 +86,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
-            // maxAttempts is higher here to account for the full retry chain (cooldown + scheduled retries)
             DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
@@ -98,7 +100,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
-            Assert.Equal(9, deadReport.AttemptCount);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, not moved to DLQ)
@@ -115,12 +117,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times");
-            Assert.Equal(9, logCapture.Count);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, logCapture.Count);
         }
     }
 
@@ -203,6 +202,8 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.EmailDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
@@ -221,12 +222,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 "SELECT count(1) FROM notifications.deaddeliveryreports");
             Assert.Equal(0, deadReportCount);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(9, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 

@@ -139,7 +139,7 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             var policy = factory.WolverineSettings!.PastDueOrdersQueuePolicy;
             int expectedRetryAttempts = policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
-            string queueName = factory.WolverineSettings.PastDueOrdersQueueName;
+            string queueName = factory.WolverineSettings!.PastDueOrdersQueueName;
 
             // Act - send command directly to the queue
             await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand

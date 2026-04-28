@@ -83,6 +83,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             // Act - Send delivery report with a gatewayReference that doesn't match any notification
@@ -108,7 +110,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
-            Assert.Equal(9, deadReport.AttemptCount);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, not moved to DLQ)
@@ -125,12 +127,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times");
-            Assert.Equal(9, logCapture.Count);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, logCapture.Count);
         }
     }
 
@@ -216,6 +215,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             string gatewayReference = Guid.NewGuid().ToString();
@@ -241,12 +242,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 gatewayReference);
             Assert.Null(deadReportId);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(9, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 
