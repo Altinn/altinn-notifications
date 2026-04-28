@@ -1,6 +1,6 @@
-using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 
 namespace Altinn.Notifications.Sms.Integrations.Publishers;
 
@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Sms.Integrations.Publishers;
 /// Publishes SMS delivery report results to the Kafka status-updated topic.
 /// This is the default publisher when <c>EnableSmsDeliveryReportPublisher</c> is <c>false</c>.
 /// </summary>
-public class KafkaSmsDeliveryReportPublisher(ICommonProducer producer, TopicSettings settings) : ISmsDeliveryReportPublisher
+public class KafkaSmsDeliveryReportPublisher(ICommonProducer producer, KafkaSettings settings) : ISmsDeliveryReportPublisher
 {
     private readonly ICommonProducer _producer = producer;
     private readonly string _topicName = settings.SmsStatusUpdatedTopicName;

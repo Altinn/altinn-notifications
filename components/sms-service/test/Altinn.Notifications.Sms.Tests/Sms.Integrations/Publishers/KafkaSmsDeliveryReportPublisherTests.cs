@@ -1,6 +1,6 @@
-using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Moq;
@@ -36,7 +36,7 @@ public class KafkaSmsDeliveryReportPublisherTests
             })
             .ReturnsAsync(true);
 
-        var publisher = new KafkaSmsDeliveryReportPublisher(producerMock.Object, new TopicSettings { SmsStatusUpdatedTopicName = "sms.status.updated" });
+        var publisher = new KafkaSmsDeliveryReportPublisher(producerMock.Object, new KafkaSettings { SmsStatusUpdatedTopicName = "sms.status.updated" });
 
         // Act
         await publisher.PublishAsync(result);

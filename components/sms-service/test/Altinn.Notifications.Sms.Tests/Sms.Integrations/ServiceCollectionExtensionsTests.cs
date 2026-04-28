@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Sms.Core.Configuration;
-using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Producers;
 using Altinn.Notifications.Sms.Integrations.Publishers;
@@ -37,6 +36,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", null, EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("KafkaSettings__SmsStatusUpdatedTopicName", null, EnvironmentVariableTarget.Process);
         Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
         string expectedExceptionMessage = "Required Kafka settings is missing from application configuration (Parameter 'config')";
 
@@ -57,6 +57,7 @@ public class ServiceCollectionExtensionsTests
         // Arrange
         Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
         Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("KafkaSettings__SmsStatusUpdatedTopicName", "sms.status.updated", EnvironmentVariableTarget.Process);
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
         IServiceCollection services = new ServiceCollection();
@@ -78,6 +79,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
                 ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = enableDeliveryReportPublisher.ToString(),
@@ -87,7 +89,6 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
         services.AddIntegrationServices(config);
         services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
-        services.AddSingleton(new TopicSettings());
 
         var publisher = services.BuildServiceProvider().GetRequiredService<ISmsDeliveryReportPublisher>();
 
@@ -125,6 +126,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
@@ -152,6 +154,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = enableSendResultPublisher.ToString(),
@@ -161,7 +164,6 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
         services.AddIntegrationServices(config);
         services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
-        services.AddSingleton(new TopicSettings());
 
         var dispatcher = services.BuildServiceProvider().GetRequiredService<ISmsSendResultDispatcher>();
 
@@ -178,6 +180,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",

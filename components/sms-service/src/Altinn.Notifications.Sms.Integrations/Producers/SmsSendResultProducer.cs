@@ -1,6 +1,6 @@
-using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 
 namespace Altinn.Notifications.Sms.Integrations.Producers;
 
@@ -17,7 +17,7 @@ public class SmsSendResultProducer : ISmsSendResultDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsSendResultProducer"/> class.
     /// </summary>
-    public SmsSendResultProducer(ICommonProducer producer, TopicSettings settings)
+    public SmsSendResultProducer(ICommonProducer producer, KafkaSettings settings)
     {
         _producer = producer;
         _topicName = settings.SmsStatusUpdatedTopicName;

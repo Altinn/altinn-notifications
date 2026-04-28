@@ -760,7 +760,7 @@ public class SmsNotificationServiceTests
 
         if (producer != null)
         {
-            commandPublisher = new KafkaSendSmsPublisher(producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+            commandPublisher = new KafkaSendSmsPublisher(producer, Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
         }
 
         repository ??= new Mock<ISmsNotificationRepository>().Object;
