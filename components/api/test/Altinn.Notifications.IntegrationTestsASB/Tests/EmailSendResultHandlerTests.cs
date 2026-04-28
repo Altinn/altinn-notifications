@@ -29,7 +29,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             // Arrange - Create notification and set status to Succeeded with an operationId
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
@@ -108,7 +108,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
     [Fact]
     public async Task EmailSendResult_WhenSendResultIsUnknown_SavesDeadDeliveryReportAndDiscardsMessage()
     {
-        // Arrange - mock service to confirm the handler short-circuits before UpdateSendStatus
+        // Arrange - mock service to confirm the handler short-circuits before UpdateEmailSendStatus
         var mockService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -150,7 +150,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
             Assert.True(deadReportFound, "Dead delivery report should be saved when SendResult is unrecognized");
 
-            // Assert - ArgumentException fires before the service is reached; UpdateSendStatus must never be called
+            // Assert - ArgumentException fires before the service is reached; UpdateEmailSendStatus must never be called
             mockService.Verify(
                 s => s.UpdateSendStatus(It.IsAny<Core.Models.Notification.EmailSendOperationResult>()),
                 Times.Never);

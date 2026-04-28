@@ -1,5 +1,5 @@
 using System.Text.Json;
-
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -78,9 +78,9 @@ public static class FailureActionsExtensions
             var eventGridEvent = EventGridEvent.Parse(reportCommand.Message.Body);
 
             if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
-                && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+               && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
             {
-                return JsonSerializer.Serialize(deliveryReport);
+                return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
             }
 
             throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
@@ -88,7 +88,7 @@ public static class FailureActionsExtensions
 
         if (message is EmailSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(sendResultCommand);
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
         }
 
         throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)} or {nameof(EmailSendResultCommand)}, got {message.GetType().Name}.");
@@ -106,12 +106,12 @@ public static class FailureActionsExtensions
     {
         if (message is SmsDeliveryReportCommand deliveryReportCommand)
         {
-            return JsonSerializer.Serialize(deliveryReportCommand);
+            return JsonSerializer.Serialize(deliveryReportCommand, JsonSerializerOptionsProvider.Options);
         }
 
         if (message is SmsSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(sendResultCommand);
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
         }
 
         throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)} or {nameof(SmsSendResultCommand)}, got {message.GetType().Name}.");

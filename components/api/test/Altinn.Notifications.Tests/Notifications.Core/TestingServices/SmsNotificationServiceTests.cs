@@ -864,4 +864,81 @@ public class SmsNotificationServiceTests
 
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), SmsNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(batch.Count));
     }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveryReport_ForwardsDeliveryReportToRepository()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string gatewayReference = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"abc","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            GatewayReference = gatewayReference,
+            SendResult = SmsNotificationResultType.Delivered,
+            DeliveryReport = deliveryReport
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Delivered),
+            It.Is<string>(s => s.Equals(gatewayReference)),
+            It.Is<string?>(d => d == deliveryReport)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repository: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Delivered),
+                It.Is<string>(s => s.Equals(gatewayReference)),
+                It.Is<string?>(d => d == deliveryReport)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithNullDeliveryReport_PassesNullDeliveryReportToRepository()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string gatewayReference = Guid.NewGuid().ToString();
+
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            GatewayReference = gatewayReference,
+            SendResult = SmsNotificationResultType.Accepted,
+            DeliveryReport = null
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Accepted),
+            It.Is<string>(s => s.Equals(gatewayReference)),
+            It.Is<string?>(d => d == null)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repository: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Accepted),
+                It.Is<string>(s => s.Equals(gatewayReference)),
+                It.Is<string?>(d => d == null)),
+            Times.Once);
+    }
 }
