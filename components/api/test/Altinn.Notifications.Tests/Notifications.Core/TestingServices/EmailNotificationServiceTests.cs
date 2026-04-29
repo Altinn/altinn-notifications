@@ -63,7 +63,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        await service.CreateNotification(orderId, requestedSendTime, expectedExpiry, emailAddressPoints, emailRecipient);
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
@@ -99,7 +99,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        await service.CreateNotification(orderId, requestedSendTime, expectedExpiry, emailAddressPoints, emailRecipient);
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
@@ -136,7 +136,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient, true);
+        await service.CreateNotification(orderId, requestedSendTime, expectedExpiry, emailAddressPoints, emailRecipient, true);
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
@@ -171,8 +171,8 @@ public class EmailNotificationServiceTests
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
-        // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        // Act — caller-supplied expiry is irrelevant here because the not-identified branch overrides it with UtcNow.
+        await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), emailAddressPoints, emailRecipient);
 
         // Assert
         repoMock.Verify();
@@ -184,6 +184,7 @@ public class EmailNotificationServiceTests
         // Arrange
         var emailRecipient = new EmailRecipient() { OrganizationNumber = "org" };
         var emailAddressPoints = new List<EmailAddressPoint>() { new("user_1@domain.com"), new("user_2@domain.com") };
+        var requestedSendTime = DateTime.UtcNow;
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()));
@@ -191,7 +192,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object);
 
         // Act
-        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, emailAddressPoints, emailRecipient);
+        await service.CreateNotification(Guid.NewGuid(), requestedSendTime, requestedSendTime.AddHours(48), emailAddressPoints, emailRecipient);
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()), Times.Exactly(2));
@@ -505,8 +506,8 @@ public class EmailNotificationServiceTests
         using var cts = new CancellationTokenSource();
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Callback<int, CancellationToken>((_, _) => cts.Cancel())
+        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .Callback<int, CancellationToken, SendingTimePolicy>((_, _, _) => cts.Cancel())
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
