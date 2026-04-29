@@ -60,7 +60,6 @@ public sealed class DeliveryReportMetrics : IDisposable
         {
             { "channel",                          "email" },
             { "email.message_id",                 messageId ?? string.Empty },
-            { "email.internet_message_id",        internetMessageId ?? string.Empty },
             { "email.status",                     status ?? string.Empty },
             { "email.status_message",             statusMessage ?? string.Empty },
             { "email.recipient_mail_server",      recipientMailServerHostName ?? string.Empty },
@@ -87,7 +86,6 @@ public sealed class DeliveryReportMetrics : IDisposable
             { "channel",                   "sms" },
             { "sms.gateway_reference",     gatewayReference },
             { "sms.send_result",           sendResult },
-            { "sms.notification_id",       notificationId ?? string.Empty },
         };
 
         _deliveryReportStatusCounter.Add(1, tags);
