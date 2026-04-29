@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_batch(
     _batchsize integer DEFAULT NULL::integer)
     RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
@@ -46,7 +46,7 @@ BEGIN
         JOIN notifications.orders ord ON ord._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND (ord.emailsendingtimepolicy IS NULL OR ord.emailsendingtimepolicy = 1)
+            AND ord.emailsendingtimepolicy = 2
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
@@ -77,9 +77,9 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_email_batch(integer)
+ALTER FUNCTION notifications.claim_daytime_email_batch(integer)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_email_batch(integer)
-    IS 'Claims and returns batches of email notifications (emailsendingtimepolicy IS NULL OR emailsendingtimepolicy = 1).
+COMMENT ON FUNCTION notifications.claim_daytime_email_batch(integer)
+    IS 'Claims and returns batches of email notifications restricted to the daytime sending window (emailsendingtimepolicy = 2).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
