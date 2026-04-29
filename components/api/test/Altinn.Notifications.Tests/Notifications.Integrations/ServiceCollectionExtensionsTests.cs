@@ -136,6 +136,9 @@ public class ServiceCollectionExtensionsTests
         Assert.Contains(services, d => d.ServiceType == typeof(ISendSmsPublisher) && d.ImplementationType == typeof(SendSmsCommandPublisher));
         Assert.Contains(services, d => d.ServiceType == typeof(IEmailCommandPublisher) && d.ImplementationType == typeof(EmailCommandPublisher));
         Assert.Contains(services, d => d.ServiceType == typeof(IPastDueOrderPublisher) && d.ImplementationType == typeof(PastDueOrderPublisher));
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(ISendSmsPublisher) && d.ImplementationType == typeof(KafkaSendSmsPublisher));
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailCommandPublisher) && d.ImplementationType == typeof(KafkaEmailCommandPublisher));
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IPastDueOrderPublisher) && d.ImplementationType == typeof(KafkaPastDueOrderPublisher));
     }
 
     [Theory]

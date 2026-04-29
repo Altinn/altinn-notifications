@@ -121,6 +121,7 @@ public class ServiceCollectionExtensionsTests
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher) && d.ImplementationType == typeof(EmailStatusCheckProducer));
     }
 
     [Fact]
@@ -243,6 +244,7 @@ public class ServiceCollectionExtensionsTests
 
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailSendResultPublisher), descriptor.ImplementationType);
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailSendResultDispatcher) && d.ImplementationType == typeof(EmailSendResultProducer));
     }
 
     [Theory]
@@ -369,6 +371,7 @@ public class ServiceCollectionExtensionsTests
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
         Assert.NotNull(descriptor);
         Assert.Equal(typeof(EmailServiceRateLimitPublisher), descriptor.ImplementationType);
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher) && d.ImplementationType == typeof(EmailServiceRateLimitProducer));
     }
 
     [Theory]

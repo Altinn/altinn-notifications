@@ -15,7 +15,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Persistence.Repository;
 
@@ -757,6 +756,11 @@ public class SmsNotificationServiceTests
     {
         var guidService = MockGuidService(guidOutput);
         var dateTimeService = MockDateTimeService(dateTimeOutput);
+
+        if (producer is not null && commandPublisher is not null)
+        {
+            throw new ArgumentException("Provide either producer or commandPublisher, not both.");
+        }
 
         if (producer != null)
         {
