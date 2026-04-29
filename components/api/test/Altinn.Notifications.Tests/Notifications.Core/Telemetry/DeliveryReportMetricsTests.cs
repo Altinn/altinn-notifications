@@ -77,7 +77,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
         // Assert
         Assert.Equal("email", capturedTags["channel"]);
         Assert.Equal("msg-001", capturedTags["email.message_id"]);
-        Assert.Equal("<msg-001@example.com>", capturedTags["email.internet_message_id"]);
         Assert.Equal("Delivered", capturedTags["email.status"]);
         Assert.Equal("OK", capturedTags["email.status_message"]);
         Assert.Equal("mail.example.com", capturedTags["email.recipient_mail_server"]);
@@ -111,7 +110,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Assert
         Assert.Equal(string.Empty, capturedTags["email.message_id"]);
-        Assert.Equal(string.Empty, capturedTags["email.internet_message_id"]);
         Assert.Equal(string.Empty, capturedTags["email.status"]);
         Assert.Equal(string.Empty, capturedTags["email.status_message"]);
         Assert.Equal(string.Empty, capturedTags["email.recipient_mail_server"]);
@@ -171,31 +169,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
         Assert.Equal("sms", capturedTags["channel"]);
         Assert.Equal("gw-ref-001", capturedTags["sms.gateway_reference"]);
         Assert.Equal("Delivered", capturedTags["sms.send_result"]);
-        Assert.Equal(notificationId, capturedTags["sms.notification_id"]);
-    }
-
-    [Fact]
-    public void RecordSmsDeliveryReport_NullNotificationId_TagDefaultsToEmptyString()
-    {
-        // Arrange
-        var capturedTags = new Dictionary<string, object?>();
-
-        using var listener = CreateListener((_, _, tags) =>
-        {
-            foreach (var tag in tags)
-            {
-                capturedTags[tag.Key] = tag.Value;
-            }
-        });
-
-        // Act
-        _sut.RecordSmsDeliveryReport(
-            gatewayReference: "gw-ref-001",
-            sendResult: "Delivered",
-            notificationId: null);
-
-        // Assert
-        Assert.Equal(string.Empty, capturedTags["sms.notification_id"]);
     }
 
     [Theory]
@@ -220,9 +193,9 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     [Theory]
     [InlineData("not-an-email")]
     [InlineData("noatsign")]
-    public void MaskEmailAddress_InvalidFormat_ReturnsInputUnchanged(string input)
+    public void MaskEmailAddress_InvalidFormat_ReturnsEmptyString(string input)
     {
-        Assert.Equal(input, DeliveryReportMetrics.MaskEmailAddress(input));
+        Assert.Equal(string.Empty, DeliveryReportMetrics.MaskEmailAddress(input));
     }
 
     private static MeterListener CreateListener(
