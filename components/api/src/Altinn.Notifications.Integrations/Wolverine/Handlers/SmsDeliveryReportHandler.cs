@@ -44,9 +44,7 @@ public static class SmsDeliveryReportHandler
             command.SendResult);
 
         metrics.RecordSmsDeliveryReport(
-            gatewayReference: command.GatewayReference,
-            sendResult: sendResult.ToString(),
-            notificationId: command.NotificationId?.ToString());
+            sendResult: sendResult.ToString());
 
         var operationResult = new SmsSendOperationResult
         {

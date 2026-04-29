@@ -48,8 +48,6 @@ public static class EmailDeliveryReportHandler
                         deliveryReport.Status);
 
                     metrics.RecordEmailDeliveryReport(
-                        messageId: deliveryReport.MessageId,
-                        internetMessageId: deliveryReport.InternetMessageId,
                         status: deliveryReport.Status?.ToString(),
                         statusMessage: deliveryReport.DeliveryStatusDetails?.StatusMessage,
                         recipientMailServerHostName: deliveryReport.DeliveryStatusDetails?.RecipientMailServerHostName,

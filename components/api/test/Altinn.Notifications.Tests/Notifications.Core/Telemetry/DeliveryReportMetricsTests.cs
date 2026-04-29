@@ -36,8 +36,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Act
         _sut.RecordEmailDeliveryReport(
-            messageId: "msg-001",
-            internetMessageId: "<msg-001@example.com>",
             status: "Delivered",
             statusMessage: "OK",
             recipientMailServerHostName: "mail.example.com",
@@ -66,8 +64,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Act
         _sut.RecordEmailDeliveryReport(
-            messageId: "msg-001",
-            internetMessageId: "<msg-001@example.com>",
             status: "Delivered",
             statusMessage: "OK",
             recipientMailServerHostName: "mail.example.com",
@@ -76,7 +72,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Assert
         Assert.Equal("email", capturedTags["channel"]);
-        Assert.Equal("msg-001", capturedTags["email.message_id"]);
         Assert.Equal("Delivered", capturedTags["email.status"]);
         Assert.Equal("OK", capturedTags["email.status_message"]);
         Assert.Equal("mail.example.com", capturedTags["email.recipient_mail_server"]);
@@ -100,8 +95,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Act
         _sut.RecordEmailDeliveryReport(
-            messageId: null,
-            internetMessageId: null,
             status: null,
             statusMessage: null,
             recipientMailServerHostName: null,
@@ -109,7 +102,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
             recipient: null);
 
         // Assert
-        Assert.Equal(string.Empty, capturedTags["email.message_id"]);
         Assert.Equal(string.Empty, capturedTags["email.status"]);
         Assert.Equal(string.Empty, capturedTags["email.status_message"]);
         Assert.Equal(string.Empty, capturedTags["email.recipient_mail_server"]);
@@ -134,9 +126,7 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Act
         _sut.RecordSmsDeliveryReport(
-            gatewayReference: "gw-ref-001",
-            sendResult: "Delivered",
-            notificationId: Guid.NewGuid().ToString());
+            sendResult: "Delivered");
 
         // Assert
         Assert.Equal(1, measurementCount);
@@ -149,7 +139,6 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     {
         // Arrange
         var capturedTags = new Dictionary<string, object?>();
-        string notificationId = Guid.NewGuid().ToString();
 
         using var listener = CreateListener((_, _, tags) =>
         {
@@ -161,13 +150,10 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         // Act
         _sut.RecordSmsDeliveryReport(
-            gatewayReference: "gw-ref-001",
-            sendResult: "Delivered",
-            notificationId: notificationId);
+            sendResult: "Delivered");
 
         // Assert
         Assert.Equal("sms", capturedTags["channel"]);
-        Assert.Equal("gw-ref-001", capturedTags["sms.gateway_reference"]);
         Assert.Equal("Delivered", capturedTags["sms.send_result"]);
     }
 

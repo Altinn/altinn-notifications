@@ -67,9 +67,6 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         // Assert — channel tag
         Assert.Equal("email", capturedTags["channel"]);
 
-        // Assert — message id forwarded
-        Assert.Equal(messageId, capturedTags["email.message_id"]);
-
         // Assert — status forwarded
         Assert.Equal("Delivered", capturedTags["email.status"]);
 

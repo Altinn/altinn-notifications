@@ -40,16 +40,12 @@ public sealed class DeliveryReportMetrics : IDisposable
     /// <summary>
     /// Records a delivery report outcome for an email notification received from ACS.
     /// </summary>
-    /// <param name="messageId">The ACS message ID.</param>
-    /// <param name="internetMessageId">The internet message ID (SMTP Message-ID header).</param>
     /// <param name="status">The delivery status string (e.g. "Delivered", "Failed").</param>
     /// <param name="statusMessage">The human-readable status detail message.</param>
     /// <param name="recipientMailServerHostName">The recipient mail server hostname from the delivery status details.</param>
     /// <param name="sender">The sender email address (will be masked before recording).</param>
     /// <param name="recipient">The recipient email address (will be masked before recording).</param>
     public void RecordEmailDeliveryReport(
-        string? messageId,
-        string? internetMessageId,
         string? status,
         string? statusMessage,
         string? recipientMailServerHostName,
@@ -59,7 +55,6 @@ public sealed class DeliveryReportMetrics : IDisposable
         var tags = new TagList
         {
             { "channel",                          "email" },
-            { "email.message_id",                 messageId ?? string.Empty },
             { "email.status",                     status ?? string.Empty },
             { "email.status_message",             statusMessage ?? string.Empty },
             { "email.recipient_mail_server",      recipientMailServerHostName ?? string.Empty },
@@ -73,18 +68,13 @@ public sealed class DeliveryReportMetrics : IDisposable
     /// <summary>
     /// Records a delivery report outcome for an SMS notification received from Link Mobility via ASB.
     /// </summary>
-    /// <param name="gatewayReference">The gateway reference from the SMS provider.</param>
     /// <param name="sendResult">The string representation of the send result.</param>
-    /// <param name="notificationId">The optional internal notification ID.</param>
     public void RecordSmsDeliveryReport(
-        string gatewayReference,
-        string sendResult,
-        string? notificationId)
+        string sendResult)
     {
         var tags = new TagList
         {
             { "channel",                   "sms" },
-            { "sms.gateway_reference",     gatewayReference },
             { "sms.send_result",           sendResult },
         };
 
