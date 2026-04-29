@@ -1,5 +1,7 @@
+using System;
+using System.Collections.Generic;
+
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
