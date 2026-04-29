@@ -22,7 +22,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             NotificationConfig config = new()
             {
                 SmsSendWindowStartHour = 9,
-                SmsSendWindowEndHour = 17
+                SmsSendWindowEndHour = 17,
+                EmailSendWindowStartHour = 9,
+                EmailSendWindowEndHour = 17
             };
 
             _notificationScheduleService = new(_dateTimeMock.Object, Options.Create(config));
@@ -125,6 +127,105 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
+        }
+
+        [Fact]
+        public void CanSendEmailNow_WhenCurrentTimeIsWithinSendWindow_ReturnsTrue()
+        {
+            // Arrange
+            var currentDateTime = new DateTime(2022, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
+
+            // Act
+            var result = _notificationScheduleService.CanSendEmailNow();
+
+            // Assert
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void CanSendEmailNow_WhenCurrentTimeIsAfterSendWindow_ReturnsFalse()
+        {
+            // Arrange
+            var currentDateTime = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc);
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
+
+            // Act
+            var result = _notificationScheduleService.CanSendEmailNow();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void CanSendEmailNow_WhenCurrentTimeIsBeforeSendWindow_ReturnsFalse()
+        {
+            // Arrange
+            var currentDateTime = new DateTime(2022, 1, 1, 5, 0, 0, DateTimeKind.Utc);
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
+
+            // Act
+            var result = _notificationScheduleService.CanSendEmailNow();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void GetEmailExpirationDateTime_RequestSendTimeIsWithinSendWindow_ReturnsRequestedPlus48Hours()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 10, 0, 0, DateTimeKind.Utc);
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 27, 10, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetEmailExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Fact]
+        public void GetEmailExpirationDateTime_WhenReferenceTimeIsAfterSendWindow_ReturnsNextSendWindowStartPlus72Hours()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 20, 0, 0, DateTimeKind.Utc);
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 28, 07, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetEmailExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Fact]
+        public void GetEmailExpirationDateTime_WhenReferenceTimeIsBeforeSendWindow_ReturnsNextSendWindowStartPlus48Hours()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 05, 0, 0, DateTimeKind.Utc);
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 27, 07, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetEmailExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Local)]
+        [InlineData(DateTimeKind.Unspecified)]
+        public void GetEmailExpirationDateTime_WhenReferenceDateTimeIsNotUtc_ThrowsArgumentException(DateTimeKind kind)
+        {
+            // Arrange
+            var nonUtcDateTime = new DateTime(2025, 8, 25, 10, 0, 0, kind);
+
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetEmailExpirationDateTime(nonUtcDateTime));
         }
     }
 }

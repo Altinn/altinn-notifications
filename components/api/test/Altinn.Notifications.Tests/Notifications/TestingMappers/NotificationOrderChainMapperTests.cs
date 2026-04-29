@@ -77,7 +77,7 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("recipient@example.com", result.Recipient.RecipientEmail.EmailAddress);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
         Assert.Equal("sender@example.com", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
-        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+        Assert.Null(result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
 
         // Verify other recipient types are null
         Assert.Null(result.Recipient.RecipientSms);

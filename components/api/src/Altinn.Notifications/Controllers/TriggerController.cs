@@ -58,7 +58,7 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Signals background processing of email notifications.
+    /// Signals background processing of email notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
     /// </summary>
     /// <returns>
     /// Always returns 200 OK, regardless of whether a new task was enqueued.
@@ -68,7 +68,27 @@ public class TriggerController : ControllerBase
     [Consumes("application/json")]
     public ActionResult Trigger_SendEmailNotifications()
     {
-        _emailPublishTaskQueue.TryEnqueue();
+        _emailPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Signals background processing of email notifications restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
+    /// </summary>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window) or a new task was enqueued.
+    /// </returns>
+    [HttpPost]
+    [Route("sendemaildaytime")]
+    [Consumes("application/json")]
+    public ActionResult Trigger_SendEmailNotificationsDaytime()
+    {
+        if (!_scheduleService.CanSendEmailNow())
+        {
+            return Ok();
+        }
+
+        _emailPublishTaskQueue.TryEnqueue(SendingTimePolicy.Daytime);
         return Ok();
     }
 

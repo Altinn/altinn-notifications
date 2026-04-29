@@ -37,9 +37,12 @@ namespace Altinn.Notifications.Validators.Email
                     .NotEmpty()
                     .WithMessage("The email body must not be empty.");
 
-                RuleFor(option => option!.SendingTimePolicy)
-                    .Must(HaveValueAnytime)
-                    .WithMessage("Email only supports send time anytime");
+                When(option => option!.SendingTimePolicy != null, () =>
+                {
+                    RuleFor(option => option!.SendingTimePolicy!.Value)
+                        .Must(IsDaytimeOrAnytime)
+                        .WithMessage("Email only supports send time daytime and anytime");
+                });
 
                 RuleFor(option => option!.ContentType)
                     .IsInEnum()
@@ -47,9 +50,14 @@ namespace Altinn.Notifications.Validators.Email
             });
         }
 
-        private static bool HaveValueAnytime(SendingTimePolicyExt sendingTime)
+        private static bool IsDaytimeOrAnytime(SendingTimePolicyExt sendingTime)
         {
-            return sendingTime == SendingTimePolicyExt.Anytime;
+            return sendingTime switch
+            {
+                SendingTimePolicyExt.Daytime => true,
+                SendingTimePolicyExt.Anytime => true,
+                _ => false
+            };
         }
     }
 }

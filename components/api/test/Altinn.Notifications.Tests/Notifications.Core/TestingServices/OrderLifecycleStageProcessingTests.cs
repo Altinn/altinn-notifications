@@ -230,7 +230,8 @@ public class OrderLifecycleStageProcessingTests
             new Mock<IEmailNotificationRepository>().Object,
             new Mock<IEmailNotificationService>().Object,
             contactPointService,
-            keywordsServiceMock.Object);
+            keywordsServiceMock.Object,
+            new Mock<INotificationScheduleService>().Object);
     }
 
     private static SmsOrderProcessingService CreateSmsProcessingService(IContactPointService contactPointService)

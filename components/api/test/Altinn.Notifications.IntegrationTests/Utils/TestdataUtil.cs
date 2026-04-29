@@ -36,10 +36,15 @@ public static class TestdataUtil
         return (order, smsNotification);
     }
 
-    public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
+    public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification(SendingTimePolicy? emailSendingTimePolicy = null)
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
+        if (emailSendingTimePolicy != null)
+        {
+            order.EmailSendingTimePolicy = emailSendingTimePolicy;
+        }
+
         var recipient = order.Recipients[0];
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 

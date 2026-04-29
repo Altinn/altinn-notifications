@@ -54,12 +54,12 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_SendEmailNotifications_TaskQueued()
+    public async Task Trigger_SendEmailNotifications_TaskQueuedWithAnytime()
     {
         // Arrange
         var emailPublishTaskQueueMock = CreateIdleEmailQueueMock();
         emailPublishTaskQueueMock
-            .Setup(e => e.TryEnqueue())
+            .Setup(e => e.TryEnqueue(SendingTimePolicy.Anytime))
             .Returns(true)
             .Verifiable();
 
@@ -73,7 +73,67 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(), Times.Once);
+        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Anytime), Times.Once);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenAllowed_TaskQueued()
+    {
+        // Arrange
+        var emailPublishTaskQueueMock = CreateIdleEmailQueueMock();
+        emailPublishTaskQueueMock
+            .Setup(e => e.TryEnqueue(SendingTimePolicy.Daytime))
+            .Returns(true)
+            .Verifiable();
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        scheduleServiceMock
+            .Setup(e => e.CanSendEmailNow())
+            .Returns(true)
+            .Verifiable();
+
+        var client = GetTestClient(
+            emailPublishTaskQueue: emailPublishTaskQueueMock.Object,
+            notificationScheduleService: scheduleServiceMock.Object);
+
+        string url = _basePath + "/sendemaildaytime";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        scheduleServiceMock.Verify(e => e.CanSendEmailNow(), Times.Once);
+        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Daytime), Times.Once);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenNotAllowed_TaskNotQueued()
+    {
+        // Arrange
+        var emailPublishTaskQueueMock = CreateIdleEmailQueueMock();
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        scheduleServiceMock
+            .Setup(e => e.CanSendEmailNow())
+            .Returns(false)
+            .Verifiable();
+
+        var client = GetTestClient(
+            emailPublishTaskQueue: emailPublishTaskQueueMock.Object,
+            notificationScheduleService: scheduleServiceMock.Object);
+
+        string url = _basePath + "/sendemaildaytime";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        scheduleServiceMock.Verify(e => e.CanSendEmailNow(), Times.Once);
+        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()), Times.Never);
     }
 
     [Fact]
@@ -182,11 +242,22 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
     private static Mock<IEmailPublishTaskQueue> CreateIdleEmailQueueMock()
     {
-        var taskCompletionSource = new TaskCompletionSource();
+        var anytimeTaskCompletionSource = new TaskCompletionSource();
+        var daytimeTaskCompletionSource = new TaskCompletionSource();
+
         var emailPublishTaskQueueMock = new Mock<IEmailPublishTaskQueue>();
+
         emailPublishTaskQueueMock
-            .Setup(e => e.WaitAsync(It.IsAny<CancellationToken>()))
-            .Returns(taskCompletionSource.Task);
+            .Setup(e => e.WaitAsync(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns(anytimeTaskCompletionSource.Task);
+
+        emailPublishTaskQueueMock
+            .Setup(e => e.WaitAsync(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .Returns(daytimeTaskCompletionSource.Task);
+
+        emailPublishTaskQueueMock
+            .Setup(e => e.MarkCompleted(It.IsAny<SendingTimePolicy>()));
+
         return emailPublishTaskQueueMock;
     }
 
