@@ -53,9 +53,15 @@ public interface IBaseNotificationOrder
     public DateTime Created { get; }
 
     /// <summary>
-    /// Gets the sending time policy for the notification order
+    /// Gets the sending time policy for the notification order. Used for SMS-only orders.
     /// </summary>
     public SendingTimePolicy? SendingTimePolicy { get; }
+
+    /// <summary>
+    /// Gets the email sending time policy for the notification order, when the order has an email template.
+    /// Null means no daytime gating; legacy orders without an explicit policy keep current Anytime behavior.
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; }
 
     /// <summary>
     /// Gets the type of the notification order.

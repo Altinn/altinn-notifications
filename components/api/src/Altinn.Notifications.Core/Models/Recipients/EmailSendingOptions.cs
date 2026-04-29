@@ -45,7 +45,8 @@ public class EmailSendingOptions
     /// Gets or sets the policy defining when the email should be sent.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="SendingTimePolicy.Anytime"/> allowing delivery at any time.
+    /// When omitted (null), the order behaves as Anytime — no daytime gating is applied.
+    /// Set to <see cref="SendingTimePolicy.Daytime"/> to restrict delivery to the configured email sending window.
     /// </remarks>
-    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.Anytime;
+    public SendingTimePolicy? SendingTimePolicy { get; set; }
 }
