@@ -58,7 +58,7 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Signals background processing of email notifications.
+    /// Signals background processing of email notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
     /// </summary>
     /// <returns>
     /// Always returns 200 OK, regardless of whether a new task was enqueued.
@@ -68,7 +68,7 @@ public class TriggerController : ControllerBase
     [Consumes("application/json")]
     public ActionResult Trigger_SendEmailNotifications()
     {
-        _emailPublishTaskQueue.TryEnqueue();
+        _emailPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
         return Ok();
     }
 

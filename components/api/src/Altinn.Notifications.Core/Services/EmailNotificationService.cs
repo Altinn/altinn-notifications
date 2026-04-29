@@ -63,7 +63,7 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(CancellationToken cancellationToken)
+    public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
         List<Email> newEmailNotifications;
 
@@ -73,7 +73,7 @@ public class EmailNotificationService(
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken, sendingTimePolicy);
                 if (newEmailNotifications.Count == 0)
                 {
                     break;
