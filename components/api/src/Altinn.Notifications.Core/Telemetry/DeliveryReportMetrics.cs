@@ -70,12 +70,12 @@ public sealed class DeliveryReportMetrics : IDisposable
     /// </summary>
     /// <param name="sendResult">The string representation of the send result.</param>
     public void RecordSmsDeliveryReport(
-        string sendResult)
+        string? sendResult)
     {
         var tags = new TagList
         {
             { "channel",                   "sms" },
-            { "sms.send_result",           sendResult },
+            { "sms.send_result",           sendResult ?? string.Empty },
         };
 
         _deliveryReportStatusCounter.Add(1, tags);
