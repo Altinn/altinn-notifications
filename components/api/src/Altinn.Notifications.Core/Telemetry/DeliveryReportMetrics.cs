@@ -114,7 +114,7 @@ public sealed class DeliveryReportMetrics : IDisposable
         var atIndex = email.IndexOf('@');
         if (atIndex <= 0 || atIndex == email.Length - 1)
         {
-            return email; // not a recognisable email format — return as-is
+            return string.Empty; // invalid format -> do not emit raw value
         }
 
         var localPart = email[..atIndex];
