@@ -272,7 +272,7 @@ public static class PostgreUtil
 
         await ExecuteWithDeadlockRetryAsync(async () =>
         {
-            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
             pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
             await pgcom.ExecuteNonQueryAsync();
         });
@@ -284,7 +284,7 @@ public static class PostgreUtil
 
         await ExecuteWithDeadlockRetryAsync(async () =>
         {
-            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
             pgcom.Parameters.AddWithValue("id", id);
             await pgcom.ExecuteNonQueryAsync();
         });
