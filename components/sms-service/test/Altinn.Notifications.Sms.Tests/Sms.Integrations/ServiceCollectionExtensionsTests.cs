@@ -27,7 +27,8 @@ public class ServiceCollectionExtensionsTests
 
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
 
-        Assert.Equal("Required SmsGatewayConfiguration settings is missing from application configuration. (Parameter 'config')", exception.Message);
+        Assert.StartsWith("Required SmsGatewayConfiguration settings is missing from application configuration.", exception.Message);
+        Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
@@ -44,7 +45,8 @@ public class ServiceCollectionExtensionsTests
 
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
 
-        Assert.Equal("Required Kafka settings is missing from application configuration (Parameter 'config')", exception.Message);
+        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
+        Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
@@ -135,11 +137,10 @@ public class ServiceCollectionExtensionsTests
 
         services.AddIntegrationServices(config);
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsSendResultDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(SmsSendResultPublisher), descriptor.ImplementationType);
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(ISmsSendResultDispatcher) && d.ImplementationType == typeof(SmsSendResultProducer));
+        var provider = services.BuildServiceProvider();
+        var dispatcher = provider.GetRequiredService<ISmsSendResultDispatcher>();
+        Assert.IsType<SmsSendResultPublisher>(dispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(ISmsSendResultDispatcher));
     }
 
     [Theory]
@@ -205,6 +206,9 @@ public class ServiceCollectionExtensionsTests
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["KafkaSettings:SmsStatusUpdatedTopicName"] = topicName,
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
+                ["WolverineSettings:SmsSendResultQueueName"] = "sms.send.result.queue",
             })
             .Build();
 

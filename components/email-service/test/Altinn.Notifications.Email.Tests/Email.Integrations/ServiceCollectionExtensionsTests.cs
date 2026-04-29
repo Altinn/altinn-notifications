@@ -114,14 +114,14 @@ public class ServiceCollectionExtensionsTests
 
         // Act
         services.AddIntegrationServices(config);
+        services.AddSingleton(new Mock<IDateTimeService>().Object);
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
+        var provider = services.BuildServiceProvider();
+        var statusDispatcher = provider.GetRequiredService<IEmailStatusCheckDispatcher>();
+        Assert.IsType<EmailStatusCheckPublisher>(statusDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher) && d.ImplementationType == typeof(EmailStatusCheckProducer));
     }
 
     [Fact]
@@ -240,11 +240,10 @@ public class ServiceCollectionExtensionsTests
 
         services.AddIntegrationServices(config);
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailSendResultDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailSendResultPublisher), descriptor.ImplementationType);
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailSendResultDispatcher) && d.ImplementationType == typeof(EmailSendResultProducer));
+        var provider = services.BuildServiceProvider();
+        var sendResultDispatcher = provider.GetRequiredService<IEmailSendResultDispatcher>();
+        Assert.IsType<EmailSendResultPublisher>(sendResultDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailSendResultDispatcher));
     }
 
     [Theory]
@@ -368,10 +367,10 @@ public class ServiceCollectionExtensionsTests
         services.AddIntegrationServices(config);
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailServiceRateLimitPublisher), descriptor.ImplementationType);
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher) && d.ImplementationType == typeof(EmailServiceRateLimitProducer));
+        var provider = services.BuildServiceProvider();
+        var rateLimitDispatcher = provider.GetRequiredService<IEmailServiceRateLimitDispatcher>();
+        Assert.IsType<EmailServiceRateLimitPublisher>(rateLimitDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
     }
 
     [Theory]

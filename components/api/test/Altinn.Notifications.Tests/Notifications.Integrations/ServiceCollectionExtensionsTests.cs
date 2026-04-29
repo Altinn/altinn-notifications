@@ -131,14 +131,16 @@ public class ServiceCollectionExtensionsTests
             .Build();
 
         IServiceCollection services = new ServiceCollection();
+        services.AddLogging();
         services.AddKafkaServices(config);
 
-        Assert.Contains(services, d => d.ServiceType == typeof(ISendSmsPublisher) && d.ImplementationType == typeof(SendSmsCommandPublisher));
-        Assert.Contains(services, d => d.ServiceType == typeof(IEmailCommandPublisher) && d.ImplementationType == typeof(EmailCommandPublisher));
-        Assert.Contains(services, d => d.ServiceType == typeof(IPastDueOrderPublisher) && d.ImplementationType == typeof(PastDueOrderPublisher));
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(ISendSmsPublisher) && d.ImplementationType == typeof(KafkaSendSmsPublisher));
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IEmailCommandPublisher) && d.ImplementationType == typeof(KafkaEmailCommandPublisher));
-        Assert.DoesNotContain(services, d => d.ServiceType == typeof(IPastDueOrderPublisher) && d.ImplementationType == typeof(KafkaPastDueOrderPublisher));
+        var provider = services.BuildServiceProvider();
+        Assert.IsType<SendSmsCommandPublisher>(provider.GetRequiredService<ISendSmsPublisher>());
+        Assert.IsType<EmailCommandPublisher>(provider.GetRequiredService<IEmailCommandPublisher>());
+        Assert.IsType<PastDueOrderPublisher>(provider.GetRequiredService<IPastDueOrderPublisher>());
+        Assert.Single(services, d => d.ServiceType == typeof(ISendSmsPublisher));
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailCommandPublisher));
+        Assert.Single(services, d => d.ServiceType == typeof(IPastDueOrderPublisher));
     }
 
     [Theory]
