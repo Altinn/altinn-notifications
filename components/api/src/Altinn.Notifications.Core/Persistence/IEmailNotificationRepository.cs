@@ -20,13 +20,17 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// </summary>
     /// <param name="publishBatchSize">Maximum number of email notifications to retrieve in a single batch.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <param name="sendingTimePolicy">
+    /// The sending time policy to claim. <see cref="SendingTimePolicy.Anytime"/> claims orders with policy = Anytime
+    /// or NULL (legacy). <see cref="SendingTimePolicy.Daytime"/> claims only orders with policy = Daytime.
+    /// </param>
     /// <returns>
     /// A task that completes when the retrieval for a single batch finishes or when cancellation is requested.
     /// The result contains up to <paramref name="publishBatchSize"/> pending email notifications.
     /// May return an empty list if none are available.
     /// </returns>
     /// <exception cref="OperationCanceledException">Thrown if cancellation is requested before or during retrieval.</exception>
-    public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime);
 
     /// <summary>
     /// Sets result status of an email notification, updates the operation id, and persists the raw delivery report.
