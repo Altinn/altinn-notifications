@@ -26,6 +26,16 @@ public class NotificationConfig
     public int SmsSendWindowEndHour { get; set; } = 17;
 
     /// <summary>
+    /// Start hour of the email send window (used for orders with sendingTimePolicy = Daytime)
+    /// </summary>
+    public int EmailSendWindowStartHour { get; set; } = 9;
+
+    /// <summary>
+    /// End hour of the email send window (used for orders with sendingTimePolicy = Daytime)
+    /// </summary>
+    public int EmailSendWindowEndHour { get; set; } = 17;
+
+    /// <summary>
     /// The maximum number of entries to return in one status feed page.
     /// </summary>
     public int StatusFeedMaxPageSize { get; set; } = 500;
