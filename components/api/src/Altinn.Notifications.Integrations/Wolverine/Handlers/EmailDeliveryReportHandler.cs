@@ -4,6 +4,7 @@ using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Telemetry;
 
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -19,16 +20,17 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 public static class EmailDeliveryReportHandler
 {
     /// <summary>
-    /// Handles an email delivery report command by logging the received status update.
+    /// Handles an email delivery report command by updating the notification send status
+    /// and emitting a custom delivery report metric.
     /// </summary>
     public static async Task Handle(
         EmailDeliveryReportCommand command,
         IEmailNotificationService emailNotificationService,
+        DeliveryReportMetrics metrics,
         ILogger logger)
     {
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
-        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
         if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
         {
             switch (systemEvent)
@@ -45,8 +47,18 @@ public static class EmailDeliveryReportHandler
                         deliveryReport.MessageId,
                         deliveryReport.Status);
 
+                    metrics.RecordEmailDeliveryReport(
+                        messageId: deliveryReport.MessageId,
+                        internetMessageId: deliveryReport.InternetMessageId,
+                        status: deliveryReport.Status?.ToString(),
+                        statusMessage: deliveryReport.DeliveryStatusDetails?.StatusMessage,
+                        recipientMailServerHostName: deliveryReport.DeliveryStatusDetails?.RecipientMailServerHostName,
+                        sender: deliveryReport.Sender,
+                        recipient: deliveryReport.Recipient);
+
                     await HandleDeliveryReport(emailNotificationService, deliveryReport);
                     break;
+
                 default:
                     logger.LogWarning("Received unhandled system event type: {EventType}", systemEvent.GetType().Name);
                     throw new InvalidDeliveryReportException("Received unhandled system event type in Event Grid event.");
@@ -54,7 +66,10 @@ public static class EmailDeliveryReportHandler
         }
         else
         {
-            logger.LogWarning("Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}", eventGridEvent.Subject, eventGridEvent.EventType);
+            logger.LogWarning(
+                "Failed to parse system event data from Event Grid event. Subject: {Subject}, EventType: {EventType}",
+                eventGridEvent.Subject,
+                eventGridEvent.EventType);
             throw new InvalidDeliveryReportException("Failed to parse system event data from Event Grid event.");
         }
     }
@@ -63,7 +78,7 @@ public static class EmailDeliveryReportHandler
         IEmailNotificationService emailNotificationService,
         AcsEmailDeliveryReportReceivedEventData deliveryReport)
     {
-        var operationResult = new EmailSendOperationResult()
+        var operationResult = new EmailSendOperationResult
         {
             OperationId = deliveryReport.MessageId,
             SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString()),
