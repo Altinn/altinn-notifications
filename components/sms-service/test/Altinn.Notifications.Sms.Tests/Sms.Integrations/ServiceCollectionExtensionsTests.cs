@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Sms.Core.Configuration;
-using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Producers;
 using Altinn.Notifications.Sms.Integrations.Publishers;
@@ -17,54 +16,55 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddIntegrationServices_MissingSmsGatewayConfig_ThrowsException()
     {
-        // Arrange
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
-        string expectedExceptionMessage = "Required SmsGatewayConfiguration settings is missing from application configuration. (Parameter 'config')";
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
-        // Act
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
 
-        // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.StartsWith("Required SmsGatewayConfiguration settings is missing from application configuration.", exception.Message);
+        Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
     public void AddIntegrationServices_MissingKafkaConfig_ThrowsException()
     {
-        // Arrange
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", null, EnvironmentVariableTarget.Process);
-        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
-        string expectedExceptionMessage = "Required Kafka settings is missing from application configuration (Parameter 'config')";
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
-        // Act
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
 
-        // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
+        Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
     public void AddIntegrationServices_SmsGatewayConfigIncluded_NoException()
     {
-        // Arrange
-        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
-        // Act
         var exception = Record.Exception(() => services.AddIntegrationServices(config));
 
-        // Assert
         Assert.Null(exception);
     }
 
@@ -78,6 +78,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
                 ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = enableDeliveryReportPublisher.ToString(),
@@ -87,7 +88,6 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
         services.AddIntegrationServices(config);
         services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
-        services.AddSingleton(new TopicSettings());
 
         var publisher = services.BuildServiceProvider().GetRequiredService<ISmsDeliveryReportPublisher>();
 
@@ -125,6 +125,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
@@ -136,10 +137,10 @@ public class ServiceCollectionExtensionsTests
 
         services.AddIntegrationServices(config);
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ISmsSendResultDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(SmsSendResultPublisher), descriptor.ImplementationType);
+        var provider = services.BuildServiceProvider();
+        var dispatcher = provider.GetRequiredService<ISmsSendResultDispatcher>();
+        Assert.IsType<SmsSendResultPublisher>(dispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(ISmsSendResultDispatcher));
     }
 
     [Theory]
@@ -152,6 +153,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = enableWolverine.ToString(),
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = enableSendResultPublisher.ToString(),
@@ -161,7 +163,6 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
         services.AddIntegrationServices(config);
         services.Replace(ServiceDescriptor.Singleton<ICommonProducer>(new Mock<ICommonProducer>().Object));
-        services.AddSingleton(new TopicSettings());
 
         var dispatcher = services.BuildServiceProvider().GetRequiredService<ISmsSendResultDispatcher>();
 
@@ -178,6 +179,7 @@ public class ServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
@@ -190,5 +192,55 @@ public class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
         Assert.Equal("SmsSendResultQueueName must be configured when EnableSmsSendResultPublisher is enabled.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_KafkaDeliveryReportTopicMissing_ThrowsInvalidOperationException(string? topicName)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = topicName,
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
+                ["WolverineSettings:SmsSendResultQueueName"] = "sms.send.result.queue",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("SmsStatusUpdatedTopicName must be configured when the Wolverine SMS delivery report publisher is disabled.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddIntegrationServices_KafkaSendResultTopicMissing_ThrowsInvalidOperationException(string? topicName)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = topicName,
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = "true",
+                ["WolverineSettings:SmsDeliveryReportQueueName"] = "sms.delivery.report.queue",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("SmsStatusUpdatedTopicName must be configured when the Wolverine SMS send result publisher is disabled.", exception.Message);
     }
 }

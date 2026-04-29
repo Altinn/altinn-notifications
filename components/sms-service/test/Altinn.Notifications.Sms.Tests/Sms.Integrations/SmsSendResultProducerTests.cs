@@ -1,5 +1,6 @@
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Producers;
 
 using Moq;
@@ -25,7 +26,7 @@ public class SmsSendResultProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var sut = new SmsSendResultProducer(producerMock.Object, _topicName);
+        var sut = new SmsSendResultProducer(producerMock.Object, new KafkaSettings { SmsStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);
@@ -56,7 +57,7 @@ public class SmsSendResultProducerTests
             .Callback<string, string>((_, msg) => capturedMessage = msg)
             .ReturnsAsync(true);
 
-        var sut = new SmsSendResultProducer(producerMock.Object, _topicName);
+        var sut = new SmsSendResultProducer(producerMock.Object, new KafkaSettings { SmsStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);
@@ -71,7 +72,7 @@ public class SmsSendResultProducerTests
     [Fact]
     public async Task DispatchAsync_WhenResultIsNull_ThrowsArgumentNullException()
     {
-        var sut = new SmsSendResultProducer(new Mock<ICommonProducer>().Object, _topicName);
+        var sut = new SmsSendResultProducer(new Mock<ICommonProducer>().Object, new KafkaSettings { SmsStatusUpdatedTopicName = _topicName });
         await Assert.ThrowsAsync<ArgumentNullException>(() => sut.DispatchAsync(null!));
     }
 
@@ -90,7 +91,7 @@ public class SmsSendResultProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var sut = new SmsSendResultProducer(producerMock.Object, _topicName);
+        var sut = new SmsSendResultProducer(producerMock.Object, new KafkaSettings { SmsStatusUpdatedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(result));
@@ -114,7 +115,7 @@ public class SmsSendResultProducerTests
             .Callback<string, string>((_, msg) => capturedMessage = msg)
             .ReturnsAsync(true);
 
-        var sut = new SmsSendResultProducer(producerMock.Object, _topicName);
+        var sut = new SmsSendResultProducer(producerMock.Object, new KafkaSettings { SmsStatusUpdatedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(result);

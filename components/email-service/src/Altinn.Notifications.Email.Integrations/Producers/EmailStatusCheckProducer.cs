@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Configuration;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
 
@@ -18,20 +19,11 @@ public class EmailStatusCheckProducer : IEmailStatusCheckDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckProducer"/> class.
     /// </summary>
-    /// <param name="producer">
-    /// The Kafka producer responsible for publishing the status‑check message.
-    /// </param>
-    /// <param name="dateTime">
-    /// Supplies the current UTC timestamp applied to the message as the initial status‑check time.
-    /// </param>
-    /// <param name="topicName">
-    /// The name of the Kafka topic where the status‑check message will be published.
-    /// </param>
-    public EmailStatusCheckProducer(ICommonProducer producer, IDateTimeService dateTime, string topicName)
+    public EmailStatusCheckProducer(ICommonProducer producer, IDateTimeService dateTime, KafkaSettings settings)
     {
         _producer = producer;
         _dateTime = dateTime;
-        _topicName = topicName;
+        _topicName = settings.EmailSendingAcceptedTopicName;
     }
 
     /// <inheritdoc/>

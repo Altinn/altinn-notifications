@@ -104,6 +104,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
             })
@@ -113,13 +114,42 @@ public class ServiceCollectionExtensionsTests
 
         // Act
         services.AddIntegrationServices(config);
+        services.AddSingleton(new Mock<IDateTimeService>().Object);
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailStatusCheckPublisher), descriptor.ImplementationType);
+        var provider = services.BuildServiceProvider();
+        var statusDispatcher = provider.GetRequiredService<IEmailStatusCheckDispatcher>();
+        Assert.IsType<EmailStatusCheckPublisher>(statusDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
         Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineEnabledButListenerDisabled_ThrowsInvalidOperationException()
+    {
+        // Publisher requires the listener to be active — publishing to the status check queue without a
+        // listener consuming it would silently drop messages.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "false",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("EnableEmailStatusCheckListener must be enabled when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
     }
 
     [Theory]
@@ -176,6 +206,7 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })
@@ -209,10 +240,10 @@ public class ServiceCollectionExtensionsTests
 
         services.AddIntegrationServices(config);
 
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailSendResultDispatcher));
-
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailSendResultPublisher), descriptor.ImplementationType);
+        var provider = services.BuildServiceProvider();
+        var sendResultDispatcher = provider.GetRequiredService<IEmailSendResultDispatcher>();
+        Assert.IsType<EmailSendResultPublisher>(sendResultDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailSendResultDispatcher));
     }
 
     [Theory]
@@ -336,9 +367,10 @@ public class ServiceCollectionExtensionsTests
         services.AddIntegrationServices(config);
 
         // Assert
-        var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
-        Assert.NotNull(descriptor);
-        Assert.Equal(typeof(EmailServiceRateLimitPublisher), descriptor.ImplementationType);
+        var provider = services.BuildServiceProvider();
+        var rateLimitDispatcher = provider.GetRequiredService<IEmailServiceRateLimitDispatcher>();
+        Assert.IsType<EmailServiceRateLimitPublisher>(rateLimitDispatcher);
+        Assert.Single(services, d => d.ServiceType == typeof(IEmailServiceRateLimitDispatcher));
     }
 
     [Theory]

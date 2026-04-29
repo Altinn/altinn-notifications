@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Publishers;
 
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -21,7 +22,7 @@ public class KafkaSendSmsPublisherTests
     private const string _topicName = "altinn.notifications.sms.send";
 
     private static KafkaSendSmsPublisher CreatePublisher(IKafkaProducer producer) =>
-        new(producer, _topicName);
+        new(producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _topicName }));
 
     [Fact]
     public async Task PublishAsync_ValidResult_ProducesToCorrectTopic()

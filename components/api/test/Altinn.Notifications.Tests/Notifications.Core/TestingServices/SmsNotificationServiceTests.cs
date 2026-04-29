@@ -757,9 +757,14 @@ public class SmsNotificationServiceTests
         var guidService = MockGuidService(guidOutput);
         var dateTimeService = MockDateTimeService(dateTimeOutput);
 
+        if (producer is not null && commandPublisher is not null)
+        {
+            throw new ArgumentException("Provide either producer or commandPublisher, not both.");
+        }
+
         if (producer != null)
         {
-            commandPublisher = new KafkaSendSmsPublisher(producer, _smsQueueTopicName);
+            commandPublisher = new KafkaSendSmsPublisher(producer, Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
         }
 
         repository ??= new Mock<ISmsNotificationRepository>().Object;
