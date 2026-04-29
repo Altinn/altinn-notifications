@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class EmailNotificationServiceTests
 {
+    private const string _emailQueueTopicName = "test.email.queue";
     private readonly int _publishBatchSize = 500;
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
@@ -564,8 +566,130 @@ public class EmailNotificationServiceTests
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
     }
 
-    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveryReport_ForwardsDeliveryReportToRepository()
     {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"abc","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded,
+            DeliveryReport = deliveryReport
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == deliveryReport)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == deliveryReport)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithNullDeliveryReport_PassesNullDeliveryReportToRepository()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded,
+            DeliveryReport = null
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == null)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == null)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_TransientErrorWithDeliveryReport_ConvertedToNewAndDeliveryReportForwarded()
+    {
+        // Arrange — a transient error still carries a delivery report payload; it should be forwarded
+        // even after the result is reset to New for re-processing.
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"abc","status":"TransientFailure"}""";
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Failed_TransientError,
+            DeliveryReport = deliveryReport
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == deliveryReport)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert — result was mapped to New, but delivery report is still forwarded
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == deliveryReport)),
+            Times.Once);
+    }
+
+    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
+    {
+        if (producer is not null && emailCommandPublisher is not null)
+        {
+            throw new ArgumentException("Provide either producer or emailCommandPublisher, not both.");
+        }
+
         var guidService = new Mock<IGuidService>();
         guidService
             .Setup(g => g.NewGuid())
@@ -575,6 +699,11 @@ public class EmailNotificationServiceTests
         dateTimeService
             .Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
+
+        if (producer != null)
+        {
+            emailCommandPublisher = new KafkaEmailCommandPublisher(producer, Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
+        }
 
         repo ??= new Mock<IEmailNotificationRepository>().Object;
         emailCommandPublisher ??= new Mock<IEmailCommandPublisher>().Object;

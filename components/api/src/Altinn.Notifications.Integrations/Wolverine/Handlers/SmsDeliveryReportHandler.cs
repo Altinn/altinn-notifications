@@ -45,7 +45,8 @@ public static class SmsDeliveryReportHandler
         {
             GatewayReference = command.GatewayReference,
             NotificationId = command.NotificationId,
-            SendResult = sendResult
+            SendResult = sendResult,
+            DeliveryReport = command.DeliveryReport
         };
 
         await smsNotificationService.UpdateSendStatus(operationResult);

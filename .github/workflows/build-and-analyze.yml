@@ -163,7 +163,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
@@ -240,6 +240,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
           -v q \
@@ -249,6 +250,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run API ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
           -v q \
@@ -386,6 +388,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
           -v q \
@@ -395,6 +398,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run Email ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
           -v q \
@@ -479,6 +483,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
           -v q \
@@ -488,6 +493,7 @@ jobs:
           --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Run SMS ASB integration tests
+        timeout-minutes: 30
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
           -v q \
@@ -620,7 +626,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}

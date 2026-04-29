@@ -28,7 +28,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
-    private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v2($1, $2, $3)"; // (_result, _gatewayreference, _alternateid)
+    private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _smsSourceIdentifier;
@@ -88,7 +88,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         return recipients;
     }
 
-    /// <inheritdoc/>   
+    /// <inheritdoc/>
     public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         if (publishBatchSize <= 0)
@@ -101,7 +101,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             SendingTimePolicy.Anytime => _claimAnytimeSmsBatchSql,
             _ => _claimDaytimeSmsBatchSql,
         };
-       
+
         await using var command = _dataSource.CreateCommand(claimSmsBatchForSending);
 
         command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
@@ -124,7 +124,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">Throws if the provided SMS identifier is invalid.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null)
+    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasGatewayReference = !string.IsNullOrWhiteSpace(gatewayReference);
@@ -140,6 +140,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
             },
             NotificationChannel.Sms,
             notificationId,

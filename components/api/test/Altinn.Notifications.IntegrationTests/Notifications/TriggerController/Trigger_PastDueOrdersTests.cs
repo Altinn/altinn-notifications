@@ -72,9 +72,6 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
                 services.Configure<KafkaSettings>(opts =>
                 {
                     opts.Admin.TopicList = new List<string> { _topicName };
-                });
-                services.Configure<Altinn.Notifications.Core.Configuration.KafkaSettings>(opts =>
-                {
                     opts.PastDueOrdersTopicName = _topicName;
                 });
 

@@ -1,0 +1,20 @@
+meta {
+  name: Get Daily Email metrics
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/metrics/email
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: valid-api-key
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

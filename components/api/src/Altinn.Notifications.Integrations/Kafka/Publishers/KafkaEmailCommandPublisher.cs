@@ -4,6 +4,9 @@ using System.Text.Json;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Integrations.Configuration;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 
@@ -11,15 +14,10 @@ namespace Altinn.Notifications.Integrations.Kafka.Publishers;
 /// Kafka-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
 /// email notifications to a Kafka topic via <see cref="IKafkaProducer"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="KafkaEmailCommandPublisher"/> class.
-/// </remarks>
-/// <param name="kafkaProducer">The Kafka producer used to publish messages.</param>
-/// <param name="topicName">The Kafka topic to publish email commands to.</param>
-internal sealed class KafkaEmailCommandPublisher(IKafkaProducer kafkaProducer, string topicName) : IEmailCommandPublisher
+internal sealed class KafkaEmailCommandPublisher(IKafkaProducer kafkaProducer, IOptions<KafkaSettings> options) : IEmailCommandPublisher
 {
     private readonly IKafkaProducer _kafkaProducer = kafkaProducer;
-    private readonly string _topicName = topicName;
+    private readonly string _topicName = options.Value.EmailQueueTopicName;
 
     /// <inheritdoc/>
     public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
