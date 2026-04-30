@@ -16,9 +16,4 @@ public class WolverineSettingsBase
     /// Connection string for Azure Service Bus.
     /// </summary>
     public string ServiceBusConnectionString { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Number of listeners per queue per pod.
-    /// </summary>
-    public int ListenerCount { get; set; } = 10;
 }
