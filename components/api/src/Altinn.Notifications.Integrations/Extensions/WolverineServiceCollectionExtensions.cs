@@ -78,6 +78,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailSendResultListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailSendResultListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
             throw new InvalidOperationException(
@@ -100,6 +106,12 @@ public static class WolverineServiceCollectionExtensions
         if (!wolverineSettings.EnableSmsSendResultListener)
         {
             return;
+        }
+
+        if (wolverineSettings.SmsSendResultListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsSendResultListener)} is enabled.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
@@ -125,6 +137,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailDeliveryReportListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
@@ -148,6 +166,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.SmsDeliveryReportListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
@@ -169,6 +193,12 @@ public static class WolverineServiceCollectionExtensions
         if (!wolverineSettings.EnableEmailServiceRateLimitListener)
         {
             return;
+        }
+
+        if (wolverineSettings.EmailServiceRateLimitListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailServiceRateLimitListener)} is enabled.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
@@ -239,6 +269,12 @@ public static class WolverineServiceCollectionExtensions
         if (!wolverineSettings.EnablePastDueOrderListener)
         {
             return;
+        }
+
+        if (wolverineSettings.PastDueOrdersListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.PastDueOrdersListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnablePastDueOrderListener)} is enabled.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))

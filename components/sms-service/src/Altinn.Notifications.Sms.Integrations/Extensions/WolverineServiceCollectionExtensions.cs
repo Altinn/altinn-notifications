@@ -64,6 +64,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.SendSmsListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SendSmsListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
         {
             throw new InvalidOperationException(
