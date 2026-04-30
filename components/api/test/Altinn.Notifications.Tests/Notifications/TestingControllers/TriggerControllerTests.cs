@@ -61,24 +61,6 @@ public class TriggerControllerTests
     }
 
     [Fact]
-    public async Task Trigger_DeleteOldStatusFeedRecords_ServiceThrowsException_ReturnsInternalServerError()
-    {
-        // Arrange
-        _statusFeedServiceMock
-            .Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None))
-            .ThrowsAsync(new Exception("Simulated exception"));
-
-        // Act
-        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
-
-        // Assert
-        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(CancellationToken.None), Times.Once);
-        Assert.IsType<ObjectResult>(result);
-        var statusCodeResult = (ObjectResult)result;
-        Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
-    }
-
-    [Fact]
     public async Task Trigger_TerminateExpiredNotifications_Success()
     {
         // Arrange

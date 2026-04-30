@@ -208,6 +208,38 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         _ordersToDelete.Add(orderAlternateId);
     }
 
+    [Fact]
+    public async Task DeleteOldStatusFeedRecords_RespectsConfiguredBatchSize()
+    {
+        // Arrange — insert more old rows than the configured batch size
+        // (requires a small batch size set via test config, e.g. 2)
+        int batchSize = 2;
+        var oldDate = DateTime.UtcNow.AddDays(-91).ToString("yyyy-MM-dd");
+
+        var shipmentIds = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToList();
+        var fakeOrderIds = new List<int> { 2001, 2002, 2003 };
+
+        for (int i = 0; i < 3; i++)
+        {
+            await InsertTestDataRowForStatusFeed(fakeOrderIds[i], oldDate, shipmentIds[i]);
+            _fakeOrderIdsToDelete.Add(fakeOrderIds[i]);
+        }
+
+        StatusFeedRepository sut = BuildRepositoryWithBatchSize(batchSize);
+
+        // Act — first invocation
+        var firstRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+
+        // Assert — only batch_size rows deleted, one remains
+        Assert.Equal(batchSize, firstRun);
+
+        // Act — second invocation
+        var secondRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+
+        // Assert — remaining row deleted
+        Assert.Equal(1, secondRun);
+    }
+
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
         OrderStatus orderStatus = new OrderStatus
@@ -235,5 +267,24 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
                               VALUES({orderId}, '{_creatorName}', '{created}', '{orderStatusFeedTestOrderCompleted}')";
 
         await PostgreUtil.RunSql(sqlInsert);
+    }
+
+    private static StatusFeedRepository BuildRepositoryWithBatchSize(int batchSize)
+    {
+        var envVariables = new Dictionary<string, string>
+        {
+            { "NotificationConfig__StatusFeedCleanupBatchSize", batchSize.ToString() }
+        };
+
+        try
+        {
+            return (StatusFeedRepository)ServiceUtil
+                .GetServices([typeof(IStatusFeedRepository)], envVariables)
+                .First(i => i.GetType() == typeof(StatusFeedRepository));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize", null);
+        }
     }
 }
