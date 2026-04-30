@@ -71,7 +71,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.SendSmsListenerCount);
 
         wolverineOptions.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
     }
