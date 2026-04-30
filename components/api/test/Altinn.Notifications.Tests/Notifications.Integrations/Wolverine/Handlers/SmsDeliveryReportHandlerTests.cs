@@ -69,12 +69,12 @@ public sealed class SmsDeliveryReportHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_NullSendResult_ThrowsAndDoesNotEmitMetric()
+    public async Task Handle_EmptySendResult_ThrowsAndDoesNotEmitMetric()
     {
         int measurementCount = 0;
         using var listener = CreateListener((_, _, _) => measurementCount++);
 
-        var command = BuildCommand(Guid.NewGuid().ToString(), sendResult: null);
+        var command = BuildCommand(Guid.NewGuid().ToString(), sendResult: string.Empty);
 
         await Assert.ThrowsAsync<InvalidDeliveryReportException>(() =>
             SmsDeliveryReportHandler.Handle(command, _serviceMock.Object, _metrics, NullLogger.Instance));
@@ -193,7 +193,7 @@ public sealed class SmsDeliveryReportHandlerTests : IDisposable
 
     private static SmsDeliveryReportCommand BuildCommand(
         string gatewayReference,
-        string? sendResult = "Delivered",
+        string sendResult = "Delivered",
         Guid? notificationId = null,
         string? deliveryReport = null)
     {
