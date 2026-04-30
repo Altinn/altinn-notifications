@@ -85,7 +85,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendResultQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailSendResultListenerCount);
 
         wolverineOptions.Policies.Add(new EmailSendResultHandlerPolicy(wolverineSettings));
     }
@@ -109,7 +109,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.SmsSendResultListenerCount);
 
         wolverineOptions.Policies.Add(new SmsSendResultHandlerPolicy(wolverineSettings));
     }
@@ -133,7 +133,7 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                         .InteropWith(new EventGridEnvelopeMapper())
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailDeliveryReportListenerCount);
 
         wolverineOptions.Policies.Add(new EmailDeliveryReportHandlerPolicy(wolverineSettings));
     }
@@ -155,7 +155,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.SmsDeliveryReportListenerCount);
 
         wolverineOptions.Policies.Add(new SmsDeliveryReportHandlerPolicy(wolverineSettings));
     }
@@ -178,7 +178,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailServiceRateLimitListenerCount);
 
         wolverineOptions.Policies.Add(new EmailServiceRateLimitHandlerPolicy(wolverineSettings));
     }
@@ -248,7 +248,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.PastDueOrdersListenerCount);
 
         wolverineOptions.Policies.Add(new ProcessPastDueOrderHandlerPolicy(wolverineSettings));
     }

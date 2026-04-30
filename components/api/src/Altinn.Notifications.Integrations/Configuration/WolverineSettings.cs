@@ -52,6 +52,11 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
+    /// Number of concurrent listeners for the email delivery report queue per pod.
+    /// </summary>
+    public int EmailDeliveryReportListenerCount { get; set; } = 10;
+
+    /// <summary>
     /// Maximum number of SMS send commands published concurrently during a batch publish operation.
     /// </summary>
     public int SmsPublishConcurrency { get; set; } = 10;
@@ -78,6 +83,11 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy SmsDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
+    /// Number of concurrent listeners for the SMS delivery report queue per pod.
+    /// </summary>
+    public int SmsDeliveryReportListenerCount { get; set; } = 10;
+
+    /// <summary>
     /// Determines whether to consume email send results via Wolverine and Azure Service Bus or via Kafka.
     /// </summary>
     public bool EnableEmailSendResultListener { get; set; } = false;
@@ -92,6 +102,11 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email send result queue.
     /// </summary>
     public QueueRetryPolicy EmailSendResultQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the email send result queue per pod.
+    /// </summary>
+    public int EmailSendResultListenerCount { get; set; } = 10;
 
     /// <summary>
     /// Determines whether to consume SMS send results via Wolverine and Azure Service Bus or via Kafka.
@@ -110,6 +125,11 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy SmsSendResultQueuePolicy { get; set; } = new();
 
     /// <summary>
+    /// Number of concurrent listeners for the SMS send result queue per pod.
+    /// </summary>
+    public int SmsSendResultListenerCount { get; set; } = 10;
+
+    /// <summary>
     /// Whether to enable the email service rate limit queue listener.
     /// Consumes messages published by the email service when ACS returns HTTP 429.
     /// </summary>
@@ -125,6 +145,11 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email service rate limit queue.
     /// </summary>
     public QueueRetryPolicy EmailServiceRateLimitQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the email service rate limit queue per pod.
+    /// </summary>
+    public int EmailServiceRateLimitListenerCount { get; set; } = 10;
 
     /// <summary>
     /// Determines whether to publish past-due order commands via Wolverine and Azure Service Bus or via Kafka.
@@ -146,6 +171,11 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the past-due orders queue.
     /// </summary>
     public QueueRetryPolicy PastDueOrdersQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the past-due orders queue per pod.
+    /// </summary>
+    public int PastDueOrdersListenerCount { get; set; } = 10;
 
     /// <summary>
     /// Delay in milliseconds before the single scheduled retry for inconclusive send conditions

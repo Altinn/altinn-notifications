@@ -59,5 +59,12 @@ public class WolverineSettingsTests
         Assert.NotNull(settings.EmailDeliveryReportQueuePolicy);
         Assert.False(settings.EnableEmailDeliveryReportListener);
         Assert.Equal(string.Empty, settings.EmailDeliveryReportQueueName);
+
+        Assert.Equal(10, settings.EmailSendResultListenerCount);
+        Assert.Equal(10, settings.SmsSendResultListenerCount);
+        Assert.Equal(10, settings.EmailDeliveryReportListenerCount);
+        Assert.Equal(10, settings.SmsDeliveryReportListenerCount);
+        Assert.Equal(10, settings.EmailServiceRateLimitListenerCount);
+        Assert.Equal(10, settings.PastDueOrdersListenerCount);
     }
 }
