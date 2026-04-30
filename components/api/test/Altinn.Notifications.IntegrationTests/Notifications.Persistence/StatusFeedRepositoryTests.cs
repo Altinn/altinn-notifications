@@ -264,6 +264,16 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         Assert.Contains("Deserialized OrderStatus is null for sequence number", exception.Message);
     }
 
+    [Fact]
+    public void Constructor_InvalidBatchSize_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => BuildRepositoryWithBatchSize(0));
+
+        Assert.Contains("StatusFeedCleanupBatchSize must be greater than 0", exception.Message);
+    }
+
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
         OrderStatus orderStatus = new OrderStatus
