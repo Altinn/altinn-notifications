@@ -240,6 +240,30 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         Assert.Equal(1, secondRun);
     }
 
+    [Fact]
+    public async Task GetStatusFeed_NullJsonOrderStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        int fakeOrderId = 9999;
+        _fakeOrderIdsToDelete.Add(fakeOrderId);
+
+        // Insert a row with JSON 'null' as orderstatus — valid JSONB but deserializes to null
+        var sqlInsert = $@"INSERT INTO notifications.statusfeed(
+                          orderid, creatorname, created, orderstatus)
+                          VALUES({fakeOrderId}, '{_creatorName}', '2025-01-01', 'null'::jsonb)";
+        await PostgreUtil.RunSql(sqlInsert);
+
+        StatusFeedRepository sut = (StatusFeedRepository)ServiceUtil
+            .GetServices([typeof(IStatusFeedRepository)])
+            .First(i => i.GetType() == typeof(StatusFeedRepository));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None));
+
+        Assert.Contains("Deserialized OrderStatus is null for sequence number", exception.Message);
+    }
+
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
         OrderStatus orderStatus = new OrderStatus
