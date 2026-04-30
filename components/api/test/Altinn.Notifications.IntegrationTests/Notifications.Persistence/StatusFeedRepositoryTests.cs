@@ -271,6 +271,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
     private static StatusFeedRepository BuildRepositoryWithBatchSize(int batchSize)
     {
+        string? previousValue = Environment.GetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize");
         var envVariables = new Dictionary<string, string>
         {
             { "NotificationConfig__StatusFeedCleanupBatchSize", batchSize.ToString() }
@@ -284,7 +285,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         }
         finally
         {
-            Environment.SetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize", null);
+            Environment.SetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize", previousValue);
         }
     }
 }

@@ -32,6 +32,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
     private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
     private const string _deleteOldStatusFeedRecordsSql =
         "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
+    
     private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
