@@ -23,7 +23,10 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config) : IStatusFeedRepository
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    private readonly int _statusFeedCleanupBatchSize = config.Value.StatusFeedCleanupBatchSize;
+    private readonly int _statusFeedCleanupBatchSize =
+        config.Value.StatusFeedCleanupBatchSize > 0
+            ? config.Value.StatusFeedCleanupBatchSize
+            : throw new InvalidOperationException("NotificationConfig:StatusFeedCleanupBatchSize must be greater than 0.");
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
     private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
