@@ -2,9 +2,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 
+using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -17,13 +19,16 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
 /// </remarks>
 /// <param name="dataSource">the npgsql data source</param>
-public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepository
+/// <param name="config">the notification configuration options</param>
+public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config) : IStatusFeedRepository
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly IOptions<NotificationConfig> _config = config;
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
     private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
-    private const string _deleteOldStatusFeedRecordsSql = "SELECT notifications.delete_old_status_feed_records()";
+    private const string _deleteOldStatusFeedRecordsSql =
+        "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
     private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
@@ -33,6 +38,22 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
     };
+
+    private readonly int _statusFeedCleanupBatchSize;
+
+    public StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config)
+    {
+        _dataSource = dataSource;
+
+        if (_config.Value.StatusFeedCleanupBatchSize > 0)
+        {
+            _statusFeedCleanupBatchSize = _config.Value.StatusFeedCleanupBatchSize;
+        }
+        else
+        {
+            _statusFeedCleanupBatchSize = 10000;
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken)
@@ -72,9 +93,9 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     public async Task<int> DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_deleteOldStatusFeedRecordsSql);
+        command.Parameters.AddWithValue("batch_size", NpgsqlDbType.Integer, _statusFeedCleanupBatchSize);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
-
         return (int)Convert.ToInt64(result);
     }
 
