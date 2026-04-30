@@ -15,16 +15,20 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Repository for handling status feed related operations.
 /// </summary>
-public class StatusFeedRepository : IStatusFeedRepository
+/// <remarks>
+/// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
+/// </remarks>
+/// <param name="dataSource">The npgsql data source</param>
+/// <param name="config">The notification configuration</param>
+public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config) : IStatusFeedRepository
 {
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly int _statusFeedCleanupBatchSize;
+    private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly int _statusFeedCleanupBatchSize = config.Value.StatusFeedCleanupBatchSize;
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
     private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
     private const string _deleteOldStatusFeedRecordsSql =
         "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
-    
     private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
@@ -34,25 +38,6 @@ public class StatusFeedRepository : IStatusFeedRepository
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
     };
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
-    /// </summary>
-    /// <param name="dataSource">The npgsql data source</param>
-    /// <param name="config">The notification configuration</param>
-    public StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config)
-    {
-        _dataSource = dataSource;
-
-        if (config.Value.StatusFeedCleanupBatchSize > 0)
-        {
-            _statusFeedCleanupBatchSize = config.Value.StatusFeedCleanupBatchSize;
-        }
-        else
-        {
-            _statusFeedCleanupBatchSize = 10000;
-        }
-    }
 
     /// <inheritdoc/>
     public async Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken)
