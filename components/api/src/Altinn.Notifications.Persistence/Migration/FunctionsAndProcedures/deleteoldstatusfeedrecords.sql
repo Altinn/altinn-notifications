@@ -46,6 +46,7 @@ LANGUAGE 'plpgsql'
 VOLATILE
 AS $$
 DECLARE
+    v_batch_size int := GREATEST(1, COALESCE(batch_size, 10000));
     -- Variable to hold the count of deleted rows
     deleted_count bigint := 0;
     -- Variable to hold the lock acquisition status
@@ -65,7 +66,7 @@ BEGIN
         WHERE _id IN (
             SELECT _id FROM notifications.statusfeed
             WHERE created <= NOW() - INTERVAL '90 days'
-            LIMIT batch_size
+            LIMIT v_batch_size
         )
         RETURNING _id
     )
