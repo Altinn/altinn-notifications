@@ -87,6 +87,7 @@ public sealed class SmsDeliveryReportHandlerTests : IDisposable
                 NullLogger.Instance));
 
         Assert.Equal(0, measurementCount);
+        _serviceMock.Verify(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
     }
 
     [Fact]
@@ -108,6 +109,7 @@ public sealed class SmsDeliveryReportHandlerTests : IDisposable
                 NullLogger.Instance));
 
         Assert.Equal(0, measurementCount);
+        _serviceMock.Verify(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
     }
 
     [Fact]
