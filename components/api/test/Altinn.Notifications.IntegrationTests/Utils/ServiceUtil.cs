@@ -65,7 +65,13 @@ public static class ServiceUtil
 
         if (envVariables != null)
         {
-            builder.AddInMemoryCollection(envVariables!);
+            // AddInMemoryCollection does not convert __ to : like AddEnvironmentVariables does,
+            // so we normalize the keys manually to support the same __ separator convention.
+            var normalizedVariables = envVariables.ToDictionary(
+                kvp => kvp.Key.Replace("__", ":"),
+                kvp => kvp.Value);
+
+            builder.AddInMemoryCollection(normalizedVariables!);
         }
 
         return builder.Build();
