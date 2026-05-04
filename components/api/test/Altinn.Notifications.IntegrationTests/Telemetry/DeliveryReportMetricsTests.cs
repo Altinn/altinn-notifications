@@ -160,7 +160,7 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     [InlineData("longaddress@domain.org", "lo***@domain.org")]
     public void MaskEmailAddress_ValidEmail_MasksLocalPartCorrectly(string input, string expected)
     {
-        Assert.Equal(expected, DeliveryReportMetrics.MaskEmailAddress(input));
+        Assert.Equal(expected, EmailMaskingHelper.MaskEmailAddress(input));
     }
 
     [Theory]
@@ -169,7 +169,7 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     [InlineData("   ")]
     public void MaskEmailAddress_NullOrWhitespace_ReturnsEmptyString(string? input)
     {
-        Assert.Equal(string.Empty, DeliveryReportMetrics.MaskEmailAddress(input));
+        Assert.Equal(string.Empty, EmailMaskingHelper.MaskEmailAddress(input));
     }
 
     [Theory]
@@ -177,7 +177,7 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     [InlineData("noatsign")]
     public void MaskEmailAddress_InvalidFormat_ReturnsEmptyString(string input)
     {
-        Assert.Equal(string.Empty, DeliveryReportMetrics.MaskEmailAddress(input));
+        Assert.Equal(string.Empty, EmailMaskingHelper.MaskEmailAddress(input));
     }
 
     private static MeterListener CreateListener(

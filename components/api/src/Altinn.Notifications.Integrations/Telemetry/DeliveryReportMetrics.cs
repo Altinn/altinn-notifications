@@ -58,8 +58,8 @@ public sealed class DeliveryReportMetrics : IDisposable
             { "email.status",                     status ?? string.Empty },
             { "email.status_message",             statusMessage ?? string.Empty },
             { "email.recipient_mail_server",      recipientMailServerHostName ?? string.Empty },
-            { "email.sender",                     MaskEmailAddress(sender) },
-            { "email.recipient",                  MaskEmailAddress(recipient) },
+            { "email.sender",                     EmailMaskingHelper.MaskEmailAddress(sender) },
+            { "email.recipient",                  EmailMaskingHelper.MaskEmailAddress(recipient) },
         };
 
         _deliveryReportStatusCounter.Add(1, tags);
@@ -74,8 +74,8 @@ public sealed class DeliveryReportMetrics : IDisposable
     {
         var tags = new TagList
         {
-            { "channel",                   "sms" },
-            { "sms.send_result",           sendResult ?? string.Empty },
+            { "channel",          "sms" },
+            { "sms.send_result",  sendResult ?? string.Empty },
         };
 
         _deliveryReportStatusCounter.Add(1, tags);
@@ -85,34 +85,5 @@ public sealed class DeliveryReportMetrics : IDisposable
     public void Dispose()
     {
         _meter.Dispose();
-    }
-
-    /// <summary>
-    /// Masks an email address by keeping only the first two characters of the local part
-    /// and the full domain, replacing the remainder with asterisks.
-    /// Returns an empty string if the input is null or whitespace.
-    /// </summary>
-    internal static string MaskEmailAddress(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return string.Empty;
-        }
-
-        var atIndex = email.IndexOf('@');
-        if (atIndex <= 0 || atIndex == email.Length - 1)
-        {
-            return string.Empty; // invalid format -> do not emit raw value
-        }
-
-        var localPart = email[..atIndex];
-        var domain = email[(atIndex + 1)..];
-
-        if (localPart.Length <= 2)
-        {
-            return $"***@{domain}";
-        }
-
-        return $"{localPart[..2]}***@{domain}";
     }
 }
