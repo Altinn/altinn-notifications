@@ -16,7 +16,6 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 /// <summary>
 /// Handles email delivery status updates received from the Azure Service Bus queue.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class EmailDeliveryReportHandler
 {
     /// <summary>
