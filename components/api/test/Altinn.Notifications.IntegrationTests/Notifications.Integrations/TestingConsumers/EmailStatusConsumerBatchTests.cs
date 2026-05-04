@@ -658,6 +658,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
 
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);

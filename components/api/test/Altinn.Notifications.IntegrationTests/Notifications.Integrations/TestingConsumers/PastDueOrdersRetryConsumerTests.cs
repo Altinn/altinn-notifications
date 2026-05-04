@@ -381,7 +381,9 @@ public class PastDueOrdersRetryConsumerTests : IAsyncLifetime
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRef);
+
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
 
         GC.SuppressFinalize(this);
