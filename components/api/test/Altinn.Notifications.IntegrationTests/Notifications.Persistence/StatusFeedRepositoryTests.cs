@@ -208,6 +208,72 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         _ordersToDelete.Add(orderAlternateId);
     }
 
+    [Fact]
+    public async Task DeleteOldStatusFeedRecords_RespectsConfiguredBatchSize()
+    {
+        // Arrange — insert more old rows than the configured batch size
+        // (requires a small batch size set via test config, e.g. 2)
+        int batchSize = 2;
+        var oldDate = DateTime.UtcNow.AddDays(-91).ToString("yyyy-MM-dd");
+
+        var shipmentIds = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToList();
+        var fakeOrderIds = new List<int> { 2001, 2002, 2003 };
+
+        for (int i = 0; i < 3; i++)
+        {
+            await InsertTestDataRowForStatusFeed(fakeOrderIds[i], oldDate, shipmentIds[i]);
+            _fakeOrderIdsToDelete.Add(fakeOrderIds[i]);
+        }
+
+        StatusFeedRepository sut = BuildRepositoryWithBatchSize(batchSize);
+
+        // Act — first invocation
+        var firstRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+
+        // Assert — only batch_size rows deleted, one remains
+        Assert.Equal(batchSize, firstRun);
+
+        // Act — second invocation
+        var secondRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+
+        // Assert — remaining row deleted
+        Assert.Equal(1, secondRun);
+    }
+
+    [Fact]
+    public async Task GetStatusFeed_NullJsonOrderStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        int fakeOrderId = 9999;
+        _fakeOrderIdsToDelete.Add(fakeOrderId);
+
+        // Insert a row with JSON 'null' as orderstatus — valid JSONB but deserializes to null
+        var sqlInsert = $@"INSERT INTO notifications.statusfeed(
+                          orderid, creatorname, created, orderstatus)
+                          VALUES({fakeOrderId}, '{_creatorName}', '2025-01-01', 'null'::jsonb)";
+        await PostgreUtil.RunSql(sqlInsert);
+
+        StatusFeedRepository sut = (StatusFeedRepository)ServiceUtil
+            .GetServices([typeof(IStatusFeedRepository)])
+            .First(i => i.GetType() == typeof(StatusFeedRepository));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None));
+
+        Assert.Contains("Deserialized OrderStatus is null for sequence number", exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_InvalidBatchSize_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => BuildRepositoryWithBatchSize(0));
+
+        Assert.Contains("StatusFeedCleanupBatchSize must be greater than 0", exception.Message);
+    }
+
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
         OrderStatus orderStatus = new OrderStatus
@@ -235,5 +301,25 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
                               VALUES({orderId}, '{_creatorName}', '{created}', '{orderStatusFeedTestOrderCompleted}')";
 
         await PostgreUtil.RunSql(sqlInsert);
+    }
+
+    private static StatusFeedRepository BuildRepositoryWithBatchSize(int batchSize)
+    {
+        string? previousValue = Environment.GetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize");
+        var envVariables = new Dictionary<string, string>
+        {
+            { "NotificationConfig__StatusFeedCleanupBatchSize", batchSize.ToString() }
+        };
+
+        try
+        {
+            return (StatusFeedRepository)ServiceUtil
+                .GetServices([typeof(IStatusFeedRepository)], envVariables)
+                .First(i => i.GetType() == typeof(StatusFeedRepository));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize", previousValue);
+        }
     }
 }

@@ -48,7 +48,9 @@ public class TriggerControllerTests
     public async Task Trigger_DeleteOldStatusFeedRecords_CallsServiceAndReturnsOk()
     {
         // Arrange
-        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None)).Returns(Task.CompletedTask);
+        _statusFeedServiceMock
+            .Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None))
+            .ReturnsAsync(42);
 
         // Act
         var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
