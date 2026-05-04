@@ -175,6 +175,27 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         Assert.Equal(EmailNotificationResultType.Delivered, captured.SendResult);
     }
 
+    [Fact]
+    public async Task Handle_NonSystemEventType_ThrowsAndDoesNotEmitMetric()
+    {
+        // Arrange — use a completely unknown event type that TryGetSystemEventData returns false for
+        int measurementCount = 0;
+
+        using var listener = CreateListener((_, _, _) => measurementCount++);
+
+        var command = BuildCommandWithEventType("MyApp.CustomEvent");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidDeliveryReportException>(() =>
+            EmailDeliveryReportHandler.Handle(
+                command,
+                _serviceMock.Object,
+                _metrics,
+                NullLogger.Instance));
+
+        Assert.Equal(0, measurementCount);
+    }
+
     private static EmailDeliveryReportCommand BuildCommand(
         string messageId,
         string status = "Delivered",
