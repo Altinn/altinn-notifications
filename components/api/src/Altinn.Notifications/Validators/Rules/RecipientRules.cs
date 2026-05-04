@@ -1,4 +1,5 @@
-using System.Text.RegularExpressions;
+using System.Globalization;
+using System.Net.Mail;
 
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Models;
@@ -229,24 +230,37 @@ public static class RecipientRules
     }
 
     /// <summary>
-    /// Validated as email address based on the Altinn 2 regex
+    /// Validates that the provided string is a single, valid email address.
+    /// Supports internationalized domain names (IDN), including Scandinavian characters (æøåÆØÅ),
+    /// by converting the domain to its ASCII-compatible encoding (Punycode) before validation.
     /// </summary>
-    /// <param name="email">The string to validate as an email address</param>
-    /// <returns>A boolean indicating that the email is valid or not</returns>
+    /// <param name="email">The string to validate as an email address.</param>
+    /// <returns><c>true</c> if the input is a single valid email address; otherwise, <c>false</c>.</returns>
     internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
+        {  
+            return false; 
+        }
+
+        try
+        {
+            var parts = email.Split('@');
+            if (parts.Length != 2 || string.IsNullOrEmpty(parts[0]) || string.IsNullOrEmpty(parts[1]))
+            {
+                return false;
+            }
+
+            var idn = new IdnMapping();
+            var asciiDomain = idn.GetAscii(parts[1]);
+            var normalizedEmail = $"{parts[0]}@{asciiDomain}";
+
+            return new MailAddress(normalizedEmail).Address == normalizedEmail;
+        }
+        catch
         {
             return false;
         }
-
-        string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
-
-        Regex regex = new(emailRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
-
-        Match match = regex.Match(email);
-
-        return match.Success;
     }
 
     /// <summary>
