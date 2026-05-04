@@ -1,0 +1,36 @@
+meta {
+  name: v1-email-ep-invalid-email
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "subject": "(REGRESSION) Invalid email test",
+    "body": "(REGRESSION) Test body",
+    "contentType": "Plain",
+    "recipients": [
+      {
+        "emailAddress": "not-a-valid-email"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions email", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("email");
+  });
+}

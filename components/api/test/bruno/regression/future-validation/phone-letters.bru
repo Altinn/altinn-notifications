@@ -1,0 +1,37 @@
+meta {
+  name: phone-letters
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-validation-phone-letters",
+    "recipientSms": {
+      "phoneNumber": "+47abcdefgh",
+      "timeToLiveInSeconds": 120,
+      "smsSettings": {
+        "sender": "Regression",
+        "body": "(REGRESSION) Phone letters test"
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions mobile number", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("mobile number");
+  });
+}

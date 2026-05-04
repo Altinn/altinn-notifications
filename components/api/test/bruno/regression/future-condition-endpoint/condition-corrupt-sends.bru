@@ -1,0 +1,36 @@
+meta {
+  name: condition-corrupt-sends
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "regression-cond-corrupt-{{senders_reference_guid}}",
+    "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_CORRUPT}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(REGRESSION) Condition Corrupt",
+          "body": "(REGRESSION) Should be sent - corrupt response defaults to send",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.status).to.equal(201);
+  });
+}

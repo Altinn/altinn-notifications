@@ -1,0 +1,33 @@
+meta {
+  name: 02-wait-and-check-feed
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq=0
+  body: none
+  auth: inherit
+}
+
+params:query {
+  seq: 0
+}
+
+script:pre-request {
+  await new Promise(resolve => setTimeout(resolve, 15000));
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response is array", function() {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("feed is not empty", function() {
+    expect(res.body.length).to.be.greaterThan(0);
+  });
+}

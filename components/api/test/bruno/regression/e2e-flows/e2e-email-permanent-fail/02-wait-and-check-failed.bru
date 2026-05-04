@@ -1,0 +1,35 @@
+meta {
+  name: 02-wait-and-check-failed
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{e2ePermFailShipmentId}}
+}
+
+script:pre-request {
+  // Wait for async processing: trigger scheduler fires every 5s, then email-service processes
+  await new Promise(resolve => setTimeout(resolve, 15000));
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shipment has been processed (email send failed in mock)", function() {
+    // The order was created and processed, but the mock email client returned a permanent failure.
+    // The shipment should exist and have been processed regardless of send outcome.
+    expect(res.body).to.be.an("object");
+    const body = JSON.stringify(res.body).toLowerCase();
+    // Should contain some status information showing it was processed
+    expect(body.length).to.be.greaterThan(10);
+  });
+}

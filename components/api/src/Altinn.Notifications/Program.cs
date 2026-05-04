@@ -10,9 +10,11 @@ using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
@@ -227,6 +229,14 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     AddInputModelValidators(services);
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
+
+    if (builder.Environment.IsDevelopment())
+    {
+        // Override the Maskinporten-backed condition client with a plain HttpClient for local dev.
+        // This avoids requiring Maskinporten credentials when running against local mock services.
+        services.AddHttpClient<IConditionClient, SendConditionClient>(); // TODO: Why is SendConditionClient added here?
+    }
+
     services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
 

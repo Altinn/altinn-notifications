@@ -1,0 +1,43 @@
+meta {
+  name: condition-endpoint-ftp
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "conditionEndpoint": "ftp://example.com/check",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "Email",
+        "emailSettings": {
+          "subject": "(REGRESSION) Validation",
+          "body": "(REGRESSION) Validation test",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("returns 400", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions http or https or scheme", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    const hasHttp = body.includes("http");
+    const hasScheme = body.includes("scheme");
+    expect(hasHttp || hasScheme).to.be.true;
+  });
+}

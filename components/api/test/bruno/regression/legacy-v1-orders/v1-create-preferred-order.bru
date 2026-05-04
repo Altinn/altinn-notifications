@@ -1,0 +1,38 @@
+meta {
+  name: v1-create-preferred-order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "notificationChannel": "EmailPreferred",
+    "emailTemplate": {
+      "fromAddress": "noreply@altinn.no",
+      "subject": "(REGRESSION) V1 Preferred",
+      "body": "(REGRESSION) V1 preferred test",
+      "contentType": "Plain"
+    },
+    "smsTemplate": {
+      "body": "(REGRESSION) V1 preferred SMS fallback"
+    },
+    "recipients": [
+      {
+        "organizationNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.status).to.equal(202);
+  });
+}

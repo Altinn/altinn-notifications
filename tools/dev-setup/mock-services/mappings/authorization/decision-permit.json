@@ -1,0 +1,26 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/authorization/api/v1/decision"
+        }
+      ]
+    },
+    "Methods": ["POST"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    },
+    "BodyAsJson": {
+      "response": [
+        {
+          "decision": "Permit"
+        }
+      ]
+    }
+  }
+}

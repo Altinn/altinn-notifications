@@ -3,7 +3,9 @@ using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Core.Configuration;
+using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Health;
+using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Extensions;
 using Altinn.Notifications.Email.Telemetry;
@@ -170,6 +172,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
+
+    if (configuration.GetValue<bool>("MockSettings:EnableMockEmailProvider"))
+    {
+        // Override Azure Communication Services client with a mock for local dev.
+        services.AddSingleton<IEmailServiceClient, MockEmailServiceClient>();
+    }
 }
 
 static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)

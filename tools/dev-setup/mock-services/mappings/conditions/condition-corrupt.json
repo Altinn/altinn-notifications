@@ -1,0 +1,20 @@
+{
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "WildcardMatcher",
+          "Pattern": "/condition/corrupt"
+        }
+      ]
+    },
+    "Methods": ["GET"]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "text/plain"
+    },
+    "Body": "dette er ikke json {{{"
+  }
+}

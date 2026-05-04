@@ -1,0 +1,48 @@
+meta {
+  name: 01-create-future-order
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "e2e-cancel-{{senders_reference_guid}}",
+    "requestedSendTime": "{{farFutureSendTime}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(E2E) Cancel Before Processing",
+          "body": "(E2E) This should be cancelled",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+script:pre-request {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  bru.setVar("farFutureSendTime", date.toISOString());
+}
+
+script:post-response {
+  if (res.status === 201 && res.body && res.body.notification && res.body.notification.shipmentId) {
+    bru.setVar("e2eCancelOrderId", res.body.notification.shipmentId);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.status).to.equal(201);
+  });
+}

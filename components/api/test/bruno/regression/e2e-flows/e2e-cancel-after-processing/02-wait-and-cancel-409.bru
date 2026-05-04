@@ -1,0 +1,25 @@
+meta {
+  name: 02-wait-and-cancel-409
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/cancel
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{e2eCancelAfterShipmentId}}
+}
+
+script:pre-request {
+  await new Promise(resolve => setTimeout(resolve, 15000));
+}
+
+tests {
+  test("returns 409 Conflict (already processed)", function() {
+    expect(res.status).to.equal(409);
+  });
+}

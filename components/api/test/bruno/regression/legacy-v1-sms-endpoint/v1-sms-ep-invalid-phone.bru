@@ -1,0 +1,34 @@
+meta {
+  name: v1-sms-ep-invalid-phone
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "body": "(REGRESSION) Invalid phone test",
+    "recipients": [
+      {
+        "mobileNumber": "12345"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions mobile number", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("mobile");
+  });
+}
