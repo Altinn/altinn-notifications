@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace Altinn.Notifications.Core.Telemetry;
+namespace Altinn.Notifications.Integrations.Telemetry;
 
 /// <summary>
 /// Provides custom OpenTelemetry metrics for ACS and SMS delivery reports.

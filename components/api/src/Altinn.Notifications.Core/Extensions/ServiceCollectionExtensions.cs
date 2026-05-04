@@ -30,7 +30,6 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
 
         services
-            .AddSingleton<DeliveryReportMetrics>()
             .AddSingleton<IGuidService, GuidService>()
             .AddSingleton<IMetricsService, MetricsService>()
             .AddSingleton<IKeywordsService, KeywordsService>()

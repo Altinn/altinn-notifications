@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-
-using Altinn.Notifications.Core.Telemetry;
-
+using Altinn.Notifications.Integrations.Telemetry;
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Core.Telemetry;
+namespace Altinn.Notifications.IntegrationTests.Telemetry;
 
 public sealed class DeliveryReportMetricsTests : IDisposable
 {

@@ -1,11 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Telemetry;
-
+using Altinn.Notifications.Integrations.Telemetry;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 
