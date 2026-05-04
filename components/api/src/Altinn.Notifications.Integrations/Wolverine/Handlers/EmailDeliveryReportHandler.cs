@@ -30,6 +30,7 @@ public static class EmailDeliveryReportHandler
     {
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
+        // If the event is a system event, TryGetSystemEventData will return the deserialized system event
         if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
         {
             switch (systemEvent)
