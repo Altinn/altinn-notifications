@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class EmailNotificationServiceTests
 {
+    private const string _emailQueueTopicName = "test.email.queue";
     private readonly int _publishBatchSize = 500;
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
@@ -681,8 +683,13 @@ public class EmailNotificationServiceTests
             Times.Once);
     }
 
-    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, bool sendViaWolverine = false)
+    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
     {
+        if (producer is not null && emailCommandPublisher is not null)
+        {
+            throw new ArgumentException("Provide either producer or emailCommandPublisher, not both.");
+        }
+
         var guidService = new Mock<IGuidService>();
         guidService
             .Setup(g => g.NewGuid())
@@ -692,6 +699,11 @@ public class EmailNotificationServiceTests
         dateTimeService
             .Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
+
+        if (producer != null)
+        {
+            emailCommandPublisher = new KafkaEmailCommandPublisher(producer, Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
+        }
 
         repo ??= new Mock<IEmailNotificationRepository>().Object;
         emailCommandPublisher ??= new Mock<IEmailCommandPublisher>().Object;

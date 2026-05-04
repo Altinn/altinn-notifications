@@ -1,5 +1,6 @@
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
+using Altinn.Notifications.Sms.Integrations.Configuration;
 
 namespace Altinn.Notifications.Sms.Integrations.Producers;
 
@@ -16,16 +17,10 @@ public class SmsSendResultProducer : ISmsSendResultDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsSendResultProducer"/> class.
     /// </summary>
-    /// <param name="producer">
-    /// The Kafka producer responsible for publishing the serialized result message.
-    /// </param>
-    /// <param name="topicName">
-    /// The name of the Kafka topic where the terminal result will be published.
-    /// </param>
-    public SmsSendResultProducer(ICommonProducer producer, string topicName)
+    public SmsSendResultProducer(ICommonProducer producer, KafkaSettings settings)
     {
         _producer = producer;
-        _topicName = topicName;
+        _topicName = settings.SmsStatusUpdatedTopicName;
     }
 
     /// <inheritdoc/>

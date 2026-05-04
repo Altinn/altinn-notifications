@@ -3,6 +3,7 @@ using System.Text.Json;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
@@ -51,7 +52,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = "test-topic" }))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -135,7 +136,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = "test-topic" }))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
