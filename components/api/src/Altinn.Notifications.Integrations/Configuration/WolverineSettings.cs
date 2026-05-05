@@ -149,7 +149,7 @@ public class WolverineSettings : WolverineSettingsBase
     /// <summary>
     /// Number of concurrent listeners for the email service rate limit queue per pod.
     /// </summary>
-    public int EmailServiceRateLimitListenerCount { get; set; } = 10;
+    public int EmailServiceRateLimitListenerCount { get; set; } = 1;
 
     /// <summary>
     /// Determines whether to publish past-due order commands via Wolverine and Azure Service Bus or via Kafka.
