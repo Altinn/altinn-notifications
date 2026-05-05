@@ -56,20 +56,20 @@ public static class ServiceUtil
         }
     }
 
-    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? configOverrides = null)
     {
-        if (envVariables != null)
-        {
-            foreach (var item in envVariables)
-            {
-                Environment.SetEnvironmentVariable(item.Key, item.Value);
-            }
-        }
-
         var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
+            .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
             .AddEnvironmentVariables();
+
+        // AddInMemoryCollection only affects the IConfiguration instance being built in that call.
+        // It is local to the stack frame and never touches any shared global state like Environment,
+        // so concurrent tests each get their own isolated configuration with no race conditions.
+        if (configOverrides != null)
+        {
+            builder.AddInMemoryCollection(configOverrides!);
+        }
 
         var config = builder.Build();
 
