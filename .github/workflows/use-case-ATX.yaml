@@ -31,7 +31,7 @@ jobs:
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-v2.js
-          flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
           inspect-flags: -e altinn_env=${{ matrix.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run API v2 recipientOrganization tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
