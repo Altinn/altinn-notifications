@@ -1,10 +1,12 @@
 using System.Text.Json;
 
 using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Telemetry;
+
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 
@@ -41,6 +43,17 @@ public static class EmailDeliveryReportHandler
                         throw new InvalidDeliveryReportException("Received delivery report with missing MessageId");
                     }
 
+                    EmailNotificationResultType sendResult;
+                    try
+                    {
+                        sendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString());
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        logger.LogError(ex, "Received delivery report with unrecognized Status: {Status} for MessageId: {MessageId}", deliveryReport.Status, deliveryReport.MessageId);
+                        throw new InvalidDeliveryReportException($"Received delivery report with unrecognized Status: '{deliveryReport.Status}'.");
+                    }
+
                     logger.LogInformation(
                         "Received email delivery report for MessageId: {MessageId}, Status: {Status}",
                         deliveryReport.MessageId,
@@ -53,7 +66,7 @@ public static class EmailDeliveryReportHandler
                         sender: deliveryReport.Sender,
                         recipient: deliveryReport.Recipient);
 
-                    await HandleDeliveryReport(emailNotificationService, deliveryReport);
+                    await HandleDeliveryReport(emailNotificationService, deliveryReport, sendResult);
                     break;
 
                 default:
@@ -73,12 +86,13 @@ public static class EmailDeliveryReportHandler
 
     private static async Task HandleDeliveryReport(
         IEmailNotificationService emailNotificationService,
-        AcsEmailDeliveryReportReceivedEventData deliveryReport)
+        AcsEmailDeliveryReportReceivedEventData deliveryReport,
+        EmailNotificationResultType sendResult)
     {
         var operationResult = new EmailSendOperationResult
         {
             OperationId = deliveryReport.MessageId,
-            SendResult = Utils.ParseDeliveryStatus(deliveryReport.Status?.ToString()),
+            SendResult = sendResult,
             DeliveryReport = JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options)
         };
 

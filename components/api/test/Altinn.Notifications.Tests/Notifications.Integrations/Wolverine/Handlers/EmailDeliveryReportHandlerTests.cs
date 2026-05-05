@@ -196,6 +196,44 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         Assert.Equal(0, measurementCount);
     }
 
+    [Fact]
+    public async Task Handle_NullStatus_ThrowsAndDoesNotEmitMetric()
+    {
+        // Arrange
+        int measurementCount = 0;
+
+        using var listener = CreateListener((_, _, _) => measurementCount++);
+
+        var command = BuildCommandWithNoStatus(Guid.NewGuid().ToString());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidDeliveryReportException>(() =>
+            EmailDeliveryReportHandler.Handle(
+                command,
+                _serviceMock.Object,
+                _metrics,
+                NullLogger.Instance));
+
+        Assert.Equal(0, measurementCount);
+    }
+
+    [Fact]
+    public async Task Handle_NullStatus_ThrowsAndDoesNotUpdateService()
+    {
+        // Arrange
+        var command = BuildCommandWithNoStatus(Guid.NewGuid().ToString());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidDeliveryReportException>(() =>
+            EmailDeliveryReportHandler.Handle(
+                command,
+                _serviceMock.Object,
+                _metrics,
+                NullLogger.Instance));
+
+        _serviceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+    }
+
     private static EmailDeliveryReportCommand BuildCommand(
         string messageId,
         string status = "Delivered",
@@ -240,6 +278,36 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
             subject = "sender/test@example.com/message/msg-001",
             data = new { },
             eventType,
+            dataVersion = "1.0",
+            metadataVersion = "1",
+            eventTime = DateTime.UtcNow.ToString("o")
+        };
+
+        string body = JsonSerializer.Serialize(eventGridEvent);
+        var message = ServiceBusModelFactory.ServiceBusReceivedMessage(body: BinaryData.FromString(body));
+        return new EmailDeliveryReportCommand(message);
+    }
+
+    private static EmailDeliveryReportCommand BuildCommandWithNoStatus(string messageId)
+    {
+        var eventGridEvent = new
+        {
+            id = Guid.NewGuid().ToString(),
+            subject = $"sender/test@example.com/message/{messageId}",
+            data = new
+            {
+                sender = "sender@example.com",
+                recipient = "recipient@example.com",
+                messageId,
+                status = (string?)null, // Explicitly null status
+                deliveryStatusDetails = new
+                {
+                    statusMessage = (string?)null,
+                    recipientMailServerHostName = (string?)null
+                },
+                deliveryAttemptTimeStamp = DateTime.UtcNow.ToString("o")
+            },
+            eventType = "Microsoft.Communication.EmailDeliveryReportReceived",
             dataVersion = "1.0",
             metadataVersion = "1",
             eventTime = DateTime.UtcNow.ToString("o")
