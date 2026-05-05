@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
@@ -161,7 +162,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
                 "Altinn.Notifications.KafkaProducer",
-                "Altinn.Notifications.KafkaConsumer");
+                "Altinn.Notifications.KafkaConsumer",
+                DeliveryReportMetrics.MeterName);
         })
         .WithTracing(tracing =>
         {
