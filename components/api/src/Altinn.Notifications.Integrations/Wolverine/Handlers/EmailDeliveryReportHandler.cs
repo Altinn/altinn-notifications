@@ -59,14 +59,14 @@ public static class EmailDeliveryReportHandler
                         deliveryReport.MessageId,
                         deliveryReport.Status);
 
+                    await HandleDeliveryReport(emailNotificationService, deliveryReport, sendResult);
+                    
                     metrics.RecordEmailDeliveryReport(
                         status: deliveryReport.Status?.ToString(),
                         statusMessage: deliveryReport.DeliveryStatusDetails?.StatusMessage,
                         recipientMailServerHostName: deliveryReport.DeliveryStatusDetails?.RecipientMailServerHostName,
                         sender: deliveryReport.Sender,
                         recipient: deliveryReport.Recipient);
-
-                    await HandleDeliveryReport(emailNotificationService, deliveryReport, sendResult);
                     break;
 
                 default:

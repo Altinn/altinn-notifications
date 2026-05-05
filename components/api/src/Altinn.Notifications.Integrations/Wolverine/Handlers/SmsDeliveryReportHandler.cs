@@ -41,9 +41,6 @@ public static class SmsDeliveryReportHandler
             command.GatewayReference,
             command.SendResult);
 
-        metrics.RecordSmsDeliveryReport(
-            sendResult: sendResult.ToString());
-
         var operationResult = new SmsSendOperationResult
         {
             GatewayReference = command.GatewayReference,
@@ -53,5 +50,8 @@ public static class SmsDeliveryReportHandler
         };
 
         await smsNotificationService.UpdateSendStatus(operationResult);
+        
+        metrics.RecordSmsDeliveryReport(
+            sendResult: sendResult.ToString());
     }
 }
