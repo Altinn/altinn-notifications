@@ -82,6 +82,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -103,13 +104,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -185,12 +182,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -247,6 +239,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
@@ -273,13 +266,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -363,12 +352,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -428,6 +412,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+        var smsCommandPublisher = new Mock<ISendSmsPublisher>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -453,13 +438,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
+            smsCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -540,12 +521,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -628,12 +604,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
@@ -689,6 +660,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var smsSendCommandPublisher = new Mock<ISendSmsPublisher>();
         var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var notificationId = Guid.NewGuid();
@@ -717,13 +689,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var smsNotificationService = new SmsNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
             smsNotificationRepository.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
-            }),
+            smsSendCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
@@ -814,12 +782,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         var emailNotificationService = new EmailNotificationService(
             guidService.Object,
-            kafkaProducer.Object,
             dateTimeService.Object,
-            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
-            {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
-            }),
             emailCommandPublisher.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);

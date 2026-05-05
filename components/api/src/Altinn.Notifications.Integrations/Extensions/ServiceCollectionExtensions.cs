@@ -1,4 +1,4 @@
-﻿using Altinn.ApiClients.Maskinporten.Extensions;
+using Altinn.ApiClients.Maskinporten.Extensions;
 using Altinn.ApiClients.Maskinporten.Services;
 using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Common.PEP.Clients;
@@ -13,9 +13,12 @@ using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
+using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
+using Altinn.Notifications.Integrations.Telemetry;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,22 +37,29 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection(nameof(KafkaSettings))
+        KafkaSettings kafkaSettings = config.GetSection(nameof(KafkaSettings))
             .Get<KafkaSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
         services
+        .AddSingleton<DeliveryReportMetrics>()
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddHostedService<SmsStatusConsumer>()
-        .AddHostedService<SmsStatusRetryConsumer>()
         .AddHostedService<EmailStatusConsumer>()
-        .AddHostedService<EmailStatusRetryConsumer>()
         .AddHostedService<PastDueOrdersConsumer>()
+        .AddHostedService<SmsStatusRetryConsumer>()
+        .AddHostedService<EmailStatusRetryConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
         .AddHostedService<AltinnServiceUpdateConsumer>()
         .AddHostedService<SmsPublishBackgroundService>()
         .AddHostedService<EmailPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
+
+        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
+
+        RegisterSmsCommandPublisher(services, wolverineSettings, kafkaSettings);
+        RegisterEmailCommandPublisher(services, wolverineSettings, kafkaSettings);
+        RegisterPastDueOrderPublisher(services, wolverineSettings, kafkaSettings);
     }
 
     /// <summary>
@@ -102,5 +112,95 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IPastDueOrderPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnablePastDueOrderPublisher)
+        {
+            if (!wolverineSettings.EnablePastDueOrderListener)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EnablePastDueOrderListener)} must be enabled when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+            }
+
+            if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<IPastDueOrderPublisher, PastDueOrderPublisher>();
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.PastDueOrdersTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.PastDueOrdersTopicName)} must be configured when the Wolverine past due order publisher is disabled.");
+            }
+
+            services.AddSingleton<IPastDueOrderPublisher, KafkaPastDueOrderPublisher>();
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="IEmailCommandPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterEmailCommandPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSendEmailPublisher)
+        {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.EmailQueueTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.EmailQueueTopicName)} must be configured when the Wolverine email command publisher is disabled.");
+            }
+
+            services.AddSingleton<IEmailCommandPublisher, KafkaEmailCommandPublisher>();
+        }
+    }
+
+    /// <summary>
+    /// Registers the appropriate <see cref="ISendSmsPublisher"/> implementation
+    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
+    /// </summary>
+    private static void RegisterSmsCommandPublisher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    {
+        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableSendSmsPublisher)
+        {
+            if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
+            }
+
+            services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(kafkaSettings.SmsQueueTopicName))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(KafkaSettings.SmsQueueTopicName)} must be configured when the Wolverine SMS command publisher is disabled.");
+            }
+
+            services.AddSingleton<ISendSmsPublisher, KafkaSendSmsPublisher>();
+        }
     }
 }

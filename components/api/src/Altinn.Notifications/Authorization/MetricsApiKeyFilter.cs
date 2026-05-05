@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Authorization
         public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
         {
             // Only apply to Metrics endpoints
-            if (!context.HttpContext.Request.Path.StartsWithSegments("/notifications/api/v1/metrics/sms"))
+            if (!context.HttpContext.Request.Path.StartsWithSegments("/notifications/api/v1/metrics/sms") && !context.HttpContext.Request.Path.StartsWithSegments("/notifications/api/v1/metrics/email"))
             {
                 return; // Not a Metrics endpoint, let it pass
             }

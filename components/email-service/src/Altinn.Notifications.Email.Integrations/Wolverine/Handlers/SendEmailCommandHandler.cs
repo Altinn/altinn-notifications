@@ -28,6 +28,10 @@ public static class SendEmailCommandHandler
             contentType = EmailContentType.Plain;
         }
 
+        logger.LogInformation(
+            "Processing SendEmailCommand for NotificationId: {NotificationId}",
+            command.NotificationId);
+
         var email = new Core.Sending.Email(
             command.NotificationId,
             command.Subject,
@@ -39,6 +43,10 @@ public static class SendEmailCommandHandler
         try
         {
             await sendingService.SendAsync(email);
+
+            logger.LogInformation(
+                "Successfully dispatched email for NotificationId: {NotificationId}",
+                command.NotificationId);
         }
         catch (OperationCanceledException)
         {

@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Moq;
@@ -24,7 +25,7 @@ public class EmailStatusCheckProducerTests
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
 
-        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act
         await emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), "op-id");
@@ -39,7 +40,7 @@ public class EmailStatusCheckProducerTests
         // Arrange
         var producerMock = new Mock<ICommonProducer>();
         var dateTimeMock = new Mock<IDateTimeService>();
-        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => sut.DispatchAsync(Guid.NewGuid(), null!));
@@ -51,7 +52,7 @@ public class EmailStatusCheckProducerTests
         // Arrange
         var producerMock = new Mock<ICommonProducer>();
         var dateTimeMock = new Mock<IDateTimeService>();
-        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => emailStatusCheckProducer.DispatchAsync(Guid.Empty, "some-operation-id"));
@@ -80,7 +81,7 @@ public class EmailStatusCheckProducerTests
             })
             .ReturnsAsync(true);
 
-        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(notificationId, operationId);
@@ -104,7 +105,7 @@ public class EmailStatusCheckProducerTests
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(_fixedTime);
 
-        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var sut = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(Guid.NewGuid(), "op-id"));
@@ -118,7 +119,7 @@ public class EmailStatusCheckProducerTests
         // Arrange
         var producerMock = new Mock<ICommonProducer>();
         var dateTimeMock = new Mock<IDateTimeService>();
-        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, _topicName);
+        var emailStatusCheckProducer = new EmailStatusCheckProducer(producerMock.Object, dateTimeMock.Object, new KafkaSettings { EmailSendingAcceptedTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => emailStatusCheckProducer.DispatchAsync(Guid.NewGuid(), operationId));

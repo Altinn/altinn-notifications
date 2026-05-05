@@ -54,16 +54,36 @@ namespace Altinn.Notifications.Controllers
         {
             var data = await _metricsService.GetDailySmsMetrics(cancellationToken);
 
-            var response = await _metricsService.GetParquetFile(data, cancellationToken);
+            return await BuildParquetResponseAsync(data, cancellationToken);
+        }
+
+        /// <summary>
+        /// Endpoint for triggering generation of daily email metrics
+        /// </summary>
+        /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+        [HttpPost]
+        [Route("email")]
+        [Produces("application/octet-stream")]
+        [ServiceFilter(typeof(MetricsApiKeyFilter))]
+        public async Task<ActionResult> GetEmailDailyMetrics(CancellationToken cancellationToken)
+        {
+            var data = await _metricsService.GetDailyEmailMetrics(cancellationToken);
+
+            return await BuildParquetResponseAsync(data, cancellationToken);
+        }
+
+        private async Task<ActionResult> BuildParquetResponseAsync<T>(DailyMetrics<T> data, CancellationToken ct)
+        {
+            var response = await _metricsService.GetParquetFile(data, ct);
             HttpContext.Response.RegisterForDispose(response.FileStream);
 
             Response.Headers["X-File-Hash"] = response.FileHash;
             Response.Headers["X-File-Size"] = response.FileSizeBytes.ToString();
             Response.Headers["X-Total-FileTransfer-Count"] = response.TotalFileTransferCount.ToString();
-            Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O"); // ISO 8601 format
+            Response.Headers["X-Generated-At"] = response.GeneratedAt.ToString("O");
             Response.Headers["X-Environment"] = response.Environment;
 
             return File(response.FileStream, "application/octet-stream", response.FileName);
-        }        
+        }
     }
 }

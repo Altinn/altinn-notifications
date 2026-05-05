@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.OpenApi;
@@ -8,13 +8,13 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Altinn.Notifications.Swagger;
 
 /// <summary>
-/// Schema filter to properly handle default values in Swagger.
+/// Schema filter that enriches OpenAPI schemas with pattern constraints and default values.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public class SwaggerDefaultValues : ISchemaFilter
+public class OpenApiSchemaEnrichmentFilter : ISchemaFilter
 {
     /// <summary>
-    /// Applies default value handling to the schema
+    /// Applies pattern constraints and default value handling to the schema.
     /// </summary>
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
@@ -23,18 +23,22 @@ public class SwaggerDefaultValues : ISchemaFilter
             return;
         }
 
-        var defaultValue = context.MemberInfo
-            .GetCustomAttributes(typeof(DefaultValueAttribute), true)
-            .OfType<DefaultValueAttribute>()
-            .FirstOrDefault();
-
-        if (defaultValue == null || schema.Default != null)
+        // Cast to concrete OpenApiSchema to access settable properties
+        if (schema is not OpenApiSchema openApiSchema)
         {
             return;
         }
 
-        // Cast to concrete OpenApiSchema to access the settable Default property
-        if (schema is not OpenApiSchema openApiSchema)
+        var patternAttr = GetAttribute<OpenApiPatternAttribute>(context);
+
+        if (patternAttr != null)
+        {
+            openApiSchema.Pattern = patternAttr.Pattern;
+        }
+
+        var defaultValue = GetAttribute<DefaultValueAttribute>(context);
+
+        if (defaultValue == null || schema.Default != null)
         {
             return;
         }
@@ -55,5 +59,12 @@ public class SwaggerDefaultValues : ISchemaFilter
         {
             openApiSchema.Default = stringValue;
         }
+    }
+
+    private static T? GetAttribute<T>(SchemaFilterContext context)
+    {
+        return context.MemberInfo.GetCustomAttributes(typeof(T), true)
+            .OfType<T>()
+            .FirstOrDefault();
     }
 }

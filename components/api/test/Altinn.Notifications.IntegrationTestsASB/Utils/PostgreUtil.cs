@@ -46,7 +46,7 @@ public static class PostgreUtil
     /// <summary>
     /// Updates the send status of an email notification.
     /// </summary>
-    public static async Task UpdateSendStatus(
+    public static async Task UpdateEmailSendStatus(
         IntegrationTestWebApplicationFactory factory,
         Guid notificationId,
         EmailNotificationResultType resultType,
@@ -92,6 +92,21 @@ public static class PostgreUtil
             throw new InvalidOperationException("Query returned no rows.");
         }
 
+        if (await reader.IsDBNullAsync(0))
+        {
+            var type = typeof(T);
+            bool isNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+            if (!isNullable)
+            {
+                throw new InvalidOperationException(
+                    $"Column 0 is NULL but T is non-nullable value type '{type.Name}'. " +
+                    $"Use '{type.Name}?' if a NULL result is expected.");
+            }
+
+            return default!;
+        }
+
         return await reader.GetFieldValueAsync<T>(0);
     }
 
@@ -129,6 +144,29 @@ public static class PostgreUtil
         using var scope = factory.Host.Services.CreateScope();
         var smsRepo = scope.ServiceProvider.GetRequiredService<ISmsNotificationRepository>();
         await smsRepo.UpdateSendStatus(notificationId, resultType, gatewayReference);
+    }
+
+    /// <summary>
+    /// Looks up a dead delivery report by the operationId stored in the JSONB deliveryreport column.
+    /// Used to verify <see cref="Altinn.Notifications.Shared.Commands.EmailSendResultCommand"/> payloads
+    /// that were saved when an unrecognized SendResult was encountered.
+    /// </summary>
+    public static async Task<DeadDeliveryReportRow?> GetDeadDeliveryReportByOperationId(string connectionString, string operationId)
+    {
+        const string sql = """
+            SELECT id, channel, reason, attemptcount, resolved
+            FROM notifications.deaddeliveryreports
+            WHERE deliveryreport ->> 'operationId' = @operationId
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("operationId", operationId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
     }
 
     /// <summary>

@@ -1,5 +1,5 @@
 using System.Text.Json;
-
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -64,41 +64,56 @@ public static class FailureActionsExtensions
     }
 
     /// <summary>
-    /// Extracts and serializes the email delivery report payload from a Wolverine message.
+    /// Extracts and serializes the email payload from a Wolverine message.
+    /// Supports both <see cref="EmailDeliveryReportCommand"/> (Event Grid reports) and
+    /// <see cref="EmailSendResultCommand"/> (email service polling results).
     /// </summary>
-    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="EmailDeliveryReportCommand"/>.</param>
-    /// <returns>A JSON-serialized string of the <see cref="AcsEmailDeliveryReportReceivedEventData"/>.</returns>
-    /// <exception cref="InvalidDataException">Thrown when the event type is not a recognized ACS email delivery report.</exception>
+    /// <param name="message">The raw Wolverine message object.</param>
+    /// <returns>A JSON-serialized string of the underlying payload.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the message type is unrecognized or the event data cannot be extracted.</exception>
     private static string ExtractEmailPayload(object message)
     {
-        if (message is not EmailDeliveryReportCommand command)
+        if (message is EmailDeliveryReportCommand reportCommand)
         {
-            throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)}, got {message.GetType().Name}.");
+            var eventGridEvent = EventGridEvent.Parse(reportCommand.Message.Body);
+
+            if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
+               && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+            {
+                return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
+            }
+
+            throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
         }
 
-        var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
-
-        if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
-            && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+        if (message is EmailSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(deliveryReport);
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
         }
 
-        throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
+        throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)} or {nameof(EmailSendResultCommand)}, got {message.GetType().Name}.");
     }
 
     /// <summary>
-    /// Serializes the SMS delivery report payload from a Wolverine message.
+    /// Extracts and serializes the SMS payload from a Wolverine message.
+    /// Supports both <see cref="SmsDeliveryReportCommand"/> (LinkMobility delivery reports) and
+    /// <see cref="SmsSendResultCommand"/> (SMS service send results).
     /// </summary>
-    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
-    /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
+    /// <param name="message">The raw Wolverine message object.</param>
+    /// <returns>A JSON-serialized string of the underlying payload.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the message type is unrecognized.</exception>
     private static string ExtractSmsPayload(object message)
     {
-        if (message is not SmsDeliveryReportCommand command)
+        if (message is SmsDeliveryReportCommand deliveryReportCommand)
         {
-            throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
+            return JsonSerializer.Serialize(deliveryReportCommand, JsonSerializerOptionsProvider.Options);
         }
 
-        return JsonSerializer.Serialize(command);
+        if (message is SmsSendResultCommand sendResultCommand)
+        {
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
+        }
+
+        throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)} or {nameof(SmsSendResultCommand)}, got {message.GetType().Name}.");
     }
 }

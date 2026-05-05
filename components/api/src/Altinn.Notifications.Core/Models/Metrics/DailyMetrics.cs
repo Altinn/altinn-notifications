@@ -1,9 +1,9 @@
 ﻿namespace Altinn.Notifications.Core.Models.Metrics;
 
 /// <summary>
-/// Model for metrics for daily statistics
+/// Model for metrics for daily statistics for either email or sms
 /// </summary>
-public record DailySmsMetrics
+public record DailyMetrics<T>
 {
     /// <summary>
     /// The day of the month the metrics apply for
@@ -21,7 +21,7 @@ public record DailySmsMetrics
     public int Year { get; init; }
 
     /// <summary>
-    /// A list of metrics for each individual SMS notification
+    /// A list of metrics for each individual notification
     /// </summary>
-    public List<DailySmsMetricsRecord> Metrics { get; init; } = [];
+    public List<T> Metrics { get; init; } = [];
 }

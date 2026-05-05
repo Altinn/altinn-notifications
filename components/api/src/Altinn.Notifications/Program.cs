@@ -13,6 +13,7 @@ using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
@@ -70,14 +71,14 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     IncludeXmlComments(options);
-    
+
     options.EnableAnnotations();
     options.UseInlineDefinitionsForEnums();
-    options.SchemaFilter<SwaggerDefaultValues>();
+    options.SchemaFilter<OpenApiSchemaEnrichmentFilter>();
     options.OperationFilter<AddResponseHeadersFilter>();
-    
+
     options.ExampleFilters();
-    
+
     options.AddServer(new OpenApiServer()
     {
         Url = "https://platform.tt02.altinn.no/",
@@ -161,7 +162,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
                 "Altinn.Notifications.KafkaProducer",
-                "Altinn.Notifications.KafkaConsumer");
+                "Altinn.Notifications.KafkaConsumer",
+                DeliveryReportMetrics.MeterName);
         })
         .WithTracing(tracing =>
         {
@@ -229,7 +231,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
-    
+
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }

@@ -1,5 +1,4 @@
 using Altinn.Notifications.Email.Core;
-using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
@@ -18,18 +17,17 @@ public static class CheckEmailSendStatusHandler
     private const int _statusPollDelayMs = 8000;
 
     /// <summary>
-    /// Polls ACS for delivery status. If the result is terminal, publishes
-    /// a <see cref="SendOperationResult"/> to Kafka so downstream consumers can update
-    /// the notification status. If still sending, re-schedules the command on ASB
-    /// with an 8-second delay so the polling loop continues.
+    /// Polls ACS for delivery status. If the result is terminal, dispatches the result
+    /// via <see cref="IEmailSendResultDispatcher"/> (Kafka or ASB depending on configuration)
+    /// so the API can update the notification status. If still sending, re-schedules the command
+    /// on ASB with an 8-second delay so the polling loop continues.
     /// </summary>
     public static async Task Handle(
         CheckEmailSendStatusCommand checkEmailSendStatusCommand,
         IDateTimeService dateTime,
-        TopicSettings topicSettings,
         IMessageContext messageContext,
-        ICommonProducer commonKafkaProducer,
-        IEmailServiceClient emailServiceClient)
+        IEmailServiceClient emailService,
+        IEmailSendResultDispatcher sendResultDispatcher)
     {
         if (checkEmailSendStatusCommand.NotificationId == Guid.Empty)
         {
@@ -41,7 +39,7 @@ public static class CheckEmailSendStatusHandler
             throw new ArgumentException("SendOperationId cannot be null, empty, or whitespace.", nameof(checkEmailSendStatusCommand));
         }
 
-        EmailSendResult sendResult = await emailServiceClient.GetOperationUpdate(checkEmailSendStatusCommand.SendOperationId);
+        EmailSendResult sendResult = await emailService.GetOperationUpdate(checkEmailSendStatusCommand.SendOperationId);
 
         if (sendResult != EmailSendResult.Sending)
         {
@@ -52,7 +50,7 @@ public static class CheckEmailSendStatusHandler
                 NotificationId = checkEmailSendStatusCommand.NotificationId
             };
 
-            await commonKafkaProducer.ProduceAsync(topicSettings.EmailStatusUpdatedTopicName, operationResult.Serialize());
+            await sendResultDispatcher.DispatchAsync(operationResult);
         }
         else
         {

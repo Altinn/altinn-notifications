@@ -16,9 +16,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
-    private readonly string _creatorName = "ttd";
     private readonly List<Guid> _ordersToDelete = [];
     private readonly List<int> _fakeOrderIdsToDelete = [];
+    private readonly string _creatorName = $"ttd-{Guid.NewGuid():N}";
 
     public async ValueTask DisposeAsync()
     {
@@ -46,7 +46,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var fakeOrderId = 123;
-        await InsertTestDataRowForStatusFeed(fakeOrderId, "2025-5-21", Guid.NewGuid());
+        var shipmentId = Guid.NewGuid();
+        await InsertTestDataRowForStatusFeed(fakeOrderId, "2025-5-21", shipmentId);
         _fakeOrderIdsToDelete.Add(fakeOrderId);
 
         StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
@@ -55,9 +56,10 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
         // Act
         var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
+        var filteredByShipmentId = results.Where(x => x.OrderStatus.ShipmentId == shipmentId);
 
         // Assert
-        var item = Assert.Single(results);
+        var item = Assert.Single(filteredByShipmentId);
         Assert.True(item.SequenceNumber > 0);
         Assert.Equal(ProcessingLifecycle.Order_Completed, item.OrderStatus.Status);
     }

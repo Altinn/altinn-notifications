@@ -257,10 +257,12 @@ public static class PostgreUtil
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = "DELETE FROM notifications.orders WHERE sendersreference = @sendersRef";
 
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
-        pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
-
-        await pgcom.ExecuteNonQueryAsync();
+        await ExecuteWithDeadlockRetryAsync(async () =>
+        {
+            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
+            await pgcom.ExecuteNonQueryAsync();
+        });
     }
 
     public static async Task DeleteOrderFromDb(Guid id)
@@ -268,10 +270,32 @@ public static class PostgreUtil
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = "DELETE FROM notifications.orders WHERE alternateid = @id";
 
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
-        pgcom.Parameters.AddWithValue("id", id);
+        await ExecuteWithDeadlockRetryAsync(async () =>
+        {
+            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            pgcom.Parameters.AddWithValue("id", id);
+            await pgcom.ExecuteNonQueryAsync();
+        });
+    }
 
-        await pgcom.ExecuteNonQueryAsync();
+    /// <summary>
+    /// Retries <paramref name="action"/> up to 3 times when a PostgreSQL deadlock (40P01) is detected,
+    /// with a short back-off between attempts. PostgreSQL expects callers to retry on deadlock.
+    /// </summary>
+    private static async Task ExecuteWithDeadlockRetryAsync(Func<Task> action, int maxRetries = 3)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await action();
+                return;
+            }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == "40P01" && attempt < maxRetries)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt));
+            }
+        }
     }
 
     public static async Task<int> SelectStatusFeedEntryCount(Guid id)

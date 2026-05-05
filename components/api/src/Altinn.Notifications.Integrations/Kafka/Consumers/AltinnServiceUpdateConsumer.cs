@@ -45,7 +45,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 return;
             }
 
-            await _serviceUpdate.HandleServiceUpdate(update.Source.ToLower().Trim(), update.Schema, update.Data);
+            await _serviceUpdate.HandleServiceUpdate(update.Source.ToLowerInvariant().Trim(), update.Schema, update.Data);
         }
 
         private async Task RetryServiceUpdate(string message)

@@ -1,8 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
@@ -12,15 +11,16 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 /// <summary>
 /// Handles SMS delivery status updates received from the Azure Service Bus queue.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class SmsDeliveryReportHandler
 {
     /// <summary>
-    /// Handles an SMS delivery report command by updating the notification send status.
+    /// Handles an SMS delivery report command by updating the notification send status
+    /// and emitting a custom delivery report metric.
     /// </summary>
     public static async Task Handle(
         SmsDeliveryReportCommand command,
         ISmsNotificationService smsNotificationService,
+        DeliveryReportMetrics metrics,
         ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(command.GatewayReference))
@@ -45,9 +45,13 @@ public static class SmsDeliveryReportHandler
         {
             GatewayReference = command.GatewayReference,
             NotificationId = command.NotificationId,
-            SendResult = sendResult
+            SendResult = sendResult,
+            DeliveryReport = command.DeliveryReport
         };
 
         await smsNotificationService.UpdateSendStatus(operationResult);
+        
+        metrics.RecordSmsDeliveryReport(
+            sendResult: sendResult.ToString());
     }
 }

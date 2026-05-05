@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Core.Services
         private readonly IMetricsRepository _metricsRepository;
         private readonly ILogger<MetricsService> _logger;
         private readonly IHostEnvironment _hostEnvironment;
-        private const int DaysOffsetForSmsMetrics = 1; // Fetch yesterdays metrics
+        private const int DaysOffsetForDailyMetrics = 1; // Fetch yesterdays metrics
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsService"/> class.
@@ -35,19 +35,33 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DailySmsMetrics> GetDailySmsMetrics(CancellationToken cancellationToken)
+        public async Task<DailyMetrics<DailySmsMetricsRecord>> GetDailySmsMetrics(CancellationToken cancellationToken)
         {
-            var date = DateTime.UtcNow.AddDays(-DaysOffsetForSmsMetrics);
+            var date = DateTime.UtcNow.AddDays(-DaysOffsetForDailyMetrics);
             return await _metricsRepository.GetDailySmsMetrics(date.Day, date.Month, date.Year, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<MetricsSummary> GetParquetFile(DailySmsMetrics metrics, CancellationToken cancellationToken)
+        public async Task<DailyMetrics<DailyEmailMetricsRecord>> GetDailyEmailMetrics(CancellationToken cancellationToken)
+        {
+            var date = DateTime.UtcNow.AddDays(-DaysOffsetForDailyMetrics);
+            return await _metricsRepository.GetDailyEmailMetrics(date.Day, date.Month, date.Year, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<MetricsSummary> GetParquetFile<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken)
         {
             var (parquetStream, fileHash, fileSize) = await GenerateParquetFileStream(metrics, cancellationToken);
 
             var env = string.IsNullOrEmpty(_hostEnvironment.EnvironmentName) ? "Unknown" : _hostEnvironment.EnvironmentName;
-            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_sms_notifications_{env}.parquet";
+            var type = typeof(T).Name switch
+            {
+                nameof(DailySmsMetricsRecord) => "sms",
+                nameof(DailyEmailMetricsRecord) => "email",
+                _ => throw new InvalidOperationException($"Unsupported metrics type: {typeof(T).Name}")
+            };
+
+            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_{type}_notifications_{env}.parquet";
 
             var response = new MetricsSummary
             {
@@ -62,7 +76,7 @@ namespace Altinn.Notifications.Core.Services
             return response;
         }
 
-        private async Task<(Stream ParquetStream, string FileHash, long FileSize)> GenerateParquetFileStream(DailySmsMetrics metrics, CancellationToken cancellationToken)
+        private async Task<(Stream ParquetStream, string FileHash, long FileSize)> GenerateParquetFileStream<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Generating daily summary parquet file.");
 

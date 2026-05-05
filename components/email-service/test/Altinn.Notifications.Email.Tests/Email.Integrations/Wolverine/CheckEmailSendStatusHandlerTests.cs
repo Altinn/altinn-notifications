@@ -1,5 +1,4 @@
 using Altinn.Notifications.Email.Core;
-using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
@@ -15,11 +14,6 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations.Wolverine;
 
 public class CheckEmailSendStatusHandlerTests
 {
-    private static readonly TopicSettings _topicSettings = new()
-    {
-        EmailStatusUpdatedTopicName = "email.status.updated"
-    };
-
     private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123") =>
         new()
         {
@@ -37,10 +31,9 @@ public class CheckEmailSendStatusHandlerTests
             CheckEmailSendStatusHandler.Handle(
                 command,
                 Mock.Of<IDateTimeService>(),
-                _topicSettings,
                 Mock.Of<IMessageContext>(),
-                Mock.Of<ICommonProducer>(),
-                Mock.Of<IEmailServiceClient>()));
+                Mock.Of<IEmailServiceClient>(),
+                Mock.Of<IEmailSendResultDispatcher>()));
 
         Assert.Equal("checkEmailSendStatusCommand", ex.ParamName);
     }
@@ -56,24 +49,23 @@ public class CheckEmailSendStatusHandlerTests
             CheckEmailSendStatusHandler.Handle(
                 command,
                 Mock.Of<IDateTimeService>(),
-                _topicSettings,
                 Mock.Of<IMessageContext>(),
-                Mock.Of<ICommonProducer>(),
-                Mock.Of<IEmailServiceClient>()));
+                Mock.Of<IEmailServiceClient>(),
+                Mock.Of<IEmailSendResultDispatcher>()));
 
         Assert.Equal("checkEmailSendStatusCommand", ex.ParamName);
     }
 
     [Theory]
-    [InlineData(EmailSendResult.Delivered)]
     [InlineData(EmailSendResult.Failed)]
+    [InlineData(EmailSendResult.Delivered)]
+    [InlineData(EmailSendResult.Failed_Bounced)]
+    [InlineData(EmailSendResult.Failed_Quarantined)]
+    [InlineData(EmailSendResult.Failed_FilteredSpam)]
+    [InlineData(EmailSendResult.Failed_TransientError)]
     [InlineData(EmailSendResult.Failed_InvalidEmailFormat)]
     [InlineData(EmailSendResult.Failed_SupressedRecipient)]
-    [InlineData(EmailSendResult.Failed_TransientError)]
-    [InlineData(EmailSendResult.Failed_Bounced)]
-    [InlineData(EmailSendResult.Failed_FilteredSpam)]
-    [InlineData(EmailSendResult.Failed_Quarantined)]
-    public async Task Handle_TerminalSendResult_PublishesToKafka(EmailSendResult terminalResult)
+    public async Task Handle_TerminalSendResult_DispatchesViaStatusDispatcher(EmailSendResult terminalResult)
     {
         // Arrange
         var command = ValidCommand();
@@ -82,37 +74,57 @@ public class CheckEmailSendStatusHandlerTests
         clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
             .ReturnsAsync(terminalResult);
 
-        string? capturedTopic = null;
-        string? capturedMessage = null;
-
-        var producerMock = new Mock<ICommonProducer>();
-        producerMock
-            .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((topic, msg) =>
-            {
-                capturedTopic = topic;
-                capturedMessage = msg;
-            })
-            .ReturnsAsync(true);
+        SendOperationResult? capturedResult = null;
+        var dispatcherMock = new Mock<IEmailSendResultDispatcher>();
+        dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Callback<SendOperationResult>(r => capturedResult = r)
+            .Returns(Task.CompletedTask);
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
             command,
             Mock.Of<IDateTimeService>(),
-            _topicSettings,
             Mock.Of<IMessageContext>(),
-            producerMock.Object,
-            clientMock.Object);
+            clientMock.Object,
+            dispatcherMock.Object);
 
-        // Assert: terminal result goes to Kafka
-        Assert.Equal(_topicSettings.EmailStatusUpdatedTopicName, capturedTopic);
-        Assert.NotNull(capturedMessage);
-        Assert.Contains(command.NotificationId.ToString(), capturedMessage);
-        Assert.Contains(command.SendOperationId, capturedMessage);
+        // Assert: terminal result dispatched with correct data
+        dispatcherMock.Verify(d => d.DispatchAsync(It.IsAny<SendOperationResult>()), Times.Once);
+        Assert.NotNull(capturedResult);
+        Assert.Equal(command.NotificationId, capturedResult.NotificationId);
+        Assert.Equal(command.SendOperationId, capturedResult.OperationId);
+        Assert.Equal(terminalResult, capturedResult.SendResult);
     }
 
     [Fact]
-    public async Task Handle_SendResultIsSending_SchedulesRecheckAndDoesNotPublishToKafka()
+    public async Task Handle_TerminalSendResult_DoesNotScheduleRecheck()
+    {
+        // Arrange
+        var command = ValidCommand();
+
+        var clientMock = new Mock<IEmailServiceClient>();
+        clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
+            .ReturnsAsync(EmailSendResult.Delivered);
+
+        var messageContextMock = new Mock<IMessageContext>();
+        var dispatcherMock = new Mock<IEmailSendResultDispatcher>();
+        dispatcherMock.Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>())).Returns(Task.CompletedTask);
+
+        // Act
+        await CheckEmailSendStatusHandler.Handle(
+            command,
+            Mock.Of<IDateTimeService>(),
+            messageContextMock.Object,
+            clientMock.Object,
+            dispatcherMock.Object);
+
+        // Assert
+        messageContextMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_SendResultIsSending_SchedulesRecheckAndDoesNotDispatch()
     {
         // Arrange
         var command = ValidCommand();
@@ -125,17 +137,16 @@ public class CheckEmailSendStatusHandlerTests
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(fixedTime);
 
-        var producerMock = new Mock<ICommonProducer>();
+        var dispatcherMock = new Mock<IEmailSendResultDispatcher>();
         var messageContextMock = new Mock<IMessageContext>();
 
         // Act
         await CheckEmailSendStatusHandler.Handle(
             command,
             dateTimeMock.Object,
-            _topicSettings,
             messageContextMock.Object,
-            producerMock.Object,
-            clientMock.Object);
+            clientMock.Object,
+            dispatcherMock.Object);
 
         // Assert
         // ScheduleAsync is a Wolverine extension method that resolves to PublishAsync with DeliveryOptions.ScheduleDelay,
@@ -149,6 +160,6 @@ public class CheckEmailSendStatusHandlerTests
                 It.Is<DeliveryOptions?>(o => o != null && o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
             Times.Once);
 
-        producerMock.VerifyNoOtherCalls();
+        dispatcherMock.VerifyNoOtherCalls();
     }
 }

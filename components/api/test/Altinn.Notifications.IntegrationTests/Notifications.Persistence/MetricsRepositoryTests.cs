@@ -67,7 +67,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         
         var date = DateTime.UtcNow;
 
-        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date.AddDays(-1));
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date);
         _orderIdsToDelete.Add(order.Id);
 
         // Act
@@ -82,5 +82,36 @@ public class MetricsRepositoryTests : IAsyncLifetime
         Assert.Equal("innland", metrics.Rate);
         Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
+    }
+
+    [Fact]
+    public async Task GetDailyEmailMetrics()
+    {
+        // Arrange
+        var orgName = $"test-{Guid.NewGuid():N}";
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        var date = DateTime.UtcNow;
+
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date);
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        var result = await sut.GetDailyEmailMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
+
+        // Assert
+        Assert.InRange(result.Metrics.Count, 2, int.MaxValue);
+
+        var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
+        Assert.NotNull(metrics);
+        Assert.Equal(orgName, metrics.CreatorName);
+        Assert.NotEmpty(metrics.RequestedSendTime);
+        Assert.Equal("Delivered", metrics.Result);
+        Assert.Equal("local-testing", metrics.SendersReference);
+        Assert.Null(metrics.ResourceId);
+        Assert.Empty(metrics.OperationId);
+        Assert.NotEmpty(metrics.ShipmentId);
     }
 }

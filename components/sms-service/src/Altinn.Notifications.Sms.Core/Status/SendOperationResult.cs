@@ -14,7 +14,7 @@ public class SendOperationResult
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new JsonStringEnumConverter() }
     };
-    
+
     /// <summary>
     /// The notification id
     /// </summary>
@@ -29,6 +29,11 @@ public class SendOperationResult
     /// The sms send result
     /// </summary>
     public SmsSendResult? SendResult { get; set; }
+
+    /// <summary>
+    /// The raw delivery report payload received from the SMS gateway.
+    /// </summary>
+    public string? DeliveryReport { get; set; }
 
     /// <summary>
     /// Json serializes the <see cref="SendOperationResult"/>
