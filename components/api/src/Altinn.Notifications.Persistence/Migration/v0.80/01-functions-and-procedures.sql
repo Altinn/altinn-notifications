@@ -384,8 +384,8 @@ DECLARE
     -- Generate lock ID from function name using hashtext
     lock_id bigint := hashtext('notifications.deleteoldstatusfeedrecords_v2');
 BEGIN
-    -- Acquire an advisory lock to prevent concurrent cleanup operations
-    SELECT pg_try_advisory_lock(lock_id) INTO lock_acquired;
+    -- Acquire a transaction-scoped advisory lock to prevent concurrent cleanup operations
+    SELECT pg_try_advisory_xact_lock(lock_id) INTO lock_acquired;
 
     IF NOT lock_acquired THEN
         RETURN 0; -- Another cleanup is running
@@ -402,8 +402,6 @@ BEGIN
     )
     -- Count the rows that were captured in the CTE
     SELECT count(*) INTO deleted_count FROM deleted_rows;
-
-    PERFORM pg_advisory_unlock(lock_id);
 
     RETURN deleted_count;
 END;
