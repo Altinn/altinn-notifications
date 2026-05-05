@@ -82,7 +82,7 @@ public class AuthorizationService : IAuthorizationService
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
-        if (xacmlJsonResponse is null || xacmlJsonResponse.Response is null)
+        if (xacmlJsonResponse?.Response is null)
         {
             throw new HttpRequestException("Authorization PDP returned a null or empty response.");
         }
