@@ -253,6 +253,7 @@ public class EmailNotificationOrderRequestValidatorTests
     [InlineData("john.doe@sub.domain.example", true)]
     [InlineData("gratis-netflix+1@gmail.com", true)]
     [InlineData(".user@example.com", true)]
+    [InlineData("user@næringsliv.no", true)] // Scandinavian IDN domain
     [InlineData("", false)]
     [InlineData("userexample.com", false)]
     [InlineData("user@", false)]
@@ -260,6 +261,8 @@ public class EmailNotificationOrderRequestValidatorTests
     [InlineData("user@example..com", false)]
     [InlineData("user@exa!mple.com", false)]
     [InlineData("user.@example.com", false)]
+    [InlineData("one@example.com;two@example.com", false)] // semicolon-separated list must be rejected
+    [InlineData("one@example.com,two@example.com", false)] // comma-separated list must also be rejected
     public void IsValidEmail(string email, bool expectedResult)
     {
         bool actual = RecipientRules.IsValidEmail(email);
