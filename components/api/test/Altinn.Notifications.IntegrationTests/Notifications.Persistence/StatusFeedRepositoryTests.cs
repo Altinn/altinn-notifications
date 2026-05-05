@@ -305,21 +305,13 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
     private static StatusFeedRepository BuildRepositoryWithBatchSize(int batchSize)
     {
-        string? previousValue = Environment.GetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize");
-        var envVariables = new Dictionary<string, string>
+        var configOverrides = new Dictionary<string, string>
         {
             { "NotificationConfig__StatusFeedCleanupBatchSize", batchSize.ToString() }
         };
 
-        try
-        {
-            return (StatusFeedRepository)ServiceUtil
-                .GetServices([typeof(IStatusFeedRepository)], envVariables)
-                .First(i => i.GetType() == typeof(StatusFeedRepository));
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("NotificationConfig__StatusFeedCleanupBatchSize", previousValue);
-        }
+        return (StatusFeedRepository)ServiceUtil
+            .GetServices([typeof(IStatusFeedRepository)], configOverrides)
+            .First(i => i.GetType() == typeof(StatusFeedRepository));
     }
 }
