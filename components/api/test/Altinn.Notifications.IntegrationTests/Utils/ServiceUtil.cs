@@ -72,7 +72,11 @@ public static class ServiceUtil
         // so concurrent tests each get their own isolated configuration with no race conditions.
         if (configOverrides != null)
         {
-            builder.AddInMemoryCollection(configOverrides!);
+            var normalized = configOverrides.ToDictionary(
+                kvp => kvp.Key.Replace("__", ":"),
+                kvp => kvp.Value);
+
+            builder.AddInMemoryCollection(normalized!);
         }
 
         var config = builder.Build();
