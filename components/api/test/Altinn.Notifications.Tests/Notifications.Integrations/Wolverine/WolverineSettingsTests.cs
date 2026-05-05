@@ -64,7 +64,7 @@ public class WolverineSettingsTests
         Assert.Equal(10, settings.SmsSendResultListenerCount);
         Assert.Equal(10, settings.EmailDeliveryReportListenerCount);
         Assert.Equal(10, settings.SmsDeliveryReportListenerCount);
-        Assert.Equal(10, settings.EmailServiceRateLimitListenerCount);
         Assert.Equal(10, settings.PastDueOrdersListenerCount);
+        Assert.Equal(1, settings.EmailServiceRateLimitListenerCount);
     }
 }
