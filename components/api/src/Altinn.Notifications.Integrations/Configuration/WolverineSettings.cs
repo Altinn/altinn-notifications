@@ -25,11 +25,6 @@ public class WolverineSettings : WolverineSettingsBase
     public string EmailSendQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the email send queue.
-    /// </summary>
-    public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
-
-    /// <summary>
     /// ASB queue name used for publishing sms messages.
     /// Produced by the API and consumed by the SMS Service and service provider.
     /// </summary>
