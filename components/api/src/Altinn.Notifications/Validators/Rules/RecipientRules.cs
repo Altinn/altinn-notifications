@@ -233,15 +233,18 @@ public static class RecipientRules
     /// Validates that the provided string is a single, valid email address.
     /// Supports internationalized domain names (IDN), including Scandinavian characters (æøåÆØÅ),
     /// by converting the domain to its ASCII-compatible encoding (Punycode) before validation.
+    /// Multiple addresses separated by semicolons or commas are not accepted.
     /// </summary>
     /// <param name="email">The string to validate as an email address.</param>
     /// <returns><c>true</c> if the input is a single valid email address; otherwise, <c>false</c>.</returns>
     internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
-        {  
-            return false; 
+        {
+            return false;
         }
+
+        email = email.Trim();
 
         try
         {
@@ -251,9 +254,27 @@ public static class RecipientRules
                 return false;
             }
 
+            string localPart = parts[0];
+            if (localPart.StartsWith('.') || localPart.EndsWith('.'))
+            {
+                return false;
+            }
+
             var idn = new IdnMapping();
             var asciiDomain = idn.GetAscii(parts[1]);
-            var normalizedEmail = $"{parts[0]}@{asciiDomain}";
+
+            var domainLabels = asciiDomain.Split('.');
+            if (domainLabels.Length < 2)
+            {
+                return false;
+            }
+
+            if (!domainLabels.All(label => label.Length > 0 && label.All(c => char.IsAsciiLetterOrDigit(c) || c == '-')))
+            {
+                return false;
+            }
+
+            var normalizedEmail = $"{localPart}@{asciiDomain}";
 
             return new MailAddress(normalizedEmail).Address == normalizedEmail;
         }
