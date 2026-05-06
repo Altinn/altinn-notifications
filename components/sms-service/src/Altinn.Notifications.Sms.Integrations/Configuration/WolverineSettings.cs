@@ -19,6 +19,11 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy SendSmsQueuePolicy { get; set; } = new();
 
     /// <summary>
+    /// Number of concurrent listeners for the SMS send queue per pod.
+    /// </summary>
+    public int SendSmsListenerCount { get; set; } = 10;
+
+    /// <summary>
     /// Determines whether to accept sms notifications via Wolverine and Azure Service Bus or via Kafka.
     /// </summary>
     public bool EnableSendSmsListener { get; set; } = false;

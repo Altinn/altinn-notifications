@@ -78,6 +78,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailSendResultListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailSendResultListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
             throw new InvalidOperationException(
@@ -85,7 +91,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendResultQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailSendResultListenerCount);
 
         wolverineOptions.Policies.Add(new EmailSendResultHandlerPolicy(wolverineSettings));
     }
@@ -102,6 +108,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.SmsSendResultListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsSendResultListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
         {
             throw new InvalidOperationException(
@@ -109,7 +121,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.SmsSendResultListenerCount);
 
         wolverineOptions.Policies.Add(new SmsSendResultHandlerPolicy(wolverineSettings));
     }
@@ -125,6 +137,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailDeliveryReportListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
@@ -133,7 +151,7 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
                         .InteropWith(new EventGridEnvelopeMapper())
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailDeliveryReportListenerCount);
 
         wolverineOptions.Policies.Add(new EmailDeliveryReportHandlerPolicy(wolverineSettings));
     }
@@ -148,6 +166,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.SmsDeliveryReportListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.SmsDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
@@ -155,7 +179,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.SmsDeliveryReportListenerCount);
 
         wolverineOptions.Policies.Add(new SmsDeliveryReportHandlerPolicy(wolverineSettings));
     }
@@ -171,6 +195,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailServiceRateLimitListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailServiceRateLimitListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
         {
             throw new InvalidOperationException(
@@ -178,7 +208,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailServiceRateLimitListenerCount);
 
         wolverineOptions.Policies.Add(new EmailServiceRateLimitHandlerPolicy(wolverineSettings));
     }
@@ -241,6 +271,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.PastDueOrdersListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.PastDueOrdersListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnablePastDueOrderListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
         {
             throw new InvalidOperationException(
@@ -248,7 +284,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.PastDueOrdersListenerCount);
 
         wolverineOptions.Policies.Add(new ProcessPastDueOrderHandlerPolicy(wolverineSettings));
     }
