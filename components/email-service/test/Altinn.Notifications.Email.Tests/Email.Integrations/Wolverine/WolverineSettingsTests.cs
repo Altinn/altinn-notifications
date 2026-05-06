@@ -14,8 +14,9 @@ public class WolverineSettingsTests
         var settings = new WolverineSettings();
 
         Assert.False(settings.EnableWolverine);
-        Assert.Equal(10, settings.ListenerCount);
-        
+        Assert.Equal(10, settings.EmailSendListenerCount);
+        Assert.Equal(10, settings.EmailStatusCheckListenerCount);
+
         Assert.NotNull(settings.EmailSendQueuePolicy);
         Assert.False(settings.EnableSendEmailListener);
         Assert.Equal(string.Empty, settings.EmailSendQueueName);
@@ -34,7 +35,8 @@ public class WolverineSettingsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:ListenerCount"] = "5",
+                ["WolverineSettings:EmailSendListenerCount"] = "5",
+                ["WolverineSettings:EmailStatusCheckListenerCount"] = "3",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSendEmailListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
@@ -55,7 +57,8 @@ public class WolverineSettingsTests
         Assert.NotNull(settings);
         Assert.True(settings.EnableWolverine);
 
-        Assert.Equal(5, settings.ListenerCount);
+        Assert.Equal(5, settings.EmailSendListenerCount);
+        Assert.Equal(3, settings.EmailStatusCheckListenerCount);
 
         Assert.True(settings.EnableSendEmailListener);
         Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);

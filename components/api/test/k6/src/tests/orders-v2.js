@@ -30,14 +30,15 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
 import {
-    post_sms_order_v2, post_sms_instant_order_v2, post_email_order_v2,
+    post_sms_order_v2, post_sms_instant_order_v2, post_sms_instant_order_old_v2, post_email_order_v2,
     setEmptyThresholds, get_email_shipment, get_sms_shipment,
-    get_sms_instant_shipment, get_status_feed
+    get_sms_instant_shipment, get_sms_instant_shipment_old, get_email_instant_shipment,
+    get_status_feed, post_email_instant_order_v2
 } from "./threshold-labels.js";
 import { scopes } from "../shared/variables.js";
 import { getEmailRecipient, getSmsRecipient } from "../shared/functions.js";
 
-const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
+const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, post_sms_instant_order_old_v2, post_email_instant_order_v2, get_sms_instant_shipment, get_sms_instant_shipment_old, get_email_instant_shipment, get_email_shipment, get_sms_shipment, get_status_feed];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
@@ -47,6 +48,12 @@ const smsOrderRequestJson = JSON.parse(
 );
 const smsOrderInstantRequestJson = JSON.parse(
     open("../data/orders/order-v2-sms-instant.json")
+);
+const smsOrderInstantRequestOldJson = JSON.parse(
+    open("../data/orders/order-v2-sms-instant-old.json")
+);
+const emailOrderInstantRequestJson = JSON.parse(
+    open("../data/orders/order-v2-email-instant.json")
 );
 
 export const options = {
@@ -66,6 +73,20 @@ export function setup() {
     const emailRecipient = getEmailRecipient();
     const smsRecipient = getSmsRecipient();
 
+    
+    // needed for instant notifications
+    if (!smsRecipient) {
+        stopIterationOnFail("smsRecipient is required for SMS instant orders — set the 'smsRecipient' env var", false);
+    }
+
+    if (!emailRecipient) {
+        stopIterationOnFail("emailRecipient is required for email instant orders — set the 'emailRecipient' env var", false);
+    }
+
+    smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
+    emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
+
+
     // used with notification email orders if applicable
     const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
 
@@ -74,40 +95,52 @@ export function setup() {
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
-    if (emailRecipient == null) {
-        // unset recipientEmail object when no email recipient is provided
+
+
+    // non-instant supports NIN lookup; prefer it over direct email when provided
+    if (ninRecipient != null) {
+        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
         emailOrderRequestJson.recipient["recipientEmail"] = undefined;
     }
     else {
-        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
-    }
-
-    if (ninRecipient == null) {
-        // unset recipientPerson object when no national identity number is provided
         emailOrderRequestJson.recipient["recipientPerson"] = undefined;
     }
-    else {
-        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
-    }
 
-    if (smsRecipient != null) {
-        smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
-    }
 
     const emailOrderRequest = { ...emailOrderRequestJson, idempotencyId: idempotencyIdEmail };
 
     const smsOrderRequest = { ...smsOrderRequestJson, idempotencyId: idempotencyIdSms, sendersReference };
 
+    const smsOrderInstantOldRequest = {
+        ...smsOrderInstantRequestOldJson,
+        idempotencyId: uuidv4(),
+        sendersReference,
+        recipient: {
+            ...smsOrderInstantRequestOldJson.recipient,
+            recipientSms: {
+                ...smsOrderInstantRequestOldJson.recipient.recipientSms,
+                phoneNumber: smsRecipient
+            }
+        }
+    };
+
     const smsOrderInstantRequest = {
         ...smsOrderInstantRequestJson,
         idempotencyId: uuidv4(),
         sendersReference,
-        recipient: {
-            ...smsOrderInstantRequestJson.recipient,
-            recipientSms: {
-                ...smsOrderInstantRequestJson.recipient.recipientSms,
-                phoneNumber: smsRecipient
-            }
+        recipientSms: {
+            ...smsOrderInstantRequestJson.recipientSms,
+            phoneNumber: smsRecipient
+        }
+    };
+
+    const emailOrderInstantRequest = {
+        ...emailOrderInstantRequestJson,
+        idempotencyId: uuidv4(),
+        sendersReference,
+        recipientEmail: {
+            ...emailOrderInstantRequestJson.recipientEmail,
+            emailAddress: emailRecipient
         }
     };
 
@@ -116,7 +149,9 @@ export function setup() {
         sendersReference,
         emailOrderRequest,
         smsOrderRequest,
-        smsOrderInstantRequest
+        smsOrderInstantRequest,
+        smsOrderInstantOldRequest,
+        emailOrderInstantRequest
     };
 }
 
@@ -178,8 +213,8 @@ function postSmsNotificationOrderRequest(data) {
 
 /**
  * Post instant SMS notification order request using the v2 API.
- * @param {*} data 
- * @returns 
+ * @param {*} data
+ * @returns
  */
 function postSmsInstantNotificationOrderRequest(data) {
     const response = futureOrdersApi.postSmsInstantNotificationOrderRequest(
@@ -194,6 +229,50 @@ function postSmsInstantNotificationOrderRequest(data) {
     });
 
     stopIterationOnFail("POST SMS instant notification order request failed", success);
+
+    return response.body;
+}
+
+/**
+ * Post old instant SMS notification order request using the v2 API.
+ * @param {*} data
+ * @returns
+ */
+function postSmsInstantNotificationOrderRequestOld(data) {
+    const response = futureOrdersApi.postSmsInstantNotificationOrderRequestOld(
+        JSON.stringify(data.smsOrderInstantOldRequest),
+        data.token,
+        post_sms_instant_order_old_v2
+    );
+
+    const success = check(response, {
+        "POST old SMS instant notification order request. Status is 201 Created": (r) => r.status === 201,
+        "POST old SMS instant notification order request. Response body contains shipmentId": (r) => JSON.parse(r.body).notification.shipmentId !== undefined
+    });
+
+    stopIterationOnFail("POST old SMS instant notification order request failed", success);
+
+    return response.body;
+}
+
+/**
+ * Post instant Email notification order request using the v2 API.
+ * @param {*} data
+ * @returns
+ */
+function postEmailInstantNotificationOrderRequest(data) {
+    const response = futureOrdersApi.postEmailInstantNotificationOrderRequest(
+        JSON.stringify(data.emailOrderInstantRequest),
+        data.token,
+        post_email_instant_order_v2
+    );
+
+    const success = check(response, {
+        "POST Email instant notification order request. Status is 201 Created": (r) => r.status === 201,
+        "POST Email instant notification order request. Response body contains shipmentId": (r) => JSON.parse(r.body).notification.shipmentId !== undefined
+    });
+
+    stopIterationOnFail("POST Email instant notification order request failed", success);
 
     return response.body;
 }
@@ -226,6 +305,15 @@ export function getShipmentStatus(data, shipmentId, label, type) {
                 "GET SMS shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId
             });
             break;
+        case "SMSOldInstant":
+            check(response, {
+                "GET old SMS instant shipment details for SMS. Status is 200 OK": (r) => r.status === 200
+            });
+            check(JSON.parse(response.body), {
+                "GET old SMS instant shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+                "Get old SMS instant shipment details for SMS. Type is Instant": (shipmentResponse) => shipmentResponse.type === "Instant"
+            });
+            break;
         case "SMSInstant":
             check(response, {
                 "GET SMS instant shipment details for SMS. Status is 200 OK": (r) => r.status === 200
@@ -233,6 +321,15 @@ export function getShipmentStatus(data, shipmentId, label, type) {
             check(JSON.parse(response.body), {
                 "GET SMS instant shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
                 "Get SMS instant shipment details for SMS. Type is Instant": (shipmentResponse) => shipmentResponse.type === "Instant"
+            });
+            break;
+        case "EmailInstant":
+            check(response, {
+                "GET Email instant shipment details. Status is 200 OK": (r) => r.status === 200
+            });
+            check(JSON.parse(response.body), {
+                "GET Email instant shipment details. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+                "GET Email instant shipment details. Type is Instant": (shipmentResponse) => shipmentResponse.type === "Instant"
             });
             break;
         default:
@@ -281,6 +378,14 @@ export default function runTests(data) {
     // testing instant SMS notification order request
     response = postSmsInstantNotificationOrderRequest(data);
     getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_instant_shipment, "SMSInstant");
+
+    // testing old instant SMS notification order request
+    response = postSmsInstantNotificationOrderRequestOld(data);
+    getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_instant_shipment_old, "SMSOldInstant");
+
+    // testing instant Email notification order request
+    response = postEmailInstantNotificationOrderRequest(data);
+    getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_email_instant_shipment, "EmailInstant");
 
     getStatusFeed(data, get_status_feed);
 }

@@ -12,7 +12,6 @@ public class WolverineSettingsTests
 
         Assert.False(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
-        Assert.Equal(10, settings.ListenerCount);
     }
 
     [Fact]

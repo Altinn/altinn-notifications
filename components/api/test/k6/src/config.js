@@ -43,7 +43,9 @@ export const notifications = {
 
     orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
 
-    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_old_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/sms`,
+    orders_email_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/email`,
 
     shipment_v2: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
 
