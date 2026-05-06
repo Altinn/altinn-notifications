@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
@@ -14,19 +15,21 @@ public interface IEmailNotificationService : INotificationService
     /// </summary>
     /// <param name="orderId">The unique identifier for the order associated with the notification.</param>
     /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
+    /// <param name="expiryDateTime">The UTC time at which the notification should expire and no longer be sent.</param>
     /// <param name="emailAddresses">The list of email addresses to send the notification to.</param>
     /// <param name="emailRecipient">The email recipient to send the notification to.</param>
     /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
+    Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends pending email notifications.
+    /// Sends pending email notifications matching the given <paramref name="sendingTimePolicy"/>.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The sending time policy to send for. Defaults to <see cref="SendingTimePolicy.Anytime"/>.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendNotifications(CancellationToken cancellationToken);
+    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime);
 
     /// <summary>
     /// Updates the send status of a notification.

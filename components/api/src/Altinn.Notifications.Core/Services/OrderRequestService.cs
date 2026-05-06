@@ -212,6 +212,7 @@ public class OrderRequestService : IOrderRequestService
         {
             Channel = NotificationChannel.Email,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
+            EmailSendingTimePolicy = recipientEmail.Settings!.SendingTimePolicy,
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
         };
     }
@@ -221,7 +222,7 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractPersonRecipientComponents(RecipientPerson recipientPerson)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientPerson.SmsSettings, recipientPerson.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientPerson.SmsSettings, recipientPerson.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
@@ -230,6 +231,7 @@ public class OrderRequestService : IOrderRequestService
             ResourceId = recipientPerson.ResourceId,
             ResourceAction = recipientPerson.ResourceAction,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             IgnoreReservation = recipientPerson.IgnoreReservation,
             Recipients = [new([], nationalIdentityNumber: recipientPerson.NationalIdentityNumber)]
         };
@@ -282,12 +284,13 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractOrganizationRecipientComponents(RecipientOrganization recipientOrganization)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientOrganization.SmsSettings, recipientOrganization.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientOrganization.SmsSettings, recipientOrganization.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
             Templates = templates,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             Channel = recipientOrganization.ChannelSchema,
             ResourceId = recipientOrganization.ResourceId,
             ResourceAction = recipientOrganization.ResourceAction,
@@ -342,12 +345,13 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractExternalIdentityRecipientComponents(RecipientExternalIdentity recipientExternalIdentity)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientExternalIdentity.SmsSettings, recipientExternalIdentity.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientExternalIdentity.SmsSettings, recipientExternalIdentity.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
             Templates = templates,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             Channel = recipientExternalIdentity.ChannelSchema,
             ResourceId = recipientExternalIdentity.ResourceId,
             ResourceAction = recipientExternalIdentity.ResourceAction,
@@ -415,7 +419,8 @@ public class OrderRequestService : IOrderRequestService
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
+            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+            EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy
         };
     }
 
@@ -491,10 +496,11 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Extracts notification templates from the provided SMS and email settings.
     /// </summary>
-    private static (List<INotificationTemplate> Templates, SendingTimePolicy? SmsSendingTimePolicy) ExtractTemplatesFromSettings(SmsSendingOptions? smsSettings, EmailSendingOptions? emailSettings)
+    private static (List<INotificationTemplate> Templates, SendingTimePolicy? SmsSendingTimePolicy, SendingTimePolicy? EmailSendingTimePolicy) ExtractTemplatesFromSettings(SmsSendingOptions? smsSettings, EmailSendingOptions? emailSettings)
     {
         var templates = new List<INotificationTemplate>();
         SendingTimePolicy? smsSendingTimePolicy = null;
+        SendingTimePolicy? emailSendingTimePolicy = null;
 
         if (smsSettings != null)
         {
@@ -505,9 +511,10 @@ public class OrderRequestService : IOrderRequestService
         if (emailSettings != null)
         {
             templates.Add(CreateEmailTemplate(emailSettings));
+            emailSendingTimePolicy = emailSettings.SendingTimePolicy;
         }
 
-        return (templates, smsSendingTimePolicy);
+        return (templates, smsSendingTimePolicy, emailSendingTimePolicy);
     }
 
     /// <summary>
@@ -589,6 +596,7 @@ public class OrderRequestService : IOrderRequestService
                 NotificationChannel = deliveryDetails.Channel,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
                 SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+                EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
                 ConditionEndpoint = notificationReminder.ConditionEndpoint

@@ -24,7 +24,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
-    private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch(@batchsize)";
+    private const string _getAnytimeEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch(@batchsize)";
+    private const string _getDaytimeEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_daytime_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v3($1, $2, $3, $4)"; // (_result, _operationid, _alternateid, _deliveryreport)
 
@@ -112,10 +113,21 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    public async Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    public async Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
+        if (publishBatchSize <= 0)
+        {
+            return [];
+        }
+
+        var claimEmailBatchSql = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _getDaytimeEmailNotificationsBatchSql,
+            _ => _getAnytimeEmailNotificationsBatchSql,
+        };
+
         List<Email> searchResult = [];
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsBatchSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(claimEmailBatchSql);
         pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))

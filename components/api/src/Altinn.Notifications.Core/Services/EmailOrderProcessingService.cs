@@ -18,6 +18,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     private readonly IEmailNotificationRepository _emailNotificationRepository;
     private readonly IEmailNotificationService _emailService;
     private readonly IKeywordsService _keywordsService;
+    private readonly INotificationScheduleService _notificationScheduleService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailOrderProcessingService"/> class.
@@ -26,16 +27,19 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <param name="emailService">The email notification service.</param>
     /// <param name="contactPointService">The contact point service.</param>
     /// <param name="keywordsService">The keywords service.</param>
+    /// <param name="notificationScheduleService">The notification schedule service used to compute Daytime expiry.</param>
     public EmailOrderProcessingService(
         IEmailNotificationRepository emailNotificationRepository,
         IEmailNotificationService emailService,
         IContactPointService contactPointService,
-        IKeywordsService keywordsService)
+        IKeywordsService keywordsService,
+        INotificationScheduleService notificationScheduleService)
     {
         _emailNotificationRepository = emailNotificationRepository;
         _emailService = emailService;
         _contactPointService = contactPointService;
         _keywordsService = keywordsService;
+        _notificationScheduleService = notificationScheduleService;
     }
 
     /// <inheritdoc/>
@@ -61,6 +65,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        var expirationDateTime = GetExpirationDateTime(order);
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
         var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
@@ -84,6 +89,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
+                expirationDateTime,
                 emailAddresses,
                 emailRecipient,
                 order.IgnoreReservation ?? false);
@@ -93,6 +99,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        var expirationDateTime = GetExpirationDateTime(order);
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
 
         foreach (var recipient in recipients)
@@ -108,10 +115,29 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
+                expirationDateTime,
                 emailAddresses,
                 emailRecipient,
                 order.IgnoreReservation ?? false);
         }
+    }
+
+    /// <summary>
+    /// Calculates the expiration date and time for an email notification based on the order's email sending time policy.
+    /// </summary>
+    /// <param name="order">The notification order.</param>
+    /// <returns>
+    /// The expiration <see cref="DateTime"/> for the email notification.
+    /// If <see cref="NotificationOrder.EmailSendingTimePolicy"/> is <see cref="SendingTimePolicy.Daytime"/>, the expiration is determined by the notification schedule service.
+    /// Otherwise, it defaults to 48 hours after the requested send time.
+    /// </returns>
+    private DateTime GetExpirationDateTime(NotificationOrder order)
+    {
+        return order.EmailSendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _notificationScheduleService.GetEmailExpirationDateTime(order.RequestedSendTime),
+            _ => order.RequestedSendTime.AddHours(48),
+        };
     }
 
     /// <summary>

@@ -32,18 +32,18 @@ public class EmailNotificationService(
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
         if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
             emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, expiryDateTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
             return;
         }
 
         if (emailAddresses.Count == 0)
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, expiryDateTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
             return;
         }
 
@@ -51,7 +51,7 @@ public class EmailNotificationService(
         {
             emailRecipient.ToAddress = addressPoint.EmailAddress;
 
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, expiryDateTime, emailRecipient, EmailNotificationResultType.New);
         }
     }
 
@@ -63,7 +63,7 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(CancellationToken cancellationToken)
+    public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
         List<Email> newEmailNotifications;
 
@@ -73,7 +73,7 @@ public class EmailNotificationService(
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken, sendingTimePolicy);
                 if (newEmailNotifications.Count == 0)
                 {
                     break;
@@ -141,10 +141,11 @@ public class EmailNotificationService(
     /// </summary>
     /// <param name="orderId">The order identifier.</param>
     /// <param name="requestedSendTime">The requested send time.</param>
+    /// <param name="expiryDateTime">The expiry time supplied by the caller (computed from order policy).</param>
     /// <param name="recipient">The email recipient.</param>
     /// <param name="result">The result of the notification.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, EmailRecipient recipient, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
         {
@@ -155,16 +156,9 @@ public class EmailNotificationService(
             SendResult = new(result, _dateTimeService.UtcNow())
         };
 
-        DateTime expiry;
-
-        if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
-        {
-            expiry = _dateTimeService.UtcNow();
-        }
-        else
-        {
-            expiry = requestedSendTime.AddHours(48);
-        }
+        DateTime expiry = result == EmailNotificationResultType.Failed_RecipientNotIdentified
+            ? _dateTimeService.UtcNow()
+            : expiryDateTime;
 
         await _emailNotificationRepository.AddNotification(emailNotification, expiry);
     }

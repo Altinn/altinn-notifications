@@ -96,7 +96,7 @@ public static partial class NotificationOrderChainMapper
             Body = emailSendingOptionsExt.Body,
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
-            SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy,
+            SendingTimePolicy = (SendingTimePolicy?)emailSendingOptionsExt.SendingTimePolicy,
             Subject = NormalizeLineEndingsRegex().Replace(emailSendingOptionsExt.Subject, SingleWhiteSpace)
         };
     }

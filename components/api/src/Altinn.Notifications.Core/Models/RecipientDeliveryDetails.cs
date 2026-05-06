@@ -44,6 +44,11 @@ internal sealed record RecipientDeliveryDetails
     public SendingTimePolicy? SmsSendingTimePolicy { get; init; }
 
     /// <summary>
+    /// Gets the sending time policy associated with the email configuration.
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; init; }
+
+    /// <summary>
     /// Gets an empty <see cref="RecipientDeliveryDetails"/> instance with default values.
     /// </summary>
     /// <remarks>

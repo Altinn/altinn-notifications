@@ -54,9 +54,9 @@ public class EmailSendingOptionsExt
     /// Gets or sets the policy defining when the email should be sent.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="SendingTimePolicyExt.Anytime"/> allowing delivery at any time.
+    /// When omitted (null), the order behaves as Anytime — no daytime gating is applied.
+    /// Set to <see cref="SendingTimePolicyExt.Daytime"/> to restrict delivery to the configured email sending window.
     /// </remarks>
     [JsonPropertyName("sendingTimePolicy")]
-    [DefaultValue(SendingTimePolicyExt.Anytime)]
-    public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Anytime;
+    public SendingTimePolicyExt? SendingTimePolicy { get; set; }
 }
