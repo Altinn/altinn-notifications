@@ -71,6 +71,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailSendListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSendEmailListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
             throw new InvalidOperationException(
@@ -78,7 +84,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailSendListenerCount);
 
         wolverineOptions.Policies.Add(new SendEmailCommandHandlerPolicy(wolverineSettings));
     }
@@ -122,6 +128,12 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
+        if (wolverineSettings.EmailStatusCheckListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
             throw new InvalidOperationException(
@@ -129,7 +141,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailStatusCheckListenerCount);
 
         wolverineOptions.Policies.Add(new CheckEmailSendStatusHandlerPolicy(wolverineSettings));
     }

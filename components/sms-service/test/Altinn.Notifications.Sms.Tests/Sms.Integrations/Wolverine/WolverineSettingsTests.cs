@@ -14,7 +14,7 @@ public class WolverineSettingsTests
         var settings = new WolverineSettings();
 
         Assert.False(settings.EnableWolverine);
-        Assert.Equal(10, settings.ListenerCount);
+        Assert.Equal(10, settings.SendSmsListenerCount);
         Assert.NotNull(settings.SendSmsQueuePolicy);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
         Assert.False(settings.EnableSendSmsListener);
@@ -27,7 +27,7 @@ public class WolverineSettingsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:ListenerCount"] = "5",
+                ["WolverineSettings:SendSmsListenerCount"] = "5",
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSendSmsListener"] = "true",
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:0"] = "1000",
@@ -43,7 +43,7 @@ public class WolverineSettingsTests
         Assert.NotNull(settings);
         Assert.True(settings.EnableWolverine);
 
-        Assert.Equal(5, settings.ListenerCount);
+        Assert.Equal(5, settings.SendSmsListenerCount);
 
         Assert.True(settings.EnableSendSmsListener);
         Assert.Equal("altinn.notifications.sms.send", settings.SendSmsQueueName);
