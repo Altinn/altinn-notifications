@@ -105,15 +105,17 @@ public static class ServiceUtil
         }
 
         // Otherwise, reuse the shared provider
+        IServiceProvider sharedProvider;
         lock (_lock)
         {
             _sharedServiceProvider ??= BuildSharedServiceProvider();
+            sharedProvider = _sharedServiceProvider; // capture inside lock
         }
 
         List<object> outputServices = [];
         foreach (Type interfaceType in interfaceTypes)
         {
-            outputServices.AddRange(_sharedServiceProvider.GetServices(interfaceType)!);
+            outputServices.AddRange(sharedProvider.GetServices(interfaceType)!);
         }
 
         return outputServices;
