@@ -4,18 +4,14 @@ using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Moq;
 using Npgsql;
-using PhoneNumbers;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
