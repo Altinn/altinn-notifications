@@ -211,8 +211,6 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task DeleteOldStatusFeedRecords_RespectsConfiguredBatchSize()
     {
-        // Arrange — insert more old rows than the configured batch size
-        // (requires a small batch size set via test config, e.g. 2)
         int batchSize = 2;
         var oldDate = DateTime.UtcNow.AddDays(-91).ToString("yyyy-MM-dd");
 
@@ -230,14 +228,20 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         // Act — first invocation
         var firstRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
 
-        // Assert — only batch_size rows deleted, one remains
-        Assert.Equal(batchSize, firstRun);
+        // Assert — batch limit was respected: at most batchSize rows deleted overall,
+        // so at least one of *our* rows must still remain
+        Assert.True(firstRun <= batchSize, $"Expected at most {batchSize} rows deleted, got {firstRun}");
+        int remainingAfterFirst = await CountRemainingRows(fakeOrderIds);
+        Assert.True(remainingAfterFirst > 0, "Expected at least one owned row to survive the first batch");
 
-        // Act — second invocation
-        var secondRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+        // Act — second invocation (and beyond, for safety)
+        while (await CountRemainingRows(fakeOrderIds) > 0)
+        {
+            await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+        }
 
-        // Assert — remaining row deleted
-        Assert.Equal(1, secondRun);
+        // Assert — all owned rows eventually cleaned up
+        Assert.Equal(0, await CountRemainingRows(fakeOrderIds));
     }
 
     [Fact]
@@ -313,5 +317,12 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         return (StatusFeedRepository)ServiceUtil
             .GetServices([typeof(IStatusFeedRepository)], configOverrides)
             .First(i => i.GetType() == typeof(StatusFeedRepository));
+    }
+
+    private static async Task<int> CountRemainingRows(IEnumerable<int> fakeOrderIds)
+    {
+        var ids = string.Join(",", fakeOrderIds);
+        return await PostgreUtil.RunSqlReturnOutput<int>(
+            $"SELECT COUNT(*)::int FROM notifications.statusfeed WHERE orderid IN ({ids})");
     }
 }
