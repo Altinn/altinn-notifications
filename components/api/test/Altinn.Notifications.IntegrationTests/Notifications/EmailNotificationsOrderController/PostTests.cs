@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IDisposable
+public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
@@ -116,25 +116,6 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        foreach (Guid orderId in _ordersToDelete)
-        {
-            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
-            await PostgreUtil.DeleteOrderFromDb(orderId);
-        }
-
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-    }
-
     private HttpClient GetTestClient()
     {
         HttpClient client = _factory.WithWebHostBuilder(builder =>
@@ -150,5 +131,24 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         }).CreateClient();
 
         return client;
+    }
+
+    public ValueTask InitializeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (Guid orderId in _ordersToDelete)
+        {
+            await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteOrderFromDb(orderId);
+        }
+
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+
+        GC.SuppressFinalize(this);
     }
 }

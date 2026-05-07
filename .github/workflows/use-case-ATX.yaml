@@ -26,12 +26,12 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up K6
-        uses: grafana/setup-k6-action@70839b2df2ef373adf890a6ce75653774378bffc # v1.2.0
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
       - name: Run API v2 tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-v2.js
-          flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
           inspect-flags: -e altinn_env=${{ matrix.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run API v2 recipientOrganization tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
@@ -80,7 +80,7 @@ jobs:
     steps:
       - name: Send notification
         if: needs.test.outputs[matrix.output] == 'true'
-        uses: slackapi/slack-github-action@03ea5433c137af7c0495bc0cad1af10403fc800c # v3.0.2
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         with:
           webhook-type: incoming-webhook
           webhook: ${{ secrets.SLACK_WEBHOOK_URL_TEST }}
