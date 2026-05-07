@@ -57,7 +57,7 @@ internal static class EmailMaskingHelper
         var redacted = message;
         foreach (var address in knownAddresses.Where(address => !string.IsNullOrWhiteSpace(address)))
         {
-            redacted = redacted.Replace(address, "[redacted]", StringComparison.OrdinalIgnoreCase);
+            redacted = redacted.Replace(address, MaskEmailAddress(address), StringComparison.OrdinalIgnoreCase);
         }
 
         return redacted;

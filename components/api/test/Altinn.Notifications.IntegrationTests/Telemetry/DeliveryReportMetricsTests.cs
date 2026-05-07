@@ -154,17 +154,14 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     }
 
     [Fact]
-    public void RecordEmailDeliveryReport_StatusMessageContainingRecipient_IsRedactedInTag()
+    public void RecordEmailDeliveryReport_StatusMessageContainingRecipient_IsMaskedInTag()
     {
         // Arrange
         var capturedTags = new Dictionary<string, object?>();
 
         using var listener = CreateListener((_, _, tags) =>
         {
-            foreach (var tag in tags)
-            {
-                capturedTags[tag.Key] = tag.Value;
-            }
+            foreach (var tag in tags) capturedTags[tag.Key] = tag.Value;
         });
 
         // Act
@@ -176,7 +173,7 @@ public sealed class DeliveryReportMetricsTests : IDisposable
             recipient: "recipient@example.com");
 
         // Assert
-        Assert.Equal("Delivery failed for [redacted]: mailbox full", capturedTags["email.status_message"]);
+        Assert.Equal("Delivery failed for re***@example.com: mailbox full", capturedTags["email.status_message"]);
     }
 
     [Theory]
@@ -207,11 +204,11 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Delivery failed for recipient@example.com: mailbox full", "recipient@example.com", "Delivery failed for [redacted]: mailbox full")]
-    [InlineData("Message rejected. Address RECIPIENT@EXAMPLE.COM not found.", "recipient@example.com", "Message rejected. Address [redacted] not found.")] // case-insensitive
+    [InlineData("Delivery failed for recipient@example.com: mailbox full", "recipient@example.com", "Delivery failed for re***@example.com: mailbox full")]
+    [InlineData("Message rejected. Address RECIPIENT@EXAMPLE.COM not found.", "recipient@example.com", "Message rejected. Address re***@example.com not found.")] // case-insensitive
     [InlineData("Permanent failure.", "recipient@example.com", "Permanent failure.")] // no address in message
-    [InlineData("Failed: recipient@example.com and sender@example.com both invalid.", "recipient@example.com", "Failed: [redacted] and sender@example.com both invalid.")] // only redacts the passed address
-    public void RedactEmailAddressesFromMessage_ReplacesKnownAddressWithRedacted(string message, string address, string expected)
+    [InlineData("Failed: recipient@example.com and sender@example.com both invalid.", "recipient@example.com", "Failed: re***@example.com and sender@example.com both invalid.")] // only redacts the passed address
+    public void RedactEmailAddressesFromMessage_ReplacesKnownAddressWithMasked(string message, string address, string expected)
     {
         Assert.Equal(expected, EmailMaskingHelper.RedactEmailAddressesFromMessage(message, address));
     }
