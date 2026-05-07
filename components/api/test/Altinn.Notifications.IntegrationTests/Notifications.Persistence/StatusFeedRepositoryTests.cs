@@ -208,6 +208,76 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         _ordersToDelete.Add(orderAlternateId);
     }
 
+    [Fact]
+    public async Task DeleteOldStatusFeedRecords_RespectsConfiguredBatchSize()
+    {
+        int batchSize = 2;
+        var oldDate = DateTime.UtcNow.AddDays(-91).ToString("yyyy-MM-dd");
+
+        var shipmentIds = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToList();
+        var fakeOrderIds = new List<int> { 2001, 2002, 2003 };
+
+        for (int i = 0; i < 3; i++)
+        {
+            await InsertTestDataRowForStatusFeed(fakeOrderIds[i], oldDate, shipmentIds[i]);
+            _fakeOrderIdsToDelete.Add(fakeOrderIds[i]);
+        }
+
+        StatusFeedRepository sut = BuildRepositoryWithBatchSize(batchSize);
+
+        // Act — first invocation
+        var firstRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+
+        // Assert — batch limit was respected: at most batchSize rows deleted overall,
+        // so at least one of *our* rows must still remain
+        Assert.True(firstRun <= batchSize, $"Expected at most {batchSize} rows deleted, got {firstRun}");
+        int remainingAfterFirst = await CountRemainingRows(fakeOrderIds);
+        Assert.True(remainingAfterFirst > 0, "Expected at least one owned row to survive the first batch");
+
+        // Act — second invocation (and beyond, for safety)
+        while (await CountRemainingRows(fakeOrderIds) > 0)
+        {
+            await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+        }
+
+        // Assert — all owned rows eventually cleaned up
+        Assert.Equal(0, await CountRemainingRows(fakeOrderIds));
+    }
+
+    [Fact]
+    public async Task GetStatusFeed_NullJsonOrderStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        int fakeOrderId = 9999;
+        _fakeOrderIdsToDelete.Add(fakeOrderId);
+
+        // Insert a row with JSON 'null' as orderstatus — valid JSONB but deserializes to null
+        var sqlInsert = $@"INSERT INTO notifications.statusfeed(
+                          orderid, creatorname, created, orderstatus)
+                          VALUES({fakeOrderId}, '{_creatorName}', '2025-01-01', 'null'::jsonb)";
+        await PostgreUtil.RunSql(sqlInsert);
+
+        StatusFeedRepository sut = (StatusFeedRepository)ServiceUtil
+            .GetServices([typeof(IStatusFeedRepository)])
+            .First(i => i.GetType() == typeof(StatusFeedRepository));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None));
+
+        Assert.Contains("Deserialized OrderStatus is null for sequence number", exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_InvalidBatchSize_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => BuildRepositoryWithBatchSize(0));
+
+        Assert.Contains("StatusFeedCleanupBatchSize must be greater than 0", exception.Message);
+    }
+
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
         OrderStatus orderStatus = new OrderStatus
@@ -235,5 +305,24 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
                               VALUES({orderId}, '{_creatorName}', '{created}', '{orderStatusFeedTestOrderCompleted}')";
 
         await PostgreUtil.RunSql(sqlInsert);
+    }
+
+    private static StatusFeedRepository BuildRepositoryWithBatchSize(int batchSize)
+    {
+        var configOverrides = new Dictionary<string, string>
+        {
+            { "NotificationConfig__StatusFeedCleanupBatchSize", batchSize.ToString() }
+        };
+
+        return (StatusFeedRepository)ServiceUtil
+            .GetServices([typeof(IStatusFeedRepository)], configOverrides)
+            .First(i => i.GetType() == typeof(StatusFeedRepository));
+    }
+
+    private static async Task<int> CountRemainingRows(IEnumerable<int> fakeOrderIds)
+    {
+        var ids = string.Join(",", fakeOrderIds);
+        return await PostgreUtil.RunSqlReturnOutput<int>(
+            $"SELECT COUNT(*)::int FROM notifications.statusfeed WHERE orderid IN ({ids})");
     }
 }

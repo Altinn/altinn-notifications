@@ -97,11 +97,11 @@ public static class ServiceUtil
         }
     }
 
-    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
+    public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? configOverrides = null)
     {
-        if (envVariables is { Count: > 0 })
+        if (configOverrides is { Count: > 0 })
         {
-            return BuildServiceProvider(envVariables, interfaceTypes);
+            return BuildServiceProvider(configOverrides, interfaceTypes);
         }
 
         // Otherwise, reuse the shared provider
@@ -158,9 +158,9 @@ public static class ServiceUtil
         return services.BuildServiceProvider();
     }
 
-    private static List<object> BuildServiceProvider(Dictionary<string, string> envVariables, List<Type> interfaceTypes)
+    private static List<object> BuildServiceProvider(Dictionary<string, string> configOverrides, List<Type> interfaceTypes)
     {
-        var config = BuildConfiguration(envVariables);
+        var config = BuildConfiguration(configOverrides);
         EnsurePostgreSqlSetup(config);
 
         IServiceCollection services = new ServiceCollection();

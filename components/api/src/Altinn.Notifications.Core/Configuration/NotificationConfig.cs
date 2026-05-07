@@ -46,6 +46,11 @@ public class NotificationConfig
     public int TerminationBatchSize { get; set; } = 100;
 
     /// <summary>
+    /// The number of status feed records to delete per cleanup job invocation.
+    /// </summary>
+    public int StatusFeedCleanupBatchSize { get; set; } = 10000;
+
+    /// <summary>
     /// The maximum number of user-organization pairs per authorization batch call to PDP.
     /// </summary>
     public int AuthorizationBatchSize { get; set; } = 500;
