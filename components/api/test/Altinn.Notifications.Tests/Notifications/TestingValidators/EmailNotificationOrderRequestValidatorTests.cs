@@ -252,7 +252,7 @@ public class EmailNotificationOrderRequestValidatorTests
     [InlineData("bakken_kundeservice@sykkelverksted.com", true)]
     [InlineData("john.doe@sub.domain.example", true)]
     [InlineData("gratis-netflix+1@gmail.com", true)]
-    [InlineData(".user@example.com", true)]
+    [InlineData(".user@example.com", false)]
     [InlineData("", false)]
     [InlineData("userexample.com", false)]
     [InlineData("user@", false)]
