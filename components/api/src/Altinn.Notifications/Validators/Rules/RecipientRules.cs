@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Net.Mail;
+using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Models;
@@ -230,13 +229,10 @@ public static class RecipientRules
     }
 
     /// <summary>
-    /// Validates that the provided string is a single, valid email address.
-    /// Supports internationalized domain names (IDN), including Scandinavian characters (æøåÆØÅ),
-    /// by converting the domain to its ASCII-compatible encoding (Punycode) before validation.
-    /// Multiple addresses separated by semicolons or commas are not accepted.
+    /// Validated as email address based on the Altinn 2 regex
     /// </summary>
-    /// <param name="email">The string to validate as an email address.</param>
-    /// <returns><c>true</c> if the input is a single valid email address; otherwise, <c>false</c>.</returns>
+    /// <param name="email">The string to validate as an email address</param>
+    /// <returns>A boolean indicating that the email is valid or not</returns>
     internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
@@ -244,44 +240,13 @@ public static class RecipientRules
             return false;
         }
 
-        email = email.Trim();
+        string emailRegexPattern = @"^((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))$";
 
-        try
-        {
-            var parts = email.Split('@');
-            if (parts.Length != 2 || string.IsNullOrEmpty(parts[0]) || string.IsNullOrEmpty(parts[1]))
-            {
-                return false;
-            }
+        Regex regex = new(emailRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
-            string localPart = parts[0];
-            if (localPart.StartsWith('.') || localPart.EndsWith('.'))
-            {
-                return false;
-            }
+        Match match = regex.Match(email);
 
-            var idn = new IdnMapping();
-            var asciiDomain = idn.GetAscii(parts[1]);
-
-            var domainLabels = asciiDomain.Split('.');
-            if (domainLabels.Length < 2)
-            {
-                return false;
-            }
-
-            if (!domainLabels.All(label => label.Length > 0 && label.All(c => char.IsAsciiLetterOrDigit(c) || c == '-')))
-            {
-                return false;
-            }
-
-            var normalizedEmail = $"{localPart}@{asciiDomain}";
-
-            return new MailAddress(normalizedEmail).Address == normalizedEmail;
-        }
-        catch
-        {
-            return false;
-        }
+        return match.Success;
     }
 
     /// <summary>
