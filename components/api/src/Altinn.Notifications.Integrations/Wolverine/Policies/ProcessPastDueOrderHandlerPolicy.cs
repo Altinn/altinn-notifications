@@ -41,8 +41,7 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<SendConditionInconclusiveException>()
-            .Or<PlatformDependencyException>()
+            .OnException<PlatformDependencyException>()
             .ScheduleRetry(TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs))
             .Then.MoveToErrorQueue();
     }
