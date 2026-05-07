@@ -233,6 +233,10 @@ public static class RecipientRules
     /// </summary>
     /// <param name="email">The string to validate as an email address</param>
     /// <returns>A boolean indicating that the email is valid or not</returns>
+    /// <remarks>
+    /// The regex is anchored with ^ and $ to enforce that the input contains exactly one email address.
+    /// This rejects semicolon-separated lists (e.g. "a@b.com;c@d.com") and any other multi-address formats.
+    /// </remarks>
     internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
