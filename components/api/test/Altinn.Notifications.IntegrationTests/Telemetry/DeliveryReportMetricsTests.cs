@@ -161,7 +161,10 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
         using var listener = CreateListener((_, _, tags) =>
         {
-            foreach (var tag in tags) capturedTags[tag.Key] = tag.Value;
+            foreach (var tag in tags)
+            {
+                capturedTags[tag.Key] = tag.Value;
+            }
         });
 
         // Act

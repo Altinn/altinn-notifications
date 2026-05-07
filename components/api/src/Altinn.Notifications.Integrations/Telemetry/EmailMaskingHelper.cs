@@ -41,7 +41,7 @@ internal static class EmailMaskingHelper
 
     /// <summary>
     /// Redacts known email addresses from a free-form status message string,
-    /// replacing each occurrence with the literal text "[redacted]".
+    /// replacing each occurrence with the masked version of the email address.
     /// Returns an empty string if <paramref name="message"/> is null or whitespace.
     /// </summary>
     /// <param name="message">The status message that may contain email addresses.</param>
@@ -55,7 +55,7 @@ internal static class EmailMaskingHelper
         }
 
         var redacted = message;
-        foreach (var address in knownAddresses.Where(address => !string.IsNullOrWhiteSpace(address)))
+        foreach (var address in (knownAddresses ?? []).Where(address => !string.IsNullOrWhiteSpace(address)))
         {
             redacted = redacted.Replace(address, MaskEmailAddress(address), StringComparison.OrdinalIgnoreCase);
         }
