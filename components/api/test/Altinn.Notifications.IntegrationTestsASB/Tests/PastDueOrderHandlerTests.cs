@@ -114,21 +114,17 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
     }
 
     [Fact]
-    public async Task ProcessPastDueOrder_WhenBothProcessOrderAndRetryThrowNpgsqlException_MovesToDeadLetterQueue()
+    public async Task ProcessPastDueOrder_WhenProcessOrderAlwaysThrowsNpgsqlException_MovesToDeadLetterQueue()
     {
-        // Arrange - both ProcessOrder (attempt 1) and ProcessOrderRetry (attempts 2+) throw,
-        // so the full retry chain is exhausted and the message moves to DLQ.
+        // Arrange - ProcessOrder always throws; since all Wolverine-managed retries re-deliver
+        // the original message (IsRetry = false), ProcessOrder is called on every attempt and
+        // ProcessOrderRetry is never called.
         int processOrderCallCount = 0;
-        int processOrderRetryCallCount = 0;
 
         var mockService = new Mock<IOrderProcessingService>();
         mockService
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
             .Callback<NotificationOrder>(_ => Interlocked.Increment(ref processOrderCallCount))
-            .ThrowsAsync(new NpgsqlException("Simulated database error"));
-        mockService
-            .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .Callback<NotificationOrder>(_ => Interlocked.Increment(ref processOrderRetryCallCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -139,6 +135,7 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
         {
             var policy = factory.WolverineSettings!.PastDueOrdersQueuePolicy;
             int expectedRetryAttempts = policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+            int expectedTotalProcessOrderCalls = 1 + expectedRetryAttempts;
 
             string queueName = factory.WolverineSettings!.PastDueOrdersQueueName;
 
@@ -156,10 +153,11 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
                 dlqTimeout);
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - ProcessOrder called once (attempt 1), ProcessOrderRetry called on all retry attempts
-            Console.WriteLine($"[Test] ProcessOrder calls: {processOrderCallCount}, ProcessOrderRetry calls: {processOrderRetryCallCount} (expected {expectedRetryAttempts})");
-            Assert.Equal(1, processOrderCallCount);
-            Assert.Equal(expectedRetryAttempts, processOrderRetryCallCount);
+            // Assert - ProcessOrder called on every attempt (initial + all retries),
+            // ProcessOrderRetry never called because IsRetry is always false on re-delivered messages.
+            Console.WriteLine($"[Test] ProcessOrder calls: {processOrderCallCount} (expected {expectedTotalProcessOrderCalls})");
+            Assert.Equal(expectedTotalProcessOrderCalls, processOrderCallCount);
+            mockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         }
     }
 }
