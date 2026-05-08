@@ -1,0 +1,291 @@
+<mxfile host="65bd71144e">
+    <diagram id="email-notifications-process-v2" name="Email Notifications Process">
+        <mxGraphModel dx="2474" dy="1157" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1350" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="22" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="600" y="10" width="600" height="730" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-40" y="10" width="620" height="1290" as="geometry"/>
+                </mxCell>
+                <mxCell id="col-send-label" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Sending flow&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="18.5" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="col-dr-label" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Delivery report flow (async)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="785" y="18.5" width="220" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="cron-label" value="Cron trigger: retrieve past due&amp;nbsp;&lt;div&gt;emails from DB&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="176" y="53.5" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="timer" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="1" vertex="1">
+                    <mxGeometry x="252" y="88" width="46" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-timer-step1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="timer" target="step1-sending" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step1-sending" value="&lt;font&gt;Sending status set to &#39;Sending&#39; in DB &amp;amp; published to ASB queue&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="155" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-step1-asb-send" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step1-sending" target="asb-send" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-send" value="&lt;font&gt;altinn.notifications.&lt;/font&gt;&lt;div&gt;&lt;font&gt;email.send&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="205" y="238" width="140" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-asb-send-step2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="asb-send" target="step2-submit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step2-submit" value="&lt;font&gt;Submit email to ACS → get OperationId, start polling&lt;/font&gt;&lt;div&gt;&lt;font&gt;for operation status&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="312" width="160" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-step2-ratelimit-diamond" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="step2-submit" target="diamond-ratelimit">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="diamond-ratelimit" value="Rate limit&amp;nbsp;&lt;div&gt;exceeded?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="216" y="405.5" width="118" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-ratelimit-yes" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" edge="1" parent="1" source="diamond-ratelimit" target="asb-ratelimit">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-ratelimit" value="&lt;font&gt;altinn.notifications.&lt;/font&gt;&lt;div&gt;&lt;font&gt;email.send.ratelimit&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="465" width="145" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-ratelimit-asb-handler" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="asb-ratelimit" target="rate-limit-handler">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rate-limit-handler" value="&lt;font&gt;Trigger 1 hour cooldown on new send attempts&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="390" y="535" width="165" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-ratelimit-handler-end" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="rate-limit-handler" target="end-ratelimit">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-ratelimit" value="&lt;div&gt;Cooldown activated&lt;/div&gt;No further action" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="452.5" y="610" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-ratelimit-no" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=9;" edge="1" parent="1" source="diamond-ratelimit" target="asb-check">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-check" value="&lt;font&gt;altinn.notifications.&lt;/font&gt;&lt;div&gt;&lt;font&gt;email.check.send.status&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="515" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-asb-check-step3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="asb-check" target="step3-poll" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3-poll" value="&lt;font&gt;Poll ACS operation status -&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;check while still &#39;Sendng&#39;&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="588" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-poll" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Schedule re-check (8s delay)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="595.5" width="150" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-step3-diamond" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step3-poll" target="terminal-diamond" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="terminal-diamond" value="&lt;font&gt;Terminal status?&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="225" y="675" width="100" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-not-terminal" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;fontSize=9;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="terminal-diamond" target="note-poll" edge="1">
+                    <mxGeometry x="0.1703" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="105" y="702"/>
+                        </Array>
+                        <mxPoint x="80" y="680" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="4" value="NO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="arrow-not-terminal" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2365" y="1" relative="1" as="geometry">
+                        <mxPoint x="13" y="-1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-terminal-dispatch" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=9;" parent="1" source="terminal-diamond" target="step4-dispatch" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="276" y="740" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="step4-dispatch" value="&lt;font&gt;Dispatch send result to API (Succeeded / Failed / Bounced / etc.)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="196" y="777" width="160" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-dispatch-asb-result" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step4-dispatch" target="asb-result" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-result" value="&lt;font&gt;altinn.notifications.&lt;/font&gt;&lt;div&gt;&lt;font&gt;email.send.result&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="201" y="865" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-asb-result-persist" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="asb-result" target="step5-persist" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step5-persist" value="&lt;font&gt;Parse &lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;email send status&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;from command&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="196" y="938" width="160" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-persist-end-send" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="6" target="end-send" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="276" y="1207" as="sourcePoint"/>
+                        <mxPoint x="230" y="1207" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="end-send" value="&lt;font&gt;Notification send status updated&lt;/font&gt;&lt;div&gt;&lt;font&gt;No further action&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="255" y="1220" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="dr-source" value="&lt;font&gt;ACS sends delivery report to EventGrid → EventGrid routes&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;event to ASB queue&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="663.5" y="67.5" width="165" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-dr-source-asb-dr" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="dr-source" target="asb-dr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-dr" value="&lt;font&gt;altinn.notifications.&lt;/font&gt;&lt;div&gt;&lt;font&gt;email.deliveryreports&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="662" y="152" width="168" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-handler-update" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="asb-dr" target="dr-step2-update" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="746.0000000000002" y="301" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-step2-update" value="&lt;font&gt;Attempt to parse and persist&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;email delivery status to DB&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="662" y="240" width="168" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-update-end-dr" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="dr-step2-update" target="dr-diamond-not-found" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="920" y="270" as="sourcePoint"/>
+                        <mxPoint x="850" y="630" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-diamond-expired" value="&lt;font&gt;NotificationExpired&lt;/font&gt;&lt;div&gt;&lt;font&gt;Exception?&lt;/font&gt;&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="681" y="540" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-diamond-expired-yes" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="dr-diamond-expired" target="dr-err-expired" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="850" y="584" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-diamond-expired-no" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="dr-diamond-not-found" target="dr-diamond-expired" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="800" y="660" as="sourcePoint"/>
+                        <mxPoint x="660" y="460" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="746" y="470"/>
+                            <mxPoint x="746" y="470"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-err-expired" value="&lt;font&gt;Save dead delivery report&lt;/font&gt;&lt;div&gt;&lt;font&gt;(NOTIFICATION_EXPIRED)&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="547" width="190" height="66" as="geometry"/>
+                </mxCell>
+                <mxCell id="dr-end-expired" value="&lt;font&gt;Dead delivery report stored&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="975" y="650" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-expired-end" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="dr-err-expired" target="dr-end-expired" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1120" y="680" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-diamond-not-found" value="&lt;font&gt;NotificationNotFound&lt;/font&gt;&lt;div&gt;&lt;font&gt;Exception?&lt;/font&gt;&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="681" y="325.5" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-diamond-not-found-yes" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="dr-diamond-not-found" target="dr-diamond-retries-exhausted" edge="1">
+                    <mxGeometry x="-0.272" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-diamond-not-found-no" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="dr-diamond-expired" target="end-dr" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="771" y="252.5" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-diamond-retries-exhausted" value="&lt;font&gt;Retries exhausted?&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="880" y="230" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-retries-exhausted-yes" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="dr-diamond-retries-exhausted" target="dr-err-not-found" edge="1">
+                    <mxGeometry x="0.4521" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-retries-not-exhausted" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="dr-diamond-retries-exhausted" target="asb-dr" edge="1">
+                    <mxGeometry x="0.2857" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="945" y="177"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dr-err-not-found" value="&lt;font&gt;Save dead delivery report&lt;/font&gt;&lt;div&gt;&lt;font&gt;(RETRY_THRESHOLD_EXCEEDED)&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="991" y="340" width="190" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="dr-end-not-found" value="&lt;font&gt;Dead delivery report stored&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1066" y="435" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-dead-not-found-end" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="dr-err-not-found" target="dr-end-not-found" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-dr" value="&lt;font&gt;Notification delivery status updated&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="726" y="670" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" parent="1" source="note-poll" target="asb-check" edge="1">
+                    <mxGeometry x="0.1703" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="105" y="540"/>
+                        </Array>
+                        <mxPoint x="130" y="580" as="sourcePoint"/>
+                        <mxPoint x="130" y="490" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="8" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="276" y="1100" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="10" value="YES" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2815" relative="1" as="geometry">
+                        <mxPoint y="2" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="6" value="&lt;font&gt;Persist&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;email send&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;status to DB&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="196" y="1130" width="160" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="step5-persist" target="8" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="275.66" y="1010" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="8" value="Valid send result?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="217.16" y="1020" width="117.67" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="8" target="12" edge="1">
+                    <mxGeometry x="-0.0497" relative="1" as="geometry">
+                        <mxPoint x="390" y="1060" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="&lt;font&gt;Save dead delivery report&lt;/font&gt;&lt;div&gt;&lt;font&gt;(UNRECOGNIZED_SEND_RESULT)&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-20" y="1020" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="12" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="125" y="1108" as="sourcePoint"/>
+                        <mxPoint x="145" y="1098" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="14" value="&lt;font&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;Dead delivery report stored&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="1110" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-310" y="10" width="250" height="310" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="&lt;div&gt;&lt;font&gt;&lt;b&gt;For all ASB queues:&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;font&gt;Infrastructure exceptions (TimeoutException, NpgsqlException, etc.)&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;are handled by Wolverine retry policy:&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;cooldown retries → scheduled retries → DLQ&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+                    <mxGeometry x="-290" y="30" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="&lt;font&gt;Altinn.Notifications&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="-245" y="192" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="&lt;font&gt;Azure Service Bus queue&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="-245" y="132.75" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="&lt;font&gt;Altinn.Notifications.Email&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="-245" y="252" width="120" height="50" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
