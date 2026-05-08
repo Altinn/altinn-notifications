@@ -64,8 +64,9 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
     [Fact]
     public async Task ProcessPastDueOrder_WhenSendConditionIsInconclusive_ProcessOrderRetryCalledOnRetry()
     {
-        // Arrange - ProcessOrder returns inconclusive (triggers SendConditionInconclusiveException + scheduled retry).
-        // ProcessOrderRetry succeeds, so the message should be processed without going to DLQ.
+        // Arrange - ProcessOrder returns inconclusive; the handler schedules a new command
+        // with IsRetry = true after PastDueOrdersRetryDelayMs. ProcessOrderRetry succeeds,
+        // so the message should be processed without going to DLQ.
         int processOrderCallCount = 0;
         int processOrderRetryCallCount = 0;
 
@@ -88,13 +89,13 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             var settings = factory.WolverineSettings!;
             string queueName = settings.PastDueOrdersQueueName;
 
-            // Act - send command directly to the queue
+            // Act - send command directly to the queue (IsRetry defaults to false)
             await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand
             {
                 Order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient()
             });
 
-            // Assert - ProcessOrderRetry called once on the retry attempt
+            // Assert - ProcessOrderRetry called once on the scheduled retry attempt
             const int pollDelayMs = 500;
             var retryProcessed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(processOrderRetryCallCount == 1),

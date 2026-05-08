@@ -43,6 +43,7 @@ public static class WolverineServiceCollectionExtensions
         }
 
         services.Configure<WolverineSettings>(wolverineSection);
+        services.AddSingleton(wolverineSettings);
 
         services.AddWolverine(opts =>
         {
