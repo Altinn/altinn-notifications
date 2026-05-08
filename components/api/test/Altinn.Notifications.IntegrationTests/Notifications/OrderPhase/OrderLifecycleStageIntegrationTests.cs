@@ -216,11 +216,15 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
 
     public async ValueTask DisposeAsync()
     {
-        await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
-
-        _client?.Dispose();
-
-        GC.SuppressFinalize(this);
+        try
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+        }
+        finally
+        {
+            _client?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 
     private async Task<HttpResponseMessage> SendPostRequest(NotificationOrderChainRequestExt request)
@@ -232,7 +236,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         {
             var body = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (result is not null)
+            if (result?.OrderChainReceipt is not null)
             {
                 _orderIdsToDelete.Add(result.OrderChainReceipt.ShipmentId);
 
