@@ -10,8 +10,8 @@
                 <mxCell id="email-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="420" y="40" width="540" height="1180" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;" parent="1" vertex="1">
-                    <mxGeometry x="14" y="1280" width="796" height="155" as="geometry"/>
+                <mxCell id="legend-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="14" y="1240" width="796" height="155" as="geometry"/>
                 </mxCell>
                 <mxCell id="sms-col-title" value="&lt;font&gt;SMS instant flow (phone number recipient)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="44" y="40" width="176" height="30" as="geometry"/>
@@ -20,28 +20,28 @@
                     <mxGeometry x="490" y="110" width="186" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-blue" value="Processing step (Altinn.Notifications API)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="28" y="1290" width="200" height="30" as="geometry"/>
+                    <mxGeometry x="28" y="1250" width="200" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-green" value="HTTP call to internal service component" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="28" y="1326" width="200" height="30" as="geometry"/>
+                    <mxGeometry x="28" y="1286" width="200" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-red" value="Error response" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="28" y="1361.5" width="200" height="30" as="geometry"/>
+                    <mxGeometry x="28" y="1321.5" width="200" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-orange" value="Architectural note" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=10;fontStyle=2;" parent="1" vertex="1">
-                    <mxGeometry x="28" y="1398" width="200" height="30" as="geometry"/>
+                    <mxGeometry x="28" y="1358" width="200" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-diamond-cell" value="Decision" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-                    <mxGeometry x="244" y="1290" width="110" height="40" as="geometry"/>
+                    <mxGeometry x="244" y="1250" width="110" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-end-ok-cell" value="OK" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="262" y="1340" width="28" height="28" as="geometry"/>
+                    <mxGeometry x="262" y="1300" width="28" height="28" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend-end-err-cell" value="Error" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="306" y="1340" width="28" height="28" as="geometry"/>
+                    <mxGeometry x="306" y="1300" width="28" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-note-text" value="&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Both flows are structurally identical. Key differences from standard order flow:&lt;/i&gt;&lt;br&gt;&lt;ul&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Only direct recipients are supported (phone number / email address) —&amp;nbsp;&lt;/i&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;no NIN, org number, or Profile API lookup&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Notifications are dispatched via a synchronous HTTP call, not via ASB queue&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;A single NotificationOrder is persisted (no chain / reminders).&amp;nbsp;&lt;/i&gt;&lt;/li&gt;&lt;/ul&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;Delivery reports are still received asynchronously.&lt;/i&gt;&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=none;fontSize=10;align=left;spacingLeft=5;spacingRight=5;" parent="1" vertex="1">
-                    <mxGeometry x="384" y="1290" width="412" height="140" as="geometry"/>
+                <mxCell id="legend-note-text" value="&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Both flows are structurally identical. Key differences from standard order flow:&lt;/i&gt;&lt;br&gt;&lt;ul&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Only direct recipients are supported (phone number / email address) —&amp;nbsp;&lt;/i&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;no NIN, org number, or Profile API lookup&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Notifications are dispatched via a synchronous HTTP call, not via ASB queue&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;A single NotificationOrder is persisted (no chain / reminders).&amp;nbsp;&lt;/i&gt;&lt;/li&gt;&lt;/ul&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;Delivery reports are still received asynchronously.&lt;/i&gt;&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=5;spacingRight=5;strokeColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="384" y="1250" width="412" height="140" as="geometry"/>
                 </mxCell>
                 <mxCell id="validate-sms" value="Validate request&lt;br&gt;(idempotencyId, phoneNumber, timeToLive, smsSettings)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-66" y="160" width="186" height="60" as="geometry"/>
