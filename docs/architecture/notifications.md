@@ -48,14 +48,17 @@ Data related to notification orders, notifications and recipients is persisted i
 Each table in the _notifications_ schema is described in the table below,
 followed by a diagram showing the relation between the tables.
 
-| Table              | Description                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| orders             | Contains metadata for each notification order                                                  |
-| emailtexts         | Holds the static common texts related to an email notification                                 |
-| emailnotifications | Holds metadata for each email notification along with recipient contact details                |
-| smstexts           | Holds the static common texts related to an SMS notification                                   |
-| smsnotifications   | Holds metadata for each SMS notification along with recipient contact details                  |
-| resourcelimitlog   | Keeps track of resource limits outages for dependent systems e.g. Azure Communication services |
+| Table               | Description                                                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| orders              | Contains metadata for each notification order, including send time policy and order type                             |
+| emailtexts          | Holds the template texts (subject, body, sender) for email notifications                                             |
+| emailnotifications  | Holds metadata for each email notification, recipient contact details, customized content, and raw delivery report   |
+| smstexts            | Holds the template texts (sender number, body) for SMS notifications                                                 |
+| smsnotifications    | Holds metadata for each SMS notification, recipient contact details, customized content, and raw delivery report     |
+| resourcelimitlog    | Keeps track of resource limit outages for dependent systems e.g. Azure Communication Services                        |
+| orderschain         | Contains order chain metadata (main order + optional reminders) for scheduled notification requests                  |
+| statusfeed          | Tracks the final status of each processed notification order, one entry per order, for status feed queries           |
+| deaddeliveryreports | Stores delivery reports that could not be matched to a known notification, for investigation and reprocessing        |
 
 ![Diagram of Notifications Database](diagrams/db-schema.png "Diagram of Notifications Database")
 
@@ -126,11 +129,14 @@ Multiple cron jobs have been set up to enable triggering of actions in the appli
 
 The following cron jobs are defined:
 
-| Job name               | Schedule     | Description                                                                           |
-| ---------------------- | ------------ | ------------------------------------------------------------------------------------- |
-| pending-orders-trigger | */1 * * * *  | Sends request to endpoint to start processing of past due orders                      |
-| send-email-trigger     | */1 * * * *  | Sends request to endpoint to start the process of sending all new email notifications |
-| send-sms-trigger       | * 7-16 * * * | Sends request to endpoint to start the process of sending all new SMS notifications   |
+| Job name                       | Schedule        | Description                                                                                |
+| ------------------------------ | --------------- | ------------------------------------------------------------------------------------------ |
+| pending-orders-trigger         | `*/1 * * * *`   | Triggers processing of past due orders                                                     |
+| send-email-trigger             | `*/1 * * * *`   | Triggers sending of all pending email notifications                                        |
+| send-sms-trigger               | `* 7-16 * * *`  | Triggers sending of SMS notifications with daytime send time policy (business hours only)  |
+| send-sms-trigger-anytime       | `*/1 * * * *`   | Triggers sending of SMS notifications with anytime send time policy (no time restriction)  |
+| terminate-expired-trigger      | `*/15 * * * *`  | Terminates SMS and email notifications that have passed their expiry time                  |
+| delete-old-status-feed-records | `*/5 2-5 * * *` | Deletes old status feed records during off-peak hours                                      |
 
 Each cron job runs in a Docker container [based on the official docker image for curl](https://hub.docker.com/r/curlimages/curl)
 and sends a request to an endpoint in the [TriggerController](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications/Controllers/TriggerController.cs).
