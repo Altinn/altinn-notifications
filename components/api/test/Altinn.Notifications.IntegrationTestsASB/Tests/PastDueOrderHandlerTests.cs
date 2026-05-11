@@ -1,6 +1,7 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
@@ -158,6 +159,69 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             Console.WriteLine($"[Test] ProcessOrder calls: {processOrderCallCount} (expected {expectedTotalProcessOrderCalls})");
             Assert.Equal(expectedTotalProcessOrderCalls, processOrderCallCount);
             mockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessPastDueOrder_WhenProcessOrderThrowsPlatformDependencyException_OrderStatusResetToRegistered()
+    {
+        // Arrange - real OrderProcessingService wired against real DB, but with a mock email
+        // processing service that throws PlatformDependencyException, reproducing the scenario
+        // where a platform dependency (e.g. profile service) is unavailable during processing.
+        // This test proves that ProcessOrderRetry — which catches PlatformDependencyException
+        // and resets the order to Registered — is still reached via the IsRetry=true scheduled command.
+        int processOrderCallCount = 0;
+        int processOrderRetryCallCount = 0;
+
+        var mockEmailProcessingService = new Mock<IEmailOrderProcessingService>();
+        mockEmailProcessingService
+            .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
+            .Callback(() => Interlocked.Increment(ref processOrderCallCount))
+            .ThrowsAsync(new PlatformDependencyException("Profile", "GetUserContactPoints", new TaskCanceledException()));
+        mockEmailProcessingService
+            .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
+            .Callback(() => Interlocked.Increment(ref processOrderRetryCallCount))
+            .ThrowsAsync(new PlatformDependencyException("Profile", "GetUserContactPoints", new TaskCanceledException()));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService<IEmailOrderProcessingService>(_ => mockEmailProcessingService.Object)
+            .Initialize();
+
+        await using (factory)
+        {
+            var settings = factory.WolverineSettings!;
+            string queueName = settings.PastDueOrdersQueueName;
+
+            // Persist a real order in the DB so the status can be observed
+            var (order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+
+            // Manually set to Processing to simulate the state when the handler picks it up
+            await PostgreUtil.RunSql(
+                _fixture.PostgresConnectionString,
+                $"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid='{order.Id}'");
+
+            // Act - send the command with IsRetry=false (initial attempt)
+            await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand { Order = order });
+
+            // Assert - after the scheduled IsRetry=true message is processed and
+            // ProcessOrderRetry catches PlatformDependencyException, the order is reset to Registered
+            const int pollDelayMs = 500;
+            var orderResetToRegistered = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    var status = await PostgreUtil.RunSqlReturnOutput<string>(
+                        _fixture.PostgresConnectionString,
+                        $"SELECT processedstatus FROM notifications.orders WHERE alternateid='{order.Id}'");
+                    return status == "Registered";
+                },
+                maxAttempts: (settings.PastDueOrdersRetryDelayMs + 10_000) / pollDelayMs,
+                delayMs: pollDelayMs);
+
+            Assert.True(
+                orderResetToRegistered,
+                "Order should be reset to Registered after ProcessOrderRetry catches PlatformDependencyException");
+            Assert.Equal(1, processOrderCallCount);
+            Assert.Equal(1, processOrderRetryCallCount);
         }
     }
 }
