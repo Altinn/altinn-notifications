@@ -1,4 +1,6 @@
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 
@@ -35,7 +37,27 @@ public static class ProcessPastDueOrderHandler
             return;
         }
 
-        var result = await orderProcessingService.ProcessOrder(command.Order);
+        NotificationOrderProcessingResult result;
+
+        try
+        {
+            result = await orderProcessingService.ProcessOrder(command.Order);
+        }
+        catch (PlatformDependencyException ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Platform dependency '{DependencyName}' failed during '{Operation}' for order {OrderId}. Scheduling retry.",
+                ex.DependencyName,
+                ex.Operation,
+                command.Order.Id);
+
+            await messageContext.ScheduleAsync(
+                command with { IsRetry = true },
+                TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
+
+            return;
+        }
 
         if (result.IsRetryRequired)
         {
@@ -45,7 +67,7 @@ public static class ProcessPastDueOrderHandler
 
             await messageContext.ScheduleAsync(
                 command with { IsRetry = true },
-                TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));           
+                TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
         }
     }
 }
