@@ -24,6 +24,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
     private const string _basePath = "/notifications/api/v1/future/orders";
     private readonly SpyContactPointServiceFactory _factory = factory;
     private readonly List<Guid> _orderIdsToDelete = [];
+    private readonly List<Guid> _orderChainIdsToDelete = [];
     private HttpClient _client = null!;
 
     [Fact]
@@ -219,6 +220,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         try
         {
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+            await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
         }
         finally
         {
@@ -239,6 +241,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
             if (result?.OrderChainReceipt is not null)
             {
                 _orderIdsToDelete.Add(result.OrderChainReceipt.ShipmentId);
+                _orderChainIdsToDelete.Add(result.OrderChainId);
 
                 if (result.OrderChainReceipt.Reminders is not null)
                 {

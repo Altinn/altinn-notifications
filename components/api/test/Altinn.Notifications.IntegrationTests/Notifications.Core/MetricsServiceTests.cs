@@ -24,8 +24,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
         public async ValueTask DisposeAsync()
         {
-            string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
-            await PostgreUtil.RunSql(deleteSql);
+            await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
             GC.SuppressFinalize(this);
         }
 
