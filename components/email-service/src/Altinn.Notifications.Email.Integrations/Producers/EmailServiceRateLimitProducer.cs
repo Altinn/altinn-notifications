@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
+using Altinn.Notifications.Email.Integrations.Configuration;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
 
@@ -16,12 +17,10 @@ public class EmailServiceRateLimitProducer : IEmailServiceRateLimitDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceRateLimitProducer"/> class.
     /// </summary>
-    /// <param name="producer">The Kafka producer used to publish the service update.</param>
-    /// <param name="topicName">The Kafka topic name to publish to.</param>
-    public EmailServiceRateLimitProducer(ICommonProducer producer, string topicName)
+    public EmailServiceRateLimitProducer(ICommonProducer producer, KafkaSettings settings)
     {
         _producer = producer;
-        _topicName = topicName;
+        _topicName = settings.AltinnServiceUpdateTopicName;
     }
 
     /// <inheritdoc/>

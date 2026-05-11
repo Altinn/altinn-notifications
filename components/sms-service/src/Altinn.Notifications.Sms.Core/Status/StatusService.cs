@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Altinn.Notifications.Sms.Core.Dependencies;
 
 using LinkMobility.PSWin.Receiver.Model;
@@ -14,12 +16,26 @@ public class StatusService(ISmsDeliveryReportPublisher deliveryReportPublisher) 
     /// <inheritdoc/>
     public async Task UpdateStatusAsync(DrMessage message)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         var result = new SendOperationResult
         {
             GatewayReference = message.Reference,
-            SendResult = SmsSendResultMapper.ParseDeliveryState(message.State)
+            SendResult = SmsSendResultMapper.ParseDeliveryState(message.State),
+            DeliveryReport = SerializeDeliveryReport(message)
         };
 
         await _deliveryReportPublisher.PublishAsync(result);
+    }
+
+    private static string SerializeDeliveryReport(DrMessage message)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            reference = message.Reference,
+            receiver = message.Receiver,
+            state = message.State.ToString(),
+            deliveryTime = message.Deliverytime
+        });
     }
 }

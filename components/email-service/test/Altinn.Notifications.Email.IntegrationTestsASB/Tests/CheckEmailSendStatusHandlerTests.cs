@@ -3,6 +3,7 @@ using System.Text.Json;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
@@ -51,7 +52,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = "test-topic" }))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -135,7 +136,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "false")
-            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, "test-topic"))
+            .ReplaceService<IEmailSendResultDispatcher>(_ => new EmailSendResultProducer(producerMock.Object, new KafkaSettings { EmailStatusUpdatedTopicName = "test-topic" }))
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -173,6 +174,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.EmailStatusCheckQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
 
             // Act
@@ -185,12 +188,9 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
                 TimeSpan.FromSeconds(30));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms) = 3 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 3 scheduled retries = 7 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(7, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 

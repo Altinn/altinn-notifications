@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
@@ -10,11 +12,8 @@ using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 using Moq;
-
 using Npgsql;
-
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
@@ -83,6 +82,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             // Act - Send delivery report with a gatewayReference that doesn't match any notification
@@ -108,7 +109,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
-            Assert.Equal(9, deadReport.AttemptCount);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
             // Assert - Queue should be empty (message was handled, not moved to DLQ)
@@ -125,12 +126,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times");
-            Assert.Equal(9, logCapture.Count);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, logCapture.Count);
         }
     }
 
@@ -216,6 +214,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             string gatewayReference = Guid.NewGuid().ToString();
@@ -241,12 +241,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 gatewayReference);
             Assert.Null(deadReportId);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(9, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 
@@ -282,6 +279,65 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 _fixture.PostgresConnectionString,
                 gatewayReference);
             Assert.Null(deadReport);
+        }
+    }
+
+    [Fact]
+    public async Task SmsDeliveryReport_WhenNotificationExists_PersistsDeliveryReportJsonToDatabase()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            // Arrange — create a notification and set it to Accepted with a known gatewayReference
+            // so the handler can resolve it by reference (simulates ACS round-trip)
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(factory);
+            string gatewayReference = Guid.NewGuid().ToString();
+            await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
+
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+
+            // Build the serialized DrMessage that the SMS service would have received from Link Mobility
+            string deliveryReport = JsonSerializer.Serialize(new
+            {
+                reference = gatewayReference,
+                receiver = "+4799999999",
+                state = "Delivered",
+                deliveryTime = DateTime.UtcNow.ToString("o")
+            });
+
+            // Act — send a delivery report command through Wolverine (stamps required envelope headers)
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = notification.Id,
+                GatewayReference = gatewayReference,
+                SendResult = "Delivered",
+                DeliveryReport = deliveryReport
+            });
+
+            // Assert — poll until the handler has written the delivery_report JSONB column
+            string? persistedReport = null;
+            var reportPersisted = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(
+                        _fixture.PostgresConnectionString,
+                        "SELECT deliveryreport::text FROM notifications.smsnotifications WHERE alternateid = $1",
+                        new NpgsqlParameter { Value = notification.Id });
+
+                    return persistedReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+
+            Assert.True(reportPersisted, "The delivery_report column should be populated after the handler runs");
+            Assert.NotNull(persistedReport);
+
+            // Assert — the persisted JSON contains the expected fields from the delivery report
+            using var doc = JsonDocument.Parse(persistedReport!);
+            Assert.Equal(gatewayReference, doc.RootElement.GetProperty("reference").GetString());
+            Assert.Equal("+4799999999", doc.RootElement.GetProperty("receiver").GetString());
+            Assert.Equal("Delivered", doc.RootElement.GetProperty("state").GetString());
         }
     }
 }

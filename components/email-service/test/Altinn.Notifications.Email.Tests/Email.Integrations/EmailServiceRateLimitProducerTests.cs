@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Moq;
@@ -33,7 +34,7 @@ public class EmailServiceRateLimitProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var sut = new EmailServiceRateLimitProducer(producerMock.Object, _topicName);
+        var sut = new EmailServiceRateLimitProducer(producerMock.Object, new KafkaSettings { AltinnServiceUpdateTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(ValidUpdate());
@@ -56,7 +57,7 @@ public class EmailServiceRateLimitProducerTests
             .Callback<string, string>((_, msg) => capturedMessage = msg)
             .ReturnsAsync(true);
 
-        var sut = new EmailServiceRateLimitProducer(producerMock.Object, _topicName);
+        var sut = new EmailServiceRateLimitProducer(producerMock.Object, new KafkaSettings { AltinnServiceUpdateTopicName = _topicName });
 
         // Act
         await sut.DispatchAsync(update);
@@ -77,7 +78,7 @@ public class EmailServiceRateLimitProducerTests
     [Fact]
     public async Task DispatchAsync_WhenNullUpdate_ThrowsArgumentNullException()
     {
-        var sut = new EmailServiceRateLimitProducer(new Mock<ICommonProducer>().Object, _topicName);
+        var sut = new EmailServiceRateLimitProducer(new Mock<ICommonProducer>().Object, new KafkaSettings { AltinnServiceUpdateTopicName = _topicName });
         await Assert.ThrowsAsync<ArgumentNullException>(() => sut.DispatchAsync(null!));
     }
 
@@ -89,7 +90,7 @@ public class EmailServiceRateLimitProducerTests
         producerMock.Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var sut = new EmailServiceRateLimitProducer(producerMock.Object, _topicName);
+        var sut = new EmailServiceRateLimitProducer(producerMock.Object, new KafkaSettings { AltinnServiceUpdateTopicName = _topicName });
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.DispatchAsync(ValidUpdate()));

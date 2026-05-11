@@ -53,7 +53,7 @@ public class EmailSendResultPublisherTests(IntegrationTestContainersFixture fixt
         await using (factory)
         {
             string checkQueueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
-            string resultQueueName = factory.WolverineSettings.EmailSendResultQueueName;
+            string resultQueueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
             // Act
             await factory.SendToQueueAsync(checkQueueName, command);

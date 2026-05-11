@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
@@ -520,6 +522,52 @@ public class AuthorizationServiceTests
         result.Should().HaveCount(1);
         result[0].UserContactPoints.Should().HaveCount(4);
         result[0].UserContactPoints.Select(u => u.UserId).Should().BeEquivalentTo([1, 2, 3, 4]);
+    }
+
+    [Fact]
+    public async Task AuthorizeUsersForResource_PdpReturnsNull_ThrowsHttpRequestException()
+    {
+        var target = CreateService();
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints = [new() { UserId = 1 }]
+            }
+        ];
+
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .ReturnsAsync((XacmlJsonResponse)null!);
+
+        Func<Task> act = () => target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
+
+        await act.Should().ThrowAsync<HttpRequestException>()
+            .WithMessage("Authorization PDP returned a null or empty response.");
+    }
+
+    [Fact]
+    public async Task AuthorizeUsersForResource_PdpReturnsNullResponse_ThrowsHttpRequestException()
+    {
+        var target = CreateService();
+
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 1001,
+                UserContactPoints = [new() { UserId = 1 }]
+            }
+        ];
+
+        _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
+            .ReturnsAsync(new XacmlJsonResponse { Response = null! });
+
+        Func<Task> act = () => target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
+
+        await act.Should().ThrowAsync<HttpRequestException>()
+            .WithMessage("Authorization PDP returned a null or empty response.");
     }
 
     private static XacmlJsonResult CreatePermitResult(XacmlJsonRequestRoot request, XacmlJsonRequestReference reference)

@@ -25,6 +25,11 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
+    /// Number of concurrent listeners for the email send queue per pod.
+    /// </summary>
+    public int EmailSendListenerCount { get; set; } = 10;
+
+    /// <summary>
     /// Determines whether to consume email status check commands via Wolverine and Azure Service Bus or via Kafka.
     /// </summary>
     public bool EnableEmailStatusCheckListener { get; set; } = false;
@@ -44,6 +49,11 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email status check queue.
     /// </summary>
     public QueueRetryPolicy EmailStatusCheckQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the email status check queue per pod.
+    /// </summary>
+    public int EmailStatusCheckListenerCount { get; set; } = 10;
 
     /// <summary>
     /// Determines whether to publish email send results via Wolverine and Azure Service Bus or via Kafka.

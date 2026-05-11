@@ -93,7 +93,7 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
         await using (factory)
         {
             string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
-            var policy = factory.WolverineSettings.EmailServiceRateLimitQueuePolicy;
+            var policy = factory.WolverineSettings!.EmailServiceRateLimitQueuePolicy;
 
             var totalPolicyDelayMs = policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum();
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;

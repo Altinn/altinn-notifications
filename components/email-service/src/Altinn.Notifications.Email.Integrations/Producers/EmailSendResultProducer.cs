@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Configuration;
 
 namespace Altinn.Notifications.Email.Integrations.Producers;
 
@@ -16,16 +17,10 @@ public class EmailSendResultProducer : IEmailSendResultDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailSendResultProducer"/> class.
     /// </summary>
-    /// <param name="producer">
-    /// The Kafka producer responsible for publishing the serialized result message.
-    /// </param>
-    /// <param name="topicName">
-    /// The name of the Kafka topic where the terminal result will be published.
-    /// </param>
-    public EmailSendResultProducer(ICommonProducer producer, string topicName)
+    public EmailSendResultProducer(ICommonProducer producer, KafkaSettings settings)
     {
         _producer = producer;
-        _topicName = topicName;
+        _topicName = settings.EmailStatusUpdatedTopicName;
     }
 
     /// <inheritdoc/>

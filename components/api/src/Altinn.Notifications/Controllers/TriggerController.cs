@@ -104,7 +104,8 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
+            var deletedCount = await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
+            _logger.LogInformation("Deleted {DeletedCount} old status feed records", deletedCount);
             return Ok();
         }
         catch (Exception ex)

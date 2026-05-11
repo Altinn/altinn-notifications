@@ -714,4 +714,76 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveryReport_PersistsDeliveryReportToDatabase()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        string gatewayReference = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"test-gw","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        // Act
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Delivered, gatewayReference, deliveryReport);
+
+        // Assert — result and gatewayReference updated
+        string statusSql = $@"
+            SELECT count(1) FROM notifications.smsnotifications
+            WHERE alternateid = '{smsNotification.Id}'
+              AND result = '{SmsNotificationResultType.Delivered}'
+              AND gatewayreference = '{gatewayReference}'";
+
+        int count = await PostgreUtil.RunSqlReturnOutput<int>(statusSql);
+        Assert.Equal(1, count);
+
+        // Assert — delivery report JSON is persisted and round-trips correctly
+        string reportSql = $@"
+            SELECT deliveryreport::text FROM notifications.smsnotifications
+            WHERE alternateid = '{smsNotification.Id}'";
+
+        string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(reportSql);
+        Assert.NotNull(persistedReport);
+
+        using var expected = System.Text.Json.JsonDocument.Parse(deliveryReport);
+        using var actual = System.Text.Json.JsonDocument.Parse(persistedReport!);
+        Assert.Equal(
+            expected.RootElement.GetProperty("messageId").GetString(),
+            actual.RootElement.GetProperty("messageId").GetString());
+        Assert.Equal(
+            expected.RootElement.GetProperty("status").GetString(),
+            actual.RootElement.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithNullDeliveryReport_LeavesDeliveryReportColumnNull()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        string gatewayReference = Guid.NewGuid().ToString();
+
+        // Act — no delivery report supplied
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Accepted, gatewayReference, deliveryReport: null);
+
+        // Assert — deliveryreport column should remain NULL
+        string sql = $@"
+            SELECT deliveryreport::text FROM notifications.smsnotifications
+            WHERE alternateid = '{smsNotification.Id}'";
+
+        string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(sql);
+        Assert.Null(persistedReport);
+    }
 }

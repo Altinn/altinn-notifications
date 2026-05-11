@@ -82,6 +82,11 @@ public class AuthorizationService : IAuthorizationService
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
+        if (xacmlJsonResponse?.Response is null)
+        {
+            throw new HttpRequestException("Authorization PDP returned a null or empty response.");
+        }
+
         List<OrganizationContactPoints> filtered =
             organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
 

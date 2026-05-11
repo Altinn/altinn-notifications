@@ -8,7 +8,10 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Publishers;
+
+using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -22,13 +25,16 @@ public class KafkaEmailCommandPublisherTests
 
     private readonly Email _email = new(Guid.NewGuid(), "subject", "body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
+    private static KafkaEmailCommandPublisher CreatePublisher(IKafkaProducer producer) =>
+        new(producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _topicName }));
+
     [Fact]
     public async Task PublishAsync_Single_ProducerSucceeds_ReturnsNull()
     {
         var producer = new Mock<IKafkaProducer>();
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<string>())).ReturnsAsync(true);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(_email, CancellationToken.None);
 
@@ -41,7 +47,7 @@ public class KafkaEmailCommandPublisherTests
         var producer = new Mock<IKafkaProducer>();
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<string>())).ReturnsAsync(false);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(_email, CancellationToken.None);
 
@@ -55,7 +61,7 @@ public class KafkaEmailCommandPublisherTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => publisher.PublishAsync(_email, cts.Token));
@@ -67,7 +73,7 @@ public class KafkaEmailCommandPublisherTests
     public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyWithoutCallingProducer()
     {
         var producer = new Mock<IKafkaProducer>();
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync([], CancellationToken.None);
 
@@ -87,7 +93,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.Is<ImmutableList<string>>(m => m.Count == batch.Count), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ImmutableList<string>.Empty);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(batch, CancellationToken.None);
 
@@ -106,7 +112,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([email1.Serialize(), email2.Serialize(), email3.Serialize()]);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(batch, CancellationToken.None);
 
@@ -128,7 +134,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([email2.Serialize()]);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(batch, CancellationToken.None);
 
@@ -148,7 +154,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([email1.Serialize(), "{}", email2.Serialize()]);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         var result = await publisher.PublishAsync(batch, CancellationToken.None);
 
@@ -167,7 +173,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([email1.Serialize(), "{"]);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         await Assert.ThrowsAsync<JsonException>(() => publisher.PublishAsync(batch, CancellationToken.None));
     }
@@ -179,7 +185,7 @@ public class KafkaEmailCommandPublisherTests
         producer.Setup(p => p.ProduceAsync(_topicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => publisher.PublishAsync([_email], CancellationToken.None));
@@ -198,7 +204,7 @@ public class KafkaEmailCommandPublisherTests
             .Callback<string, ImmutableList<string>, CancellationToken>((_, msgs, _) => capturedMessages = msgs)
             .ReturnsAsync(ImmutableList<string>.Empty);
 
-        var publisher = new KafkaEmailCommandPublisher(producer.Object, _topicName);
+        var publisher = CreatePublisher(producer.Object);
 
         await publisher.PublishAsync(batch, CancellationToken.None);
 
