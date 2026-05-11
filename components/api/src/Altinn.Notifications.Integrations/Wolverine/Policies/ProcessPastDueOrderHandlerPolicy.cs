@@ -39,10 +39,5 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
-
-        chain
-            .OnException<PlatformDependencyException>()
-            .ScheduleRetry(TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs))
-            .Then.MoveToErrorQueue();
     }
 }
