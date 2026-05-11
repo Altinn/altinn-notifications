@@ -13,15 +13,15 @@ const mpClientId = __ENV.mpClientId;
 
 export function generateAccessToken(scopes) {
     if (!encodedJwk) {
-        stopIterationOnFail("Required environment variable Encoded JWK (encodedJWK) was not provided", false);
+        throw new Error("Required environment variable Encoded JWK (encodedJWK) was not provided");
     }
 
     if (!mpClientId) {
-        stopIterationOnFail("Required environment variable maskinporten client id (mpClientId) was not provided", false);
+        throw new Error("Required environment variable maskinporten client id (mpClientId) was not provided");
     }
 
     if (!mpKid) {
-        stopIterationOnFail("Required environment variable maskinporten kid (mpKid) was not provided", false);
+        throw new Error("Required environment variable maskinporten kid (mpKid) was not provided");
     }
 
     const grant = createJwtGrant(scopes);
