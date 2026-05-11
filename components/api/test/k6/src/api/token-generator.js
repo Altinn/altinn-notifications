@@ -39,10 +39,10 @@ function generateToken(endpoint) {
     const skewSeconds = 30;
 
     // Return cached token if it exists and is not expired
-    if (authenticationStorage.cachedToken &&(authenticationStorage.expiresAt - skewSeconds) > currentTime) {
+    if (authenticationStorage.cachedToken && (authenticationStorage.expiresAt - skewSeconds) > currentTime) {
         return authenticationStorage.cachedToken;
     }
-    
+
     if (!tokenGeneratorUserName) {
         stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`, false);
     }
@@ -51,8 +51,9 @@ function generateToken(endpoint) {
         stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserPwd': '${tokenGeneratorUserPwd}'.`, false);
     }
 
+    // const tokenGeneratorUserName = await getFromSecretSource('tokenGeneratorUserName', throwConfigurationError);
+    // const tokenGeneratorUserPwd = await getFromSecretSource('tokenGeneratorUserPwd', throwConfigurationError);
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
-
     const encodedCredentials = encoding.b64encode(credentials);
 
     const params = apiHelpers.buildHeaderWithBasic(encodedCredentials);
@@ -93,4 +94,25 @@ function getTokenExpiration(token) {
     }
 
     return exp;
+}
+
+async function getFromSecretSource(secretName, raiseError) {
+    let secretValue;
+    try {
+        secretValue = await secrets.get(secretName);
+    }
+    catch (error) {
+        if (error == "no secret sources are configured") {
+            raiseError("No secret source is configured for the k6 command - specify the file path with the --secret-source flag");
+        }
+        else if (error == "no value") {
+            raiseError(`Secret ${secretName} does not exist in the secret source`);
+        }
+        console.log(error);
+        raiseError("Unknown error occurred in the attempt to get secret from source");
+    }
+    if (!secretValue) {
+        raiseError(`Secret ${secretName} is not properly assigned in the secret source`);
+    }
+    return secretValue;
 }
