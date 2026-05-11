@@ -129,13 +129,13 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - From setup
  */
-export default function runTests(data) {
+export default async function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientSmsFromOrderChainPayload
     });
 
-    const processingResults = processVariants(variants, {
+    const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,

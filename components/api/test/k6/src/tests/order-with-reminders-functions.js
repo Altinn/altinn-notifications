@@ -270,11 +270,11 @@ export async function sendNotificationOrderChain(orderRequest, label = 'post_val
  * @param {Trend} durationMetric - Trend metric to record duration
  * @returns {Object|undefined} { orderType, httpResponse, orderChainPayload }
  */
-export function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
+export async function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
     if (!orderType || !orderChainPayload) {
         return undefined;
     }
-    const httpResponse = sendNotificationOrderChain(orderChainPayload, label);
+    const httpResponse = await sendNotificationOrderChain(orderChainPayload, label);
     collectHttpResponseMetrics(httpResponse);
     if (durationMetric) {
         durationMetric.add(httpResponse.timings.duration);
@@ -457,27 +457,36 @@ export function generateOrderChainPayloads(orderTypes, basePayload, {
  * @param {Object<string,Trend>} config.durationMetrics - orderType -> Trend
  * @returns {Array<Object>} processingResults
  */
-export function processVariants(variants, {
+export async function processVariants(variants, {
     labelMap,
     durationMetrics
 }) {
-    return variants.map(v => {
-        const { orderType, orderChainPayload } = v;
+    const results = [];
+    for (const { orderType, orderChainPayload } of variants) {
+        let result;
         switch (orderType) {
             case "valid":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+                break;
             case "invalid":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+                break;
             case "duplicate":
                 // Send initial valid for idempotency before expecting 200
-                processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+                await processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+                break;
             case "missingResource":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+                break;
             default:
-                return undefined;
+                break;
         }
-    }).filter(Boolean);
+        if (result !== undefined) {
+            results.push(result);
+        }
+    }
+    return results;
 }
 
 /**
