@@ -69,11 +69,10 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
 */
-export function setup() {
+export async function setup() {
     const emailRecipient = getEmailRecipient();
     const smsRecipient = getSmsRecipient();
 
-    
     // needed for instant notifications
     if (!smsRecipient) {
         stopIterationOnFail("smsRecipient is required for SMS instant orders — set the 'smsRecipient' env var", false);
@@ -90,11 +89,10 @@ export function setup() {
     // used with notification email orders if applicable
     const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
 
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
     const idempotencyIdEmail = uuidv4();
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
-
 
 
     // non-instant supports NIN lookup; prefer it over direct email when provided

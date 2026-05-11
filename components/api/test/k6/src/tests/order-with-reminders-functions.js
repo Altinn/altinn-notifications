@@ -255,9 +255,9 @@ export function collectHttpResponseMetrics(httpResponse) {
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
  * @returns {Object} The HTTP response from the Notification API.
  */
-export function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
+export async function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
     return ordersApi.postNotificationOrderV2(requestBody, token, label);
 }
 

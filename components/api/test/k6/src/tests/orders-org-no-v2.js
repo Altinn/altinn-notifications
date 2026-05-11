@@ -54,11 +54,11 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
  */
-export function setup() {
+export async function setup() {
     const sendersReference = uuidv4();
     const idempotencyIdEmail = uuidv4();
     const idempotencyIdSms = uuidv4();
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();
 
