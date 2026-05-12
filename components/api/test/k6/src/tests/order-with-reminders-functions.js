@@ -253,7 +253,7 @@ export function collectHttpResponseMetrics(httpResponse) {
  *
  * @param {Object} orderRequest - The order chain payload to send.
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
- * @returns {Object} The HTTP response from the Notification API.
+ * @returns {Promise<Object>} The HTTP response from the Notification API.
  */
 export async function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
@@ -268,7 +268,7 @@ export async function sendNotificationOrderChain(orderRequest, label = 'post_val
  * @param {Object} orderChainPayload - The notification order chain payload to send
  * @param {string} label - Metric label
  * @param {Trend} durationMetric - Trend metric to record duration
- * @returns {Object|undefined} { orderType, httpResponse, orderChainPayload }
+ * @returns {Promise<Object|undefined>} { orderType, httpResponse, orderChainPayload }
  */
 export async function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
     if (!orderType || !orderChainPayload) {
@@ -455,7 +455,7 @@ export function generateOrderChainPayloads(orderTypes, basePayload, {
  * @param {Object} config
  * @param {Object<string,string>} config.labelMap - orderType -> label constant
  * @param {Object<string,Trend>} config.durationMetrics - orderType -> Trend
- * @returns {Array<Object>} processingResults
+ * @returns {Promise<Array<Object>>} processingResults
  */
 export async function processVariants(variants, {
     labelMap,
