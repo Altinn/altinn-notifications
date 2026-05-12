@@ -257,9 +257,9 @@ public class OrderProcessingService : IOrderProcessingService
             return new SendConditionEvaluationResult { IsSendConditionMet = true };
         }
 
-        var evaluatationResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
+        var evaluationResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
 
-        return evaluatationResult.Match(
+        return evaluationResult.Match(
             checkResult =>
             {
                 if (checkResult)
