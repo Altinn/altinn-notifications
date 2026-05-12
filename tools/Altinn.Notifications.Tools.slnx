@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Altinn.Notifications.Tools.RetryDeadDeliveryReports/Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
     <Project Path="src/Altinn.Notifications.Tools.StatusFeedBackfillTool/Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
+    <Project Path="src/Altinn.Notifications.Tools.SmsDeliveryReporter/Altinn.Notifications.Tools.SmsDeliveryReporter.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj" />
