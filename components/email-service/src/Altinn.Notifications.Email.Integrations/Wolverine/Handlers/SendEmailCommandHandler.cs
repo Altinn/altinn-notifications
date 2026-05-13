@@ -57,7 +57,7 @@ public static class SendEmailCommandHandler
     }
 
     /// <summary>
-    /// Logs a send-email failure at error level.
+    /// Logs a send-email failure at warning level.
     /// </summary>
     /// <param name="logger">The logger to write to.</param>
     /// <param name="notificationId">The notification ID associated with the failed send attempt.</param>

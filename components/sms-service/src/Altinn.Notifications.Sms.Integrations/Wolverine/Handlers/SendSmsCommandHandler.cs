@@ -56,6 +56,11 @@ public static class SendSmsCommandHandler
         }
     }
 
+    /// <summary>
+    /// Logs a send-sms failure at warning level.
+    /// </summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="notificationId">The notification ID associated with the failed send attempt.</param>
     private static void LogOnSendSmsFailed(ILogger logger, Guid notificationId)
     {
         logger.LogWarning(
