@@ -48,18 +48,17 @@ public static class SendSmsCommandHandler
                 "Successfully dispatched SMS for NotificationId: {NotificationId}",
                 command.NotificationId);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            LogOnSendSmsFailed(logger, ex, command.NotificationId);
+            LogOnSendSmsFailed(logger, command.NotificationId);
 
             throw;
         }
     }
 
-    private static void LogOnSendSmsFailed(ILogger logger, Exception exception, Guid notificationId)
+    private static void LogOnSendSmsFailed(ILogger logger, Guid notificationId)
     {
         logger.LogWarning(
-            exception,
             "SendSmsCommandHandler failed to send SMS for NotificationId: {NotificationId}.",
             notificationId);
     }
