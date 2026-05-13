@@ -4,8 +4,12 @@ using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 
 using Azure.Messaging.ServiceBus;
+
 using JasperFx;
 using JasperFx.CodeGeneration;
+
+using LinkMobility.PSWin.Client;
+
 using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
@@ -38,8 +42,9 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
         chain
            .OnException<TimeoutException>()
            .Or<ServiceBusException>()
+           .Or<HttpRequestException>()
+           .Or<SendMessageException>()
            .Or<TaskCanceledException>()
-           .Or<InvalidOperationException>()
            .RetryWithCooldown(policy.GetCooldownDelays())
            .Then.ScheduleRetry(policy.GetScheduleDelays())
            .Then.MoveToErrorQueue();
