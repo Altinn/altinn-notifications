@@ -233,6 +233,10 @@ public static class RecipientRules
     /// </summary>
     /// <param name="email">The string to validate as an email address</param>
     /// <returns>A boolean indicating that the email is valid or not</returns>
+    /// <remarks>
+    /// The regex is anchored with ^ and $ to enforce that the input contains exactly one email address.
+    /// This rejects semicolon-separated lists (e.g. "a@b.com;c@d.com") and any other multi-address formats.
+    /// </remarks>
     internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
@@ -240,7 +244,9 @@ public static class RecipientRules
             return false;
         }
 
-        string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
+        email = email.Trim();
+
+        string emailRegexPattern = @"^((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9æøåÆØÅ!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9æøåÆØÅ!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))$";
 
         Regex regex = new(emailRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
