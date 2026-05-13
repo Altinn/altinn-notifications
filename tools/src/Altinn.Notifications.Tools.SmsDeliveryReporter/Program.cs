@@ -29,7 +29,7 @@ if (string.IsNullOrWhiteSpace(settings.Username) || string.IsNullOrWhiteSpace(se
 
 var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{settings.Username}:{settings.Password}"));
 var lines = File.ReadAllLines(settings.InputFile);
-var deliveryTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+var deliveryTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
 using var http = new HttpClient();
 http.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
