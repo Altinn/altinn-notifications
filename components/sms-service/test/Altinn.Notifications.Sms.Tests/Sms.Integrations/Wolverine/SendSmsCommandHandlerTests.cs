@@ -44,7 +44,7 @@ public class SendSmsCommandHandlerTests
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send SMS") && v.ToString()!.Contains(_validSendSmsCommand.NotificationId.ToString())),
-                exception,
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
@@ -99,7 +99,7 @@ public class SendSmsCommandHandlerTests
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send SMS")),
-                exception,
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
