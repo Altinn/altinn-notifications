@@ -10,8 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
-    <PackageReference Include="WolverineFx" Version="5.32.1" />
-    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.32.1" />
+    <PackageReference Include="WolverineFx" Version="5.39.0" />
+    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.39.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
