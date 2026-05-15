@@ -61,10 +61,6 @@ public static class ProcessPastDueOrderHandler
 
         if (result.IsRetryRequired)
         {
-            logger.LogInformation(
-                "Send condition check inconclusive for order {OrderId}, scheduling retry.",
-                command.Order.Id);
-
             await messageContext.ScheduleAsync(
                 command with { IsRetry = true },
                 TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
