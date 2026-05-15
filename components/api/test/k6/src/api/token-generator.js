@@ -44,11 +44,11 @@ function generateToken(endpoint) {
     }
     
     if (!tokenGeneratorUserName) {
-        stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`, false);
+        throw new Error(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`);
     }
 
     if (!tokenGeneratorUserPwd) {
-        stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserPwd': '${tokenGeneratorUserPwd}'.`, false);
+        throw new Error(`Invalid value for environment variable 'tokenGeneratorUserPwd': '${tokenGeneratorUserPwd}'.`);
     }
 
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;

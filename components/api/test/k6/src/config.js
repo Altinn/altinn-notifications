@@ -18,12 +18,12 @@ const maskinportenBaseUrls = {
 };
 
 if (!environment) {
-    stopIterationOnFail("Environment variable 'altinn_env' is not set", false);
+    throw new Error("Environment variable 'altinn_env' is not set");
 }
 
 const baseUrl = baseUrls[environment];
 if (!baseUrl) {
-    stopIterationOnFail(`Invalid value for environment variable 'altinn_env': '${environment}'.`, false);
+    throw new Error(`Invalid value for environment variable 'altinn_env': '${environment}'.`);
 }
 
 const subscriptionKey = __ENV.subscriptionKey;
