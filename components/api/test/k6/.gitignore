@@ -1,5 +1,2 @@
-# Junit reports
-**/reports/*.xml
-
 # Secret-source
 .secrets
