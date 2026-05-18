@@ -12,4 +12,4 @@ services:
       - '6565:6565'
     volumes:
       - ./src:/src
-      - ./.secrets:/.secrets
+      - ./.secrets:/.secrets:ro
