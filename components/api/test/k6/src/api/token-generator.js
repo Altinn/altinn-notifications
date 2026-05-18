@@ -92,14 +92,14 @@ async function getFromSecretSource(secretName, raiseError) {
         secretValue = await secrets.get(secretName);
     }
     catch (error) {
-        if (error == "no secret sources are configured") {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("no secret sources are configured")) {
             raiseError("No secret source is configured for the k6 command - specify the file path with the --secret-source flag");
         }
-        else if (error == "no value") {
+        else if (message.includes("no value")) {
             raiseError(`Secret ${secretName} does not exist in the secret source`);
         }
-        console.log(error);
-        raiseError("Unknown error occurred in the attempt to get secret from source");
+        raiseError(`Unknown error occurred while reading secret '${secretName}': ${message}`);
     }
     if (!secretValue) {
         raiseError(`Secret ${secretName} is not properly assigned in the secret source`);
