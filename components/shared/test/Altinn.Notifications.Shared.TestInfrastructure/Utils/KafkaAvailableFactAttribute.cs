@@ -5,8 +5,7 @@ using Xunit;
 namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 /// <summary>
-/// A custom xUnit <see cref="FactAttribute"/> that automatically skips the test
-/// when a Kafka broker is not reachable at localhost:9092.
+/// A custom xUnit <see cref="FactAttribute"/> that automatically skips the test when a Kafka broker is not reachable at localhost:9092.
 /// </summary>
 /// <example>
 /// <code>
@@ -20,8 +19,8 @@ namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class KafkaAvailableFactAttribute : FactAttribute
 {
-    private const string _brokerHost = "localhost";
     private const int _brokerPort = 9092;
+    private const string _brokerHost = "localhost";
     private const string _skipReason = "Kafka broker is not available at localhost:9092.";
 
     private static readonly Lazy<bool> _isAvailable = new(CheckAvailability);
@@ -46,10 +45,8 @@ public sealed class KafkaAvailableFactAttribute : FactAttribute
     {
         try
         {
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             using var client = new TcpClient();
-            client.ConnectAsync(_brokerHost, _brokerPort, cancellationTokenSource.Token).GetAwaiter().GetResult();
-            return true;
+            return client.ConnectAsync(_brokerHost, _brokerPort).Wait(500);
         }
         catch
         {
@@ -59,8 +56,7 @@ public sealed class KafkaAvailableFactAttribute : FactAttribute
 }
 
 /// <summary>
-/// A custom xUnit <see cref="TheoryAttribute"/> that automatically skips the test
-/// when a Kafka broker is not reachable at localhost:9092.
+/// A custom xUnit <see cref="TheoryAttribute"/> that automatically skips the test when a Kafka broker is not reachable at localhost:9092.
 /// </summary>
 /// <example>
 /// <code>
@@ -76,15 +72,15 @@ public sealed class KafkaAvailableFactAttribute : FactAttribute
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class KafkaAvailableTheoryAttribute : TheoryAttribute
 {
-    private const string _brokerHost = "localhost";
     private const int _brokerPort = 9092;
+    private const string _brokerHost = "localhost";
     private const string _skipReason = "Kafka broker is not available at localhost:9092.";
 
     private static readonly Lazy<bool> _isAvailable = new(CheckAvailability);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaAvailableTheoryAttribute"/> class.
-    /// Automatically sets <see cref="TheoryAttribute.Skip"/> if the Kafka broker is unreachable.
+    /// Automatically sets <see cref="FactAttribute.Skip"/> if the Kafka broker is unreachable.
     /// </summary>
     public KafkaAvailableTheoryAttribute()
     {
@@ -102,10 +98,8 @@ public sealed class KafkaAvailableTheoryAttribute : TheoryAttribute
     {
         try
         {
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             using var client = new TcpClient();
-            client.ConnectAsync(_brokerHost, _brokerPort, cancellationTokenSource.Token).GetAwaiter().GetResult();
-            return true;
+            return client.ConnectAsync(_brokerHost, _brokerPort).Wait(500);
         }
         catch
         {
@@ -113,4 +107,3 @@ public sealed class KafkaAvailableTheoryAttribute : TheoryAttribute
         }
     }
 }
-
