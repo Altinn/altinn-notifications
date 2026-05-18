@@ -48,28 +48,22 @@ public static class SendEmailCommandHandler
                 "Successfully dispatched email for NotificationId: {NotificationId}",
                 command.NotificationId);
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogOnSendEmailFailed(logger, ex, command.NotificationId);
+            LogOnSendEmailFailed(logger, command.NotificationId);
 
             throw;
         }
     }
 
     /// <summary>
-    /// Logs a send-email failure at error level.
+    /// Logs a send-email failure at warning level.
     /// </summary>
     /// <param name="logger">The logger to write to.</param>
-    /// <param name="exception">The exception that caused the failure.</param>
     /// <param name="notificationId">The notification ID associated with the failed send attempt.</param>
-    private static void LogOnSendEmailFailed(ILogger logger, Exception exception, Guid notificationId)
+    private static void LogOnSendEmailFailed(ILogger logger, Guid notificationId)
     {
-        logger.LogError(
-            exception,
+        logger.LogWarning(
             "SendEmailCommandHandler failed to send email for NotificationId: {NotificationId}.",
             notificationId);
     }
