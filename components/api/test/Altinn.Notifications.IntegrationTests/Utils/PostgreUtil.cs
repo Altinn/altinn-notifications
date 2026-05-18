@@ -531,4 +531,19 @@ public static class PostgreUtil
         string deleteSql = @"DELETE from notifications.orders o where o.alternateid = ANY(@orderIds)";
         await RunSql(deleteSql, new NpgsqlParameter("orderIds", orderIds.ToArray()));
     }
+
+    /// <summary>
+    /// Deletes order chain entries from the database by their order chain IDs.
+    /// </summary>
+    /// <param name="orderChainIds">Collection of order chain IDs to delete.</param>
+    public static async Task DeleteOrdersChainByOrderIds(IEnumerable<Guid> orderChainIds)
+    {
+        if (orderChainIds is null || !orderChainIds.Any())
+        {
+            return;
+        }
+
+        string deleteSql = @"DELETE FROM notifications.orderschain WHERE orderid = ANY(@orderChainIds)";
+        await RunSql(deleteSql, new NpgsqlParameter("orderChainIds", orderChainIds.ToArray()));
+    }
 }
