@@ -51,9 +51,9 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and smsOrderRequest.
  */
-export function setup() {
+export async function setup() {
     const sendersReference = uuidv4();
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
 
     const smsOrderRequest = {
         senderNumber: "Altinn",

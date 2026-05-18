@@ -9,13 +9,13 @@ import { environment } from "./shared/variables.js";
  * If no organization is specified, the default organization (TTD) will be used.
  * @returns An Altinn token with the specified scopes for the organization.
  */
-export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
+export async function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
     if (!environment) {
-        stopIterationOnFail("Environment variable 'altinn_env' is not set", false);
+        throw new Error("Environment variable 'altinn_env' is not set");
     }
 
     if ((environment === "prod" || environment === "tt02") && org === "ttd") {
-        const accessToken = maskinporten.generateAccessToken(scopes);
+        const accessToken = await maskinporten.generateAccessToken(scopes);
 
         return authentication.exchangeToAltinnToken(accessToken, true);
     }

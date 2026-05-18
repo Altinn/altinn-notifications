@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Altinn.Notifications.Integrations.Telemetry;
 
 /// <summary>
@@ -35,5 +37,29 @@ internal static class EmailMaskingHelper
         }
 
         return $"{localPart[..2]}***@{domain}";
+    }
+
+    /// <summary>
+    /// Redacts known email addresses from a free-form status message string,
+    /// replacing each occurrence with the masked version of the email address.
+    /// Returns an empty string if <paramref name="message"/> is null or whitespace.
+    /// </summary>
+    /// <param name="message">The status message that may contain email addresses.</param>
+    /// <param name="knownAddresses">The email addresses to redact from the message.</param>
+    /// <returns>The message with known addresses redacted.</returns>
+    internal static string RedactEmailAddressesFromMessage(string? message, params string[] knownAddresses)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return string.Empty;
+        }
+
+        var redacted = message;
+        foreach (var address in (knownAddresses ?? []).Where(address => !string.IsNullOrWhiteSpace(address)))
+        {
+            redacted = redacted.Replace(address, MaskEmailAddress(address), StringComparison.OrdinalIgnoreCase);
+        }
+
+        return redacted;
     }
 }
