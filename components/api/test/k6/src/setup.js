@@ -27,5 +27,5 @@ export async function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "9918258
         orgNo: orgNo,
     };
 
-    return tokenGenerator.generateEnterpriseToken(queryParams);
+    return await tokenGenerator.generateEnterpriseToken(queryParams);
 }
