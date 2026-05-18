@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Altinn.Notifications.Email\Altinn.Notifications.Email.csproj" />
+    <ProjectReference Include="..\..\..\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

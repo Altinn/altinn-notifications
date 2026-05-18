@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications\Altinn.Notifications.csproj" />
     <ProjectReference Include="..\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj" />
+    <ProjectReference Include="..\..\..\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
