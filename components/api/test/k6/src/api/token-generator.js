@@ -1,4 +1,4 @@
-import secrets from "k6/experimental/secrets";
+import secrets from "k6/secrets";
 import encoding from "k6/encoding";
 import http from "k6/http";
 import * as config from "../config.js";
