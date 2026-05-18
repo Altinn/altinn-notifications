@@ -14,8 +14,7 @@
 
     Command:    
     podman compose run k6 run /src/tests/order-with-reminders-for-email-address.js \
-    -e tokenGeneratorUserName={the user name to access the token generator} \
-    -e tokenGeneratorUserPwd={the password to access the token generator} \
+    --secret-source=file=/.secrets \
     -e mpClientId={the identifier of an integration defined in maskinporten} \
     -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
