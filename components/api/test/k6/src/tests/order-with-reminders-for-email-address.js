@@ -15,9 +15,6 @@
     Command:    
     podman compose run k6 run /src/tests/order-with-reminders-for-email-address.js \
     --secret-source=file=/.secrets \
-    -e mpClientId={the identifier of an integration defined in maskinporten} \
-    -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e altinn_env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
     -e emailRecipient={Email address to include as notification recipient} \
     -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \

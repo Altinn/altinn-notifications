@@ -4,18 +4,14 @@
     Command:
     podman compose run k6 run /src/tests/orders-email.js \
     --secret-source=file=/.secrets \
-    -e mpClientId={the id of an integration defined in maskinporten} \
-    -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e altinn_env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
-    -e subscriptionKey={the subscription key with access to the automated tests product} \
     -e runFullTestSet=true
 
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
-    - The `subscriptionKey` is required and can be retrieved from API management in Azure.
+    - Setting `subscriptionKey` in .secrets is required - can be retrieved from Azure APIM.
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
@@ -28,6 +24,7 @@ import { notifications } from "../config.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
+import { getFromSecretSource } from "..secret-reader.js";
 import * as setupToken from "../setup.js";
 import { getEmailRecipient } from "../shared/functions.js";
 import * as ordersApi from "../api/notifications/orders.js";
