@@ -95,9 +95,9 @@ function stringToBytes(str) {
 /**
  * Creates a signed JWT grant for the Maskinporten token request.
  * @param {string} scopes - Space-separated list of scopes to include in the grant.
- * @param {string} encodedJwk - Base64-encoded JWK.
- * @param {string} mpKid - Maskinporten kid (key identifier).
- * @param {string} mpClientId - Maskinporten client-ID
+ * @param {string} encodedJwk - Base64-encoded JWK for signing maskinporten token requests.
+ * @param {string} mpKid - The key identifier of the JSON web key used to sign the maskinporten token request
+ * @param {string} mpClientId - The client-ID of the integration set up in Maskinporten
  * @returns {Promise<string>} The signed JWT string.
  */
 async function createJwtGrant(scopes, encodedJwk, mpKid, mpClientId) {
