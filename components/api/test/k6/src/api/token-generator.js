@@ -1,9 +1,9 @@
-import secrets from "k6/secrets";
 import encoding from "k6/encoding";
 import http from "k6/http";
 import * as config from "../config.js";
 import * as apiHelpers from "../apiHelpers.js";
-import { stopIterationOnFail, throwConfigurationError } from "../errorhandler.js";
+import { stopIterationOnFail } from "../errorhandler.js";
+import { getFromSecretSource } from "../secret-reader.js";
 
 // Storage to hold the cached token and its expiration time
 let authenticationStorage = {
@@ -41,8 +41,8 @@ async function generateToken(endpoint) {
         return authenticationStorage.cachedToken;
     }
 
-    const tokenGeneratorUserName = await getFromSecretSource('tokenGeneratorUserName', throwConfigurationError);
-    const tokenGeneratorUserPwd = await getFromSecretSource('tokenGeneratorUserPwd', throwConfigurationError);
+    const tokenGeneratorUserName = await getFromSecretSource('tokenGeneratorUserName');
+    const tokenGeneratorUserPwd = await getFromSecretSource('tokenGeneratorUserPwd');
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
     const encodedCredentials = encoding.b64encode(credentials);
 
@@ -84,25 +84,4 @@ function getTokenExpiration(token) {
     }
 
     return exp;
-}
-
-async function getFromSecretSource(secretName, raiseError) {
-    let secretValue;
-    try {
-        secretValue = await secrets.get(secretName);
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes("no secret sources are configured")) {
-            raiseError("No secret source is configured for the k6 command - specify the file path with the --secret-source flag");
-        }
-        else if (message.includes("no value")) {
-            raiseError(`Secret ${secretName} does not exist in the secret source`);
-        }
-        raiseError(`Unknown error occurred while reading secret '${secretName}': ${message}`);
-    }
-    if (!secretValue) {
-        raiseError(`Secret ${secretName} is not properly assigned in the secret source`);
-    }
-    return secretValue;
 }
