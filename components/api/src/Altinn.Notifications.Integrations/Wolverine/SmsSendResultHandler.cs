@@ -19,7 +19,7 @@ public static class SmsSendResultHandler
     /// using existing application services.
     /// </summary>
     /// <exception cref="UnrecognizedSendResultException">
-    /// Thrown when <see cref="EmailSendResultCommand.SendResult"/> cannot be parsed into a known <see cref="EmailNotificationResultType"/> value.
+    /// Thrown when <see cref="SmsSendResultCommand.SendResult"/> cannot be parsed into a known <see cref="SmsNotificationResultType"/> value.
     /// </exception>
     public static async Task Handle(
         SmsSendResultCommand command,
