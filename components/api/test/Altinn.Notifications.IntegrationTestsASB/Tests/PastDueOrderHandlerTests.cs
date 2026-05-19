@@ -90,7 +90,7 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             var settings = factory.WolverineSettings!;
             string queueName = settings.PastDueOrdersQueueName;
 
-            // Act - send command directly to the queue (IsRetry defaults to false)
+            // Act - send command directly to the queue (IsProcessOrderRetry defaults to false)
             await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand
             {
                 Order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient()

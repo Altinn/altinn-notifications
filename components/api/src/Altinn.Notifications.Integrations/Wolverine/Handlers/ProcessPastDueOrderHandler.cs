@@ -17,11 +17,11 @@ public static class ProcessPastDueOrderHandler
 {
     /// <summary>
     /// Processes a past-due notification order by routing it through the appropriate channel service.
-    /// On retry attempts (<see cref="ProcessPastDueOrderCommand.IsRetry"/> is <see langword="true"/>),
+    /// On retry attempts (<see cref="ProcessPastDueOrderCommand.IsProcessOrderRetry"/> is <see langword="true"/>),
     /// delegates to <see cref="IOrderProcessingService.ProcessOrderRetry"/> which handles send condition
     /// failures and platform dependency errors gracefully.
     /// When the send condition check is inconclusive, schedules a new command with
-    /// <see cref="ProcessPastDueOrderCommand.IsRetry"/> set to <see langword="true"/> after
+    /// <see cref="ProcessPastDueOrderCommand.IsProcessOrderRetry"/> set to <see langword="true"/> after
     /// the configured <see cref="WolverineSettings.PastDueOrdersRetryDelayMs"/> delay.
     /// </summary>
     public static async Task Handle(
@@ -31,7 +31,7 @@ public static class ProcessPastDueOrderHandler
         IOrderProcessingService orderProcessingService,
         ILogger logger)
     {
-        if (command.IsRetry)
+        if (command.IsProcessOrderRetry)
         {
             await orderProcessingService.ProcessOrderRetry(command.Order);
             return;
@@ -53,7 +53,7 @@ public static class ProcessPastDueOrderHandler
                 command.Order.Id);
 
             await messageContext.ScheduleAsync(
-                command with { IsRetry = true },
+                command with { IsProcessOrderRetry = true },
                 TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
 
             return;
@@ -62,7 +62,7 @@ public static class ProcessPastDueOrderHandler
         if (result.IsRetryRequired)
         {
             await messageContext.ScheduleAsync(
-                command with { IsRetry = true },
+                command with { IsProcessOrderRetry = true },
                 TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
         }
     }

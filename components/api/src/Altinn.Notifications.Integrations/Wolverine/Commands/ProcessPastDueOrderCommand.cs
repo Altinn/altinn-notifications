@@ -14,10 +14,10 @@ public sealed record ProcessPastDueOrderCommand
     public required NotificationOrder Order { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether this command represents a retry attempt.
+    /// Gets a value indicating whether this command represents an application-scheduled retry attempt.
     /// When <see langword="true"/>, the handler delegates to
     /// <see cref="Core.Services.Interfaces.IOrderProcessingService.ProcessOrderRetry"/>
     /// instead of the normal <see cref="Core.Services.Interfaces.IOrderProcessingService.ProcessOrder"/> path.
     /// </summary>
-    public bool IsRetry { get; init; } = false;
+    public bool IsProcessOrderRetry { get; init; } = false;
 }
