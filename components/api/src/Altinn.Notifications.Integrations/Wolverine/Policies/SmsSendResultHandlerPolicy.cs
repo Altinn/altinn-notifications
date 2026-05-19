@@ -57,7 +57,8 @@ internal sealed class SmsSendResultHandlerPolicy(WolverineSettings settings) : I
             .SaveDeadDeliveryReport(_notificationExpiredReason, DeliveryReportChannel.LinkMobility);
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<UnrecognizedSendResultException>()
+            .Or<InvalidNotificationIdentifierException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.LinkMobility);
     }
 }

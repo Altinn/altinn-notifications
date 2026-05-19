@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -44,7 +45,8 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<UnrecognizedSendResultException>()
+            .Or<InvalidNotificationIdentifierException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.AzureCommunicationServices);
     }
 }
