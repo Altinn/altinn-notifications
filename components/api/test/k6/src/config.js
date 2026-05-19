@@ -1,4 +1,3 @@
-import { getFromSecretSource } from "./secret-reader.js";
 import { environment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
