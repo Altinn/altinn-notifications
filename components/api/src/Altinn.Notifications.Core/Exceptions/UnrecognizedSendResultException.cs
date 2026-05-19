@@ -23,4 +23,15 @@ public sealed class UnrecognizedSendResultException : Exception
     {
         SendResult = sendResult;
     }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="UnrecognizedSendResultException"/> with a specified send result and inner exception.
+    /// </summary>
+    /// <param name="sendResult">The unrecognized send result value.</param>
+    /// <param name="innerException">The exception that caused this exception.</param>
+    public UnrecognizedSendResultException(string sendResult, Exception innerException)
+        : base($"Unrecognized SendResult value: '{sendResult}'", innerException)
+    {
+        SendResult = sendResult;
+    }
 }

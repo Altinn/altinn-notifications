@@ -18,4 +18,14 @@ public sealed class InvalidNotificationIdentifierException : Exception
         : base(message)
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="InvalidNotificationIdentifierException"/> with a specified error message and inner exception.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The exception that caused this exception.</param>
+    public InvalidNotificationIdentifierException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
