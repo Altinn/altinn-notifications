@@ -46,10 +46,6 @@ var app = appBuilder.Build();
 
 EmailDeliveryReportSettings emailDeliveryReportSettings = new();
 app.Configuration.GetSection("EmailDeliveryReportSettings").Bind(emailDeliveryReportSettings);
-if (emailDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
-{
-    app.UseRequestBodyTelemetry();
-}
 
 if (app.Environment.IsDevelopment())
 {
