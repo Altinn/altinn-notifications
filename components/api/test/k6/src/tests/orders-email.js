@@ -24,7 +24,7 @@ import { notifications } from "../config.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
-import { getFromSecretSource } from "..secret-reader.js";
+import { getFromSecretSource } from "../secret-reader.js";
 import * as setupToken from "../setup.js";
 import { getEmailRecipient } from "../shared/functions.js";
 import * as ordersApi from "../api/notifications/orders.js";
