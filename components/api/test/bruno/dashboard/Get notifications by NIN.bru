@@ -12,17 +12,21 @@ get {
 
 params:query {
   nin: {{nin}}
-  from: {{dateFrom}}
-  to: {{dateTo}}
+  ~from: {{dateFrom}}
+  ~to: {{dateTo}}
+}
+
+vars:pre-request {
+  nin: 16035001577
 }
 
 script:pre-request {
   const from = bru.getEnvVar("dateFrom");
   const to = bru.getEnvVar("dateTo");
-
+  
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+  
   bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
   bru.setVar("dateTo", to || new Date().toISOString());
 }
