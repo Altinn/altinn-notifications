@@ -28,7 +28,7 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 
 1. Create a `.secrets` file in the k6 folder
 2. Copy contents from `.secrets.sample`
-3. Assign valid values to the variables that are required in your intented environment (refer to the table below)
+3. Assign valid values to the variables that are required in your intended environment (refer to the table below)
 
 
 | Variable | Description | When is it required |
