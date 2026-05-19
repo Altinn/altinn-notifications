@@ -28,13 +28,17 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 
 1. Create a `.secrets` file in the k6 folder
 2. Copy contents from `.secrets.sample`
-3. Assign valid values to the variables
+3. Assign valid values to the variables that are required in your intented environment (refer to the table below)
 
 
-| Variable | Description | Required |
+| Variable | Description | When is it required |
 |----------|-------------|----------|
-| `tokenGeneratorUserName` | Username for token generator | Yes |
-| `tokenGeneratorUserPwd` | Password for token generator | Yes |
+| `tokenGeneratorUserName` | Username for token generator | For running in envs ATxx |
+| `tokenGeneratorUserPwd` | Password for token generator | For running in envs ATxx |
+| `encodedJwk` | Base64-encoded JWK for signing maskinporten token requests. | For running in envs [tt02, prod] |
+| `mpKid` | The key identifier of the JSON web key used to sign the maskinporten token request | For running in envs [tt02, prod] |
+| `mpClientId` | The client-ID of the integration set up in Maskinporten | For running in envs [tt02, prod] |
+| `subscriptionKey` | An APIM subscription key with access to the automated tests product | For running `orders-email.js` |
 
 
 ## Running tests
