@@ -25,17 +25,19 @@ jobs:
         env:
           TOKEN_GENERATOR_USERNAME: ${{ secrets.TOKENGENERATOR_USERNAME }}
           TOKEN_GENERATOR_USERPASSWORD: ${{ secrets.TOKENGENERATOR_USERPASSWORD }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY }}
         run: |
           umask 077
           SECRETS_FILE="${{ runner.temp }}/k6.secrets"
           printf 'tokenGeneratorUserName=%s\n' "$TOKEN_GENERATOR_USERNAME" > "$SECRETS_FILE"
           printf 'tokenGeneratorUserPwd=%s\n' "$TOKEN_GENERATOR_USERPASSWORD" >> "$SECRETS_FILE"
+          printf 'subscriptionKey=%s\n' "$APIM_SUBSCRIPTION_KEY" >> "$SECRETS_FILE"
           echo "file=$SECRETS_FILE" >> "$GITHUB_OUTPUT"
       - name: Run email notification order regression tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-email.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY }}
           inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run contact(s) lookup by organization number regression tests with generating an email notification
@@ -58,7 +60,7 @@ jobs:
           path: components/api/test/k6/src/tests/orders-v2.js
           flags: >-
             --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }}
-            -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+            -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}}
           inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run API v2 org lookup regression tests

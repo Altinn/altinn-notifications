@@ -60,8 +60,9 @@ setEmptyThresholds(labels, options);
 export async function setup() {
     const sendersReference = uuidv4();
     const token = await setupToken.getAltinnTokenForOrg(scopes);
+    const subscriptionKey = await getFromSecretSource("subscriptionKey");
 
-    const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, conditionEndpoint: notifications.conditionCheck(true), recipients: [] };
+    const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, conditionEndpoint: notifications.conditionCheck(true, subscriptionKey), recipients: [] };
 
     if (ninRecipient) {
         emailOrderRequest.recipients.push({ nationalIdentityNumber: ninRecipient });
@@ -80,6 +81,7 @@ export async function setup() {
         runFullTestSet,
         sendersReference,
         emailOrderRequest,
+        subscriptionKey
     };
 }
 
@@ -138,7 +140,7 @@ function getEmailNotificationSummary(data, orderId) {
  * @param {Object} data - The data object containing emailOrderRequest and token.
  */
 function postEmailNotificationOrderWithNegativeConditionCheck(data) {
-    const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false) };
+    const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false, data.subscriptionKey) };
 
     let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),
