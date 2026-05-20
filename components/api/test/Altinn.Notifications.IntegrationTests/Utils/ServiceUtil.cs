@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -197,8 +198,8 @@ public static class ServiceUtil
         services.AddSingleton(sharedDataSource);
         RegisterRepositories(services);
         services.AddCoreServices(config);
-        services.AddKafkaServices(config);
         services.AddAltinnClients(config);
+        services.AddNotificationServices(config);
         services.AddAuthorizationService(config);
     }
 
