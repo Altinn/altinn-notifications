@@ -1,9 +1,7 @@
 using Altinn.Notifications.Extensions;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.IntegrationTests;
@@ -11,16 +9,12 @@ namespace Altinn.Notifications.IntegrationTests;
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
-    private readonly string? _originalEnableWolverine = Environment.GetEnvironmentVariable("WolverineSettings__EnableWolverine");
-
     /// <summary>
     /// ConfigureWebHost for setup of configuration and test services
     /// </summary>
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
-
         IConfiguration configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
@@ -37,28 +31,5 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 ResourceLinkExtensions.Initialize(uri);
             }
         });
-
-        builder.ConfigureTestServices(services =>
-        {
-            // Remove all Kafka consumers - controller tests don't need them
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-                .ToList();
-
-            foreach (var descriptor in consumersToRemove)
-            {
-                services.Remove(descriptor);
-            }
-        });
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", _originalEnableWolverine);
-        }
-
-        base.Dispose(disposing);
     }
 }

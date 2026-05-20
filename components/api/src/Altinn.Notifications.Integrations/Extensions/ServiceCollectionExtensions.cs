@@ -11,6 +11,7 @@ using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
+using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
@@ -39,6 +40,7 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
         services
+            .AddSingleton<IKafkaProducer, KafkaProducer>()
             .AddHostedService<SmsStatusConsumer>()
             .AddHostedService<EmailStatusConsumer>()
             .AddHostedService<PastDueOrdersConsumer>()
