@@ -161,7 +161,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                "Altinn.Notifications.KafkaProducer",
                 "Altinn.Notifications.KafkaConsumer",
                 DeliveryReportMetrics.MeterName);
         })
@@ -230,6 +229,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
+    services.AddNotificationServices(config);
     services.AddWolverineServices(config, builder.Environment);
 
     services.AddAltinnClients(config);
