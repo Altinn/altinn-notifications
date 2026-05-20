@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -24,6 +25,7 @@ namespace Altinn.Notifications.Integrations.Wolverine.Policies;
 internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) : IHandlerPolicy
 {
     private const string _unrecognizedSendResultReason = "UNRECOGNIZED_SEND_RESULT";
+    private const string _invalidNotificationIdentifierReason = "INVALID_NOTIFICATION_IDENTIFIER";
 
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
@@ -44,7 +46,11 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<UnrecognizedSendResultException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.AzureCommunicationServices);
+
+        chain
+            .OnException<InvalidNotificationIdentifierException>()
+            .SaveDeadDeliveryReport(_invalidNotificationIdentifierReason, DeliveryReportChannel.AzureCommunicationServices);
     }
 }
