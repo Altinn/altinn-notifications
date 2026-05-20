@@ -19,9 +19,9 @@ public class AltinnGatewayClient : IAltinnGatewayClient
     /// <summary>
     /// Initializes a new instance of the <see cref="AltinnGatewayClient"/> class.
     /// </summary>
-    public AltinnGatewayClient(SmsGatewaySettings gatewayConfig)
+    public AltinnGatewayClient(HttpClient httpClient, SmsGatewaySettings gatewayConfig)
     {
-        _client = new(new XmlTransport(gatewayConfig.Username, gatewayConfig.Password, new Uri(gatewayConfig.Endpoint)));
+        _client = new(new XmlTransport(gatewayConfig.Username, gatewayConfig.Password, new Uri(gatewayConfig.Endpoint), httpClient));
     }
 
     /// <inheritdoc/>

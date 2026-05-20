@@ -42,8 +42,12 @@ public static class ServiceCollectionExtensions
             .AddHostedService<SendSmsQueueConsumer>()
             .AddSingleton(kafkaSettings)
             .AddSingleton<ISmsClient, SmsClient>()
-            .AddSingleton<IAltinnGatewayClient, AltinnGatewayClient>()
             .AddSingleton(smsGatewaySettings);
+
+        services.AddHttpClient<IAltinnGatewayClient, AltinnGatewayClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(smsGatewaySettings.TimeoutInSeconds);
+        });
 
         WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
 
