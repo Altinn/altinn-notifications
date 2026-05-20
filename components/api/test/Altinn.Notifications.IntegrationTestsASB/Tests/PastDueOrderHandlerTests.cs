@@ -1,6 +1,7 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
@@ -64,8 +65,9 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
     [Fact]
     public async Task ProcessPastDueOrder_WhenSendConditionIsInconclusive_ProcessOrderRetryCalledOnRetry()
     {
-        // Arrange - ProcessOrder returns inconclusive (triggers SendConditionInconclusiveException + scheduled retry).
-        // ProcessOrderRetry succeeds, so the message should be processed without going to DLQ.
+        // Arrange - ProcessOrder returns inconclusive; the handler schedules a new command
+        // with IsRetry = true after PastDueOrdersRetryDelayMs. ProcessOrderRetry succeeds,
+        // so the message should be processed without going to DLQ.
         int processOrderCallCount = 0;
         int processOrderRetryCallCount = 0;
 
@@ -88,13 +90,13 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             var settings = factory.WolverineSettings!;
             string queueName = settings.PastDueOrdersQueueName;
 
-            // Act - send command directly to the queue
+            // Act - send command directly to the queue (IsProcessOrderRetry defaults to false)
             await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand
             {
                 Order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient()
             });
 
-            // Assert - ProcessOrderRetry called once on the retry attempt
+            // Assert - ProcessOrderRetry called once on the scheduled retry attempt
             const int pollDelayMs = 500;
             var retryProcessed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(processOrderRetryCallCount == 1),
@@ -113,21 +115,17 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
     }
 
     [Fact]
-    public async Task ProcessPastDueOrder_WhenBothProcessOrderAndRetryThrowNpgsqlException_MovesToDeadLetterQueue()
+    public async Task ProcessPastDueOrder_WhenProcessOrderAlwaysThrowsNpgsqlException_MovesToDeadLetterQueue()
     {
-        // Arrange - both ProcessOrder (attempt 1) and ProcessOrderRetry (attempts 2+) throw,
-        // so the full retry chain is exhausted and the message moves to DLQ.
+        // Arrange - ProcessOrder always throws; since all Wolverine-managed retries re-deliver
+        // the original message (IsRetry = false), ProcessOrder is called on every attempt and
+        // ProcessOrderRetry is never called.
         int processOrderCallCount = 0;
-        int processOrderRetryCallCount = 0;
 
         var mockService = new Mock<IOrderProcessingService>();
         mockService
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
             .Callback<NotificationOrder>(_ => Interlocked.Increment(ref processOrderCallCount))
-            .ThrowsAsync(new NpgsqlException("Simulated database error"));
-        mockService
-            .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .Callback<NotificationOrder>(_ => Interlocked.Increment(ref processOrderRetryCallCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -138,6 +136,7 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
         {
             var policy = factory.WolverineSettings!.PastDueOrdersQueuePolicy;
             int expectedRetryAttempts = policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+            int expectedTotalProcessOrderCalls = 1 + expectedRetryAttempts;
 
             string queueName = factory.WolverineSettings!.PastDueOrdersQueueName;
 
@@ -155,10 +154,74 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
                 dlqTimeout);
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - ProcessOrder called once (attempt 1), ProcessOrderRetry called on all retry attempts
-            Console.WriteLine($"[Test] ProcessOrder calls: {processOrderCallCount}, ProcessOrderRetry calls: {processOrderRetryCallCount} (expected {expectedRetryAttempts})");
+            // Assert - ProcessOrder called on every attempt (initial + all retries),
+            // ProcessOrderRetry never called because IsRetry is always false on re-delivered messages.
+            Console.WriteLine($"[Test] ProcessOrder calls: {processOrderCallCount} (expected {expectedTotalProcessOrderCalls})");
+            Assert.Equal(expectedTotalProcessOrderCalls, processOrderCallCount);
+            mockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessPastDueOrder_WhenProcessOrderThrowsPlatformDependencyException_OrderStatusResetToRegistered()
+    {
+        // Arrange - real OrderProcessingService wired against real DB, but with a mock email
+        // processing service that throws PlatformDependencyException, reproducing the scenario
+        // where a platform dependency (e.g. profile service) is unavailable during processing.
+        // This test proves that ProcessOrderRetry — which catches PlatformDependencyException
+        // and resets the order to Registered — is still reached via the IsRetry=true scheduled command.
+        int processOrderCallCount = 0;
+        int processOrderRetryCallCount = 0;
+
+        var mockEmailProcessingService = new Mock<IEmailOrderProcessingService>();
+        mockEmailProcessingService
+            .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
+            .Callback(() => Interlocked.Increment(ref processOrderCallCount))
+            .ThrowsAsync(new PlatformDependencyException("Profile", "GetUserContactPoints", new TaskCanceledException()));
+        mockEmailProcessingService
+            .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
+            .Callback(() => Interlocked.Increment(ref processOrderRetryCallCount))
+            .ThrowsAsync(new PlatformDependencyException("Profile", "GetUserContactPoints", new TaskCanceledException()));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService<IEmailOrderProcessingService>(_ => mockEmailProcessingService.Object)
+            .Initialize();
+
+        await using (factory)
+        {
+            var settings = factory.WolverineSettings!;
+            string queueName = settings.PastDueOrdersQueueName;
+
+            // Persist a real order in the DB so the status can be observed
+            var (order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+
+            // Manually set to Processing to simulate the state when the handler picks it up
+            await PostgreUtil.RunSql(
+                _fixture.PostgresConnectionString,
+                $"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid='{order.Id}'");
+
+            // Act - send the command with IsRetry=false (initial attempt)
+            await factory.SendToQueueAsync(queueName, new ProcessPastDueOrderCommand { Order = order });
+
+            // Assert - after the scheduled IsRetry=true message is processed and
+            // ProcessOrderRetry catches PlatformDependencyException, the order is reset to Registered
+            const int pollDelayMs = 500;
+            var orderResetToRegistered = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    var status = await PostgreUtil.RunSqlReturnOutput<string>(
+                        _fixture.PostgresConnectionString,
+                        $"SELECT processedstatus FROM notifications.orders WHERE alternateid='{order.Id}'");
+                    return status == "Registered";
+                },
+                maxAttempts: (settings.PastDueOrdersRetryDelayMs + 10_000) / pollDelayMs,
+                delayMs: pollDelayMs);
+
+            Assert.True(
+                orderResetToRegistered,
+                "Order should be reset to Registered after ProcessOrderRetry catches PlatformDependencyException");
             Assert.Equal(1, processOrderCallCount);
-            Assert.Equal(expectedRetryAttempts, processOrderRetryCallCount);
+            Assert.Equal(1, processOrderRetryCallCount);
         }
     }
 }
