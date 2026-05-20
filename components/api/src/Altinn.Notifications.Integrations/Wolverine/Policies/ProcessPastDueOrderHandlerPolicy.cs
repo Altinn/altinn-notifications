@@ -33,17 +33,17 @@ internal sealed class ProcessPastDueOrderHandlerPolicy(WolverineSettings setting
         var policy = settings.PastDueOrdersQueuePolicy;
 
         chain
+            .OnException<ArgumentException>()
+            .Or<InvalidOperationException>()
+            .MoveToErrorQueue();
+
+        chain
             .OnException<TimeoutException>()
+            .Or<TaskCanceledException>()
             .Or<ServiceBusException>()
             .Or<NpgsqlException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
-            .Then.MoveToErrorQueue();
-
-        chain
-            .OnException<SendConditionInconclusiveException>()
-            .Or<PlatformDependencyException>()
-            .ScheduleRetry(TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs))
             .Then.MoveToErrorQueue();
     }
 }

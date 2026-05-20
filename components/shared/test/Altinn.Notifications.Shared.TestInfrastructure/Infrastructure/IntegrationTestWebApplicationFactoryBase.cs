@@ -178,6 +178,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         }
         catch (AggregateException ex) when (ex.Flatten().InnerExceptions.All(e =>
             e is ObjectDisposedException { ObjectName: "EventLogInternal" } ||
+            e is ObjectDisposedException { ObjectName: "System.Threading.SemaphoreSlim" } ||
             e is TimeoutException))
         {
             // Suppress errors that occur during Wolverine shutdown on the inline ASB listener:
@@ -187,6 +188,10 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
             //
             // 2. ObjectDisposedException(EventLogInternal) — Wolverine tries to log the timeout
             //    error but the Windows EventLog provider has already been torn down.
+            //
+            // 3. ObjectDisposedException(SemaphoreSlim) — ServiceBusProcessor.StopProcessingAsync
+            //    releases a SemaphoreSlim after the ASB client has already been disposed; this is
+            //    a race condition in the Azure.Messaging.ServiceBus SDK during inline listener teardown.
             //
             // Wolverine may nest these inside multiple layers of AggregateException, so we call
             // Flatten() before checking so every leaf exception is covered.
