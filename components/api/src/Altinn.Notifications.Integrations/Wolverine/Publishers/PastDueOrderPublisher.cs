@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// ASB-backed implementation of <see cref="IPastDueOrderPublisher"/> that publishes
-/// past-due orders one-by-one to an Azure Service Bus queue via <see cref="IMessageBus"/>.
+/// past-due orders concurrently to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
 public class PastDueOrderPublisher(
     ILogger<PastDueOrderPublisher> logger,
