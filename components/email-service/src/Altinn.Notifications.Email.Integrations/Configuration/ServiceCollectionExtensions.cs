@@ -1,8 +1,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
-using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Health;
-using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
@@ -45,9 +43,6 @@ public static class ServiceCollectionExtensions
         }
 
         services
-            .AddHostedService<SendEmailQueueConsumer>()
-            .AddSingleton<ICommonProducer, CommonProducer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(emailServiceAdminSettings)
@@ -109,8 +104,6 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException(
                     $"{nameof(KafkaSettings.EmailSendingAcceptedTopicName)} must be configured when the Wolverine email status check publisher is disabled.");
             }
-
-            services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckProducer>();
         }
     }
 
@@ -137,8 +130,6 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException(
                     $"{nameof(KafkaSettings.EmailStatusUpdatedTopicName)} must be configured when the Wolverine email send result publisher is disabled.");
             }
-
-            services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultProducer>();
         }
     }
 
@@ -165,8 +156,6 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException(
                     $"{nameof(KafkaSettings.AltinnServiceUpdateTopicName)} must be configured when the Wolverine email service rate limit publisher is disabled.");
             }
-
-            services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitProducer>();
         }
     }
 }

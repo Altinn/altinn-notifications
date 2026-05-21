@@ -18,17 +18,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        TopicSettings topicSettings = config!.GetSection("KafkaSettings").Get<TopicSettings>()!;
-
-        if (topicSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required Kafka topic settings is missing from application configuration");
-        }
-
         services.AddSingleton<ISendingService, SendingService>()
-                .AddSingleton<IStatusService, StatusService>()
-                .AddSingleton<IDateTimeService, DateTimeService>()
-                .AddSingleton(topicSettings);
+                .AddSingleton<IDateTimeService, DateTimeService>();
 
         return services;
     }

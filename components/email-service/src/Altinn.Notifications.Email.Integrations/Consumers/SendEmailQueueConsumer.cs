@@ -13,7 +13,6 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 public sealed class SendEmailQueueConsumer : KafkaConsumerBase
 {
     private readonly string _retryTopicName;
-    private readonly ICommonProducer _producer;
     private readonly ISendingService _emailService;
     private readonly ILogger<SendEmailQueueConsumer> _logger;
 
@@ -23,12 +22,10 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase
     public SendEmailQueueConsumer(
         KafkaSettings kafkaSettings,
         ISendingService emailService,
-        ICommonProducer producer,
         ILogger<SendEmailQueueConsumer> logger)
         : base(kafkaSettings.SendEmailQueueTopicName, kafkaSettings, logger)
     {
         _logger = logger;
-        _producer = producer;
         _emailService = emailService;
         _retryTopicName = kafkaSettings.SendEmailQueueRetryTopicName;
     }
@@ -55,6 +52,6 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase
 
     private async Task RetryEmail(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
+        // Producer has been removed
     }
 }

@@ -12,8 +12,6 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 /// </summary>
 public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
 {
-    private readonly IStatusService _statusService;
-    private readonly ICommonProducer _producer;
     private readonly string _retryTopicName;
     private const int _processingDelay = 8000;
     private readonly IDateTimeService _dateTime;
@@ -23,15 +21,11 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
     /// Initializes a new instance of the <see cref="EmailSendingAcceptedConsumer"/> class.
     /// </summary>
     public EmailSendingAcceptedConsumer(
-        IStatusService statusService,
-        ICommonProducer producer,
         KafkaSettings kafkaSettings,
         IDateTimeService dateTime,
         ILogger<EmailSendingAcceptedConsumer> logger)
         : base(kafkaSettings.EmailSendingAcceptedTopicName, kafkaSettings, logger)
     {
-        _statusService = statusService;
-        _producer = producer;
         _retryTopicName = kafkaSettings.EmailSendingAcceptedTopicName;
         _dateTime = dateTime;
         _logger = logger;
@@ -61,11 +55,9 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
             await Task.Delay(_processingDelay - diff);
         }
 
-        await _statusService.UpdateSendStatus(operationIdentifier);
     }
 
     private async Task RetryOperation(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
     }
 }

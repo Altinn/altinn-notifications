@@ -260,9 +260,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <returns>A fully initialized <see cref="ConsumerConfig"/> ready to be used by a <see cref="ConsumerBuilder{TKey, TValue}"/>.</returns>
         private ConsumerConfig BuildConfiguration(KafkaSettings settings)
         {
-            var configuration = new SharedClientConfig(settings);
-
-            var consumerConfig = new ConsumerConfig(configuration.ConsumerConfig)
+            var consumerConfig = new ConsumerConfig()
             {
                 FetchWaitMaxMs = 100,
                 QueuedMinMessages = 100,

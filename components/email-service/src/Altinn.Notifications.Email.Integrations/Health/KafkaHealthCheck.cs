@@ -19,11 +19,9 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     /// </summary>
     public KafkaHealthCheck(KafkaSettings settings)      
     {
-        var clientConfig = new SharedClientConfig(settings);
-
         _healthCheckTopic = settings.HealthCheckTopicName;
 
-        var config = new ProducerConfig(clientConfig.ProducerConfig)
+        var config = new ProducerConfig()
         {
             Acks = Acks.Leader,
             MessageSendMaxRetries = 3,

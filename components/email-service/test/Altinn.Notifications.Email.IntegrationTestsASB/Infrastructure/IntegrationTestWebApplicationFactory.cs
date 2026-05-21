@@ -39,8 +39,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
         RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
 
     /// <inheritdoc/>
