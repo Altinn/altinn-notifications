@@ -37,6 +37,12 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required SmsGatewayConfiguration settings is missing from application configuration.");
         }
 
+        if (smsGatewaySettings.TimeoutInSeconds <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(SmsGatewaySettings.TimeoutInSeconds)} must be greater than 0.");
+        }
+
         services
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddHostedService<SendSmsQueueConsumer>()

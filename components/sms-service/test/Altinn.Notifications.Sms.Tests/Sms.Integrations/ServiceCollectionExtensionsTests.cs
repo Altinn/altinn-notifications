@@ -47,6 +47,28 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AddIntegrationServices_TimeoutInSecondsIsNotPositive_ThrowsInvalidOperationException(int timeout)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["SmsGatewaySettings:TimeoutInSeconds"] = timeout.ToString(),
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        Assert.Equal("TimeoutInSeconds must be greater than 0.", exception.Message);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
