@@ -1,0 +1,293 @@
+<mxfile host="65bd71144e">
+    <diagram id="instant-notifications-process-v1" name="Instant Notifications Process">
+        <mxGraphModel dx="1830" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1500" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="sms-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-136" y="40" width="536" height="1180" as="geometry"/>
+                </mxCell>
+                <mxCell id="email-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="40" width="540" height="1180" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="14" y="1240" width="796" height="155" as="geometry"/>
+                </mxCell>
+                <mxCell id="sms-col-title" value="&lt;font&gt;SMS instant flow (phone number recipient)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="44" y="40" width="176" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="email-col-title" value="&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;POST /future/orders/instant/email&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="110" width="186" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-blue" value="Processing step (Altinn.Notifications API)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="28" y="1250" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-green" value="HTTP call to internal service component" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="28" y="1286" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-red" value="Error response" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="28" y="1321.5" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-orange" value="Architectural note" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=10;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="28" y="1358" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-diamond-cell" value="Decision" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="244" y="1250" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-end-ok-cell" value="OK" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="262" y="1300" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-end-err-cell" value="Error" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="306" y="1300" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-note-text" value="&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Both flows are structurally identical. Key differences from standard order flow:&lt;/i&gt;&lt;br&gt;&lt;ul&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Only direct recipients are supported (phone number / email address) —&amp;nbsp;&lt;/i&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;no NIN, org number, or Profile API lookup&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Notifications are dispatched via a synchronous HTTP call, not via ASB queue&lt;/i&gt;&lt;/li&gt;&lt;li&gt;&lt;i style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;A single NotificationOrder is persisted (no chain / reminders).&amp;nbsp;&lt;/i&gt;&lt;/li&gt;&lt;/ul&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;&lt;i style=&quot;background-color: transparent; color: rgb(63, 63, 63);&quot;&gt;Delivery reports are still received asynchronously.&lt;/i&gt;&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=5;spacingRight=5;strokeColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="384" y="1250" width="412" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="validate-sms" value="Validate request&lt;br&gt;(idempotencyId, phoneNumber, timeToLive, smsSettings)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-66" y="160" width="186" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="valid-sms" value="Request valid?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="-76" y="253" width="206" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-400-sms" value="Return 400 Bad Request" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="224" y="269" width="156" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-400-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="288" y="339" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="creator-sms" value="Extract creator (org) from HTTP context" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-66" y="367" width="186" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="creator-d-sms" value="Creator present?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="-66" y="448" width="186" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-403-sms" value="Return 403 Forbidden" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="224" y="464" width="156" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-403-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="288" y="534" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="idem-sms" value="Existing order for&lt;br&gt;(creator + idempotencyId)?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="-86" y="562" width="226" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-200-sms" value="Return 200 OK&lt;br&gt;with existing tracking details" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="224" y="578" width="156" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-200-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="288" y="660" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-sms" value="&lt;i&gt;No ASB queue: SMS dispatched synchronously&lt;br&gt;via HTTP — replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="-86" y="678" width="226" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="http-sms" value="HTTP &lt;b&gt;POST /instantmessage/send&lt;/b&gt;&lt;br&gt;to Altinn.Notifications.Sms service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-66" y="738" width="186" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="http-d-sms" value="Service returned&lt;br&gt;200 response?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="-76" y="840" width="206" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-500-sms" value="Return 500&lt;br&gt;(PlatformDependencyException)&lt;br&gt;Nothing persisted" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="224" y="851" width="156" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-500-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="288" y="940" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="persist-sms" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(status: &#39;Processed&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-66" y="955" width="186" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-201-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="4" y="1040" width="46" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-201-sms-label" value="Return 201 Created&lt;br&gt;(OrderChainId + ShipmentId)" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-96" y="1092" width="246" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="async-note-sms" value="&lt;font&gt;Sms service delivers to gateway asynchronously.&lt;br&gt;Delivery reports flow back via ASB as in standard processing.&lt;br&gt;&lt;i&gt;See: flowchart-sms-notifications-process&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-96" y="1150" width="356" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-start-validate-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="5" target="validate-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="76.99999999999977" y="135.9999999999999" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a-validate-valid-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="validate-sms" target="valid-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-invalid-sms" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="valid-sms" target="box-400-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-400-end-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-400-sms" target="end-400-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-valid-creator-sms" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="valid-sms" target="creator-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-creator-d-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="creator-sms" target="creator-d-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-no-creator-sms" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="creator-d-sms" target="box-403-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-403-end-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-403-sms" target="end-403-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-yes-creator-sms" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="creator-d-sms" target="idem-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-match-sms" value="MATCH" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="idem-sms" target="box-200-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-200-end-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-200-sms" target="end-200-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-new-note-sms" value="NEW" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="idem-sms" target="note-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-note-http-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="note-sms" target="http-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-d-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="http-sms" target="http-d-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-fail-sms" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="http-d-sms" target="box-500-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-500-end-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-500-sms" target="end-500-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-ok-sms" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="http-d-sms" target="persist-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-persist-201-sms" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="persist-sms" target="end-201-sms" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="validate-email" value="Validate request&lt;br&gt;(idempotencyId, emailAddress, subject, body, contentType)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="160" width="186" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="valid-email" value="Request valid?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="253" width="206" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-400-email" value="Return 400 Bad Request" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="269" width="160" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-400-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="846" y="339" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="creator-email" value="Extract creator (org) from HTTP context" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="367" width="186" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="creator-d-email" value="Creator present?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="448" width="186" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-403-email" value="Return 403 Forbidden" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="464" width="160" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-403-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="846" y="534" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="idem-email" value="Existing order for&lt;br&gt;(creator + idempotencyId)?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="562" width="226" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-200-email" value="Return 200 OK&lt;br&gt;with existing tracking details" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="578" width="160" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-200-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="846" y="660" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-email" value="&lt;i&gt;No ASB queue: email dispatched synchronously&lt;br&gt;via HTTP — replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="678" width="226" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="http-email" value="HTTP &lt;b&gt;POST /instantemail&lt;/b&gt;&lt;br&gt;to Altinn.Notifications.Email service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="738" width="186" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="http-d-email" value="Service returned&lt;br&gt;202 response?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="840" width="206" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="box-500-email" value="Return 500&lt;br&gt;(PlatformDependencyException)&lt;br&gt;Nothing persisted" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="851" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-500-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="846" y="940" width="28" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="persist-email" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(status: &#39;Processed&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="955" width="186" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-201-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="1040" width="46" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-201-email-label" value="Return 201 Created&lt;br&gt;(OrderChainId + ShipmentId)" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="1092" width="246" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="async-note-email" value="&lt;font&gt;Email service submits to ACS asynchronously (returns 202).&lt;br&gt;Delivery reports flow back via ASB as in standard processing.&lt;br&gt;&lt;i&gt;See: flowchart-email-notifications-process&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="1150" width="380" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-start-validate-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="email-col-title" target="validate-email" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="633" y="135.9999999999999" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a-validate-valid-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="validate-email" target="valid-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-invalid-email" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="valid-email" target="box-400-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-400-end-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-400-email" target="end-400-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-valid-creator-email" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="valid-email" target="creator-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-creator-d-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="creator-email" target="creator-d-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-no-creator-email" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="creator-d-email" target="box-403-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-403-end-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-403-email" target="end-403-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-yes-creator-email" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="creator-d-email" target="idem-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-match-email" value="MATCH" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="idem-email" target="box-200-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-200-end-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-200-email" target="end-200-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-new-note-email" value="NEW" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="idem-email" target="note-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-note-http-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="note-email" target="http-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-d-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="http-email" target="http-d-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-fail-email" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="http-d-email" target="box-500-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-500-end-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-500-email" target="end-500-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-http-ok-email" value="YES" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="1" source="http-d-email" target="persist-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-persist-201-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="persist-email" target="end-201-email" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="12" y="80" width="30" height="34" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="568" y="76" width="30" height="34" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="&lt;font style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;Email instant flow (email address recipient)&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="610" y="40" width="160" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;POST /future/orders/instant/sms&lt;/font&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="-66" y="110" width="186" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
