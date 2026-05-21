@@ -40,7 +40,7 @@ available test gateway, and production uses a Digdir dedicated SMS gateway.
 
 ## Dependencies
 
-The microservice takes use of a range of external and Altinn services as well as .NET libraries to support the provided functionality.
+The microservice makes use of a range of external and Altinn services as well as .NET libraries to support the provided functionality.
 
 ### External Services
 

@@ -30,7 +30,7 @@ ACS email delivery reports are routed to the Notifications API via Azure Event G
 
 ## Dependencies
 
-The microservice takes use of a range of external and Altinn services as well as .NET libraries to support the provided functionality.
+The microservice makes use of a range of external and Altinn services as well as .NET libraries to support the provided functionality.
 
 ### External Services
 
