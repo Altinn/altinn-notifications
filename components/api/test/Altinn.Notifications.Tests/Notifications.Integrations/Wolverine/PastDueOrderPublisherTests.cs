@@ -225,6 +225,32 @@ public class PastDueOrderPublisherTests
         Times.Exactly(orderCount));
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task PublishAsync_ZeroOrNegativeConcurrency_DefaultsToTen(int concurrency)
+    {
+        // Arrange
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Returns(ValueTask.CompletedTask);                                 
+        
+        var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
+
+        var orders = Enumerable.Range(0, 3)
+            .Select(_ => CreateOrder())
+            .ToList();
+        
+        // Act
+        var result = await publisher.PublishAsync(orders, CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+        messageBusMock.Verify(
+            m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(3));
+    }
+
     private static PastDueOrderPublisher CreatePublisher(
         Mock<IMessageBus> messageBusMock,
         Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null,
