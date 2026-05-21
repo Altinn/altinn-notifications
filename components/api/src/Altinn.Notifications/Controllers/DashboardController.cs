@@ -47,6 +47,11 @@ public class DashboardController : ControllerBase
         [FromQuery] DateTimeOffset? to,
         CancellationToken cancellationToken = default)
     {
+        if (from.HasValue && to.HasValue && from.Value >= to.Value)
+        {
+            return BadRequest("'from' must be earlier than 'to'.");
+        }
+
         var result = await _dashboardService.GetNotificationsByNinAsync(nin, from, to, cancellationToken);
         return Ok(result);
     }
