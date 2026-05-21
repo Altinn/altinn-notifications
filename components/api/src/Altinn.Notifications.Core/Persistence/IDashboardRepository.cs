@@ -14,6 +14,7 @@ public interface IDashboardRepository
     /// <param name="recipientNin">The national identity number of the recipient.</param>
     /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
     /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
-    Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo);
+    Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
 }
