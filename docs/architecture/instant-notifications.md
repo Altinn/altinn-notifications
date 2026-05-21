@@ -21,7 +21,7 @@ Implemented in [InstantOrderRequestService](https://github.com/Altinn/altinn-not
 3. Check idempotency by creator + `IdempotencyId` — return `200` with existing tracking info if found
 4. **Dispatch synchronously via HTTP** to the service component ([ShortMessageServiceClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Clients/ShortMessageServiceClient.cs) for SMS, [InstantEmailServiceClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Clients/InstantEmailServiceClient.cs) for email)
 5. If the HTTP call fails — throw `PlatformDependencyException` → `500`. Nothing is persisted.
-6. Persist the instant order record, a single `NotificationOrder` (status: `Sending`), and the notification to the database
+6. Persist the instant order record, a single `NotificationOrder` (status: `Processed`), and the notification (status: `Sending`) to the database
 7. Return `201 Created` with tracking information
 
 The key distinction from regular orders: **dispatch happens before persistence, not via a queue**. If the service component is unreachable, the request fails with 500 and leaves no record.
