@@ -31,22 +31,18 @@ public class DashboardRepository : IDashboardRepository
     /// <param name="recipientNin">The national identity number of the recipient.</param>
     /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
     /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
-    ///
-    public async Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    public async Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken)
     {
         List<DashboardNotification> searchResult = [];
-        if (dateTimeFrom == null || dateTimeTo == null)
-        {
-            dateTimeFrom = DateTime.UtcNow.AddDays(-7);
-            dateTimeTo = DateTime.UtcNow;
-        }
+        DateTimeOffset from = dateTimeFrom ?? DateTimeOffset.UtcNow.AddDays(-7);
+        DateTimeOffset to = dateTimeTo ?? DateTimeOffset.UtcNow;
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNotificationsByNin);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientNin);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, dateTimeFrom);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, dateTimeTo);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, from);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, to);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {

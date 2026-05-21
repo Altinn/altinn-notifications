@@ -21,7 +21,7 @@ public class DashboardService : IDashboardService
     }
 
     /// <inheritdoc/>
-    public async Task<List<DashboardNotification>> GetNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    public async Task<List<DashboardNotification>> GetNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken)
     {
         return await _dashboardRepository.GetDashboardNotificationsByNinAsync(recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
     }
