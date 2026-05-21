@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="email-notifications-process-v2" name="Email Notifications Process">
-        <mxGraphModel dx="2474" dy="1157" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1350" math="0" shadow="0">
+        <mxGraphModel dx="870" dy="421" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1350" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -73,7 +73,7 @@
                 <mxCell id="arrow-asb-check-step3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="asb-check" target="step3-poll" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="step3-poll" value="&lt;font&gt;Poll ACS operation status -&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;check while still &#39;Sendng&#39;&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                <mxCell id="step3-poll" value="&lt;font&gt;Poll ACS operation status -&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;check while still &#39;Sending&#39;&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="195" y="588" width="160" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="note-poll" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Schedule re-check (8s delay)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=9;fontStyle=2;" parent="1" vertex="1">
