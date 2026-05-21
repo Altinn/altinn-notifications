@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 using Altinn.Notifications.Sms.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
@@ -44,6 +45,28 @@ public class ServiceCollectionExtensionsTests
         var exception = Record.Exception(() => services.AddIntegrationServices(config));
 
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_SmsGatewayConfigIncluded_AltinnGatewayClientResolvable()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
+                ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
+                ["SmsGatewaySettings:TimeoutInSeconds"] = "30",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+        services.AddIntegrationServices(config);
+
+        var provider = services.BuildServiceProvider();
+        var client = provider.GetRequiredService<IAltinnGatewayClient>();
+
+        Assert.IsType<AltinnGatewayClient>(client);
     }
 
     [Theory]
