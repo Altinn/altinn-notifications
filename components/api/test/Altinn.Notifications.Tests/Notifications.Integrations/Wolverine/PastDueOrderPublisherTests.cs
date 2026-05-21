@@ -231,14 +231,30 @@ public class PastDueOrderPublisherTests
     public async Task PublishAsync_ZeroOrNegativeConcurrency_DefaultsToTen(int concurrency)
     {
         // Arrange
+        const int orderCount = 20;
+
+        var lockObj = new object();
+        int currentConcurrent = 0;
+        int maxObservedConcurrent = 0;
+
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
             .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);                                 
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_,_) => new ValueTask(Task.Run(async () =>
+            {
+                int current = Interlocked.Increment(ref currentConcurrent);
+                lock (lockObj)
+                {
+                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
+                }
+
+                await Task.Delay(30);
+                Interlocked.Decrement( ref currentConcurrent);
+            })));                                
         
         var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
 
-        var orders = Enumerable.Range(0, 3)
+        var orders = Enumerable.Range(0, orderCount)
             .Select(_ => CreateOrder())
             .ToList();
         
@@ -247,8 +263,8 @@ public class PastDueOrderPublisherTests
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(3));
+        Assert.True(maxObservedConcurrent > 1, "Expected concurrent processing but all orders ran sequentially.");
+        Assert.True(maxObservedConcurrent <= 10, $"Max concurrent ({maxObservedConcurrent}) exceeded the expected default of 10.");
     }
 
     private static PastDueOrderPublisher CreatePublisher(
