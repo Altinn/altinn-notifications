@@ -16,15 +16,10 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.TestingExtension
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddIntegrationServicess_NotificationOrderConfigMissing_ThrowsException()
+    public void AddIntegrationServices_KafkaSettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
-        string expectedExceptionMessage = "Required communication services settings is missing from application configuration (Parameter 'config')";
-
-        Environment.SetEnvironmentVariable("KafkaSettings__ConsumerGroupId", "value");
-        Environment.SetEnvironmentVariable("CommunicationServicesSettings__Connectionstring", null);
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder().Build();
 
         IServiceCollection services = new ServiceCollection();
 
@@ -32,47 +27,70 @@ public class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
 
         // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.Equal("config", exception.ParamName);
+        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_EmailServiceAdminSettingsMissing_ThrowsException()
-    {
-        // Arrange
-        string expectedExceptionMessage = "Required email service admin settings is missing from application configuration (Parameter 'config')";
-
-        Environment.SetEnvironmentVariable("KafkaSettings__ConsumerGroupId", "value");
-        Environment.SetEnvironmentVariable("CommunicationServicesSettings__Connectionstring", "value");
-        Environment.SetEnvironmentVariable("EmailServiceAdminSettings__IntermittentErrorDelay", null);
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-
-        IServiceCollection services = new ServiceCollection();
-
-        // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
-
-        // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
-    }
-
-    [Fact]
-    public void AddIntegrationServices_WolverineAndStatusCheckEnabled_RegistersWolverineDispatcher()
+    public void AddIntegrationServices_CommunicationServicesSettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+
+        // Assert
+        Assert.Equal("config", exception.ParamName);
+        Assert.StartsWith("Required communication services settings is missing from application configuration", exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_EmailServiceAdminSettingsMissing_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+
+        // Assert
+        Assert.Equal("config", exception.ParamName);
+        Assert.StartsWith("Required email service admin settings is missing from application configuration", exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineEnabledWithStatusCheckPublisher_RegistersEmailStatusCheckPublisher()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
-                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
             })
             .Build();
 
@@ -91,30 +109,29 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddIntegrationServices_WolverineEnabledButListenerDisabled_ThrowsInvalidOperationException()
+    public void AddIntegrationServices_WolverineEnabledButStatusCheckListenerDisabled_ThrowsInvalidOperationException()
     {
-        // Publisher requires the listener to be active — publishing to the status check queue without a
-        // listener consuming it would silently drop messages.
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
-                ["WolverineSettings:EmailStatusCheckQueueName"] = "email-status-check-queue",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
             })
             .Build();
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
+        // Assert
         Assert.Equal("EnableEmailStatusCheckListener must be enabled when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
     }
 
@@ -122,20 +139,17 @@ public class ServiceCollectionExtensionsTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void AddIntegrationServices_WolverineEnabledButQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    public void AddIntegrationServices_WolverineEnabledButStatusCheckQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
-        // Both feature flags are on, but EmailStatusCheckQueueName is blank — fail fast rather than
-        // silently falling back to Kafka, to surface misconfiguration at startup.
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
@@ -144,32 +158,38 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
+        // Assert
         Assert.Equal("EmailStatusCheckQueueName must be configured when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_WolverineAndSendResultPublisherEnabled_RegistersEmailSendResultPublisher()
+    public void AddIntegrationServices_WolverineEnabledWithSendResultPublisher_RegistersEmailSendResultPublisher()
     {
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "test-altinn-service-update-topic",
-                ["WolverineSettings:EmailSendResultQueueName"] = "email-send-result-queue",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
+                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "false",
             })
             .Build();
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         services.AddIntegrationServices(config);
 
+        // Assert
         var provider = services.BuildServiceProvider();
         var sendResultDispatcher = provider.GetRequiredService<IEmailSendResultDispatcher>();
         Assert.IsType<EmailSendResultPublisher>(sendResultDispatcher);
@@ -182,44 +202,44 @@ public class ServiceCollectionExtensionsTests
     [InlineData("   ")]
     public void AddIntegrationServices_WolverineEnabledButSendResultQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
-        // Both feature flags are on, but EmailSendResultQueueName is blank — fail fast to surface
-        // misconfiguration at startup rather than silently falling back to Kafka.
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["WolverineSettings:EmailSendResultQueueName"] = queueName,
-                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = queueName,
             })
             .Build();
 
         IServiceCollection services = new ServiceCollection();
 
+        // Act
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
 
+        // Assert
         Assert.Equal("EmailSendResultQueueName must be configured when EnableEmailSendResultPublisher is enabled.", exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_EmailServiceRateLimitPublisherEnabled_RegistersAsbDispatcher()
+    public void AddIntegrationServices_WolverineEnabledWithRateLimitPublisher_RegistersEmailServiceRateLimitPublisher()
     {
         // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
-                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
-                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.service.ratelimit",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit",
             })
             .Build();
 
@@ -239,29 +259,62 @@ public class ServiceCollectionExtensionsTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public void AddIntegrationServices_EmailServiceRateLimitPublisherEnabledButQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    public void AddIntegrationServices_WolverineEnabledButRateLimitQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
         // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "test-topic",
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "test-email-status-updated-topic",
-                ["WolverineSettings:EmailServiceRateLimitQueueName"] = queueName,
-                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
+                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = queueName,
             })
             .Build();
 
         IServiceCollection services = new ServiceCollection();
 
-        // Act & Assert
+        // Act
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+
+        // Assert
         Assert.Equal(
             "EmailServiceRateLimitQueueName must be configured when EnableEmailServiceRateLimitPublisher is enabled.",
             exception.Message);
+    }
+
+    [Fact]
+    public void AddIntegrationServices_WolverineEnabledWithAllPublishers_NoException()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",    
+                ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
+                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit",
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Record.Exception(() => services.AddIntegrationServices(config));
+
+        // Assert
+        Assert.Null(exception);
     }
 }
