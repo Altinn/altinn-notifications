@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
@@ -5,6 +6,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+using Moq;
 
 namespace Altinn.Notifications.IntegrationTests;
 
@@ -14,11 +19,12 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     private readonly string? _originalEnableWolverine = Environment.GetEnvironmentVariable("WolverineSettings__EnableWolverine");
 
     /// <summary>
-    /// ConfigureWebHost for setup of configuration and test services
+    /// Configures the web host for setting up configuration and test services.
     /// </summary>
-    /// <param name="builder">IWebHostBuilder</param>
+    /// <param name="builder">The web host builder.</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // No ServiceBusConnectionString is configured in the test environment, so Wolverine must not attempt to connect.
         Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
 
         IConfiguration configuration = new ConfigurationBuilder()
@@ -30,7 +36,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         {
             config.AddConfiguration(configuration);
 
-            // overriding initialization of extension class with test settings
+            // overriding initialization of the extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
             if (!string.IsNullOrEmpty(uri))
             {
@@ -40,7 +46,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove all Kafka consumers - controller tests don't need them
+            // Remove Kafka consumers — they are hosted services that would try to connect to a broker on startup.
             var consumersToRemove = services
                 .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
                 .ToList();
@@ -49,6 +55,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 services.Remove(descriptor);
             }
+
+            // Replace the Kafka producer with a no-op mock — keeps IKafkaProducer resolvable without a real broker.
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
         });
     }
 

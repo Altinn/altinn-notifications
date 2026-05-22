@@ -1,6 +1,7 @@
 # Altinn Notifications
 
 [![.NET Analysis](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/build-and-analyze.yml)
+[![Notifications scan](https://github.com/altinn/altinn-notifications/actions/workflows/container-scan.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/container-scan.yml)
 [![CodeQL](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Altinn/altinn-notifications/actions/workflows/codeql-analysis.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
