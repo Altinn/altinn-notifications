@@ -206,6 +206,7 @@ public static class ServiceUtil
     {
         services.AddSingleton<IOrderRepository, OrderRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
+        services.AddSingleton<IDashboardRepository, DashboardRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
