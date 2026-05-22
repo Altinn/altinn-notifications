@@ -8,11 +8,9 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Core;
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddIntegrationServices_MissingKafkaConfig_ThrowsException()
+    public void AddCoreServices_KafkaSettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
-        string expectedExceptionMessage = "Required Kafka settings is missing from application configuration (Parameter 'config')";
-
         var config = new ConfigurationBuilder().Build();
 
         IServiceCollection services = new ServiceCollection();
@@ -21,15 +19,20 @@ public class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<ArgumentNullException>(() => services.AddCoreServices(config));
 
         // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.Equal("config", exception.ParamName);
+        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_SmsGatewayConfigIncluded_NoException()
+    public void AddCoreServices_KafkaSettingsPresent_NoException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["KafkaSettings:SmsStatusUpdatedTopicName"] = "altinn.notifications.sms.status.updated",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
