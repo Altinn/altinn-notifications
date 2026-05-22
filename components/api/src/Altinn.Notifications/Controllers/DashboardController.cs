@@ -41,12 +41,18 @@ public class DashboardController : ControllerBase
     [HttpGet("notifications/nin")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotification>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
     public async Task<ActionResult<List<DashboardNotification>>> GetNotificationsByNin(
         [FromQuery] string nin,
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(nin))
+        {
+            return BadRequest("'nin' is required and cannot be empty");
+        }
+
         if (from.HasValue && to.HasValue && from.Value >= to.Value)
         {
             return BadRequest("'from' must be earlier than 'to'.");
