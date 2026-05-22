@@ -19,5 +19,10 @@
         /// Url to the SMS gateway endpoint
         /// </summary>
         public string Endpoint { get; set; } = string.Empty;
+
+        /// <summary>
+        /// HTTP request timeout in seconds for calls to the SMS gateway. Defaults to 30 seconds.
+        /// </summary>
+        public int TimeoutInSeconds { get; set; } = 30;
     }
 }
