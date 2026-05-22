@@ -1,13 +1,8 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
+﻿using Altinn.Notifications.Integrations.Kafka.Consumers;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
 
 namespace Altinn.Notifications.Email.IntegrationTests;
 
@@ -37,9 +32,6 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 services.Remove(descriptor);
             }
-
-            // Replace the Kafka producer with a mock to prevent broker connection attempts
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
         });
     }
 
