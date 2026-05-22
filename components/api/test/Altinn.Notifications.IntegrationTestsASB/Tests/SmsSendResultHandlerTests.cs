@@ -318,18 +318,13 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
     [Fact]
     public async Task SmsSendResult_WhenBothIdentifiersEmpty_SavesDeadDeliveryReportWithoutRetry()
     {
-        // Arrange - mock service to confirm the handler short-circuits before UpdateSendStatus
-        var mockService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 
         await using (factory)
         {
             string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
 
-            // Both NotificationId = Guid.Empty and GatewayReference = null triggers
+            // NotificationId = Guid.Empty and GatewayReference = null causes
             // InvalidNotificationIdentifierException in SmsNotificationRepository.UpdateSendStatus
             var command = new SmsSendResultCommand
             {
@@ -341,7 +336,7 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
             // Act
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert - Dead delivery report should be saved with the correct reason
+            // Assert - Dead delivery report saved with the correct reason
             DeadDeliveryReportRow? deadReport = null;
             var deadReportFound = await WaitForUtils.WaitForAsync(
                 async () =>
@@ -360,24 +355,19 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
             Assert.Equal(1, deadReport.AttemptCount);
             Assert.False(deadReport.Resolved);
 
-            // Assert - Message is discarded, not moved to the dead letter queue
+            // Assert - Message discarded, not moved to DLQ
             var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — InvalidNotificationIdentifierException should not trigger DLQ");
 
-            // Assert - Queue itself is empty (no retries)
+            // Assert - Queue is empty (no retries)
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — invalid identifiers should not be retried");
-
-            // Assert - UpdateSendStatus is never reached
-            mockService.Verify(
-                s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()),
-                Times.Never);
         }
     }
 }

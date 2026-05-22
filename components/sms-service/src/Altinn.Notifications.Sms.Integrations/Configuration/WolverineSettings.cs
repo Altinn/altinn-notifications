@@ -8,13 +8,14 @@ namespace Altinn.Notifications.Sms.Integrations.Configuration;
 /// </summary>
 public class WolverineSettings : WolverineSettingsBase
 {
-    /// <summary> ASB queue name used for publishing sms messages.
-    /// Produced by the API and consumed by the sms service.
+    /// <summary>
+    /// ASB queue name used for publishing SMS messages.
+    /// Produced by the API and consumed by the SMS service.
     /// </summary>
     public string SendSmsQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the SMS sending queue, defining the retry strategy for transient failures when processing messages from the queue. This includes parameters such as the number of retry attempts, delay between retries, and any specific exceptions that should trigger a retry.
+    /// Retry policy for the SMS send queue.
     /// </summary>
     public QueueRetryPolicy SendSmsQueuePolicy { get; set; } = new();
 
@@ -24,16 +25,14 @@ public class WolverineSettings : WolverineSettingsBase
     public int SendSmsListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to accept sms notifications via Wolverine and Azure Service Bus or via Kafka.
+    /// Determines whether SMS send commands are consumed via Wolverine and Azure Service Bus.
     /// </summary>
-    public bool EnableSendSmsListener { get; set; } = false;
+    public bool EnableSendSmsListener { get; set; } = true;
     
     /// <summary>
-    /// When <c>true</c>, <c>StatusService</c> publishes SMS delivery reports to
-    /// the ASB queue instead of the Kafka topic.
-    /// Must match <c>WolverineSettings</c> in the SMS core project.
+    /// Determines whether to publish SMS delivery reports via Wolverine and Azure Service Bus.
     /// </summary>
-    public bool EnableSmsDeliveryReportPublisher { get; set; } = false;
+    public bool EnableSmsDeliveryReportPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing SMS delivery reports.
@@ -42,9 +41,9 @@ public class WolverineSettings : WolverineSettingsBase
     public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Determines whether to publish SMS send results via Wolverine and Azure Service Bus or via Kafka.
+    /// Determines whether to publish SMS send results via Wolverine and Azure Service Bus.
     /// </summary>
-    public bool EnableSmsSendResultPublisher { get; set; } = false;
+    public bool EnableSmsSendResultPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing SMS send results.
