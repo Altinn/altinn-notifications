@@ -86,11 +86,13 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
-                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "false",
+                ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
+                ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit"
             })
             .Build();
 

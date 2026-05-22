@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
+using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Publishers;
 
@@ -43,6 +44,8 @@ public static class ServiceCollectionExtensions
         }
 
         services
+            .AddHostedService<SendEmailQueueConsumer>()
+            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(kafkaSettings)
             .AddSingleton(emailServiceAdminSettings)
