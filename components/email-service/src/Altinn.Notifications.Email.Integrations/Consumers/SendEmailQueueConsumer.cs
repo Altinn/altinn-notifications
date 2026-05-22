@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
-using Altinn.Notifications.Email.Core.Sending;
+﻿using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
@@ -12,7 +11,6 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 /// </summary>
 public sealed class SendEmailQueueConsumer : KafkaConsumerBase
 {
-    private readonly string _retryTopicName;
     private readonly ISendingService _emailService;
     private readonly ILogger<SendEmailQueueConsumer> _logger;
 
@@ -27,7 +25,6 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase
     {
         _logger = logger;
         _emailService = emailService;
-        _retryTopicName = kafkaSettings.SendEmailQueueRetryTopicName;
     }
 
     /// <inheritdoc/>

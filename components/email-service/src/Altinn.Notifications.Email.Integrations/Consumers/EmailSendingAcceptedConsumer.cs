@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Email.Core;
-using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
@@ -12,7 +11,6 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 /// </summary>
 public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
 {
-    private readonly string _retryTopicName;
     private const int _processingDelay = 8000;
     private readonly IDateTimeService _dateTime;
     private readonly ILogger<EmailSendingAcceptedConsumer> _logger;
@@ -26,7 +24,6 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         ILogger<EmailSendingAcceptedConsumer> logger)
         : base(kafkaSettings.EmailSendingAcceptedTopicName, kafkaSettings, logger)
     {
-        _retryTopicName = kafkaSettings.EmailSendingAcceptedTopicName;
         _dateTime = dateTime;
         _logger = logger;
     }
@@ -59,5 +56,6 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
 
     private async Task RetryOperation(string message)
     {
+        // producers have been removed
     }
 }
