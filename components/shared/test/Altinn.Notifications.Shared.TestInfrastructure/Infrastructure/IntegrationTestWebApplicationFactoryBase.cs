@@ -35,7 +35,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     public IHost Host => _host ?? throw new InvalidOperationException("Host not created yet. Call Initialize() first.");
 
     /// <summary>
-    /// Initializes the factory by creating the test client, triggering host startup.
+    /// Initializes the factory by creating the test client and triggering host startup.
     /// </summary>
     public TSelf Initialize()
     {
@@ -194,7 +194,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
             //    a race condition in the Azure.Messaging.ServiceBus SDK during inline listener teardown.
             //
             // Wolverine may nest these inside multiple layers of AggregateException, so we call
-            // Flatten() before checking so every leaf exception is covered.
+            // Flatten() before checking to ensure every leaf exception is covered.
         }
         finally
         {

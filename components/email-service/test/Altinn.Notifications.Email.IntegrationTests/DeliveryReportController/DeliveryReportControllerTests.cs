@@ -1,7 +1,10 @@
 ﻿using System.Net;
 using System.Text;
+
 using Altinn.Notifications.Email.Configuration;
-using Altinn.Notifications.Email.Core.Sending;
+using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core.Status;
+
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -81,7 +84,8 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_ValidDeliveryReport_ReturnsOK()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        var statusServiceMock = new Mock<IStatusService>();
+        HttpClient client = GetTestClient(statusServiceMock);
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath + _queryString)
         {
             Content = new StringContent(_deliveryEvent, Encoding.UTF8, "application/json"),
@@ -92,6 +96,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        statusServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<SendOperationResult>()), Times.Once);
     }
 
     [Fact]
@@ -113,19 +118,19 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
         Assert.Contains("\"validationResponse\":\"512d38b6-c7b8-40c8-89fe-f46f9e9622b6\"", responseBody);
     }
 
-    private HttpClient GetTestClient()
+    private HttpClient GetTestClient(Mock<IStatusService>? statusServiceMock = null)
     {
+        statusServiceMock ??= new Mock<IStatusService>();
+
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
-            var sendingServiceMock = new Mock<ISendingService>();
-
             builder.ConfigureTestServices(services =>
             {
                 services.Configure<EmailDeliveryReportSettings>(opts =>
                 {
                     opts.AccessKey = "accesskey";
                 });
-                services.AddSingleton(sendingServiceMock.Object);
+                services.AddSingleton(statusServiceMock.Object);
             });
         }).CreateClient();
 
