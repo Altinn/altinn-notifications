@@ -90,6 +90,7 @@ public class ServiceCollectionExtensionsTests
                 ["KafkaSettings:SmsStatusUpdatedTopicName"] = "sms.status.updated",
                 ["SmsGatewaySettings:Endpoint"] = "https://vg.no",
                 ["SmsGatewaySettings:TimeoutInSeconds"] = "30",
+                ["WolverineSettings:EnableWolverine"] = "false",
             })
             .Build();
 
