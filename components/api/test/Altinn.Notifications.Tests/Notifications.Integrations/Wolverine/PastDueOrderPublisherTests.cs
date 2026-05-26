@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Extensions.Options;
 using Moq;
 
 using Wolverine;
@@ -179,9 +181,96 @@ public class PastDueOrderPublisherTests
         Assert.Contains(result, r => r.Id == order2.Id);
     }
 
+    [Fact]
+    public async Task PublishAsync_RespectsConcurrencyLimit()
+    {
+        // Arrange
+        const int concurrency = 3;
+        const int orderCount = 12;
+
+        var lockObj = new object();
+        int currentConcurrent = 0;
+        int maxObservedConcurrent = 0;
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_,_) => new ValueTask(Task.Run(async () =>
+            {
+                int current = Interlocked.Increment(ref currentConcurrent);
+                lock (lockObj)
+                {
+                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
+                }
+
+                await Task.Delay(30);
+                Interlocked.Decrement( ref currentConcurrent);
+            })));
+
+        var orders = Enumerable.Range(0, orderCount)
+            .Select(_ => CreateOrder())
+            .ToList();
+
+        var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
+
+        // Act
+        await publisher.PublishAsync(orders, CancellationToken.None);
+
+        // Assert
+        Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {orderCount} orders were processed sequentially.");
+        Assert.True(maxObservedConcurrent <= concurrency, $"Max concurrent sends ({maxObservedConcurrent}) exceeded the configured limit ({concurrency}).");
+
+        messageBusMock.Verify(
+        m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()),
+        Times.Exactly(orderCount));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task PublishAsync_ZeroOrNegativeConcurrency_DefaultsToTen(int concurrency)
+    {
+        // Arrange
+        const int orderCount = 20;
+
+        var lockObj = new object();
+        int currentConcurrent = 0;
+        int maxObservedConcurrent = 0;
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_,_) => new ValueTask(Task.Run(async () =>
+            {
+                int current = Interlocked.Increment(ref currentConcurrent);
+                lock (lockObj)
+                {
+                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
+                }
+
+                await Task.Delay(30);
+                Interlocked.Decrement( ref currentConcurrent);
+            })));                                
+        
+        var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
+
+        var orders = Enumerable.Range(0, orderCount)
+            .Select(_ => CreateOrder())
+            .ToList();
+        
+        // Act
+        var result = await publisher.PublishAsync(orders, CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+        Assert.True(maxObservedConcurrent > 1, "Expected concurrent processing but all orders ran sequentially.");
+        Assert.True(maxObservedConcurrent <= 10, $"Max concurrent ({maxObservedConcurrent}) exceeded the expected default of 10.");
+    }
+
     private static PastDueOrderPublisher CreatePublisher(
         Mock<IMessageBus> messageBusMock,
-        Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null)
+        Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null,
+        int concurrency = 10)
     {
         loggerMock ??= new Mock<ILogger<PastDueOrderPublisher>>();
 
@@ -189,6 +278,8 @@ public class PastDueOrderPublisherTests
         services.AddScoped(_ => messageBusMock.Object);
         var serviceProvider = services.BuildServiceProvider();
 
-        return new PastDueOrderPublisher(loggerMock.Object, serviceProvider);
+        var options = Options.Create(new WolverineSettings { PastDueOrdersPublishConcurrency = concurrency});
+
+        return new PastDueOrderPublisher(loggerMock.Object, serviceProvider, options);
     }
 }

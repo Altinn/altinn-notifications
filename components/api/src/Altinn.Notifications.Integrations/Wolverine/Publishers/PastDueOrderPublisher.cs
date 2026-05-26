@@ -1,22 +1,27 @@
+using System.Collections.Concurrent;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Extensions.Options;
 using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// ASB-backed implementation of <see cref="IPastDueOrderPublisher"/> that publishes
-/// past-due orders one-by-one to an Azure Service Bus queue via <see cref="IMessageBus"/>.
+/// past-due orders concurrently to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
 public class PastDueOrderPublisher(
     ILogger<PastDueOrderPublisher> logger,
-    IServiceProvider serviceProvider) : IPastDueOrderPublisher
+    IServiceProvider serviceProvider,
+    IOptions<WolverineSettings> options) : IPastDueOrderPublisher    
 {
+    private readonly int _publishConcurrency = options.Value.PastDueOrdersPublishConcurrency <= 0 ? 10 : options.Value.PastDueOrdersPublishConcurrency;
+
     /// <inheritdoc/>
     public async Task<IReadOnlyList<NotificationOrder>> PublishAsync(
         IReadOnlyList<NotificationOrder> orders,
@@ -32,27 +37,52 @@ public class PastDueOrderPublisher(
         await using var scope = serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var failed = new List<NotificationOrder>();
-        foreach (var order in orders)
+        var failed = new ConcurrentBag<NotificationOrder>();
+        using var semaphore = new SemaphoreSlim(_publishConcurrency);
+
+        await Task.WhenAll(orders.Select(async order =>
         {
+            await semaphore.WaitAsync(cancellationToken);
+
             try
             {
-                await messageBus.SendAsync(new ProcessPastDueOrderCommand { Order = order });
+                var failedOrder = await SendAsync(order,messageBus,cancellationToken);
+                if (failedOrder is not null)
+                {
+                    failed.Add(failedOrder);
+                }
             }
-            catch (OperationCanceledException)
+            finally
             {
-                throw;
+                semaphore.Release();
             }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "PastDueOrderPublisher failed to publish order {OrderId} to ASB queue.",
-                    order.Id);
-                failed.Add(order);
-            }
-        }
+        }));
 
-        return failed;
+       return [.. failed];
+    }
+
+    private async Task<NotificationOrder?> SendAsync(
+        NotificationOrder order,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await messageBus.SendAsync(new ProcessPastDueOrderCommand { Order = order });
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "PastDueOrderPublisher failed to publish order {OrderId} to ASB queue",
+                order.Id);
+            return order;
+        }
     }
 }
