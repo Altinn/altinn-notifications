@@ -211,6 +211,28 @@ public static class PostgreUtil
         return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
     }
 
+    /// <summary>
+    /// Looks up the most recent dead delivery report with the given reason.
+    /// Useful when no natural key (gatewayReference, operationId) is available in the payload.
+    /// </summary>
+    public static async Task<DeadDeliveryReportRow?> GetLatestDeadDeliveryReportByReason(string connectionString, string reason)
+    {
+        const string sql = """
+            SELECT id, channel, reason, attemptcount, resolved
+            FROM notifications.deaddeliveryreports
+            WHERE reason = @reason
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("reason", reason);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
+    }
+
     private static async Task<DeadDeliveryReportRow> ReadDeadDeliveryReportRow(NpgsqlDataReader reader)
     {
         return new DeadDeliveryReportRow(

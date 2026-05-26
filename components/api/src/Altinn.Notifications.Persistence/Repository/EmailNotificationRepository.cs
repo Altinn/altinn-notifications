@@ -2,6 +2,7 @@ using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -86,13 +87,14 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
         if (!hasOperationId && !hasNotificationId)
         {
-            throw new ArgumentException("The provided Email identifier is invalid.");
+            throw new InvalidNotificationIdentifierException("The provided Email identifier is invalid.");
         }
 
         await ExecuteUpdateWithTransactionAsync(

@@ -514,7 +514,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithInvalidNotificationId_ThrowsArgumentException()
+    public async Task UpdateSendStatus_WithInvalidNotificationId_ThrowsInvalidNotificationIdentifierException()
     {
         // Arrange
         SmsNotificationRepository repo = ServiceUtil
@@ -526,7 +526,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         SmsNotificationResultType resultType = SmsNotificationResultType.Failed;
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(async () =>
         {
             await repo.UpdateSendStatus(emptyGuid, resultType);
         });
