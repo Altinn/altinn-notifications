@@ -43,8 +43,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
-        Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
-        Console.WriteLine($"[Factory] ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
+        Console.WriteLine($"[Factory] Loaded WolverineSettings - ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
         Console.WriteLine($"[Factory] Postgres connection: {Truncate(Fixture.PostgresConnectionString, 50)}...");
 
         string? uri = configuration["GeneralSettings:BaseUri"];
@@ -69,7 +68,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        if (WolverineSettings == null)
         {
             return;
         }
@@ -93,11 +92,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         {
             await using var dataSource = NpgsqlDataSource.Create(Fixture.PostgresConnectionString);
             await using var cmd = dataSource.CreateCommand(
-                "DELETE FROM notifications.emailnotifications; " +
-                "DELETE FROM notifications.smsnotifications; " +
-                "DELETE FROM notifications.orders; " +
-                "DELETE FROM notifications.statusfeed; " +
-                "DELETE FROM notifications.deaddeliveryreports;");
+                "TRUNCATE notifications.orderschain, notifications.orders, " +
+                "notifications.statusfeed, notifications.resourcelimitlog, " +
+                "notifications.deaddeliveryreports CASCADE;");
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex)
@@ -105,7 +102,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             Console.WriteLine($"[Factory] Database cleanup failed (non-fatal): {ex.Message}");
         }
     }
-
+        
     private static string FindMigrationPath()
     {
         string? currentDir = AppContext.BaseDirectory;

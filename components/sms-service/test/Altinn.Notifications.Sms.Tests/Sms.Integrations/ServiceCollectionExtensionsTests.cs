@@ -27,7 +27,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required SmsGatewayConfiguration settings is missing from application configuration.", exception.Message);
+        Assert.StartsWith("Required SmsGatewayConfiguration settings are missing from application configuration.", exception.Message);
     }
 
     [Fact]
@@ -94,6 +94,7 @@ public class ServiceCollectionExtensionsTests
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = "true",
                 ["WolverineSettings:SmsDeliveryReportQueueName"] = queueName,
+                ["WolverineSettings:EnableSmsSendResultPublisher"] = "false",
             })
             .Build();
 

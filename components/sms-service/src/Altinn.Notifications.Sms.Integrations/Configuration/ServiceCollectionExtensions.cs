@@ -27,14 +27,14 @@ public static class ServiceCollectionExtensions
 
         if (kafkaSettings == null)
         {
-            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
+            throw new ArgumentNullException(nameof(config), "Required Kafka settings are missing from application configuration");
         }
 
         SmsGatewaySettings smsGatewaySettings = config!.GetSection(nameof(SmsGatewaySettings)).Get<SmsGatewaySettings>()!;
 
         if (smsGatewaySettings == null)
         {
-            throw new ArgumentNullException(nameof(config), "Required SmsGatewayConfiguration settings is missing from application configuration.");
+            throw new ArgumentNullException(nameof(config), "Required SmsGatewayConfiguration settings are missing from application configuration.");
         }
 
         services

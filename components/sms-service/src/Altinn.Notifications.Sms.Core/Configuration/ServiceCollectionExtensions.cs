@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
 
         if (topicSettings == null)
         {
-            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
+            throw new ArgumentNullException(nameof(config), "Required Kafka settings are missing from application configuration");
         }
 
         services.AddSingleton<ISendingService, SendingService>();

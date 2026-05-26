@@ -17,7 +17,6 @@ public class WolverineSettingsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
 
                 ["WolverineSettings:EmailPublishConcurrency"] = "5",
@@ -71,7 +70,6 @@ public class WolverineSettingsTests
         var settings = config.GetSection("WolverineSettings").Get<WolverineSettings>();
 
         Assert.NotNull(settings);
-        Assert.True(settings.EnableWolverine);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
 
         Assert.Equal(5, settings.EmailPublishConcurrency);
@@ -126,7 +124,6 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettings();
 
-        Assert.True(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
 
         Assert.Equal(10, settings.EmailPublishConcurrency);

@@ -20,7 +20,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
+        Assert.StartsWith("Required Kafka settings are missing from application configuration", exception.Message);
     }
 
     [Fact]
