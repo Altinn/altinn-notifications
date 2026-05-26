@@ -6,10 +6,12 @@ This component handles the functionality related to sending SMS through Altinn N
 
 ### Altinn.Notifications.Sms
 
-The API layer that consumes services provided by _Altinn.Notifications.Sms.Core_.
+The host layer responsible for bootstrapping the service and exposing HTTP endpoints.
 
 Relevant implementations:
 - Program.cs
+- Delivery report controller
+- Instant message controller
 
 ### Altinn.Notifications.Sms.Core
 
@@ -25,7 +27,8 @@ Relevant implementations:
 The infrastructure layer that implements the interfaces defined in _Altinn.Notifications.Sms.Core_ for integrations towards 3rd-party libraries and systems.
 
 Relevant implementations:
-- Client for integrating with SMS service
+- Client for external SMS delivery service (Link Mobility)
+- ASB message publishers and handlers (Wolverine)
 
 ## 🏗 Building & Running
 
@@ -61,4 +64,4 @@ docker build -t notifications-sms -f components/sms-service/Dockerfile .
 
 ## 📚 Additional Resources
 
-For full setup instructions including Kafka, database configuration, and user secrets, see [getting-started.md](../../getting-started.md).
+For full setup instructions including database configuration and user secrets, see [getting-started.md](../../getting-started.md).
