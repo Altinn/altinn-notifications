@@ -248,6 +248,41 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
     }
 
     [Fact]
+    public async Task SmsDeliveryReport_WhenGatewayReferenceIsMissing_GoesToDeadLetterQueueWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+
+            // Act - Send delivery report with an empty GatewayReference.
+            // The handler throws InvalidDeliveryReportException, which is not in the
+            // SmsDeliveryReportHandlerPolicy chain → message goes to DLQ immediately.
+            await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                GatewayReference = string.Empty,
+                SendResult = "Delivered"
+            });
+
+            // Assert - Message should appear in DLQ immediately (no retries)
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(10));
+            Assert.NotNull(deadLetterMessage);
+
+            // Assert - No dead delivery report in DB (InvalidDeliveryReportException is not
+            // mapped to SaveDeadDeliveryReport in the policy — it goes straight to DLQ)
+            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+                _fixture.PostgresConnectionString,
+                "SELECT count(1) FROM notifications.deaddeliveryreports");
+            Assert.Equal(0, deadReportCount);
+        }
+    }
+
+    [Fact]
     public async Task SmsDeliveryReport_WhenSendResultIsInvalid_GoesToDeadLetterQueueWithoutRetry()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
