@@ -314,4 +314,60 @@ public class SmsSendResultHandlerTests(IntegrationTestContainersFixture fixture)
             Assert.True(queueEmpty, "Queue should be empty — unknown SendResult should not be retried");
         }
     }
+
+    [Fact]
+    public async Task SmsSendResult_WhenBothIdentifiersEmpty_SavesDeadDeliveryReportWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
+
+            // NotificationId = Guid.Empty and GatewayReference = null causes
+            // InvalidNotificationIdentifierException in SmsNotificationRepository.UpdateSendStatus
+            var command = new SmsSendResultCommand
+            {
+                NotificationId = Guid.Empty,
+                GatewayReference = null,
+                SendResult = SmsNotificationResultType.Delivered.ToString()
+            };
+
+            // Act
+            await factory.SendToQueueAsync(queueName, command);
+
+            // Assert - Dead delivery report saved with the correct reason
+            DeadDeliveryReportRow? deadReport = null;
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    deadReport = await PostgreUtil.GetLatestDeadDeliveryReportByReason(
+                        _fixture.PostgresConnectionString,
+                        "INVALID_NOTIFICATION_IDENTIFIER");
+                    return deadReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+
+            Assert.True(deadReportFound, "Dead delivery report should be saved when both identifiers are empty");
+            Assert.Equal("INVALID_NOTIFICATION_IDENTIFIER", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
+
+            // Assert - Message discarded, not moved to DLQ
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — InvalidNotificationIdentifierException should not trigger DLQ");
+
+            // Assert - Queue is empty (no retries)
+            var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(queueEmpty, "Queue should be empty — invalid identifiers should not be retried");
+        }
+    }
 }
