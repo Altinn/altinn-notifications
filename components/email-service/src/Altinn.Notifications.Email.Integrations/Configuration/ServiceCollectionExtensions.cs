@@ -56,7 +56,7 @@ public static class ServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured.");
         }
 
         services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
@@ -70,7 +70,7 @@ public static class ServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured.");
         }
 
         services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
@@ -84,7 +84,7 @@ public static class ServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured.");
         }
 
         services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();

@@ -11,7 +11,6 @@ namespace Altinn.Notifications.Email.Integrations.Publishers;
 /// <summary>
 /// Azure Service Bus–based implementation of <see cref="IEmailServiceRateLimitDispatcher"/> that dispatches
 /// an <see cref="EmailServiceRateLimitCommand"/> via Wolverine to publish rate-limit events.
-/// This implementation is active when <c>WolverineSettings:EnableEmailServiceRateLimitPublisher</c> is set to <c>true</c>.
 /// </summary>
 public class EmailServiceRateLimitPublisher : IEmailServiceRateLimitDispatcher
 {

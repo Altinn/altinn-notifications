@@ -11,7 +11,6 @@ namespace Altinn.Notifications.Email.Integrations.Publishers;
 /// <summary>
 /// Azure Service Bus–based implementation of <see cref="IEmailSendResultDispatcher"/> that dispatches
 /// an <see cref="EmailSendResultCommand"/> via Wolverine to publish terminal email send operation results.
-/// This implementation is active when <c>WolverineSettings:EnableEmailSendResultPublisher</c> is set to <c>true</c>.
 /// </summary>
 public class EmailSendResultPublisher : IEmailSendResultDispatcher
 {

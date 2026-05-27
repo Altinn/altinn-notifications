@@ -12,7 +12,6 @@ namespace Altinn.Notifications.Email.Integrations.Publishers;
 /// Azure Service Bus–based implementation of <see cref="IEmailStatusCheckDispatcher"/> that dispatches a
 /// <see cref="CheckEmailSendStatusCommand"/> via Wolverine to initiate status tracking for an email send
 /// operation processed by Azure Communication Services (ACS).
-/// This implementation is active when <c>WolverineSettings:EnableCheckEmailSendStatusListener</c> is set to <c>true</c>.
 /// </summary>
 public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
 {
