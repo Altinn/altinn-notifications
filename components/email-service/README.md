@@ -6,11 +6,11 @@ This component handles the functionality related to sending emails through Altin
 
 ### Altinn.Notifications.Email
 
-The API layer that consumes services provided by _Altinn.Notifications.Email.Core_.
+The host layer responsible for bootstrapping the service and exposing HTTP endpoints.
 
 Relevant implementations:
 - Program.cs
-- Kafka consumer implementation
+- Instant email controller
 
 ### Altinn.Notifications.Email.Core
 
@@ -26,8 +26,8 @@ Relevant implementations:
 The infrastructure layer that implements the interfaces defined in _Altinn.Notifications.Email.Core_ for integrations towards 3rd-party libraries and systems.
 
 Relevant implementations:
-- Client for integrating with email service
-- Kafka producer implementation
+- Client for integrating with email service (ACS)
+- ASB message publishers and handlers (Wolverine)
 
 ## 🏗 Building & Running
 
@@ -63,7 +63,7 @@ docker build -t notifications-email -f components/email-service/Dockerfile .
 
 ## 📚 Additional Resources
 
-For full setup instructions including Kafka, database configuration, and user secrets, see [getting-started.md](../../getting-started.md).
+For full setup instructions including database configuration and user secrets, see [getting-started.md](../../getting-started.md).
 
 ## Building
 
