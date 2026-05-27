@@ -84,32 +84,6 @@ public class ServiceCollectionExtensionsTests
         Assert.Single(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
     }
 
-    [Fact]
-    public void AddIntegrationServices_WolverineEnabledButStatusCheckListenerDisabled_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
-                ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = "false",
-                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
-                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
-            })
-            .Build();
-
-        IServiceCollection services = new ServiceCollection();
-
-        // Act
-        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
-
-        // Assert
-        Assert.Equal("EnableEmailStatusCheckListener must be enabled when EnableEmailStatusCheckPublisher is enabled.", exception.Message);
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -123,9 +97,9 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })
             .Build();
@@ -151,6 +125,8 @@ public class ServiceCollectionExtensionsTests
                 ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EnableEmailSendResultPublisher"] = "true",
                 ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.rate.limit",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
                 ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "false",
             })
@@ -205,6 +181,8 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
                 ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
                 ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
                 ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
@@ -237,9 +215,9 @@ public class ServiceCollectionExtensionsTests
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableEmailSendResultPublisher"] = "false",
-                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "false",
                 ["WolverineSettings:EnableEmailServiceRateLimitPublisher"] = "true",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
                 ["WolverineSettings:EmailServiceRateLimitQueueName"] = queueName,
             })
             .Build();
