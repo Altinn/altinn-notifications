@@ -16,27 +16,25 @@ namespace Altinn.Notifications.IntegrationTests;
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
-    private readonly string? _originalEnableWolverine = Environment.GetEnvironmentVariable("WolverineSettings__EnableWolverine");
-
     /// <summary>
     /// Configures the web host for setting up configuration and test services.
     /// </summary>
     /// <param name="builder">The web host builder.</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // No ServiceBusConnectionString is configured in the test environment, so Wolverine must not attempt to connect.
-        Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", "false");
-
         IConfiguration configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
-        .Build();
+                .Build();
 
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ=="
+            });
 
-            // overriding initialization of the extension class with test settings
             string? uri = configuration["GeneralSettings:BaseUri"];
             if (!string.IsNullOrEmpty(uri))
             {
@@ -58,16 +56,22 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
             // Replace the Kafka producer with a no-op mock — keeps IKafkaProducer resolvable without a real broker.
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
+
+            var wolverineServices = services
+                .Where(s =>
+                    s.ServiceType.Assembly.GetName().Name?.StartsWith("Wolverine") == true ||
+                    s.ImplementationType?.Assembly.GetName().Name?.StartsWith("Wolverine") == true ||
+                    s.ImplementationFactory?.Method.DeclaringType?.Assembly.GetName().Name?.StartsWith("Wolverine") == true)
+                .ToList();
+
+            foreach (var descriptor in wolverineServices)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISendSmsPublisher>()));
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IPastDueOrderPublisher>()));
         });
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            Environment.SetEnvironmentVariable("WolverineSettings__EnableWolverine", _originalEnableWolverine);
-        }
-
-        base.Dispose(disposing);
     }
 }

@@ -13,10 +13,8 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Integrations.Kafka.Publishers;
 using Altinn.Notifications.Persistence.Repository;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -30,7 +28,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class EmailNotificationServiceTests
 {
-    private const string _emailQueueTopicName = "test.email.queue";
     private readonly int _publishBatchSize = 500;
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
 
@@ -177,7 +174,7 @@ public class EmailNotificationServiceTests
         await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
 
         // Assert
-        repoMock.Verify();
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
     }
 
     [Fact]
@@ -267,10 +264,7 @@ public class EmailNotificationServiceTests
             SendResult = EmailNotificationResultType.Succeeded
         };
 
-        var mockRepo = new Mock<EmailNotificationRepository>(
-            (null as NpgsqlDataSource)!,
-            (null as ILogger<EmailNotificationRepository>)!,
-            Options.Create(new NotificationConfig()))
+        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
         {
             CallBase = true
         };
@@ -326,6 +320,8 @@ public class EmailNotificationServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
             async () => await service.SendNotifications(cts.Token));
+
+        repoMock.Verify(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -334,7 +330,7 @@ public class EmailNotificationServiceTests
         // Arrange
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
         emailNotificationRepositoryMock
-            .Setup(e => e.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException()); // Simulate cancellation during fetch
 
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -353,7 +349,7 @@ public class EmailNotificationServiceTests
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
-            .SetupSequence(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_email, _email]) // First fetch returns a batch to process
             .ThrowsAsync(new OperationCanceledException()); // Second fetch simulates cancellation between iterations
 
@@ -507,7 +503,7 @@ public class EmailNotificationServiceTests
         using var cts = new CancellationTokenSource();
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .Callback<int, CancellationToken>((_, _) => cts.Cancel())
             .ReturnsAsync(emails);
 
@@ -528,7 +524,7 @@ public class EmailNotificationServiceTests
         var emails = new List<Email> { _email, _email, _email };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
@@ -551,7 +547,7 @@ public class EmailNotificationServiceTests
         var emails = new List<Email> { _email };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
@@ -683,13 +679,8 @@ public class EmailNotificationServiceTests
             Times.Once);
     }
 
-    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
+    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
     {
-        if (producer is not null && emailCommandPublisher is not null)
-        {
-            throw new ArgumentException("Provide either producer or emailCommandPublisher, not both.");
-        }
-
         var guidService = new Mock<IGuidService>();
         guidService
             .Setup(g => g.NewGuid())
@@ -699,11 +690,6 @@ public class EmailNotificationServiceTests
         dateTimeService
             .Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
-
-        if (producer != null)
-        {
-            emailCommandPublisher = new KafkaEmailCommandPublisher(producer, Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
-        }
 
         repo ??= new Mock<IEmailNotificationRepository>().Object;
         emailCommandPublisher ??= new Mock<IEmailCommandPublisher>().Object;

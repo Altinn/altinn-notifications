@@ -57,6 +57,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetEmailOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -84,7 +85,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -103,6 +103,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetSmsOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithSmsOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -130,7 +131,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
