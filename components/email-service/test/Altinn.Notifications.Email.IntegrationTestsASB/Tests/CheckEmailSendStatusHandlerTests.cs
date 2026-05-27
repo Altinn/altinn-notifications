@@ -220,4 +220,32 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             Assert.NotNull(deadLetterMessage);
         }
     }
+
+    [Fact]
+    public async Task CheckEmailSendStatus_WhenSendOperationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+
+            // Act - SendOperationId = string.Empty triggers ArgumentException in the handler guard clause.
+            // ArgumentException is not in the CheckEmailSendStatusHandlerPolicy chain → DLQ immediately.
+            await factory.SendToQueueAsync(queueName, new CheckEmailSendStatusCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                SendOperationId = string.Empty,
+                LastCheckedAtUtc = DateTime.UtcNow
+            });
+
+            // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(10));
+            Assert.NotNull(deadLetterMessage);
+        }
+    }
 }
