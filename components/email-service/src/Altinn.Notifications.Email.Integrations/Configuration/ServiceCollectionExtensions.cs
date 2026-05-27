@@ -50,61 +50,43 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
-    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
     private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
-        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckPublisher)
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
-            if (!wolverineSettings.EnableEmailStatusCheckListener)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.EnableEmailStatusCheckListener)} must be enabled when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
-            }
-
-            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
-            }
-
-            services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
         }
+
+        services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
     }
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailSendResultDispatcher"/> implementation
-    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
     private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
-        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailSendResultPublisher)
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
-            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
-            }
-
-            services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
         }
+
+        services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
     }
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailServiceRateLimitDispatcher"/> implementation
-    /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
     private static void RegisterEmailServiceRateLimitDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
-        if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailServiceRateLimitPublisher)
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
         {
-            if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitPublisher)} is enabled.");
-            }
-
-            services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitPublisher)} is enabled.");
         }
+
+        services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
     }
 }

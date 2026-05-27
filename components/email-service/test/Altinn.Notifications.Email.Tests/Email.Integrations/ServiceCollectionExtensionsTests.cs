@@ -15,31 +15,10 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.TestingExtension
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddIntegrationServices_KafkaSettingsMissing_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var config = new ConfigurationBuilder().Build();
-
-        IServiceCollection services = new ServiceCollection();
-
-        // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
-
-        // Assert
-        Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required Kafka settings are missing from application configuration", exception.Message);
-    }
-
-    [Fact]
     public void AddIntegrationServices_CommunicationServicesSettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
-            })
-            .Build();
+        var config = new ConfigurationBuilder().Build();
 
         IServiceCollection services = new ServiceCollection();
 
@@ -58,7 +37,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
             })
             .Build();
@@ -80,8 +58,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
