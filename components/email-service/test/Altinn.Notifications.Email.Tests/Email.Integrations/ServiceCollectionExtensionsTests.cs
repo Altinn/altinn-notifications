@@ -1,7 +1,6 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Email.Integrations.Consumers;
 using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
@@ -107,7 +106,6 @@ public class ServiceCollectionExtensionsTests
         var statusDispatcher = provider.GetRequiredService<IEmailStatusCheckDispatcher>();
         Assert.IsType<EmailStatusCheckPublisher>(statusDispatcher);
         Assert.Single(services, d => d.ServiceType == typeof(IEmailStatusCheckDispatcher));
-        Assert.Contains(services, d => d.ImplementationType == typeof(EmailSendingAcceptedConsumer)); // The Kafka consumer should be registered alongside the publisher when Wolverine is enabled
     }
 
     [Fact]
@@ -117,7 +115,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -147,7 +144,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -174,8 +170,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
-                ["KafkaSettings:AltinnServiceUpdateTopicName"] = "altinn.platform.service.updated",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -208,7 +202,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -233,8 +226,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -267,8 +258,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:EmailStatusUpdatedTopicName"] = "altinn.notifications.email.status.updated",
-                ["KafkaSettings:EmailSendingAcceptedTopicName"] = "altinn.notifications.email.sending.accepted",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
                 ["WolverineSettings:EnableWolverine"] = "true",
@@ -297,7 +286,6 @@ public class ServiceCollectionExtensionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",    
                 ["WolverineSettings:EnableWolverine"] = "true",

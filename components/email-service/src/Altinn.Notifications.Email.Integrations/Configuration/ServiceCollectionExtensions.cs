@@ -1,7 +1,5 @@
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
-using Altinn.Notifications.Email.Integrations.Consumers;
-using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Publishers;
 
 using Microsoft.Extensions.Configuration;
@@ -22,13 +20,6 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddIntegrationServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
-
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
-        }
-
         CommunicationServicesSettings communicationServicesSettings = config!.GetSection(nameof(CommunicationServicesSettings)).Get<CommunicationServicesSettings>()!;
 
         if (communicationServicesSettings == null)
@@ -44,45 +35,24 @@ public static class ServiceCollectionExtensions
         }
 
         services
-            .AddHostedService<SendEmailQueueConsumer>()
-            .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
-            .AddSingleton(kafkaSettings)
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
 
         WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
 
-        RegisterEmailSendResultDispatcher(services, wolverineSettings, kafkaSettings);
-        RegisterEmailStatusCheckDispatcher(services, wolverineSettings, kafkaSettings);
-        RegisterEmailServiceRateLimitDispatcher(services, wolverineSettings, kafkaSettings);
+        RegisterEmailSendResultDispatcher(services, wolverineSettings);
+        RegisterEmailStatusCheckDispatcher(services, wolverineSettings);
+        RegisterEmailServiceRateLimitDispatcher(services, wolverineSettings);
 
         return services;
-    }
-
-    /// <summary>
-    /// Adds health checks for integrations 
-    /// </summary>
-    /// <param name="services">service collection.</param>
-    /// <param name="config">the configuration collection</param>
-    public static void AddIntegrationHealthChecks(this IServiceCollection services, IConfiguration config)
-    {
-        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
-
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
-        }
-
-        services.AddHealthChecks()
-        .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
     }
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
     /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailStatusCheckPublisher)
         {
@@ -100,21 +70,13 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
         }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(kafkaSettings.EmailSendingAcceptedTopicName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(KafkaSettings.EmailSendingAcceptedTopicName)} must be configured when the Wolverine email status check publisher is disabled.");
-            }
-        }
     }
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailSendResultDispatcher"/> implementation
     /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailSendResultPublisher)
         {
@@ -126,21 +88,13 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
         }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(kafkaSettings.EmailStatusUpdatedTopicName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(KafkaSettings.EmailStatusUpdatedTopicName)} must be configured when the Wolverine email send result publisher is disabled.");
-            }
-        }
     }
 
     /// <summary>
     /// Registers the appropriate <see cref="IEmailServiceRateLimitDispatcher"/> implementation
     /// based on Wolverine configuration, selecting either the ASB or Kafka transport path.
     /// </summary>
-    private static void RegisterEmailServiceRateLimitDispatcher(IServiceCollection services, WolverineSettings wolverineSettings, KafkaSettings kafkaSettings)
+    private static void RegisterEmailServiceRateLimitDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
     {
         if (wolverineSettings.EnableWolverine && wolverineSettings.EnableEmailServiceRateLimitPublisher)
         {
@@ -151,14 +105,6 @@ public static class ServiceCollectionExtensions
             }
 
             services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(kafkaSettings.AltinnServiceUpdateTopicName))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(KafkaSettings.AltinnServiceUpdateTopicName)} must be configured when the Wolverine email service rate limit publisher is disabled.");
-            }
         }
     }
 }
