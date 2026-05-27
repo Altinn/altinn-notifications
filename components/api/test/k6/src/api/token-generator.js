@@ -1,11 +1,9 @@
-import http from "k6/http";
 import encoding from "k6/encoding";
+import http from "k6/http";
 import * as config from "../config.js";
 import * as apiHelpers from "../apiHelpers.js";
 import { stopIterationOnFail } from "../errorhandler.js";
-
-const tokenGeneratorUserPwd = __ENV.tokenGeneratorUserPwd;
-const tokenGeneratorUserName = __ENV.tokenGeneratorUserName;
+import { getFromSecretSource } from "../secret-reader.js";
 
 // Storage to hold the cached token and its expiration time
 let authenticationStorage = {
@@ -17,14 +15,14 @@ let authenticationStorage = {
  * Generate enterprise token for test environment.
  * 
  * @param {Object} queryParams - The query parameters to be included in the token generation request.
- * @returns {string} The generated enterprise token.
+ * @returns {Promise<string>} The generated enterprise token.
  */
-export function generateEnterpriseToken(queryParams) {
+export async function generateEnterpriseToken(queryParams) {
     const endpoint =
         config.tokenGenerator.getEnterpriseToken +
         apiHelpers.buildQueryParametersForEndpoint(queryParams);
 
-    return generateToken(endpoint);
+    return await generateToken(endpoint);
 }
 
 /**
@@ -32,27 +30,20 @@ export function generateEnterpriseToken(queryParams) {
  * Returns a cached token if one exists and hasn't expired.
  *
  * @param {string} endpoint - The endpoint URL to which the token generation request is sent.
- * @returns {string} The generated or cached token.
+ * @returns {Promise<string>} The generated or cached token.
  */
-function generateToken(endpoint) {
+async function generateToken(endpoint) {
     const currentTime = Math.floor(Date.now() / 1000);
     const skewSeconds = 30;
 
     // Return cached token if it exists and is not expired
-    if (authenticationStorage.cachedToken &&(authenticationStorage.expiresAt - skewSeconds) > currentTime) {
+    if (authenticationStorage.cachedToken && (authenticationStorage.expiresAt - skewSeconds) > currentTime) {
         return authenticationStorage.cachedToken;
     }
-    
-    if (!tokenGeneratorUserName) {
-        throw new Error(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`);
-    }
 
-    if (!tokenGeneratorUserPwd) {
-        throw new Error(`Invalid value for environment variable 'tokenGeneratorUserPwd': '${tokenGeneratorUserPwd}'.`);
-    }
-
+    const tokenGeneratorUserName = await getFromSecretSource('tokenGeneratorUserName');
+    const tokenGeneratorUserPwd = await getFromSecretSource('tokenGeneratorUserPwd');
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
-
     const encodedCredentials = encoding.b64encode(credentials);
 
     const params = apiHelpers.buildHeaderWithBasic(encodedCredentials);

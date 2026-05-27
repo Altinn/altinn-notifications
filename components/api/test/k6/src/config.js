@@ -1,4 +1,3 @@
-import { stopIterationOnFail } from "./errorhandler.js";
 import { environment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
@@ -26,7 +25,6 @@ if (!baseUrl) {
     throw new Error(`Invalid value for environment variable 'altinn_env': '${environment}'.`);
 }
 
-const subscriptionKey = __ENV.subscriptionKey;
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
 // Altinn TestTools token generator URL.
@@ -61,7 +59,7 @@ export const notifications = {
 
     orders_fromSendersRef: (sendersReference) => `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`,
 
-    conditionCheck: (conditionMet) => `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`
+    conditionCheck: (conditionMet, subscriptionKey) => `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`
 };
 
 // Provides endpoints for handling authentication work-flows on the Altinn platform.

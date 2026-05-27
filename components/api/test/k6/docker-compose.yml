@@ -9,6 +9,7 @@ services:
     networks:
       - k6
     ports:
-      - "6565:6565"
+      - '6565:6565'
     volumes:
       - ./src:/src
+      - ./.secrets:/.secrets:ro
