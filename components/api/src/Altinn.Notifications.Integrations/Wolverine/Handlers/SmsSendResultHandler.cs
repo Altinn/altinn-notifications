@@ -6,7 +6,7 @@ using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
 
-namespace Altinn.Notifications.Integrations.Wolverine;
+namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Handles terminal SMS send operation results received from the Azure Service Bus queue.
