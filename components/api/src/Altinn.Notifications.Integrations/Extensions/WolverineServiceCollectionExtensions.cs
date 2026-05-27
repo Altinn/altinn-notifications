@@ -1,10 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
-using Altinn.Notifications.Core.Integrations;
 
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
+using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
 
@@ -25,25 +26,20 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Each listener/publisher queue is individually enabled via its own flag.
+    /// Publisher queues are mandatory. Listener queues are individually enabled via their own flags.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
     /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
-    public static void AddWolverineServices(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        IHostEnvironment hostEnvironment)
+    public static void AddWolverineServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment hostEnvironment)
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
-        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-        if (!wolverineSettings.EnableWolverine)
-        {
-            return;
-        }
+        WolverineSettings wolverineSettings =
+            wolverineSection.Get<WolverineSettings>() ?? throw new ArgumentNullException(nameof(configuration), "Required WolverineSettings is missing from application configuration");
 
-        services.Configure<WolverineSettings>(wolverineSection);
-        services.AddSingleton(wolverineSettings);
+        services
+            .AddSingleton(wolverineSettings)
+            .Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
@@ -61,9 +57,9 @@ public static class WolverineServiceCollectionExtensions
             AddPastDueOrderListener(wolverineSettings, opts);
 
             // Publishers
-            AddSendSmsPublisher(wolverineSettings, opts);
-            AddSendEmailPublisher(wolverineSettings, opts);
-            AddPastDueOrderPublisher(wolverineSettings, opts);
+            AddSendSmsPublisher(services, wolverineSettings, opts);
+            AddSendEmailPublisher(services, wolverineSettings, opts);
+            AddPastDueOrderPublisher(services, wolverineSettings, opts);
         });
     }
 
@@ -215,16 +211,16 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="SendEmailCommand"/>,
-    /// routing outbound commands to the Azure Service Bus email send queue.
-    /// Only active when <see cref="WolverineSettings.EnableSendEmailPublisher"/> is <c>true</c>.
-    /// The <see cref="IEmailCommandPublisher"/> DI registration is handled separately.
+    /// Configures Wolverine to publish <see cref="SendEmailCommand"/> messages
+    /// to the Azure Service Bus email send queue and registers
+    /// <see cref="EmailCommandPublisher"/> as the <see cref="IEmailCommandPublisher"/> implementation.
     /// </summary>
-    private static void AddSendEmailPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendEmailPublisher)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EnableSendEmailPublisher)} cannot be disabled — there is no alternative publisher implementation.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
@@ -235,19 +231,21 @@ public static class WolverineServiceCollectionExtensions
 
         wolverineOptions.PublishMessage<SendEmailCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName);
+
+        services.AddSingleton<IEmailCommandPublisher, EmailCommandPublisher>();
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="SendSmsCommand"/>,
-    /// routing outbound commands to the Azure Service Bus SMS send queue.
-    /// Only active when <see cref="WolverineSettings.EnableSendSmsPublisher"/> is <c>true</c>.
-    /// The <see cref="ISendSmsPublisher"/> DI registration is handled separately.
+    /// Configures Wolverine to publish <see cref="SendSmsCommand"/> messages
+    /// to the Azure Service Bus SMS send queue and registers
+    /// <see cref="SendSmsCommandPublisher"/> as the <see cref="ISendSmsPublisher"/> implementation.
     /// </summary>
-    private static void AddSendSmsPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSendSmsPublisher)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EnableSendSmsPublisher)} cannot be disabled — there is no alternative publisher implementation.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
@@ -255,6 +253,8 @@ public static class WolverineServiceCollectionExtensions
             throw new InvalidOperationException(
                 $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
         }
+
+        services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
 
         wolverineOptions.PublishMessage<SendSmsCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);
@@ -291,22 +291,16 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="ProcessPastDueOrderCommand"/>,
-    /// routing outbound commands to the Azure Service Bus past-due orders queue.
-    /// Only active when <see cref="WolverineSettings.EnablePastDueOrderPublisher"/> is <c>true</c>.
-    /// The <see cref="IPastDueOrderPublisher"/> DI registration is handled separately.
+    /// Configures Wolverine to publish <see cref="ProcessPastDueOrderCommand"/> messages
+    /// to the Azure Service Bus past-due orders queue and registers
+    /// <see cref="PastDueOrderPublisher"/> as the <see cref="IPastDueOrderPublisher"/> implementation.
     /// </summary>
-    private static void AddPastDueOrderPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnablePastDueOrderPublisher)
         {
-            return;
-        }
-
-        if (!wolverineSettings.EnablePastDueOrderListener)
-        {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnablePastDueOrderListener)} must be enabled when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EnablePastDueOrderPublisher)} cannot be disabled — there is no alternative publisher implementation.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
@@ -314,6 +308,8 @@ public static class WolverineServiceCollectionExtensions
             throw new InvalidOperationException(
                 $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
         }
+
+        services.AddSingleton<IPastDueOrderPublisher, PastDueOrderPublisher>();
 
         wolverineOptions.PublishMessage<ProcessPastDueOrderCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName);

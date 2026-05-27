@@ -420,7 +420,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithInvalidNotificationAndOperationIdentifiers_ThrowsArgumentException()
+    public async Task UpdateSendStatus_WithInvalidNotificationAndOperationIdentifiers_ThrowsInvalidNotificationIdentifierException()
     {
         // Arrange
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
@@ -428,7 +428,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
             () => repo.UpdateSendStatus(null, EmailNotificationResultType.Succeeded, null));
 
         Assert.Equal("The provided Email identifier is invalid.", exception.Message);

@@ -177,4 +177,9 @@ public class WolverineSettings : WolverineSettingsBase
     /// and platform dependency failures.
     /// </summary>
     public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
+
+    /// <summary>
+    /// Maximum number of past-due orders send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int PastDueOrdersPublishConcurrency { get; set; } = 10;
 }

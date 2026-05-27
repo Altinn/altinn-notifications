@@ -87,6 +87,43 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
     }
 
     [Fact]
+    public async Task HandleAsync_UnknownContentType_DefaultsToPlainAndSendsSuccessfully()
+    {
+        // Arrange - ContentType that cannot be parsed as EmailContentType; the handler
+        // logs a warning and falls back to EmailContentType.Plain before delegating to the sending service.
+        var sendingService = new AlwaysSucceedSendingService();
+        var command = new SendEmailCommand
+        {
+            Body = "Body",
+            ContentType = "UnknownContentTypeXYZ",
+            Subject = "Fallback test",
+            NotificationId = Guid.NewGuid(),
+            FromAddress = "sender@example.com",
+            ToAddress = "recipient@example.com"
+        };
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService<ISendingService>(_ => sendingService)
+            .Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.EmailSendQueueName;
+
+            // Act
+            await factory.SendToEndpointAsync(queueName, command);
+            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+
+            // Assert - email is sent successfully with Plain as the fallback content type
+            Assert.NotNull(capturedEmail);
+            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
+            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
+            Assert.Equal(command.Body, capturedEmail.Body);
+            Assert.Equal(command.Subject, capturedEmail.Subject);
+        }
+    }
+
+    [Fact]
     public async Task HandleAsync_WhenSendingServiceThrows_RetriesAndMovesToDeadLetterQueue()
     {
         // Arrange

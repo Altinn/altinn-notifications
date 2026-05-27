@@ -12,7 +12,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddCoreServices_KafkaTopicSettingsMissing_ThrowsException()
     {
-        string expectedExceptionMessage = "Required Kafka topic settings is missing from application configuration (Parameter 'config')";
+        string expectedExceptionMessage = "Required Kafka topic settings are missing from application configuration (Parameter 'config')";
 
         var config = new ConfigurationBuilder().Build();
 

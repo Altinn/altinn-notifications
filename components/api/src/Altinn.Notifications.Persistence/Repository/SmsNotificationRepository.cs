@@ -123,14 +123,14 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentException">Throws if the provided SMS identifier is invalid.</exception>
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and gateway reference are null or empty.</exception>
     public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasGatewayReference = !string.IsNullOrWhiteSpace(gatewayReference);
         if (!hasGatewayReference && !hasNotificationId)
         {
-            throw new ArgumentException("The provided SMS identifier is invalid.");
+            throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
         }
 
         await ExecuteUpdateWithTransactionAsync(

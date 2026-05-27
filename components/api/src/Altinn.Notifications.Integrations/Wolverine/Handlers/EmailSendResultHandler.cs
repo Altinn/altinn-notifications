@@ -1,11 +1,12 @@
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
 
-namespace Altinn.Notifications.Integrations.Wolverine;
+namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Handles terminal email send operation results received from the Azure Service Bus queue.
@@ -17,6 +18,9 @@ public static class EmailSendResultHandler
     /// Processes a terminal email send operation result by updating the notification status
     /// using existing application services.
     /// </summary>
+    /// <exception cref="UnrecognizedSendResultException">
+    /// Thrown when <see cref="EmailSendResultCommand.SendResult"/> cannot be parsed into a known <see cref="EmailNotificationResultType"/> value.
+    /// </exception>
     public static async Task Handle(
         EmailSendResultCommand command,
         IEmailNotificationService emailNotificationService,
@@ -30,7 +34,7 @@ public static class EmailSendResultHandler
                 command.NotificationId,
                 command.OperationId);
 
-            throw new ArgumentException($"Unrecognized SendResult value: '{command.SendResult}'");
+            throw new UnrecognizedSendResultException(command.SendResult);
         }
 
         var operationResult = new EmailSendOperationResult

@@ -24,14 +24,14 @@ public static class ServiceCollectionExtensions
 
         if (communicationServicesSettings == null)
         {
-            throw new ArgumentNullException(nameof(config), "Required communication services settings is missing from application configuration");
+            throw new ArgumentNullException(nameof(config), "Required communication services settings are missing from application configuration");
         }
 
         EmailServiceAdminSettings emailServiceAdminSettings = config!.GetSection(nameof(EmailServiceAdminSettings)).Get<EmailServiceAdminSettings>()!;
 
         if (emailServiceAdminSettings == null)
         {
-            throw new ArgumentNullException(nameof(config), "Required email service admin settings is missing from application configuration");
+            throw new ArgumentNullException(nameof(config), "Required email service admin settings are missing from application configuration");
         }
 
         services

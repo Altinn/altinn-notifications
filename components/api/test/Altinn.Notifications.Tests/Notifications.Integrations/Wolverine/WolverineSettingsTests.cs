@@ -17,7 +17,6 @@ public class WolverineSettingsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
 
                 ["WolverineSettings:EmailPublishConcurrency"] = "5",
@@ -60,6 +59,7 @@ public class WolverineSettingsTests
 
                 ["WolverineSettings:EnablePastDueOrderPublisher"] = "true",
                 ["WolverineSettings:EnablePastDueOrderListener"] = "true",
+                ["WolverineSettings:PastDueOrdersPublishConcurrency"] = "8",
                 ["WolverineSettings:PastDueOrdersQueueName"] = "altinn.notifications.orders.pastdue",
                 ["WolverineSettings:PastDueOrdersListenerCount"] = "7",
                 ["WolverineSettings:PastDueOrdersRetryDelayMs"] = "30000",
@@ -71,7 +71,6 @@ public class WolverineSettingsTests
         var settings = config.GetSection("WolverineSettings").Get<WolverineSettings>();
 
         Assert.NotNull(settings);
-        Assert.True(settings.EnableWolverine);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
 
         Assert.Equal(5, settings.EmailPublishConcurrency);
@@ -114,6 +113,7 @@ public class WolverineSettingsTests
 
         Assert.True(settings.EnablePastDueOrderPublisher);
         Assert.True(settings.EnablePastDueOrderListener);
+        Assert.Equal(8, settings.PastDueOrdersPublishConcurrency);
         Assert.Equal("altinn.notifications.orders.pastdue", settings.PastDueOrdersQueueName);
         Assert.Equal(7, settings.PastDueOrdersListenerCount);
         Assert.Equal(30000, settings.PastDueOrdersRetryDelayMs);
@@ -126,7 +126,6 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettings();
 
-        Assert.True(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
 
         Assert.Equal(10, settings.EmailPublishConcurrency);
@@ -165,6 +164,7 @@ public class WolverineSettingsTests
         Assert.NotNull(settings.PastDueOrdersQueuePolicy);
         Assert.True(settings.EnablePastDueOrderPublisher);
         Assert.True(settings.EnablePastDueOrderListener);
+        Assert.Equal(10, settings.PastDueOrdersPublishConcurrency);
         Assert.Equal(string.Empty, settings.PastDueOrdersQueueName);
         Assert.Equal(10, settings.PastDueOrdersListenerCount);
         Assert.Equal(60_000, settings.PastDueOrdersRetryDelayMs);

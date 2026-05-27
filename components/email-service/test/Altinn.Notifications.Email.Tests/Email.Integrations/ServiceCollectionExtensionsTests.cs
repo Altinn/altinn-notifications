@@ -27,7 +27,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required Kafka settings is missing from application configuration", exception.Message);
+        Assert.StartsWith("Required Kafka settings are missing from application configuration", exception.Message);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required communication services settings is missing from application configuration", exception.Message);
+        Assert.StartsWith("Required communication services settings are missing from application configuration", exception.Message);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         Assert.Equal("config", exception.ParamName);
-        Assert.StartsWith("Required email service admin settings is missing from application configuration", exception.Message);
+        Assert.StartsWith("Required email service admin settings are missing from application configuration", exception.Message);
     }
 
     [Fact]
