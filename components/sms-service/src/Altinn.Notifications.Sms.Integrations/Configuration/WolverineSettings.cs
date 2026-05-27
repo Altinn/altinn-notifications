@@ -1,5 +1,7 @@
 using Altinn.Notifications.Shared.Configuration;
 
+using LinkMobility.PSWin.Client;
+
 namespace Altinn.Notifications.Sms.Integrations.Configuration;
 
 /// <summary>
@@ -16,8 +18,18 @@ public class WolverineSettings : WolverineSettingsBase
 
     /// <summary>
     /// Retry policy for the SMS send queue.
+    /// Applies to infrastructure transient errors: <see cref="TimeoutException"/>, <see cref="Azure.Messaging.ServiceBus.ServiceBusException"/>, and <see cref="TaskCanceledException"/>.
     /// </summary>
     public QueueRetryPolicy SendSmsQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Retry policy for SMS gateway errors on the SMS send queue.
+    /// Applies to <see cref="HttpRequestException"/> (gateway unreachable) and
+    /// <see cref="SendMessageException"/> (e.g. 504 rate-limiting responses).
+    /// Uses spread-out scheduled retries with no immediate in-lock cooldown retries, to avoid
+    /// amplifying load on the SMS gateway during outages or rate-limiting windows.
+    /// </summary>
+    public QueueRetryPolicy SendSmsQueueGatewayErrorPolicy { get; set; } = new();
 
     /// <summary>
     /// Number of concurrent listeners for the SMS send queue per pod.
