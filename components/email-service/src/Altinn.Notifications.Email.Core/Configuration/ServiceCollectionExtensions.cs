@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
+        services.AddSingleton<IDateTimeService, DateTimeService>();
         return services;
     }
 }
