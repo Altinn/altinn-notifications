@@ -19,7 +19,7 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
         const string sql = """
             SELECT result,
                    expirytime,
-                   expirytime IS NOT NULL AND expirytime < NOW() AS isexpired,
+                   expirytime IS NOT NULL AND expirytime <= NOW() AS isexpired,
                    resulttime
             FROM notifications.smsnotifications
             WHERE alternateid = @notificationId
@@ -57,7 +57,7 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
                    resulttime = NOW()
             WHERE  alternateid = @notificationId
               AND  result      = 'Sending'
-              AND  expirytime  < NOW()
+              AND  expirytime  <= NOW()
             """;
 
         await using var cmd = _dataSource.CreateCommand(sql);
