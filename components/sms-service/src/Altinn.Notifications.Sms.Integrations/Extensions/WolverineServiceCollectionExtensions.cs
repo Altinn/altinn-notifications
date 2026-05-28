@@ -14,8 +14,6 @@ using Microsoft.Extensions.Hosting;
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
-using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
-
 namespace Altinn.Notifications.Sms.Integrations.Extensions;
 
 /// <summary>

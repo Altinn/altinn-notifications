@@ -12,7 +12,7 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Record.Exception(() => services.AddCoreServices());
+        var exception = Record.Exception(services.AddCoreServices);
 
         // Assert
         Assert.Null(exception);

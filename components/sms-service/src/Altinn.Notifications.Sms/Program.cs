@@ -6,16 +6,19 @@ using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Extensions;
 using Altinn.Notifications.Sms.Telemetry;
+
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
+
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
