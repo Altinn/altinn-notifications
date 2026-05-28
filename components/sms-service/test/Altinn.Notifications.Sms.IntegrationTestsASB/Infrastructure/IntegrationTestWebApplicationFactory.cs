@@ -1,13 +1,8 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Integrations.Consumers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
 
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 
@@ -37,10 +32,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
                 "Missing WolverineSettings configuration for ASB integration tests.");
 
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
-
-        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
     }
 
     /// <inheritdoc/>

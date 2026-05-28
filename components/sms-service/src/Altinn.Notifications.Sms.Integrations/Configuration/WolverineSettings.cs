@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Sms.Integrations.Configuration;
 
 /// <summary>
 /// Wolverine/Azure Service Bus settings scoped to the SMS service.
-/// Extends the shared base with queue names and feature flags for the SMS service.
+/// Extends the shared base with queue names specific to the SMS service.
 /// </summary>
 public class WolverineSettings : WolverineSettingsBase
 {
@@ -35,11 +35,6 @@ public class WolverineSettings : WolverineSettingsBase
     /// Number of concurrent listeners for the SMS send queue per pod.
     /// </summary>
     public int SendSmsListenerCount { get; set; } = 10;
-
-    /// <summary>
-    /// Determines whether SMS send commands are consumed via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableSendSmsListener { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing SMS delivery reports.

@@ -1,20 +1,15 @@
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Publishers;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Status;
-
-using Microsoft.Extensions.DependencyInjection;
-
-using Wolverine;
 
 namespace Altinn.Notifications.Sms.Integrations.Publishers;
 
 /// <summary>
 /// Publishes SMS delivery report results to the Azure Service Bus queue via Wolverine.
 /// </summary>
-public class SmsDeliveryReportPublisher(IServiceProvider serviceProvider) : ISmsDeliveryReportPublisher
+public class SmsDeliveryReportPublisher(IServiceProvider serviceProvider) : WolverinePublisher(serviceProvider), ISmsDeliveryReportPublisher
 {
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
-
     /// <inheritdoc/>
     public async Task PublishAsync(SendOperationResult result)
     {
@@ -33,8 +28,6 @@ public class SmsDeliveryReportPublisher(IServiceProvider serviceProvider) : ISms
             DeliveryReport = result.DeliveryReport
         };
 
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        await messageBus.SendAsync(command);
+        await PublishCommandAsync(command);
     }
 }
