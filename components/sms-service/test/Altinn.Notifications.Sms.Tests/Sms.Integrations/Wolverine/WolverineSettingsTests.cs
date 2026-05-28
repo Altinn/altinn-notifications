@@ -11,7 +11,6 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettings();
 
-        Assert.True(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
 
         Assert.Equal(10, settings.SendSmsListenerCount);
@@ -19,10 +18,7 @@ public class WolverineSettingsTests
         Assert.True(settings.EnableSendSmsListener);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
 
-        Assert.True(settings.EnableSmsDeliveryReportPublisher);
         Assert.Equal(string.Empty, settings.SmsDeliveryReportQueueName);
-
-        Assert.True(settings.EnableSmsSendResultPublisher);
         Assert.Equal(string.Empty, settings.SmsSendResultQueueName);
     }
 
@@ -33,16 +29,13 @@ public class WolverineSettingsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["WolverineSettings:SendSmsListenerCount"] = "5",
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
                 ["WolverineSettings:EnableSendSmsListener"] = "true",
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:SendSmsQueuePolicy:ScheduleDelaysMs:0"] = "60000",
                 ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
-                ["WolverineSettings:EnableSmsDeliveryReportPublisher"] = "true",
                 ["WolverineSettings:SmsDeliveryReportQueueName"] = "altinn.notifications.sms.deliveryreports",
-                ["WolverineSettings:EnableSmsSendResultPublisher"] = "true",
                 ["WolverineSettings:SmsSendResultQueueName"] = "altinn.notifications.sms.send.result",
             })
             .Build();
@@ -50,7 +43,6 @@ public class WolverineSettingsTests
         var settings = config.GetSection("WolverineSettings").Get<WolverineSettings>();
 
         Assert.NotNull(settings);
-        Assert.True(settings.EnableWolverine);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
 
         Assert.Equal(5, settings.SendSmsListenerCount);
@@ -60,10 +52,7 @@ public class WolverineSettingsTests
         Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.SendSmsQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.SendSmsQueuePolicy.GetScheduleDelays());
 
-        Assert.True(settings.EnableSmsDeliveryReportPublisher);
         Assert.Equal("altinn.notifications.sms.deliveryreports", settings.SmsDeliveryReportQueueName);
-
-        Assert.True(settings.EnableSmsSendResultPublisher);
         Assert.Equal("altinn.notifications.sms.send.result", settings.SmsSendResultQueueName);
     }
 }

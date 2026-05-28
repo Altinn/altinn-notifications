@@ -33,10 +33,6 @@ public static class WolverineServiceCollectionExtensions
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-        if (!wolverineSettings.EnableWolverine)
-        {
-            return;
-        }
 
         services
             .AddSingleton(wolverineSettings)
@@ -52,8 +48,8 @@ public static class WolverineServiceCollectionExtensions
             AddSendSmsListener(wolverineSettings, opts);
 
             // Publishers
-            AddSmsSendResultPublisher(services, wolverineSettings, opts);
             AddSmsDeliveryReportPublisher(services, wolverineSettings, opts);
+            AddSmsSendResultPublisher(services, wolverineSettings, opts);
         });
     }
 
@@ -89,16 +85,10 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSmsDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSmsDeliveryReportPublisher)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} cannot be disabled — there is no alternative publisher implementation.");
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured.");
         }
 
         services.AddSingleton<ISmsDeliveryReportPublisher, SmsDeliveryReportPublisher>();
@@ -114,16 +104,10 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSmsSendResultPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSmsSendResultPublisher)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnableSmsSendResultPublisher)} cannot be disabled — there is no alternative publisher implementation.");
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured.");
         }
 
         services.AddSingleton<ISmsSendResultDispatcher, SmsSendResultPublisher>();
