@@ -11,7 +11,6 @@ namespace Altinn.Notifications.Sms.Integrations.Publishers;
 /// <summary>
 /// Azure Service Bus–based implementation of <see cref="ISmsSendResultDispatcher"/> that dispatches
 /// an <see cref="SmsSendResultCommand"/> via Wolverine to publish terminal SMS send operation results.
-/// This implementation is active when <c>WolverineSettings:EnableSmsSendResultPublisher</c> is set to <c>true</c>.
 /// </summary>
 public class SmsSendResultPublisher : ISmsSendResultDispatcher
 {
