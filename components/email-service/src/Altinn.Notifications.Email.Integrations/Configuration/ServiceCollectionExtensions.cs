@@ -39,54 +39,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
 
-        WolverineSettings wolverineSettings = config.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>() ?? new WolverineSettings();
-
-        RegisterEmailSendResultDispatcher(services, wolverineSettings);
-        RegisterEmailStatusCheckDispatcher(services, wolverineSettings);
-        RegisterEmailServiceRateLimitDispatcher(services, wolverineSettings);
-
         return services;
-    }
-
-    /// <summary>
-    /// Registers the appropriate <see cref="IEmailStatusCheckDispatcher"/> implementation
-    /// </summary>
-    private static void RegisterEmailStatusCheckDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
-    {
-        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured.");
-        }
-
-        services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
-    }
-
-    /// <summary>
-    /// Registers the appropriate <see cref="IEmailSendResultDispatcher"/> implementation
-    /// </summary>
-    private static void RegisterEmailSendResultDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
-    {
-        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured.");
-        }
-
-        services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
-    }
-
-    /// <summary>
-    /// Registers the appropriate <see cref="IEmailServiceRateLimitDispatcher"/> implementation
-    /// </summary>
-    private static void RegisterEmailServiceRateLimitDispatcher(IServiceCollection services, WolverineSettings wolverineSettings)
-    {
-        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured.");
-        }
-
-        services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
     }
 }
