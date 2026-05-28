@@ -87,7 +87,7 @@ public static class WolverineServiceCollectionExtensions
     /// <summary>
     /// Configures Wolverine to publish <see cref="SmsDeliveryReportCommand"/> messages
     /// to the Azure Service Bus SMS delivery report queue and registers
-    /// <see cref="AsbSmsDeliveryReportPublisher"/> as the <see cref="ISmsDeliveryReportPublisher"/> implementation.
+    /// <see cref="SmsDeliveryReportPublisher"/> as the <see cref="ISmsDeliveryReportPublisher"/> implementation.
     /// </summary>
     private static void AddSmsDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
@@ -103,7 +103,7 @@ public static class WolverineServiceCollectionExtensions
                 $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} is enabled.");
         }
 
-        services.AddSingleton<ISmsDeliveryReportPublisher, AsbSmsDeliveryReportPublisher>();
+        services.AddSingleton<ISmsDeliveryReportPublisher, SmsDeliveryReportPublisher>();
 
         wolverineOptions.PublishMessage<SmsDeliveryReportCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);

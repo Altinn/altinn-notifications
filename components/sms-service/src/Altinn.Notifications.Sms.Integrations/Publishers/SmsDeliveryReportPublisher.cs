@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Sms.Integrations.Publishers;
 /// <summary>
 /// Publishes SMS delivery report results to the Azure Service Bus queue via Wolverine.
 /// </summary>
-public class AsbSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : ISmsDeliveryReportPublisher
+public class SmsDeliveryReportPublisher(IServiceProvider serviceProvider) : ISmsDeliveryReportPublisher
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
