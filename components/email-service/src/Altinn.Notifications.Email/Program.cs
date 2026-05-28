@@ -44,9 +44,6 @@ appBuilder.Services.AddSwaggerGen(c =>
 
 var app = appBuilder.Build();
 
-EmailDeliveryReportSettings emailDeliveryReportSettings = new();
-app.Configuration.GetSection("EmailDeliveryReportSettings").Bind(emailDeliveryReportSettings);
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
