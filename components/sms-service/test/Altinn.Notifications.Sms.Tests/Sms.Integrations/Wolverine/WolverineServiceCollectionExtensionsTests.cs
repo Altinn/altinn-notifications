@@ -82,6 +82,7 @@ public class WolverineServiceCollectionExtensionsTests
         {
             ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
             ["WolverineSettings:SendSmsListenerCount"] = listenerCount.ToString(),
+            ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
         });
 
         IServiceCollection services = new ServiceCollection();
