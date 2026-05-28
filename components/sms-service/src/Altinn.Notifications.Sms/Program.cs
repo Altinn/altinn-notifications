@@ -125,7 +125,7 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
-    SmsDeliveryReportSettings smsDeliveryReportSettings = configuration!.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>()!;
+    SmsDeliveryReportSettings? smsDeliveryReportSettings = configuration.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>();
 
     if (smsDeliveryReportSettings == null)
     {
