@@ -19,7 +19,9 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddSmsGatewayServices(this IServiceCollection services, IConfiguration config)
     {
-        SmsGatewaySettings smsGatewaySettings = config!.GetSection(nameof(SmsGatewaySettings)).Get<SmsGatewaySettings>()!;
+        ArgumentNullException.ThrowIfNull(config);
+
+        SmsGatewaySettings? smsGatewaySettings = config.GetSection(nameof(SmsGatewaySettings)).Get<SmsGatewaySettings>();
 
         if (smsGatewaySettings == null)
         {

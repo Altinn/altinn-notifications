@@ -3,8 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Altinn.Notifications.Sms.Health;
 
 /// <summary>
-/// Health check service configured in startup
-/// Listen to 
+/// Health check for the SMS service.
 /// </summary>
 public class HealthCheck : IHealthCheck
 {
