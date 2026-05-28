@@ -32,23 +32,33 @@ The tool presents an interactive menu. Select a queue (1–9), then choose an op
 
 The typical operator workflow for `altinn.notifications.sms.send`:
 
-1. **Inspect DLQ** — reads all DLQ messages, cross-references the database, and writes two list files:
-   - `sms-send-dlq-expired.json` — notifications past their `expirytime`
-   - `sms-send-dlq-pending.json` — notifications not yet expired
+1. **Inspect DLQ** — reads all DLQ messages via AMQP, cross-references the database, and writes three list files based on the notification's DB state:
+   - `sms-send-dlq-sending-expired.json` — `result = 'Sending'`, `expirytime <= NOW()`
+   - `sms-send-dlq-sending-pending.json` — `result = 'Sending'`, `expirytime > NOW()`
+   - `sms-send-dlq-other.json` — any other DB result (already terminal, Accepted, etc.)
 
-2. *(Optional)* Open either file in a text editor and remove any rows you do **not** want to act on.
+2. *(Optional)* Open any list file and remove rows you do **not** want to act on yet.
 
-3. **Process expired list** — sets the DB result to `Accepted` for non-terminal notifications, then purges their DLQ messages. The existing expiry-termination cron job (`terminateexpirednotifications`) will subsequently finalise them as `Failed_TTL` and complete the order lifecycle.
+3. **Process sending-expired list** — sets the DB result to `Accepted` for notifications still in `Sending` state, then purges their DLQ messages. The existing expiry-termination cron (`terminateexpirednotifications`) subsequently finalises them as `Failed_TTL` and completes the order lifecycle.
 
-4. **Process pending list** — reconstructs a clean `SendSmsCommand` message for each entry and sends it to the main queue, then purges the DLQ message. Wolverine will retry delivery from scratch.
+4. **Process sending-pending list** — reconstructs a clean `SendSmsCommand` for each entry and sends it back to the main queue (with Wolverine envelope headers preserved), then purges the DLQ message. Wolverine retries delivery from scratch with a fresh delivery count.
 
-5. **Query DB state** — run at any point to check the current `result`, `expirytime`, and `resulttime` for all notifications in either list file.
+5. **Purge other-status list** — purges DLQ messages only. No DB changes are made. Use for messages whose DB result is already terminal or in an unexpected state.
+
+6. **Query DB state** — run at any point to check the current `result`, `expirytime`, and `resulttime` for all notifications in a list file.
 
 ## Output files
 
-| File | Contents |
-|---|---|
-| `sms-send-dlq-expired.json` | DLQ items whose `expirytime` is in the past |
-| `sms-send-dlq-pending.json` | DLQ items whose `expirytime` is in the future |
+| File | DB condition | Intended action |
+|---|---|---|
+| `sms-send-dlq-sending-expired.json` | `result = 'Sending'` AND `expirytime <= NOW()` | Mark DB `Accepted` → expiry cron finalises as `Failed_TTL` |
+| `sms-send-dlq-sending-pending.json` | `result = 'Sending'` AND `expirytime > NOW()` | Resubmit to main queue |
+| `sms-send-dlq-other.json` | anything else | Purge DLQ only |
 
-Both files are gitignored (they may contain phone numbers and message bodies).
+All three files are gitignored (they may contain phone numbers and message bodies).
+
+## Verifying DLQ counts
+
+The tool's DLQ count (shown in the sub-menu header) and the Inspect operation both use a direct AMQP connection, which reflects the real-time queue state.
+
+**Do not rely on the Azure Portal's "Peek from start" to verify results.** After large batch operations the portal's management layer can show stale counts and peek results for several minutes. Use the tool's own count or Grafana for reliable verification.
