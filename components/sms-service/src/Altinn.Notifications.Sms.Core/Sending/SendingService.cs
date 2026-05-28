@@ -26,7 +26,7 @@ public class SendingService : ISendingService
     {
         var result = await _smsClient.SendAsync(sms);
 
-        await ProcessSendResult(sms, result);
+        await ProcessSendResult(sms, result, _smsSendResultDispatcher);
     }
 
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public class SendingService : ISendingService
     {
         var result = await _smsClient.SendAsync(sms, timeToLiveInSeconds);
 
-        await ProcessSendResult(sms, result);
+        await ProcessSendResult(sms, result, _smsSendResultDispatcher);
     }
 
     /// <summary>
@@ -42,7 +42,8 @@ public class SendingService : ISendingService
     /// </summary>
     /// <param name="sms">The SMS message that was attempted to be sent.</param>
     /// <param name="result">The result of the send operation, containing either a gateway reference or an error response.</param>
-    private async Task ProcessSendResult(Sms sms, Result<string, SmsClientErrorResponse> result)
+    /// <param name="dispatcher">The dispatcher used to publish the send result.</param>
+    private static async Task ProcessSendResult(Sms sms, Result<string, SmsClientErrorResponse> result, ISmsSendResultDispatcher dispatcher)
     {
         var operationResult = new SendOperationResult
         {
@@ -55,14 +56,14 @@ public class SendingService : ISendingService
                 operationResult.GatewayReference = gatewayReference;
                 operationResult.SendResult = SmsSendResult.Accepted;
 
-                await _smsSendResultDispatcher.DispatchAsync(operationResult);
+                await dispatcher.DispatchAsync(operationResult);
             },
             async smsSendFailResponse =>
             {
                 operationResult.GatewayReference = string.Empty;
                 operationResult.SendResult = smsSendFailResponse.SendResult;
 
-                await _smsSendResultDispatcher.DispatchAsync(operationResult);
+                await dispatcher.DispatchAsync(operationResult);
             });
     }
 }

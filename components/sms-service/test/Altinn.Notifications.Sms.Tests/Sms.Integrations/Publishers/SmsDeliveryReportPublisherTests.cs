@@ -11,9 +11,9 @@ using Wolverine;
 namespace Altinn.Notifications.Sms.Tests.Sms.Integrations.Publishers;
 
 /// <summary>
-/// Unit tests for <see cref="AsbSmsDeliveryReportPublisher"/>.
+/// Unit tests for <see cref="SmsDeliveryReportPublisher"/>.
 /// </summary>
-public class AsbSmsDeliveryReportPublisherTests
+public class SmsDeliveryReportPublisherTests
 {
     [Fact]
     public async Task PublishAsync_ValidResult_SendsCommandViaMessageBus()
@@ -33,7 +33,7 @@ public class AsbSmsDeliveryReportPublisherTests
             .Returns(ValueTask.CompletedTask);
 
         using var serviceProvider = BuildServiceProvider(messageBusMock);
-        var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
+        var publisher = new SmsDeliveryReportPublisher(serviceProvider);
 
         // Act
         await publisher.PublishAsync(result);
@@ -61,7 +61,7 @@ public class AsbSmsDeliveryReportPublisherTests
         };
 
         using var serviceProvider = BuildServiceProvider(new Mock<IMessageBus>());
-        var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
+        var publisher = new SmsDeliveryReportPublisher(serviceProvider);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(result));
@@ -84,7 +84,7 @@ public class AsbSmsDeliveryReportPublisherTests
             .ThrowsAsync(new InvalidOperationException("Bus unavailable"));
 
         using var serviceProvider = BuildServiceProvider(messageBusMock);
-        var publisher = new AsbSmsDeliveryReportPublisher(serviceProvider);
+        var publisher = new SmsDeliveryReportPublisher(serviceProvider);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(result));
