@@ -87,12 +87,8 @@ function postSmsNotificationOrderRequest(data) {
     );
 
     const success = check(response, {
-        "POST SMS notification order request. Status is 202 Accepted": (r) => {
-            console.error("Response status: ", r.status_text, r.body);
-            return r.status === 202
-        }
+        "POST SMS notification order request. Status is 202 Accepted": (r) => r.status === 202
     });
-
 
     stopIterationOnFail("POST SMS notification order request failed", success);
 
