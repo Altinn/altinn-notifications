@@ -381,11 +381,12 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 ReceiveMode = ServiceBusReceiveMode.PeekLock
             });
 
-        // Receive the current DLQ snapshot.  The 15-second timeout ensures we don't
-        // block indefinitely if the DLQ is smaller than batchSize.
+        // Receive the current DLQ snapshot. ReceiveMessagesAsync returns when it reaches
+        // maxMessages OR when maxWaitTime expires. The 2-minute timeout gives it enough
+        // time to drain large DLQs (hundreds to low thousands of messages) in one call.
         var snapshot = await receiver.ReceiveMessagesAsync(
             maxMessages: batchSize,
-            maxWaitTime: TimeSpan.FromSeconds(15));
+            maxWaitTime: TimeSpan.FromMinutes(2));
 
         int succeeded = 0, failed = 0, index = 0;
         var foundIds = new HashSet<string>(snapshot.Count);
