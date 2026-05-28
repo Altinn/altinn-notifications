@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Sms.Core.Dependencies;
@@ -19,7 +17,6 @@ namespace Altinn.Notifications.Sms.Integrations.Extensions;
 /// <summary>
 /// Extension methods for registering Wolverine with Azure Service Bus in the SMS service.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
