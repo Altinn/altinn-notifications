@@ -1,12 +1,10 @@
-﻿using Altinn.Notifications.Sms.Core.Dependencies;
-using Altinn.Notifications.Sms.Integrations.Consumers;
+using Altinn.Notifications.Sms.Core.Dependencies;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Moq;
 
@@ -31,19 +29,6 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove Kafka consumers — they are hosted services that would try to connect to a broker on startup.
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-                .ToList();
-
-            foreach (var descriptor in consumersToRemove)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Replace the Kafka producer with a no-op mock — keeps ICommonProducer resolvable without a real broker.
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
-
             // Strip all Wolverine services to prevent ASB connection attempts.
             var wolverineServices = services
                 .Where(s =>

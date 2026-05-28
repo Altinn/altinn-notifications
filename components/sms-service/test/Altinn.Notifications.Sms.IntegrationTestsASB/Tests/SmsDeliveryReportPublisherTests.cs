@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 
 /// <summary>
 /// Integration tests for the SMS delivery report ASB publisher.
-/// Verifies that when the ASB publisher is enabled, calling <c>ISmsDeliveryReportPublisher.PublishAsync</c>
+/// Verifies that calling <c>ISmsDeliveryReportPublisher.PublishAsync</c>
 /// sends a correctly shaped <see cref="SmsDeliveryReportCommand"/> to the ASB queue.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
@@ -28,7 +28,7 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
     /// into a flat <see cref="SmsDeliveryReportCommand"/> and sends it to the configured queue.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_WhenEnabled_SendsCommandToQueue()
+    public async Task PublishAsync_SendsCommandToQueue()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations;
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddIntegrationServices_KafkaSettingsMissing_ThrowsArgumentNullException()
+    public void AddSmsGatewayServices_SmsGatewaySettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
         var config = new ConfigurationBuilder()
@@ -18,40 +19,40 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddSmsGatewayServices(config));
 
         // Assert
         Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
-    public void AddIntegrationServices_SmsGatewaySettingsMissing_ThrowsArgumentNullException()
+    public void AddSmsGatewayServices_TimeoutInSecondsZero_ThrowsInvalidOperationException()
     {
         // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
+                ["SmsGatewaySettings:Endpoint"] = "https://xml-test.pswin.com",
+                ["SmsGatewaySettings:TimeoutInSeconds"] = "0",
             })
             .Build();
 
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddSmsGatewayServices(config));
 
         // Assert
-        Assert.Equal("config", exception.ParamName);
+        Assert.Contains(nameof(SmsGatewaySettings.TimeoutInSeconds), exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_ValidConfig_NoException()
+    public void AddSmsGatewayServices_ValidConfig_NoException()
     {
         // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["KafkaSettings:BrokerAddress"] = "localhost:9092",
                 ["SmsGatewaySettings:Endpoint"] = "https://xml-test.pswin.com",
             })
             .Build();
@@ -59,7 +60,7 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Record.Exception(() => services.AddIntegrationServices(config));
+        var exception = Record.Exception(() => services.AddSmsGatewayServices(config));
 
         // Assert
         Assert.Null(exception);

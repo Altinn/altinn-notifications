@@ -1,7 +1,5 @@
 using Altinn.Notifications.Sms.Core.Dependencies;
-using Altinn.Notifications.Sms.Integrations.Consumers;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
-using Altinn.Notifications.Sms.Integrations.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,16 +17,11 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The application service collection.</param>
     /// <param name="config">The application configuration.</param>
     /// <returns>The given service collection.</returns>
-    public static IServiceCollection AddIntegrationServices(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddSmsGatewayServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
+        ArgumentNullException.ThrowIfNull(config);
 
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required Kafka settings are missing from application configuration");
-        }
-
-        SmsGatewaySettings smsGatewaySettings = config!.GetSection(nameof(SmsGatewaySettings)).Get<SmsGatewaySettings>()!;
+        SmsGatewaySettings? smsGatewaySettings = config.GetSection(nameof(SmsGatewaySettings)).Get<SmsGatewaySettings>();
 
         if (smsGatewaySettings == null)
         {
@@ -37,14 +30,10 @@ public static class ServiceCollectionExtensions
 
         if (smsGatewaySettings.TimeoutInSeconds <= 0)
         {
-            throw new InvalidOperationException(
-                $"{nameof(SmsGatewaySettings.TimeoutInSeconds)} must be greater than 0.");
+            throw new InvalidOperationException($"{nameof(SmsGatewaySettings.TimeoutInSeconds)} must be greater than 0.");
         }
 
         services
-            .AddSingleton<ICommonProducer, CommonProducer>()
-            .AddHostedService<SendSmsQueueConsumer>()
-            .AddSingleton(kafkaSettings)
             .AddSingleton<ISmsClient, SmsClient>()
             .AddSingleton(smsGatewaySettings);
 
