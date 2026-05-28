@@ -13,11 +13,14 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
     private readonly NpgsqlDataSource _dataSource = dataSource;
 
     /// <inheritdoc/>
-    public async Task<(string? Result, DateTime? ExpiryTime, DateTime? ResultTime)> GetNotificationStateAsync(
+    public async Task<(string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)> GetNotificationStateAsync(
         Guid notificationId)
     {
         const string sql = """
-            SELECT result, expirytime, resulttime
+            SELECT result,
+                   expirytime,
+                   expirytime IS NOT NULL AND expirytime < NOW() AS isexpired,
+                   resulttime
             FROM notifications.smsnotifications
             WHERE alternateid = @notificationId
             """;
@@ -30,11 +33,12 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
         {
             var result     = await reader.IsDBNullAsync(0) ? null : await reader.GetFieldValueAsync<string>(0);
             var expiryTime = await reader.IsDBNullAsync(1) ? (DateTime?)null : DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(1), DateTimeKind.Utc);
-            var resultTime = await reader.IsDBNullAsync(2) ? (DateTime?)null : DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(2), DateTimeKind.Utc);
-            return (result, expiryTime, resultTime);
+            var isExpired  = await reader.GetFieldValueAsync<bool>(2);
+            var resultTime = await reader.IsDBNullAsync(3) ? (DateTime?)null : DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(3), DateTimeKind.Utc);
+            return (result, expiryTime, isExpired, resultTime);
         }
 
-        return (null, null, null);
+        return (null, null, false, null);
     }
 
     /// <inheritdoc/>

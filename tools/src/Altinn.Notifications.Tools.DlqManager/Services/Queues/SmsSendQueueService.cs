@@ -9,11 +9,12 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Tools.DlqManager.Services.Queues;
 
 /// <summary>
-/// Implements the four DLQ operations for <c>altinn.notifications.sms.send</c>:
+/// Implements the DLQ operations for <c>altinn.notifications.sms.send</c>:
 /// <list type="number">
-///   <item>Inspect — peek all DLQ messages, classify by expiry, write list files.</item>
-///   <item>Process expired — update DB to <c>Accepted</c>, purge DLQ messages.</item>
-///   <item>Process pending — resubmit to main queue, purge DLQ messages.</item>
+///   <item>Inspect — peek all DLQ messages, classify into three list files.</item>
+///   <item>Process sending-expired — mark DB <c>Accepted</c> + purge DLQ messages.</item>
+///   <item>Process sending-pending — resubmit to main queue + purge DLQ messages.</item>
+///   <item>Purge other-status — purge DLQ messages only, no DB change or re-queue.</item>
 ///   <item>Query DB state — print current database state for a list file.</item>
 /// </list>
 /// </summary>
@@ -26,21 +27,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
 
     private static readonly JsonSerializerOptions _writeOptions = new() { WriteIndented = true };
 
-    // Terminal result values — must stay in sync with SmsNotificationResultType enum.
-    private static readonly HashSet<string> _terminalResults =
-    [
-        "Delivered",
-        "Failed",
-        "Failed_InvalidRecipient",
-        "Failed_RecipientReserved",
-        "Failed_BarredReceiver",
-        "Failed_Deleted",
-        "Failed_Expired",
-        "Failed_Undelivered",
-        "Failed_RecipientNotIdentified",
-        "Failed_Rejected",
-        "Failed_TTL"
-    ];
+    private const string NotFound = "NOT FOUND";
 
     public SmsSendQueueService(
         IOptions<AsbSettings> asbSettings,
@@ -67,25 +54,27 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             Console.WriteLine($"Queue    : {_asbSettings.SmsSendQueueName}");
             Console.WriteLine($"DLQ count: {dlqCountDisplay}");
             Console.WriteLine();
-            Console.WriteLine("  1. Inspect DLQ — list all messages and save to files");
-            Console.WriteLine("  2. Process expired list — mark DB status 'Accepted' + purge DLQ messages");
-            Console.WriteLine("  3. Process pending list — resubmit to main queue + purge DLQ messages");
-            Console.WriteLine("  4. Query DB state for a list file");
+            Console.WriteLine("  1. Inspect DLQ — classify all messages and save to list files");
+            Console.WriteLine("  2. Process sending-expired list — mark DB 'Accepted' + purge DLQ messages");
+            Console.WriteLine("  3. Process sending-pending list — resubmit to main queue + purge DLQ messages");
+            Console.WriteLine("  4. Purge other-status list — purge DLQ messages only (no DB change)");
+            Console.WriteLine("  5. Query DB state for a list file");
             Console.WriteLine("  0. Back");
             Console.WriteLine();
-            Console.Write("Enter choice (0-4): ");
+            Console.Write("Enter choice (0-5): ");
 
             var choice = Console.ReadLine()?.Trim();
 
             switch (choice)
             {
-                case "1": await InspectDlqAsync();          break;
-                case "2": await ProcessExpiredListAsync();   break;
-                case "3": await ProcessPendingListAsync();   break;
-                case "4": await QueryDbStateAsync();         break;
+                case "1": await InspectDlqAsync();                break;
+                case "2": await ProcessSendingExpiredListAsync(); break;
+                case "3": await ProcessSendingPendingListAsync(); break;
+                case "4": await PurgeOtherStatusListAsync();      break;
+                case "5": await QueryDbStateAsync();              break;
                 case "0": return;
                 default:
-                    Console.WriteLine("Invalid choice. Please enter 0-4.");
+                    Console.WriteLine("Invalid choice. Please enter 0-5.");
                     break;
             }
         }
@@ -122,12 +111,9 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         Console.WriteLine($"Found {allMessages.Count} message(s).");
         Console.WriteLine();
 
-        if (allMessages.Count == 0)
-            return;
-
-        var expired = new List<DlqSmsItem>();
-        var pending = new List<DlqSmsItem>();
-        var now = DateTime.UtcNow;
+        var sendingExpired = new List<DlqSmsItem>();
+        var sendingPending = new List<DlqSmsItem>();
+        var other          = new List<DlqSmsItem>();
 
         PrintTableHeader();
 
@@ -140,54 +126,64 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 continue;
             }
 
-            var (result, expiryTime, _) = await _repository.GetNotificationStateAsync(cmd.NotificationId);
+            var (result, expiryTime, isExpired, _) = await _repository.GetNotificationStateAsync(cmd.NotificationId);
 
-            bool isExpired = expiryTime.HasValue && expiryTime.Value < now;
-            string statusLabel = isExpired ? "EXPIRED" : "PENDING";
+            bool isSending = result == "Sending";
+
+            string statusLabel = (isSending, isExpired) switch
+            {
+                (true,  true)  => "SENDING/EXPIRED",
+                (true,  false) => "SENDING/PENDING",
+                _              => $"OTHER ({result ?? NotFound})"
+            };
 
             Console.WriteLine(
-                $"  {cmd.NotificationId,-38} {result ?? "NOT FOUND",-28} " +
+                $"  {cmd.NotificationId,-38} {result ?? NotFound,-28} " +
                 $"{FormatUtc(expiryTime),-22} {statusLabel}");
 
             var item = new DlqSmsItem
             {
-                NotificationId             = cmd.NotificationId,
-                MobileNumber               = cmd.MobileNumber,
-                Body                       = cmd.Body,
-                SenderNumber               = cmd.SenderNumber,
-                CurrentDbResult            = result,
-                ExpiryTime                 = expiryTime,
-                DlqMessageId               = msg.MessageId,
-                DlqEnqueuedTime            = msg.EnqueuedTime.UtcDateTime,
-                DlqDeadLetterReason        = msg.DeadLetterReason,
+                NotificationId                = cmd.NotificationId,
+                MobileNumber                  = cmd.MobileNumber,
+                Body                          = cmd.Body,
+                SenderNumber                  = cmd.SenderNumber,
+                CurrentDbResult               = result,
+                ExpiryTime                    = expiryTime,
+                DlqMessageId                  = msg.MessageId,
+                DlqEnqueuedTime               = msg.EnqueuedTime.UtcDateTime,
+                DlqDeadLetterReason           = msg.DeadLetterReason,
                 DlqDeadLetterErrorDescription = msg.DeadLetterErrorDescription
             };
 
-            if (isExpired) expired.Add(item);
-            else           pending.Add(item);
+            if (isSending && isExpired)  sendingExpired.Add(item);
+            else if (isSending)          sendingPending.Add(item);
+            else                         other.Add(item);
         }
 
         Console.WriteLine();
-        Console.WriteLine($"Expired : {expired.Count}");
-        Console.WriteLine($"Pending : {pending.Count}");
+        Console.WriteLine($"Sending/expired : {sendingExpired.Count}");
+        Console.WriteLine($"Sending/pending : {sendingPending.Count}");
+        Console.WriteLine($"Other status    : {other.Count}");
 
-        await WriteListFileAsync(_queueSettings.ExpiredListFilePath, expired);
-        await WriteListFileAsync(_queueSettings.PendingListFilePath, pending);
+        await WriteListFileAsync(_queueSettings.SendingExpiredListFilePath, sendingExpired);
+        await WriteListFileAsync(_queueSettings.SendingPendingListFilePath, sendingPending);
+        await WriteListFileAsync(_queueSettings.OtherStatusListFilePath,    other);
 
         Console.WriteLine();
-        Console.WriteLine($"Saved: {_queueSettings.ExpiredListFilePath} ({expired.Count} item(s))");
-        Console.WriteLine($"Saved: {_queueSettings.PendingListFilePath} ({pending.Count} item(s))");
+        Console.WriteLine($"Saved: {_queueSettings.SendingExpiredListFilePath} ({sendingExpired.Count} item(s))");
+        Console.WriteLine($"Saved: {_queueSettings.SendingPendingListFilePath} ({sendingPending.Count} item(s))");
+        Console.WriteLine($"Saved: {_queueSettings.OtherStatusListFilePath} ({other.Count} item(s))");
     }
 
-    // ── Operation 2: Process expired ──────────────────────────────────────────
+    // ── Operation 2: Process sending-expired ──────────────────────────────────
 
-    private async Task ProcessExpiredListAsync()
+    private async Task ProcessSendingExpiredListAsync()
     {
-        var items = await ReadListFileAsync(_queueSettings.ExpiredListFilePath);
+        var items = await ReadListFileAsync(_queueSettings.SendingExpiredListFilePath);
         if (items.Count == 0) return;
 
         Console.WriteLine();
-        Console.WriteLine($"Processing expired list ({_queueSettings.ExpiredListFilePath})...");
+        Console.WriteLine($"Processing sending-expired list ({_queueSettings.SendingExpiredListFilePath})...");
         Console.WriteLine($"{items.Count} item(s) to process.");
         Console.WriteLine();
 
@@ -195,12 +191,12 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             items,
             async (msg, item, rcv) =>
             {
-                var (currentResult, _, _) = await _repository.GetNotificationStateAsync(item.NotificationId);
+                var (currentResult, _, _, _) = await _repository.GetNotificationStateAsync(item.NotificationId);
 
-                if (_terminalResults.Contains(currentResult ?? string.Empty))
+                if (currentResult != "Sending")
                 {
                     await rcv.CompleteMessageAsync(msg);
-                    return (true, $"Already terminal ({currentResult}). DLQ message purged.");
+                    return (true, $"DB result is '{currentResult ?? NotFound}' (not Sending) — DLQ message purged without DB change.");
                 }
 
                 int rows = await _repository.UpdateResultToAcceptedAsync(item.NotificationId);
@@ -211,19 +207,19 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 }
 
                 await rcv.AbandonMessageAsync(msg);
-                return (false, "DB update returned 0 rows. DLQ message NOT purged.");
+                return (false, "DB update returned 0 rows (expirytime may not be in the past yet). DLQ message NOT purged.");
             });
     }
 
-    // ── Operation 3: Process pending ──────────────────────────────────────────
+    // ── Operation 3: Process sending-pending ──────────────────────────────────
 
-    private async Task ProcessPendingListAsync()
+    private async Task ProcessSendingPendingListAsync()
     {
-        var items = await ReadListFileAsync(_queueSettings.PendingListFilePath);
+        var items = await ReadListFileAsync(_queueSettings.SendingPendingListFilePath);
         if (items.Count == 0) return;
 
         Console.WriteLine();
-        Console.WriteLine($"Processing pending list ({_queueSettings.PendingListFilePath})...");
+        Console.WriteLine($"Processing sending-pending list ({_queueSettings.SendingPendingListFilePath})...");
         Console.WriteLine($"{items.Count} item(s) to process.");
         Console.WriteLine();
 
@@ -233,9 +229,6 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             items,
             async (msg, item, rcv) =>
             {
-                // Reconstruct a clean message from stored command fields.
-                // Avoids carrying Wolverine-internal application properties that
-                // would interfere with handler routing or retry policy logic.
                 var command = new SendSmsCommand
                 {
                     NotificationId = item.NotificationId,
@@ -279,21 +272,58 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             });
     }
 
-    // ── Operation 4: Query DB state ───────────────────────────────────────────
+    // ── Operation 4: Purge other-status ───────────────────────────────────────
+
+    private async Task PurgeOtherStatusListAsync()
+    {
+        var items = await ReadListFileAsync(_queueSettings.OtherStatusListFilePath);
+        if (items.Count == 0) return;
+
+        Console.WriteLine();
+        Console.WriteLine($"Purging other-status list ({_queueSettings.OtherStatusListFilePath})...");
+        Console.WriteLine($"{items.Count} item(s) to purge.");
+        Console.WriteLine();
+        Console.WriteLine(
+            "  These messages have a DB status other than 'Sending'. No DB changes will be made.");
+        Console.WriteLine(
+            "  Edit the list file first to remove any items you do not want purged yet.");
+        Console.WriteLine();
+        Console.Write("  Proceed? (y/N): ");
+
+        if (!string.Equals(Console.ReadLine()?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Aborted.");
+            return;
+        }
+
+        Console.WriteLine();
+
+        await ProcessDlqItemsAsync(
+            items,
+            async (msg, item, rcv) =>
+            {
+                await rcv.CompleteMessageAsync(msg);
+                return (true, $"DLQ message purged (DB result: {item.CurrentDbResult ?? NotFound}).");
+            });
+    }
+
+    // ── Operation 5: Query DB state ───────────────────────────────────────────
 
     private async Task QueryDbStateAsync()
     {
         Console.WriteLine();
         Console.WriteLine("Query DB state — which list file?");
-        Console.WriteLine($"  1. Expired list ({_queueSettings.ExpiredListFilePath})");
-        Console.WriteLine($"  2. Pending list ({_queueSettings.PendingListFilePath})");
+        Console.WriteLine($"  1. Sending-expired ({_queueSettings.SendingExpiredListFilePath})");
+        Console.WriteLine($"  2. Sending-pending ({_queueSettings.SendingPendingListFilePath})");
+        Console.WriteLine($"  3. Other status    ({_queueSettings.OtherStatusListFilePath})");
         Console.WriteLine();
-        Console.Write("Enter choice (1-2): ");
+        Console.Write("Enter choice (1-3): ");
 
         string filePath = Console.ReadLine()?.Trim() switch
         {
-            "1" => _queueSettings.ExpiredListFilePath,
-            "2" => _queueSettings.PendingListFilePath,
+            "1" => _queueSettings.SendingExpiredListFilePath,
+            "2" => _queueSettings.SendingPendingListFilePath,
+            "3" => _queueSettings.OtherStatusListFilePath,
             _   => string.Empty
         };
 
@@ -321,10 +351,10 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         for (int i = 0; i < items.Count; i++)
         {
             var item = items[i];
-            var (result, expiryTime, resultTime) = states[i];
+            var (result, expiryTime, _, resultTime) = states[i];
 
             Console.WriteLine(
-                $"  {item.NotificationId,-38} {result ?? "NOT FOUND",-28} " +
+                $"  {item.NotificationId,-38} {result ?? NotFound,-28} " +
                 $"{FormatUtc(expiryTime),-22} {FormatUtc(resultTime)}");
         }
     }
@@ -341,7 +371,6 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     {
         var targetByMessageId = items.ToDictionary(i => i.DlqMessageId);
 
-        // Size the receive batch generously to capture all current DLQ messages.
         int batchSize = GetDlqBatchSize(items.Count);
 
         await using var receiver = _sbClient.CreateReceiver(
@@ -408,10 +437,8 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the DLQ message count via AMQP peek.
-    /// Works on both the local ASB emulator and real Azure Service Bus without
-    /// needing the REST management endpoint (which requires port 80 and is
-    /// unavailable on the emulator, causing multi-second retry delays).
+    /// Counts DLQ messages via AMQP peek — works on both the local ASB emulator and
+    /// real Azure Service Bus without needing the REST management endpoint.
     /// Returns <c>-1</c> if the peek fails.
     /// </summary>
     private Task<long> GetDlqCountAsync() => PeekCountDlqAsync();
