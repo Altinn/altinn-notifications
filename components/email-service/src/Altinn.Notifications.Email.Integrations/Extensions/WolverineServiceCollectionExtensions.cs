@@ -31,10 +31,6 @@ public static class WolverineServiceCollectionExtensions
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-        if (!wolverineSettings.EnableWolverine)
-        {
-            return;
-        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 

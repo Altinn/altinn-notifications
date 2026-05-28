@@ -58,7 +58,6 @@ public class ServiceCollectionExtensionsTests
             {
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = queueName,
             })
@@ -85,7 +84,6 @@ public class ServiceCollectionExtensionsTests
             {
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EmailSendResultQueueName"] = queueName,
             })
             .Build();
@@ -111,7 +109,6 @@ public class ServiceCollectionExtensionsTests
             {
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
                 ["WolverineSettings:EmailServiceRateLimitQueueName"] = queueName,
@@ -138,7 +135,6 @@ public class ServiceCollectionExtensionsTests
             {
                 ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
                 ["EmailServiceAdminSettings:IntermittentErrorDelay"] = "60",    
-                ["WolverineSettings:EnableWolverine"] = "true",
                 ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
                 ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
                 ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit",
