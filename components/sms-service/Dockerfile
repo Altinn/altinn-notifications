@@ -21,7 +21,7 @@ RUN dotnet publish -c Release -o out \
 
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.8-alpine3.23@sha256:1e37a8236c558ae31bd6bc8144e38e6036b73cf1b0616fe56d79e60babb9d93b AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.8-alpine3.23@sha256:1b3a34768687d583ebdf16ca8dd9a21ec93de9cdf81bb424e3c1a706e2a453d7 AS final
 EXPOSE 5092
 WORKDIR /app
 COPY --from=build /app/out ./
