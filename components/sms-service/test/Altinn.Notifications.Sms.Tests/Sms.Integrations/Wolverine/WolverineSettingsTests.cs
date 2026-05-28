@@ -15,7 +15,6 @@ public class WolverineSettingsTests
 
         Assert.Equal(10, settings.SendSmsListenerCount);
         Assert.NotNull(settings.SendSmsQueuePolicy);
-        Assert.True(settings.EnableSendSmsListener);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
 
         Assert.Equal(string.Empty, settings.SmsDeliveryReportQueueName);
@@ -30,7 +29,6 @@ public class WolverineSettingsTests
             {
                 ["WolverineSettings:SendSmsListenerCount"] = "5",
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
-                ["WolverineSettings:EnableSendSmsListener"] = "true",
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:SendSmsQueuePolicy:ScheduleDelaysMs:0"] = "60000",
@@ -46,7 +44,6 @@ public class WolverineSettingsTests
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
 
         Assert.Equal(5, settings.SendSmsListenerCount);
-        Assert.True(settings.EnableSendSmsListener);
         Assert.Equal("altinn.notifications.sms.send", settings.SendSmsQueueName);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.SendSmsQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.SendSmsQueuePolicy.GetCooldownDelays());

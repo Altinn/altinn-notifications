@@ -171,7 +171,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 
     services.AddCoreServices();
-    services.AddIntegrationServices(configuration);
+    services.AddSmsGatewayServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
     services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);

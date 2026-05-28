@@ -12,20 +12,9 @@ namespace Altinn.Notifications.Sms.Integrations.Publishers;
 /// Azure Service Bus–based implementation of <see cref="ISmsSendResultDispatcher"/> that dispatches
 /// an <see cref="SmsSendResultCommand"/> via Wolverine to publish terminal SMS send operation results.
 /// </summary>
-public class SmsSendResultPublisher : ISmsSendResultDispatcher
+public class SmsSendResultPublisher(IServiceProvider serviceProvider) : ISmsSendResultDispatcher
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SmsSendResultPublisher"/> class.
-    /// </summary>
-    /// <param name="serviceProvider">
-    /// The service provider used to resolve a scoped <see cref="IMessageBus"/> instance for each dispatch.
-    /// </param>
-    public SmsSendResultPublisher(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
 
     /// <inheritdoc/>
     public async Task DispatchAsync(SendOperationResult result)
@@ -50,7 +39,7 @@ public class SmsSendResultPublisher : ISmsSendResultDispatcher
         var command = new SmsSendResultCommand
         {
             NotificationId = result.NotificationId.Value,
-            
+
             // SendResult.ToString() is the wire format; SmsNotificationResultType on the API side
             // must have matching member names — any divergence will be treated as an unrecognized result.
             SendResult = result.SendResult.Value.ToString(),

@@ -21,7 +21,7 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Publisher queues are mandatory. Listener queues are individually enabled via their own flags.
+    /// The send-SMS listener and publisher queues are all mandatory.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
@@ -41,7 +41,7 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllListeners(x => x.ProcessInline());
             opts.Policies.AllSenders(x => x.SendInline());
 
-            // Listeners
+            // Listener
             AddSendSmsListener(wolverineSettings, opts);
 
             // Publishers
@@ -50,23 +50,20 @@ public static class WolverineServiceCollectionExtensions
         });
     }
 
+    /// <summary>
+    /// Configures Wolverine to listen to the Azure Service Bus SMS send queue
+    /// and applies the <see cref="SendSmsCommandHandlerPolicy"/> retry/error-handling policy.
+    /// </summary>
     private static void AddSendSmsListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSendSmsListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.SendSmsListenerCount <= 0)
         {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SendSmsListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SendSmsListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
         {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsListener)} is enabled.");
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SendSmsQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
@@ -84,8 +81,7 @@ public static class WolverineServiceCollectionExtensions
     {
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured.");
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured.");
         }
 
         services.AddSingleton<ISmsDeliveryReportPublisher, SmsDeliveryReportPublisher>();
@@ -103,8 +99,7 @@ public static class WolverineServiceCollectionExtensions
     {
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
         {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured.");
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured.");
         }
 
         services.AddSingleton<ISmsSendResultDispatcher, SmsSendResultPublisher>();

@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 
 /// <summary>
 /// Integration tests for the SMS send-result ASB publisher.
-/// Verifies that when the ASB publisher is enabled, calling <c>ISmsSendResultDispatcher.DispatchAsync</c>
+/// Verifies that calling <c>ISmsSendResultDispatcher.DispatchAsync</c>
 /// sends a correctly shaped <see cref="SmsSendResultCommand"/> to the ASB queue.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
@@ -27,7 +27,7 @@ public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixtur
     private readonly IntegrationTestContainersFixture _fixture = fixture;
 
     [Fact]
-    public async Task DispatchAsync_WhenEnabled_SendsCommandToQueue()
+    public async Task DispatchAsync_SendsCommandToQueue()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 

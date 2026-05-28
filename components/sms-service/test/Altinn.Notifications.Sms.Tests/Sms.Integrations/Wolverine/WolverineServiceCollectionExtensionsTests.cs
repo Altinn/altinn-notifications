@@ -33,7 +33,6 @@ public class WolverineServiceCollectionExtensionsTests
         var config = BuildConfig(new Dictionary<string, string?>
         {
             ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
-            ["WolverineSettings:EnableSendSmsListener"] = "true",
             ["WolverineSettings:SendSmsListenerCount"] = "1",
             ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
             ["WolverineSettings:SmsDeliveryReportQueueName"] = queueName,
@@ -58,7 +57,6 @@ public class WolverineServiceCollectionExtensionsTests
         var config = BuildConfig(new Dictionary<string, string?>
         {
             ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
-            ["WolverineSettings:EnableSendSmsListener"] = "true",
             ["WolverineSettings:SendSmsListenerCount"] = "1",
             ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
             ["WolverineSettings:SmsDeliveryReportQueueName"] = "altinn.notifications.sms.deliveryreports",
@@ -83,7 +81,6 @@ public class WolverineServiceCollectionExtensionsTests
         var config = BuildConfig(new Dictionary<string, string?>
         {
             ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
-            ["WolverineSettings:EnableSendSmsListener"] = "true",
             ["WolverineSettings:SendSmsListenerCount"] = listenerCount.ToString(),
         });
 
@@ -106,7 +103,6 @@ public class WolverineServiceCollectionExtensionsTests
         var config = BuildConfig(new Dictionary<string, string?>
         {
             ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
-            ["WolverineSettings:EnableSendSmsListener"] = "true",
             ["WolverineSettings:SendSmsListenerCount"] = "1",
             ["WolverineSettings:SendSmsQueueName"] = queueName,
         });
@@ -118,26 +114,5 @@ public class WolverineServiceCollectionExtensionsTests
 
         // Assert
         Assert.Contains(nameof(WolverineSettings.SendSmsQueueName), exception.Message);
-    }
-
-    [Fact]
-    public void AddWolverineServices_SendSmsListenerDisabled_NoException()
-    {
-        // Arrange
-        var config = BuildConfig(new Dictionary<string, string?>
-        {
-            ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
-            ["WolverineSettings:EnableSendSmsListener"] = "false",
-            ["WolverineSettings:SmsDeliveryReportQueueName"] = "altinn.notifications.sms.deliveryreports",
-            ["WolverineSettings:SmsSendResultQueueName"] = "altinn.notifications.sms.send.result",
-        });
-
-        IServiceCollection services = new ServiceCollection();
-
-        // Act
-        var exception = Record.Exception(() => services.AddWolverineServices(config, CreateHostEnvironment()));
-
-        // Assert
-        Assert.Null(exception);
     }
 }
