@@ -118,7 +118,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     protected abstract Dictionary<string, string?> GetFixtureConfigOverrides();
 
     /// <summary>
-    /// Configures component-specific services: removes Kafka consumers, replaces producers, etc.
+    /// Configures component-specific services: replaces or removes services as needed for test isolation.
     /// </summary>
     protected abstract void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services);
 
@@ -206,7 +206,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
 
     /// <summary>
     /// Removes all registered services whose implementation type is assignable to <paramref name="baseType"/>.
-    /// Use this to strip component-specific consumers (e.g. Kafka) before tests run.
+    /// Use this to strip component-specific background services before tests run.
     /// </summary>
     protected static void RemoveServicesAssignableTo(IServiceCollection services, Type baseType)
     {

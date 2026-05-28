@@ -10,7 +10,6 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Handles terminal email send operation results received from the Azure Service Bus queue.
-/// Published by the email service polling loop when <c>EnableEmailSendResultPublisher</c> is enabled.
 /// </summary>
 public static class EmailSendResultHandler
 {

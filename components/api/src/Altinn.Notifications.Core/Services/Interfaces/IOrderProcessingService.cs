@@ -18,7 +18,7 @@ public interface IOrderProcessingService
     /// <remarks>
     /// <para>
     /// This method retrieves orders that are due for processing, updates their status to 'Processing',
-    /// and publishes them to a configured Kafka topic for asynchronous handling.
+    /// and publishes them to an Azure Service Bus queue for asynchronous handling.
     /// </para>
     /// <para>
     /// The method continues fetching batches of orders until either fewer than 50 orders are returned

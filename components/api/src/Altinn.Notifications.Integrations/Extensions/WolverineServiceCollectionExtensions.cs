@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
@@ -26,7 +27,6 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Publisher queues are mandatory. Listener queues are individually enabled via their own flags.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
@@ -39,6 +39,7 @@ public static class WolverineServiceCollectionExtensions
 
         services
             .AddSingleton(wolverineSettings)
+            .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
@@ -70,21 +71,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddEmailSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailSendResultListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.EmailSendResultListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailSendResultListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendResultListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendResultQueueName)
@@ -100,21 +96,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSmsSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSmsSendResultListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.SmsSendResultListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsSendResultListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsSendResultListener)} is enabled.");
+                $"{nameof(WolverineSettings.SmsSendResultListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultListener)} is enabled.");
+                $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName)
@@ -129,21 +120,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddEmailDeliveryReportListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailDeliveryReportListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.EmailDeliveryReportListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailDeliveryReportListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailDeliveryReportListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailDeliveryReportQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName)
@@ -158,21 +144,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSmsDeliveryReportListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSmsDeliveryReportListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.SmsDeliveryReportListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsDeliveryReportListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
+                $"{nameof(WolverineSettings.SmsDeliveryReportListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportListener)} is enabled.");
+                $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName)
@@ -187,21 +168,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddEmailServiceRateLimitListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailServiceRateLimitListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.EmailServiceRateLimitListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailServiceRateLimitListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnableEmailServiceRateLimitListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailServiceRateLimitListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailServiceRateLimitListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName)
@@ -217,16 +193,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSendEmailPublisher)
+        if (wolverineSettings.EmailPublishConcurrency <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnableSendEmailPublisher)} cannot be disabled — there is no alternative publisher implementation.");
+                $"{nameof(WolverineSettings.EmailPublishConcurrency)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured.");
         }
 
         wolverineOptions.PublishMessage<SendEmailCommand>()
@@ -242,16 +218,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSendSmsPublisher)
+        if (wolverineSettings.SmsPublishConcurrency <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnableSendSmsPublisher)} cannot be disabled — there is no alternative publisher implementation.");
+                $"{nameof(WolverineSettings.SmsPublishConcurrency)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured when {nameof(WolverineSettings.EnableSendSmsPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured.");
         }
 
         services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
@@ -267,21 +243,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddPastDueOrderListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnablePastDueOrderListener)
-        {
-            return;
-        }
-
         if (wolverineSettings.PastDueOrdersListenerCount <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.PastDueOrdersListenerCount)} must be greater than 0 when {nameof(WolverineSettings.EnablePastDueOrderListener)} is enabled.");
+                $"{nameof(WolverineSettings.PastDueOrdersListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderListener)} is enabled.");
+                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.PastDueOrdersQueueName)
@@ -297,16 +268,16 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddPastDueOrderPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnablePastDueOrderPublisher)
+        if (wolverineSettings.PastDueOrdersPublishConcurrency <= 0)
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EnablePastDueOrderPublisher)} cannot be disabled — there is no alternative publisher implementation.");
+                $"{nameof(WolverineSettings.PastDueOrdersPublishConcurrency)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.PastDueOrdersQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured when {nameof(WolverineSettings.EnablePastDueOrderPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.PastDueOrdersQueueName)} must be configured.");
         }
 
         services.AddSingleton<IPastDueOrderPublisher, PastDueOrderPublisher>();

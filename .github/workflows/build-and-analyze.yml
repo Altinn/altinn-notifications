@@ -194,27 +194,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      kafka:
-        image: confluentinc/cp-kafka:8.2.1@sha256:68cf7eb0d994f9c94206a0cca751abbb491ab1f308d4580debbfcdc5b45ee4fc
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_NODE_ID: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-        options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
@@ -444,28 +423,6 @@ jobs:
     permissions:
       contents: read
       checks: write
-    services:
-      kafka:
-        image: confluentinc/cp-kafka:8.2.1@sha256:68cf7eb0d994f9c94206a0cca751abbb491ab1f308d4580debbfcdc5b45ee4fc
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_NODE_ID: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-        options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET

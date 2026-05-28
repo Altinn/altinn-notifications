@@ -1,14 +1,10 @@
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
 
 using Npgsql;
 
@@ -59,10 +55,6 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             dataSourceBuilder.EnableDynamicJson();
             return dataSourceBuilder.Build();
         }));
-
-        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
     }
 
     /// <inheritdoc/>
@@ -102,7 +94,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             Console.WriteLine($"[Factory] Database cleanup failed (non-fatal): {ex.Message}");
         }
     }
-        
+
     private static string FindMigrationPath()
     {
         string? currentDir = AppContext.BaseDirectory;

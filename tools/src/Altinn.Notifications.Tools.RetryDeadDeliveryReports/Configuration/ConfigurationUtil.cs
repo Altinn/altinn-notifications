@@ -1,5 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 using Npgsql;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Notifications.Tools.RetryDeadDeliveryReports.Configuration;
 
@@ -21,7 +21,6 @@ internal static class ConfigurationUtil
     {
         ConfigureAppSettings(builder);
         ConfigureDatabase(builder);
-        ConfigureKafka(builder);
         ConfigureEventGrid(builder);
         ConfigureProcessingSettings(builder);
         RegisterRepositoriesAndServices(builder);
@@ -58,16 +57,6 @@ internal static class ConfigurationUtil
         {
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(credentials);
             return dataSourceBuilder.Build();
-        });
-    }
-
-    internal static void ConfigureKafka(HostApplicationBuilder builder)
-    {
-        builder.Services.AddSingleton(sp =>
-        {
-            var kafkaSettings = new KafkaSettings();
-            builder.Configuration.GetSection("KafkaSettings").Bind(kafkaSettings);
-            return kafkaSettings;
         });
     }
 
