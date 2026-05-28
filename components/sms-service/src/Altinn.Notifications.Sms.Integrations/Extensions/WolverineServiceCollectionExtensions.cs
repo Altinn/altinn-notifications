@@ -2,12 +2,15 @@ using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Publishers;
 using Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -23,15 +26,12 @@ public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Each listener/publisher queue is individually enabled via its own flag.
+    /// Publisher queues are mandatory. Listener queues are individually enabled via their own flags.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
     /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
-    public static void AddWolverineServices(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        IHostEnvironment hostEnvironment)
+    public static void AddWolverineServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment hostEnvironment)
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
@@ -40,7 +40,9 @@ public static class WolverineServiceCollectionExtensions
             return;
         }
 
-        services.Configure<WolverineSettings>(wolverineSection);
+        services
+            .AddSingleton(wolverineSettings)
+            .Configure<WolverineSettings>(wolverineSection);
 
         services.AddWolverine(opts =>
         {
@@ -52,8 +54,8 @@ public static class WolverineServiceCollectionExtensions
             AddSendSmsListener(wolverineSettings, opts);
 
             // Publishers
-            AddSmsDeliveryReportPublisher(wolverineSettings, opts);
-            AddSmsSendResultPublisher(wolverineSettings, opts);
+            AddSmsSendResultPublisher(services, wolverineSettings, opts);
+            AddSmsDeliveryReportPublisher(services, wolverineSettings, opts);
         });
     }
 
@@ -83,14 +85,16 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="SmsDeliveryReportCommand"/>,
-    /// routing outbound commands to the Azure Service Bus SMS delivery report queue.
+    /// Configures Wolverine to publish <see cref="SmsDeliveryReportCommand"/> messages
+    /// to the Azure Service Bus SMS delivery report queue and registers
+    /// <see cref="AsbSmsDeliveryReportPublisher"/> as the <see cref="ISmsDeliveryReportPublisher"/> implementation.
     /// </summary>
-    private static void AddSmsDeliveryReportPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSmsDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSmsDeliveryReportPublisher)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} cannot be disabled — there is no alternative publisher implementation.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
@@ -99,20 +103,23 @@ public static class WolverineServiceCollectionExtensions
                 $"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsDeliveryReportPublisher)} is enabled.");
         }
 
+        services.AddSingleton<ISmsDeliveryReportPublisher, AsbSmsDeliveryReportPublisher>();
+
         wolverineOptions.PublishMessage<SmsDeliveryReportCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);
     }
 
     /// <summary>
-    /// Registers Wolverine publishing rules for <see cref="SmsSendResultCommand"/>,
-    /// routing outbound commands to the Azure Service Bus SMS send result queue consumed by the API.
-    /// Only active when <see cref="WolverineSettings.EnableSmsSendResultPublisher"/> is <c>true</c>.
+    /// Configures Wolverine to publish <see cref="SmsSendResultCommand"/> messages
+    /// to the Azure Service Bus SMS send result queue and registers
+    /// <see cref="SmsSendResultPublisher"/> as the <see cref="ISmsSendResultDispatcher"/> implementation.
     /// </summary>
-    private static void AddSmsSendResultPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddSmsSendResultPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (!wolverineSettings.EnableSmsSendResultPublisher)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EnableSmsSendResultPublisher)} cannot be disabled — there is no alternative publisher implementation.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
@@ -120,6 +127,8 @@ public static class WolverineServiceCollectionExtensions
             throw new InvalidOperationException(
                 $"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableSmsSendResultPublisher)} is enabled.");
         }
+
+        services.AddSingleton<ISmsSendResultDispatcher, SmsSendResultPublisher>();
 
         wolverineOptions.PublishMessage<SmsSendResultCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName);

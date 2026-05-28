@@ -167,7 +167,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 
-    services.AddCoreServices(configuration);
+    services.AddCoreServices();
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
