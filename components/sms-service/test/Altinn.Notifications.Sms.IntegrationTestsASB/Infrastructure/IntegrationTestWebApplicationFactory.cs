@@ -46,7 +46,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        if (WolverineSettings == null)
         {
             return;
         }
