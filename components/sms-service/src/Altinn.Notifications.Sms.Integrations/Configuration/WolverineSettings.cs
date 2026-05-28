@@ -40,22 +40,12 @@ public class WolverineSettings : WolverineSettingsBase
     /// Determines whether SMS send commands are consumed via Wolverine and Azure Service Bus.
     /// </summary>
     public bool EnableSendSmsListener { get; set; } = true;
-    
-    /// <summary>
-    /// Determines whether to publish SMS delivery reports via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableSmsDeliveryReportPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing SMS delivery reports.
     /// Consumed by the API service's <c>SmsDeliveryReportHandler</c>.
     /// </summary>
     public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Determines whether to publish SMS send results via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableSmsSendResultPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing SMS send results.

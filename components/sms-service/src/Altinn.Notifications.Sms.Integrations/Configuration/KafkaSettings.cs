@@ -31,11 +31,6 @@ public class KafkaSettings
     public string HealthCheckTopicName { get; set; } = string.Empty;
 
     /// <summary>
-    /// The name of the sms status updated topic
-    /// </summary>
-    public string SmsStatusUpdatedTopicName { get; set; } = string.Empty;
-
-    /// <summary>
     /// The name of the send sms queue topic
     /// </summary>
     public string SendSmsQueueTopicName { get; set; } = string.Empty;
