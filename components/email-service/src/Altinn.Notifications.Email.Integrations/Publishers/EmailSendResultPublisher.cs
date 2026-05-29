@@ -2,7 +2,6 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
-using Microsoft.Extensions.DependencyInjection;
 
 using Wolverine;
 
@@ -14,8 +13,6 @@ namespace Altinn.Notifications.Email.Integrations.Publishers;
 /// </summary>
 public class EmailSendResultPublisher : WolverinePublisher, IEmailSendResultDispatcher
 {
-    private readonly IServiceProvider _serviceProvider;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailSendResultPublisher"/> class.
     /// </summary>
@@ -24,7 +21,6 @@ public class EmailSendResultPublisher : WolverinePublisher, IEmailSendResultDisp
     /// </param>
     public EmailSendResultPublisher(IServiceProvider serviceProvider) : base(serviceProvider)
     {
-        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>

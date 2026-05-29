@@ -3,8 +3,6 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.DependencyInjection;
-
 using Wolverine;
 
 namespace Altinn.Notifications.Email.Integrations.Publishers;
