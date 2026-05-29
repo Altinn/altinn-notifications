@@ -12,6 +12,7 @@ using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Moq;
 
 using Wolverine;
@@ -195,7 +196,7 @@ public class PastDueOrderPublisherTests
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
             .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_,_) => new ValueTask(Task.Run(async () =>
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
             {
                 int current = Interlocked.Increment(ref currentConcurrent);
                 lock (lockObj)
@@ -204,14 +205,14 @@ public class PastDueOrderPublisherTests
                 }
 
                 await Task.Delay(30);
-                Interlocked.Decrement( ref currentConcurrent);
+                Interlocked.Decrement(ref currentConcurrent);
             })));
 
         var orders = Enumerable.Range(0, orderCount)
             .Select(_ => CreateOrder())
             .ToList();
 
-        var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
+        var publisher = CreatePublisher(messageBusMock, concurrency: concurrency);
 
         // Act
         await publisher.PublishAsync(orders, CancellationToken.None);
@@ -278,7 +279,7 @@ public class PastDueOrderPublisherTests
         services.AddScoped(_ => messageBusMock.Object);
         var serviceProvider = services.BuildServiceProvider();
 
-        var options = Options.Create(new WolverineSettings { PastDueOrdersPublishConcurrency = concurrency});
+        var options = Options.Create(new WolverineSettings { PastDueOrdersPublishConcurrency = concurrency });
 
         return new PastDueOrderPublisher(loggerMock.Object, serviceProvider, options);
     }

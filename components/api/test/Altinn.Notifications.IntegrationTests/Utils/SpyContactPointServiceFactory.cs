@@ -2,7 +2,6 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
 using AltinnCore.Authentication.JwtCookie;
@@ -51,19 +50,6 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove Kafka consumers — they are hosted services that would try to connect to a broker on startup.
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
-                .ToList();
-
-            foreach (var descriptor in consumersToRemove)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Replace the Kafka producer with a no-op mock — keeps IKafkaProducer resolvable without a real broker.
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
-
             var wolverineServices = services
                 .Where(s =>
                     s.ServiceType.Assembly.GetName().Name?.StartsWith("Wolverine") == true ||

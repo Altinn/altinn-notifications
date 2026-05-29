@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
@@ -15,10 +15,6 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// Wolverine-based implementation of <see cref="ISendSmsPublisher"/> that publishes
 /// SMS notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
-/// <remarks>
-/// This class implements the <see cref="ISendSmsPublisher"/> interface to enable asynchronous publication of SMS
-/// commands to Azure Service Bus via Wolverine. Ensure that the provided <see cref="Sms"/> object is properly configured before calling PublishAsync.
-/// </remarks>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
 /// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
 /// <param name="options">Configuration options for Wolverine settings, including SMS publish concurrency.</param>

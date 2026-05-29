@@ -6,33 +6,6 @@ Messaging is managed through the [Wolverine](https://wolverine.netlify.app/) fra
 Queues are provisioned automatically in production via Wolverine's `AutoProvision` capability.
 In development environments, the [Azure Service Bus Emulator](https://learn.microsoft.com/en-us/azure/service-bus-messaging/overview-emulator) is used and queues are purged on startup (`AutoPurgeOnStartup`).
 
-## Feature flags
-
-Wolverine and ASB integration is controlled by feature flags defined in `WolverineSettings` for each component.
-The base flag `EnableWolverine` must be `true` to activate any ASB integration.
-Each queue has its own independent enable flag, allowing gradual rollout.
-
-| Flag | Scope | Purpose |
-|------|-------|---------|
-| `EnableWolverine` | All components | Master switch — enables ASB and Wolverine configuration |
-| `EnablePastDueOrderPublisher` | API | Publishes past-due orders to the processing queue |
-| `EnablePastDueOrderListener` | API | Consumes and processes past-due orders from the queue |
-| `EnableSendEmailPublisher` | API | Publishes email send commands to the email queue |
-| `EnableSendEmailListener` | Email service | Consumes email send commands |
-| `EnableEmailStatusCheckPublisher` | Email service | Publishes status check commands for the ACS polling loop |
-| `EnableEmailStatusCheckListener` | Email service | Consumes status check commands and polls ACS |
-| `EnableEmailSendResultPublisher` | Email service | Publishes email send results back to API |
-| `EnableEmailSendResultListener` | API | Consumes email send results |
-| `EnableEmailDeliveryReportListener` | API | Consumes ACS delivery reports routed from Event Grid |
-| `EnableEmailServiceRateLimitPublisher` | Email service | Publishes service rate limit events |
-| `EnableEmailServiceRateLimitListener` | API | Consumes service rate limit events |
-| `EnableSendSmsPublisher` | API | Publishes SMS send commands to the SMS queue |
-| `EnableSendSmsListener` | SMS service | Consumes SMS send commands |
-| `EnableSmsSendResultPublisher` | SMS service | Publishes SMS send results back to API |
-| `EnableSmsSendResultListener` | API | Consumes SMS send results |
-| `EnableSmsDeliveryReportPublisher` | SMS service | Publishes SMS delivery reports |
-| `EnableSmsDeliveryReportListener` | API | Consumes SMS delivery reports |
-
 ## Retry policy
 
 Each queue has a configurable `QueueRetryPolicy` defining the retry strategy for transient failures.
