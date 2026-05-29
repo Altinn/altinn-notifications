@@ -21,4 +21,15 @@ public abstract class WolverinePublisher(IServiceProvider serviceProvider)
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await messageBus.SendAsync(command);
     }
+
+    /// <summary>
+    /// Sends <paramref name="command"/> to Azure Service Bus with the given <paramref name="options"/>
+    /// via a short-lived scoped <see cref="IMessageBus"/>.
+    /// </summary>
+    protected async Task PublishCommandAsync<TCommand>(TCommand command, DeliveryOptions options)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        await messageBus.SendAsync(command, options);
+    }
 }

@@ -2,6 +2,7 @@ using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Shared.Publishers;
+
 using Microsoft.Extensions.DependencyInjection;
 
 using Wolverine;
@@ -17,7 +18,6 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
 {
     private const int _statusPollDelayMs = 8000;
     private readonly IDateTimeService _dateTime;
-    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusCheckPublisher"/> class.
@@ -31,7 +31,6 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
     public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime) : base(serviceProvider)
     {
         _dateTime = dateTime;
-        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>
@@ -47,6 +46,11 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
 
-        await PublishCommandAsync(checkEmailSendStatusCommand);
+        var deliveryOptions = new DeliveryOptions
+        {
+            ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs)
+        };
+
+        await PublishCommandAsync(checkEmailSendStatusCommand, deliveryOptions);
     }
 }
