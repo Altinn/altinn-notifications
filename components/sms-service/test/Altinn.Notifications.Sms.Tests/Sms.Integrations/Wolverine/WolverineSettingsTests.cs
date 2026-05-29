@@ -15,6 +15,8 @@ public class WolverineSettingsTests
 
         Assert.Equal(10, settings.SendSmsListenerCount);
         Assert.NotNull(settings.SendSmsQueuePolicy);
+        
+        Assert.NotNull(settings.SendSmsQueueGatewayErrorPolicy);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
 
         Assert.Equal(string.Empty, settings.SmsDeliveryReportQueueName);
@@ -33,6 +35,8 @@ public class WolverineSettingsTests
                 ["WolverineSettings:SendSmsQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:SendSmsQueuePolicy:ScheduleDelaysMs:0"] = "60000",
                 ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
+                ["WolverineSettings:SendSmsQueueGatewayErrorPolicy:ScheduleDelaysMs:0"] = "300000",
+                ["WolverineSettings:SendSmsQueueGatewayErrorPolicy:ScheduleDelaysMs:1"] = "600000",
                 ["WolverineSettings:SmsDeliveryReportQueueName"] = "altinn.notifications.sms.deliveryreports",
                 ["WolverineSettings:SmsSendResultQueueName"] = "altinn.notifications.sms.send.result",
             })
@@ -48,7 +52,9 @@ public class WolverineSettingsTests
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.SendSmsQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.SendSmsQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.SendSmsQueuePolicy.GetScheduleDelays());
-
+        Assert.Empty(settings.SendSmsQueueGatewayErrorPolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(300000), settings.SendSmsQueueGatewayErrorPolicy.GetScheduleDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(600000), settings.SendSmsQueueGatewayErrorPolicy.GetScheduleDelays());
         Assert.Equal("altinn.notifications.sms.deliveryreports", settings.SmsDeliveryReportQueueName);
         Assert.Equal("altinn.notifications.sms.send.result", settings.SmsSendResultQueueName);
     }
