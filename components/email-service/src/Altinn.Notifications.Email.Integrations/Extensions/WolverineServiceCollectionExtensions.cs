@@ -19,7 +19,6 @@ namespace Altinn.Notifications.Email.Integrations.Extensions;
 /// <summary>
 /// Extension methods for registering Wolverine with Azure Service Bus in the email service.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
