@@ -10,7 +10,6 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Handles terminal SMS send operation results received from the Azure Service Bus queue.
-/// Published by the SMS service when <c>EnableSmsSendResultPublisher</c> is enabled.
 /// </summary>
 public static class SmsSendResultHandler
 {
