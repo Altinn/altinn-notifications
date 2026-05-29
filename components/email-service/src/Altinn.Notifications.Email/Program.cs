@@ -44,9 +44,6 @@ appBuilder.Services.AddSwaggerGen(c =>
 
 var app = appBuilder.Build();
 
-EmailDeliveryReportSettings emailDeliveryReportSettings = new();
-app.Configuration.GetSection("EmailDeliveryReportSettings").Bind(emailDeliveryReportSettings);
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -135,8 +132,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             metrics.AddMeter(
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
-                "System.Net.Http",
-                "Altinn.Notifications.KafkaConsumer");
+                "System.Net.Http");
         })
         .WithTracing(tracing => 
         {

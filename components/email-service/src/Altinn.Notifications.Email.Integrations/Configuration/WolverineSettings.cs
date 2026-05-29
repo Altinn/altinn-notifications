@@ -9,11 +9,6 @@ namespace Altinn.Notifications.Email.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
-    /// Determines whether email send commands are consumed via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableSendEmailListener { get; set; } = true;
-
-    /// <summary>
     /// ASB queue name for receiving email send commands.
     /// Produced by the API and consumed by this email service.
     /// </summary>
@@ -28,16 +23,6 @@ public class WolverineSettings : WolverineSettingsBase
     /// Number of concurrent listeners for the email send queue per pod.
     /// </summary>
     public int EmailSendListenerCount { get; set; } = 10;
-
-    /// <summary>
-    /// Determines whether to consume email status check commands via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableEmailStatusCheckListener { get; set; } = true;
-
-    /// <summary>
-    /// Determines whether email status check commands are published via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableEmailStatusCheckPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for email status check operations (polling loop).
@@ -55,20 +40,10 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailStatusCheckListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to publish email send results via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableEmailSendResultPublisher { get; set; } = true;
-
-    /// <summary>
     /// ASB queue name for publishing email send results.
     /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailSendResultQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Determines whether to publish email service rate limit notifications via Wolverine and Azure Service Bus.
-    /// </summary>
-    public bool EnableEmailServiceRateLimitPublisher { get; set; } = true;
 
     /// <summary>
     /// ASB queue name for publishing email service rate limit notifications.
