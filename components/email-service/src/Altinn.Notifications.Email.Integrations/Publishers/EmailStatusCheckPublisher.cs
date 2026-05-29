@@ -1,7 +1,7 @@
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
-
+using Altinn.Notifications.Shared.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 
 using Wolverine;
@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Email.Integrations.Publishers;
 /// <see cref="CheckEmailSendStatusCommand"/> via Wolverine to initiate status tracking for an email send
 /// operation processed by Azure Communication Services (ACS).
 /// </summary>
-public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
+public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDispatcher
 {
     private const int _statusPollDelayMs = 8000;
     private readonly IDateTimeService _dateTime;
@@ -28,7 +28,7 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
     /// <param name="dateTime">
     /// Provides the current UTC timestamp applied to the command as the initial status‑check time.
     /// </param>
-    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime)
+    public EmailStatusCheckPublisher(IServiceProvider serviceProvider, IDateTimeService dateTime) : base(serviceProvider)
     {
         _dateTime = dateTime;
         _serviceProvider = serviceProvider;
@@ -47,8 +47,6 @@ public class EmailStatusCheckPublisher : IEmailStatusCheckDispatcher
             LastCheckedAtUtc = _dateTime.UtcNow()
         };
 
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        await messageBus.SendAsync(checkEmailSendStatusCommand, new DeliveryOptions { ScheduleDelay = TimeSpan.FromMilliseconds(_statusPollDelayMs) });
+        await PublishCommandAsync(checkEmailSendStatusCommand);
     }
 }
