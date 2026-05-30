@@ -16,10 +16,11 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
 {
     private const string _attemptsKey = "wolverine-attempts";
+    private const string _enqueuedAtKey = "wolverine-enqueued-at";
 
     /// <summary>
     /// Maps the specified incoming service bus message to the provided envelope by assigning an email delivery report
-    /// command. Restores the retry attempt counter if the message was re-enqueued by a ScheduleRetry policy.
+    /// command. Restores the retry attempt counter and original enqueue time if the message was re-enqueued by a ScheduleRetry policy.
     /// </summary>
     /// <param name="envelope">The envelope to which the email delivery report command will be assigned.</param>
     /// <param name="incoming">The incoming service bus message containing the Event Grid payload.</param>
@@ -32,13 +33,22 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         {
             envelope.Attempts = count;
         }
+
+        if (incoming.ApplicationProperties.TryGetValue(_enqueuedAtKey, out var enqueuedAt) && enqueuedAt is string raw)
+        {
+            envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey] = raw;
+        }
+        else
+        {
+            envelope.SetEnqueuedAt(incoming.EnqueuedTime);
+        }
     }
 
     /// <summary>
     /// Maps the envelope back to an outgoing ServiceBusMessage by copying the original
     /// Event Grid payload. This is required for Wolverine retry policies
     /// (e.g. <c>ScheduleRetry</c>) that re-enqueue the message.
-    /// Preserves the current attempt counter so the retry policy can track progress.
+    /// Preserves the current attempt counter and original enqueue time so the retry policy can track progress.
     /// </summary>
     /// <param name="envelope">The envelope whose message is an <see cref="EmailDeliveryReportCommand"/>.</param>
     /// <param name="outgoing">The outgoing ServiceBusMessage to populate.</param>
@@ -55,5 +65,10 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         outgoing.ContentType = command.Message.ContentType;
         outgoing.Subject = command.Message.Subject;
         outgoing.ApplicationProperties[_attemptsKey] = envelope.Attempts;
+
+        if (envelope.HasEnqueuedAt())
+        {
+            outgoing.ApplicationProperties[_enqueuedAtKey] = envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey];
+        }
     }
 }

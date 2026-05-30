@@ -49,7 +49,7 @@ public static class FailureActionsExtensions
                 var deadDeliveryReport = new DeadDeliveryReport
                 {
                     Channel = channel,
-                    FirstSeen = innerEnvelope.SentAt.UtcDateTime,
+                    FirstSeen = innerEnvelope.EnqueuedAt().UtcDateTime,
                     LastAttempt = DateTime.UtcNow,
                     AttemptCount = Math.Max(1, innerEnvelope.Attempts),
                     Resolved = false,
