@@ -453,4 +453,54 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
         await using var sender = client.CreateSender(queueName);
         await sender.SendMessageAsync(new ServiceBusMessage(body));
     }
+
+    [Fact]
+    public async Task EmailDeliveryReport_WhenRetriesExhausted_FirstSeenReflectsOriginalEnqueueTime_NotRetryTime()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+            string unmatchedOperationId = Guid.NewGuid().ToString();
+
+            // Record the window around the original send — the ASB broker stamps EnqueuedTime here.
+            // FirstSeen must stay anchored to this, not drift forward with each retry re-enqueue.
+            var beforeSend = DateTime.UtcNow;
+            await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
+            var afterSend = DateTime.UtcNow;
+
+            // Wait for all retries to exhaust and the dead delivery report to be written
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    var row = await PostgreUtil.GetDeadDeliveryReportByMessageId(
+                        _fixture.PostgresConnectionString,
+                        unmatchedOperationId);
+                    return row is not null;
+                },
+                maxAttempts: 40,
+                delayMs: 500);
+
+            Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted.");
+
+            var timestamps = await PostgreUtil.GetDeadDeliveryReportTimestampsAsync(
+                _fixture.PostgresConnectionString,
+                unmatchedOperationId);
+
+            Assert.NotNull(timestamps);
+
+            // FirstSeen must fall within the original send window — not shifted forward by retries
+            var tolerance = TimeSpan.FromSeconds(5);
+            Assert.True(
+                timestamps.Value.FirstSeen >= beforeSend - tolerance &&
+                timestamps.Value.FirstSeen <= afterSend + tolerance,
+                $"FirstSeen ({timestamps.Value.FirstSeen:O}) should reflect the original enqueue time [{beforeSend:O} – {afterSend:O}], not a retry re-enqueue time.");
+
+            // LastAttempt must be later than FirstSeen — proving retries occurred after original enqueue
+            Assert.True(
+                timestamps.Value.LastAttempt > timestamps.Value.FirstSeen,
+                $"LastAttempt ({timestamps.Value.LastAttempt:O}) should be later than FirstSeen ({timestamps.Value.FirstSeen:O}). If equal, FirstSeen was incorrectly reset to the retry enqueue time.");
+        }
+    }
 }
