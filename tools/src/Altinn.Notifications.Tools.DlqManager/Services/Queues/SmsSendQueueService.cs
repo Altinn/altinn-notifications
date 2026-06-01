@@ -32,12 +32,13 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     public SmsSendQueueService(
         IOptions<AsbSettings> asbSettings,
         IOptions<SmsSendQueueSettings> queueSettings,
-        ISmsNotificationRepository repository)
+        ISmsNotificationRepository repository,
+        ServiceBusClient sbClient)
     {
         _asbSettings = asbSettings.Value;
         _queueSettings = queueSettings.Value;
         _repository = repository;
-        _sbClient = new ServiceBusClient(_asbSettings.ConnectionString);
+        _sbClient = sbClient;
     }
 
     // ── Top-level sub-menu loop ────────────────────────────────────────────────

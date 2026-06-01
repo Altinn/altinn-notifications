@@ -2,9 +2,11 @@ using Altinn.Notifications.Tools.DlqManager.Configuration;
 using Altinn.Notifications.Tools.DlqManager.Repositories;
 using Altinn.Notifications.Tools.DlqManager.Services;
 using Altinn.Notifications.Tools.DlqManager.Services.Queues;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -45,7 +47,14 @@ builder.Services.AddSingleton<ISmsNotificationRepository, SmsNotificationReposit
 
 // ── Services ──────────────────────────────────────────────────────────────────
 
-builder.Services.AddSingleton<ISmsSendQueueService, SmsSendQueueService>();
+builder.Services.AddSingleton<ISmsSendQueueService>(sp =>
+{
+    var asbSettings = sp.GetRequiredService<IOptions<AsbSettings>>();
+    var queueSettings = sp.GetRequiredService<IOptions<SmsSendQueueSettings>>();
+    var repository = sp.GetRequiredService<ISmsNotificationRepository>();
+    var sbClient = new ServiceBusClient(asbSettings.Value.ConnectionString);
+    return new SmsSendQueueService(asbSettings, queueSettings, repository, sbClient);
+});
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 
