@@ -366,7 +366,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     /// <paramref name="items"/> (by <c>MessageId</c>), and abandons any non-target messages.
     /// </summary>
     private async Task ProcessDlqItemsAsync(
-        IReadOnlyList<DlqSmsItem> items,
+        List<DlqSmsItem> items,
         Func<ServiceBusReceivedMessage, DlqSmsItem, ServiceBusReceiver, Task<(bool Success, string Message)>> processItem)
     {
         var targetByMessageId = items.ToDictionary(i => i.DlqMessageId);
