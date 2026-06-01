@@ -1,5 +1,7 @@
 using System.Diagnostics.Metrics;
+
 using Altinn.Notifications.Integrations.Telemetry;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Telemetry;
@@ -153,10 +155,36 @@ public sealed class DeliveryReportMetricsTests : IDisposable
         Assert.Equal("Delivered", capturedTags["sms.send_result"]);
     }
 
+    [Fact]
+    public void RecordEmailDeliveryReport_StatusMessageContainingRecipient_IsMaskedInTag()
+    {
+        // Arrange
+        var capturedTags = new Dictionary<string, object?>();
+
+        using var listener = CreateListener((_, _, tags) =>
+        {
+            foreach (var tag in tags)
+            {
+                capturedTags[tag.Key] = tag.Value;
+            }
+        });
+
+        // Act
+        _sut.RecordEmailDeliveryReport(
+            status: "Failed",
+            statusMessage: "Delivery failed for recipient@example.com: mailbox full",
+            recipientMailServerHostName: "mail.example.com",
+            sender: "sender@example.com",
+            recipient: "recipient@example.com");
+
+        // Assert
+        Assert.Equal("Delivery failed for re***@example.com: mailbox full", capturedTags["email.status_message"]);
+    }
+
     [Theory]
     [InlineData("sender@example.com", "se***@example.com")]
-    [InlineData("ab@example.com", "***@example.com")]     // local part <= 2 chars
-    [InlineData("a@example.com", "***@example.com")]      // local part <= 2 chars
+    [InlineData("ab@example.com", "***@example.com")] // local part <= 2 chars
+    [InlineData("a@example.com", "***@example.com")] // local part <= 2 chars
     [InlineData("longaddress@domain.org", "lo***@domain.org")]
     public void MaskEmailAddress_ValidEmail_MasksLocalPartCorrectly(string input, string expected)
     {
@@ -178,6 +206,25 @@ public sealed class DeliveryReportMetricsTests : IDisposable
     public void MaskEmailAddress_InvalidFormat_ReturnsEmptyString(string input)
     {
         Assert.Equal(string.Empty, EmailMaskingHelper.MaskEmailAddress(input));
+    }
+
+    [Theory]
+    [InlineData("Delivery failed for recipient@example.com: mailbox full", "recipient@example.com", "Delivery failed for re***@example.com: mailbox full")]
+    [InlineData("Message rejected. Address RECIPIENT@EXAMPLE.COM not found.", "recipient@example.com", "Message rejected. Address re***@example.com not found.")] // case-insensitive
+    [InlineData("Permanent failure.", "recipient@example.com", "Permanent failure.")] // no address in message
+    [InlineData("Failed: recipient@example.com and sender@example.com both invalid.", "recipient@example.com", "Failed: re***@example.com and sender@example.com both invalid.")] // only redacts the passed address
+    public void RedactEmailAddressesFromMessage_ReplacesKnownAddressWithMasked(string message, string address, string expected)
+    {
+        Assert.Equal(expected, EmailMaskingHelper.RedactEmailAddressesFromMessage(message, address));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RedactEmailAddressesFromMessage_NullOrWhitespaceMessage_ReturnsEmptyString(string? message)
+    {
+        Assert.Equal(string.Empty, EmailMaskingHelper.RedactEmailAddressesFromMessage(message, "recipient@example.com"));
     }
 
     private static MeterListener CreateListener(

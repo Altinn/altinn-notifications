@@ -9,11 +9,6 @@ namespace Altinn.Notifications.Email.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
-    /// Determines whether to accept Email notifications via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableSendEmailListener { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for receiving email send commands.
     /// Produced by the API and consumed by this email service.
     /// </summary>
@@ -28,17 +23,6 @@ public class WolverineSettings : WolverineSettingsBase
     /// Number of concurrent listeners for the email send queue per pod.
     /// </summary>
     public int EmailSendListenerCount { get; set; } = 10;
-
-    /// <summary>
-    /// Determines whether to consume email status check commands via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableEmailStatusCheckListener { get; set; } = false;
-
-    /// <summary>
-    /// Enables or disables the publisher responsible for sending <c>CheckEmailSendStatusCommand</c> messages independently of the listener activation, allowing
-    /// the listener to be enabled without the publisher and vice versa. This is useful for testing and allows for flexibility in how the polling loop is triggered.
-    /// </summary>
-    public bool EnableEmailStatusCheckPublisher { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for email status check operations (polling loop).
@@ -56,23 +40,14 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailStatusCheckListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to publish email send results via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableEmailSendResultPublisher { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for publishing email send results.
     /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailSendResultQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Determines whether to publish Altinn service update messages via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableEmailServiceRateLimitPublisher { get; set; } = false;
-
-    /// <summary>
-    /// ASB queue name for publishing Altinn service update notifications.
+    /// ASB queue name for publishing email service rate limit notifications.
+    /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
 }

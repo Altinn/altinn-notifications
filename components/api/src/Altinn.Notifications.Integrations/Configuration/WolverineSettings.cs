@@ -14,26 +14,21 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailPublishConcurrency { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to publish email send commands via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableSendEmailPublisher { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for publishing email send commands.
     /// Produced by this API and consumed by the email service.
     /// </summary>
     public string EmailSendQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// ASB queue name used for publishing sms messages.
+    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int SmsPublishConcurrency { get; set; } = 10;
+
+    /// <summary>
+    /// ASB queue name used for publishing SMS messages.
     /// Produced by the API and consumed by the SMS Service and service provider.
     /// </summary>
     public string SendSmsQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Whether to enable the email delivery report queue listener.
-    /// </summary>
-    public bool EnableEmailDeliveryReportListener { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for receiving email delivery reports.
@@ -52,23 +47,8 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailDeliveryReportListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
-    /// </summary>
-    public int SmsPublishConcurrency { get; set; } = 10;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the SMS publisher is enabled.
-    /// </summary>
-    public bool EnableSendSmsPublisher { get; set; } = false;
-
-    /// <summary>
-    /// Whether to enable the SMS delivery report queue listener.
-    /// </summary>
-    public bool EnableSmsDeliveryReportListener { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for receiving SMS delivery reports.
-    /// Published by the SMS service when <c>EnableSmsDeliveryReportPublisher</c> is <c>true</c> there.
+    /// Produced by the SMS service and consumed by this API.
     /// </summary>
     public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
 
@@ -81,11 +61,6 @@ public class WolverineSettings : WolverineSettingsBase
     /// Number of concurrent listeners for the SMS delivery report queue per pod.
     /// </summary>
     public int SmsDeliveryReportListenerCount { get; set; } = 10;
-
-    /// <summary>
-    /// Determines whether to consume email send results via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableEmailSendResultListener { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for receiving email send results.
@@ -104,11 +79,6 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailSendResultListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to consume SMS send results via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableSmsSendResultListener { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for receiving SMS send results.
     /// Produced by the SMS service and consumed by this API.
     /// </summary>
@@ -125,12 +95,6 @@ public class WolverineSettings : WolverineSettingsBase
     public int SmsSendResultListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Whether to enable the email service rate limit queue listener.
-    /// Consumes messages published by the email service when ACS returns HTTP 429.
-    /// </summary>
-    public bool EnableEmailServiceRateLimitListener { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for receiving email service rate limit notifications.
     /// Published by the email service and consumed by the API to update service availability.
     /// </summary>
@@ -145,16 +109,6 @@ public class WolverineSettings : WolverineSettingsBase
     /// Number of concurrent listeners for the email service rate limit queue per pod.
     /// </summary>
     public int EmailServiceRateLimitListenerCount { get; set; } = 1;
-
-    /// <summary>
-    /// Determines whether to publish past-due order commands via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnablePastDueOrderPublisher { get; set; } = false;
-
-    /// <summary>
-    /// Determines whether to listen for past-due order commands from the Azure Service Bus queue.
-    /// </summary>
-    public bool EnablePastDueOrderListener { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for past-due order processing commands.
@@ -177,4 +131,9 @@ public class WolverineSettings : WolverineSettingsBase
     /// and platform dependency failures.
     /// </summary>
     public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
+
+    /// <summary>
+    /// Maximum number of past-due orders send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int PastDueOrdersPublishConcurrency { get; set; } = 10;
 }

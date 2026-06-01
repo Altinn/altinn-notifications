@@ -24,8 +24,6 @@ using AltinnCore.Authentication.JwtCookie;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 
-using Confluent.Kafka.Extensions.OpenTelemetry;
-
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
@@ -161,8 +159,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                "Altinn.Notifications.KafkaProducer",
-                "Altinn.Notifications.KafkaConsumer",
                 DeliveryReportMetrics.MeterName);
         })
         .WithTracing(tracing =>
@@ -179,8 +175,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
-
-            tracing.AddConfluentKafkaInstrumentation();
 
             tracing.AddSource("Wolverine");
         });
@@ -229,7 +223,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     AddInputModelValidators(services);
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
-    services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
 
     services.AddAltinnClients(config);

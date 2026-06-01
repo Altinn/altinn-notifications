@@ -253,11 +253,11 @@ export function collectHttpResponseMetrics(httpResponse) {
  *
  * @param {Object} orderRequest - The order chain payload to send.
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
- * @returns {Object} The HTTP response from the Notification API.
+ * @returns {Promise<Object>} The HTTP response from the Notification API.
  */
-export function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
+export async function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
     return ordersApi.postNotificationOrderV2(requestBody, token, label);
 }
 
@@ -268,13 +268,13 @@ export function sendNotificationOrderChain(orderRequest, label = 'post_valid_ord
  * @param {Object} orderChainPayload - The notification order chain payload to send
  * @param {string} label - Metric label
  * @param {Trend} durationMetric - Trend metric to record duration
- * @returns {Object|undefined} { orderType, httpResponse, orderChainPayload }
+ * @returns {Promise<Object|undefined>} { orderType, httpResponse, orderChainPayload }
  */
-export function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
+export async function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
     if (!orderType || !orderChainPayload) {
         return undefined;
     }
-    const httpResponse = sendNotificationOrderChain(orderChainPayload, label);
+    const httpResponse = await sendNotificationOrderChain(orderChainPayload, label);
     collectHttpResponseMetrics(httpResponse);
     if (durationMetric) {
         durationMetric.add(httpResponse.timings.duration);
@@ -455,29 +455,38 @@ export function generateOrderChainPayloads(orderTypes, basePayload, {
  * @param {Object} config
  * @param {Object<string,string>} config.labelMap - orderType -> label constant
  * @param {Object<string,Trend>} config.durationMetrics - orderType -> Trend
- * @returns {Array<Object>} processingResults
+ * @returns {Promise<Array<Object>>} processingResults
  */
-export function processVariants(variants, {
+export async function processVariants(variants, {
     labelMap,
     durationMetrics
 }) {
-    return variants.map(v => {
-        const { orderType, orderChainPayload } = v;
+    const results = [];
+    for (const { orderType, orderChainPayload } of variants) {
+        let result;
         switch (orderType) {
             case "valid":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+                break;
             case "invalid":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+                break;
             case "duplicate":
                 // Send initial valid for idempotency before expecting 200
-                processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+                await processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+                break;
             case "missingResource":
-                return processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+                break;
             default:
-                return undefined;
+                break;
         }
-    }).filter(Boolean);
+        if (result !== undefined) {
+            results.push(result);
+        }
+    }
+    return results;
 }
 
 /**

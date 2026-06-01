@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -24,6 +25,9 @@ namespace Altinn.Notifications.Integrations.Wolverine.Policies;
 internal sealed class SmsSendResultHandlerPolicy(WolverineSettings settings) : IHandlerPolicy
 {
     private const string _unrecognizedSendResultReason = "UNRECOGNIZED_SEND_RESULT";
+    private const string _invalidNotificationIdentifierReason = "INVALID_NOTIFICATION_IDENTIFIER";
+    private const string _retryExceededReason = "RETRY_THRESHOLD_EXCEEDED";
+    private const string _notificationExpiredReason = "NOTIFICATION_EXPIRED";
 
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
@@ -44,7 +48,21 @@ internal sealed class SmsSendResultHandlerPolicy(WolverineSettings settings) : I
             .Then.MoveToErrorQueue();
 
         chain
-            .OnException<ArgumentException>()
+            .OnException<NotificationNotFoundException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
+            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.SaveDeadDeliveryReport(_retryExceededReason, DeliveryReportChannel.LinkMobility);
+
+        chain
+            .OnException<NotificationExpiredException>()
+            .SaveDeadDeliveryReport(_notificationExpiredReason, DeliveryReportChannel.LinkMobility);
+
+        chain
+            .OnException<UnrecognizedSendResultException>()
             .SaveDeadDeliveryReport(_unrecognizedSendResultReason, DeliveryReportChannel.LinkMobility);
+
+        chain
+            .OnException<InvalidNotificationIdentifierException>()
+            .SaveDeadDeliveryReport(_invalidNotificationIdentifierReason, DeliveryReportChannel.LinkMobility);
     }
 }

@@ -6,16 +6,19 @@ using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Extensions;
 using Altinn.Notifications.Sms.Telemetry;
+
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
+
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -42,12 +45,6 @@ appBuilder.Services.AddSwaggerGen(c =>
 });
 
 var app = appBuilder.Build();
-
-var smsDeliveryReportSettings = app.Services.GetRequiredService<SmsDeliveryReportSettings>();
-if (smsDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
-{
-    app.UseMiddleware<RequestBodyTelemetryMiddleware>();
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -128,7 +125,7 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
-    SmsDeliveryReportSettings smsDeliveryReportSettings = configuration!.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>()!;
+    SmsDeliveryReportSettings? smsDeliveryReportSettings = configuration.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>();
 
     if (smsDeliveryReportSettings == null)
     {
@@ -173,8 +170,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 
-    services.AddCoreServices(configuration);
-    services.AddIntegrationServices(configuration);
+    services.AddCoreServices();
+    services.AddSmsGatewayServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
     services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);

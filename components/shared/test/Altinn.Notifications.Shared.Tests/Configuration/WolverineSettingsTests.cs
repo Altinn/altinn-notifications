@@ -1,4 +1,5 @@
 using Altinn.Notifications.Shared.Configuration;
+
 using Xunit;
 
 namespace Altinn.Notifications.Shared.Tests.Configuration;
@@ -10,7 +11,6 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettingsBase();
 
-        Assert.False(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
     }
 

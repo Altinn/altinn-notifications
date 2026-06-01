@@ -13,20 +13,18 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettings();
 
-        Assert.False(settings.EnableWolverine);
-        Assert.Equal(10, settings.EmailSendListenerCount);
-        Assert.Equal(10, settings.EmailStatusCheckListenerCount);
-
-        Assert.NotNull(settings.EmailSendQueuePolicy);
-        Assert.False(settings.EnableSendEmailListener);
-        Assert.Equal(string.Empty, settings.EmailSendQueueName);
-
-        Assert.NotNull(settings.EmailStatusCheckQueuePolicy);
-        Assert.False(settings.EnableEmailStatusCheckListener);
-        Assert.False(settings.EnableEmailStatusCheckPublisher);
-        Assert.Equal(string.Empty, settings.EmailStatusCheckQueueName);
-
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
+
+        Assert.Equal(string.Empty, settings.EmailSendQueueName);
+        Assert.Equal(10, settings.EmailSendListenerCount);
+        Assert.NotNull(settings.EmailSendQueuePolicy);
+
+        Assert.Equal(string.Empty, settings.EmailStatusCheckQueueName);
+        Assert.Equal(10, settings.EmailStatusCheckListenerCount);
+        Assert.NotNull(settings.EmailStatusCheckQueuePolicy);
+
+        Assert.Equal(string.Empty, settings.EmailSendResultQueueName);
+        Assert.Equal(string.Empty, settings.EmailServiceRateLimitQueueName);
     }
 
     [Fact]
@@ -35,42 +33,38 @@ public class WolverineSettingsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
+                ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
                 ["WolverineSettings:EmailSendListenerCount"] = "5",
-                ["WolverineSettings:EmailStatusCheckListenerCount"] = "3",
-                ["WolverineSettings:EnableWolverine"] = "true",
-                ["WolverineSettings:EnableSendEmailListener"] = "true",
-                ["WolverineSettings:EnableEmailStatusCheckListener"] = "true",
-                ["WolverineSettings:EnableEmailStatusCheckPublisher"] = "true",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:0"] = "1000",
                 ["WolverineSettings:EmailSendQueuePolicy:CooldownDelaysMs:1"] = "5000",
                 ["WolverineSettings:EmailSendQueuePolicy:ScheduleDelaysMs:0"] = "60000",
-                ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
+                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+                ["WolverineSettings:EmailStatusCheckListenerCount"] = "3",
                 ["WolverineSettings:EmailStatusCheckQueuePolicy:CooldownDelaysMs:0"] = "500",
                 ["WolverineSettings:EmailStatusCheckQueuePolicy:ScheduleDelaysMs:0"] = "30000",
-                ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check-send-status",
-                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
+                ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
+                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit",
             })
             .Build();
 
         var settings = config.GetSection("WolverineSettings").Get<WolverineSettings>();
 
         Assert.NotNull(settings);
-        Assert.True(settings.EnableWolverine);
-
-        Assert.Equal(5, settings.EmailSendListenerCount);
-        Assert.Equal(3, settings.EmailStatusCheckListenerCount);
-
-        Assert.True(settings.EnableSendEmailListener);
-        Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
+
+        Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
+        Assert.Equal(5, settings.EmailSendListenerCount);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailSendQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(5000), settings.EmailSendQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(60000), settings.EmailSendQueuePolicy.GetScheduleDelays());
 
-        Assert.True(settings.EnableEmailStatusCheckListener);
-        Assert.True(settings.EnableEmailStatusCheckPublisher);
-        Assert.Equal("altinn.notifications.email.check-send-status", settings.EmailStatusCheckQueueName);
+        Assert.Equal("altinn.notifications.email.check.send.status", settings.EmailStatusCheckQueueName);
+        Assert.Equal(3, settings.EmailStatusCheckListenerCount);
         Assert.Contains(TimeSpan.FromMilliseconds(500), settings.EmailStatusCheckQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(30000), settings.EmailStatusCheckQueuePolicy.GetScheduleDelays());
+
+        Assert.Equal("altinn.notifications.email.send.result", settings.EmailSendResultQueueName);
+        Assert.Equal("altinn.notifications.email.send.ratelimit", settings.EmailServiceRateLimitQueueName);
     }
 }

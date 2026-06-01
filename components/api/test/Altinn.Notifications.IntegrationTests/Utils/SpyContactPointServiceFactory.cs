@@ -1,9 +1,7 @@
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
 using AltinnCore.Authentication.JwtCookie;
@@ -13,7 +11,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+
+using Moq;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
@@ -35,6 +36,10 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ=="
+            });
 
             string? uri = configuration["GeneralSettings:BaseUri"];
             if (!string.IsNullOrEmpty(uri))
@@ -45,19 +50,24 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove all Kafka consumers - not needed for these tests
-            var consumersToRemove = services
-                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
+            var wolverineServices = services
+                .Where(s =>
+                    s.ServiceType.Assembly.GetName().Name?.StartsWith("Wolverine") == true ||
+                    s.ImplementationType?.Assembly.GetName().Name?.StartsWith("Wolverine") == true ||
+                    s.ImplementationFactory?.Method.DeclaringType?.Assembly.GetName().Name?.StartsWith("Wolverine") == true)
                 .ToList();
 
-            foreach (var descriptor in consumersToRemove)
+            foreach (var descriptor in wolverineServices)
             {
                 services.Remove(descriptor);
             }
 
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISendSmsPublisher>()));
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IPastDueOrderPublisher>()));
+
             // Remove the existing IContactPointService registration
-            var contactPointDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IContactPointService));
+            var contactPointDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IContactPointService));
 
             if (contactPointDescriptor != null)
             {

@@ -35,7 +35,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     public IHost Host => _host ?? throw new InvalidOperationException("Host not created yet. Call Initialize() first.");
 
     /// <summary>
-    /// Initializes the factory by creating the test client, triggering host startup.
+    /// Initializes the factory by creating the test client and triggering host startup.
     /// </summary>
     public TSelf Initialize()
     {
@@ -118,7 +118,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     protected abstract Dictionary<string, string?> GetFixtureConfigOverrides();
 
     /// <summary>
-    /// Configures component-specific services: removes Kafka consumers, replaces producers, etc.
+    /// Configures component-specific services: replaces or removes services as needed for test isolation.
     /// </summary>
     protected abstract void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services);
 
@@ -178,6 +178,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         }
         catch (AggregateException ex) when (ex.Flatten().InnerExceptions.All(e =>
             e is ObjectDisposedException { ObjectName: "EventLogInternal" } ||
+            e is ObjectDisposedException { ObjectName: "System.Threading.SemaphoreSlim" } ||
             e is TimeoutException))
         {
             // Suppress errors that occur during Wolverine shutdown on the inline ASB listener:
@@ -188,8 +189,12 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
             // 2. ObjectDisposedException(EventLogInternal) — Wolverine tries to log the timeout
             //    error but the Windows EventLog provider has already been torn down.
             //
+            // 3. ObjectDisposedException(SemaphoreSlim) — ServiceBusProcessor.StopProcessingAsync
+            //    releases a SemaphoreSlim after the ASB client has already been disposed; this is
+            //    a race condition in the Azure.Messaging.ServiceBus SDK during inline listener teardown.
+            //
             // Wolverine may nest these inside multiple layers of AggregateException, so we call
-            // Flatten() before checking so every leaf exception is covered.
+            // Flatten() before checking to ensure every leaf exception is covered.
         }
         finally
         {
@@ -201,7 +206,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
 
     /// <summary>
     /// Removes all registered services whose implementation type is assignable to <paramref name="baseType"/>.
-    /// Use this to strip component-specific consumers (e.g. Kafka) before tests run.
+    /// Use this to strip component-specific background services before tests run.
     /// </summary>
     protected static void RemoveServicesAssignableTo(IServiceCollection services, Type baseType)
     {

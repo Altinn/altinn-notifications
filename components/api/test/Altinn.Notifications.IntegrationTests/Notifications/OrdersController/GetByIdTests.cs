@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
+public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
@@ -57,6 +57,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetEmailOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -84,7 +85,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -103,6 +103,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetSmsOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithSmsOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -130,7 +131,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -145,16 +145,13 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         Assert.Equivalent(expected, actual);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+
+        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

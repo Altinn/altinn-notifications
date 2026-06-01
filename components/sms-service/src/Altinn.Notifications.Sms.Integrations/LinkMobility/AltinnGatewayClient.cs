@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-using LinkMobility.PSWin.Client;
+﻿using LinkMobility.PSWin.Client;
 using LinkMobility.PSWin.Client.Model;
 using LinkMobility.PSWin.Client.Transports;
 
@@ -11,7 +9,6 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 /// <summary>
 ///  Wrapper class for the LinkMobility SMS Gateway client to support DI
 /// </summary>
-[ExcludeFromCodeCoverage]
 public class AltinnGatewayClient : IAltinnGatewayClient
 {
     private readonly GatewayClient _client;
@@ -19,9 +16,9 @@ public class AltinnGatewayClient : IAltinnGatewayClient
     /// <summary>
     /// Initializes a new instance of the <see cref="AltinnGatewayClient"/> class.
     /// </summary>
-    public AltinnGatewayClient(SmsGatewaySettings gatewayConfig)
+    public AltinnGatewayClient(HttpClient httpClient, SmsGatewaySettings gatewayConfig)
     {
-        _client = new(new XmlTransport(gatewayConfig.Username, gatewayConfig.Password, new Uri(gatewayConfig.Endpoint)));
+        _client = new(new XmlTransport(gatewayConfig.Username, gatewayConfig.Password, new Uri(gatewayConfig.Endpoint), httpClient));
     }
 
     /// <inheritdoc/>

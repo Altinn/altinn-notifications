@@ -122,8 +122,7 @@ public static class ServiceUtil
     }
 
     /// <summary>
-    /// Runs Yuniql database migrations at most once per test run. The
-    /// PostgreSQL settings are identical regardless of Kafka topic overrides,
+    /// Runs Yuniql database migrations at most once per test run.
     /// so a single invocation is sufficient.
     /// </summary>
     private static void EnsurePostgreSqlSetup(IConfiguration config)
@@ -197,7 +196,6 @@ public static class ServiceUtil
         services.AddSingleton(sharedDataSource);
         RegisterRepositories(services);
         services.AddCoreServices(config);
-        services.AddKafkaServices(config);
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
     }

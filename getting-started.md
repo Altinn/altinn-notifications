@@ -23,7 +23,7 @@ You can work on the entire system using the root solution or focus on individual
 Ensure you have the following installed:
 
 *   **[.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)** – Required to build and run the code.
-*   **[Podman](https://podman.io/) (Preferred) or [Docker](https://www.docker.com/get-started)** – For running local infrastructure (Kafka, etc.).
+*   **[Podman](https://podman.io/) (Preferred) or [Docker](https://www.docker.com/get-started)** – For running local infrastructure (ASB emulator and its dependencies).
 *   **[PostgreSQL](https://www.postgresql.org/download/) & [pgAdmin](https://www.pgadmin.org/download/)** – Database and management tool.
 *   **IDE:** [Visual Studio](https://visualstudio.microsoft.com/) or [Visual Studio Code](https://code.visualstudio.com/).
 *   **[Git](https://git-scm.com/)** – Version control.
@@ -39,25 +39,9 @@ git clone https://github.com/Altinn/altinn-notifications.git
 cd altinn-notifications
 ```
 
-### 2. Kafka Setup
+### 2. Azure Service Bus Emulator Setup
 
-Altinn Notifications uses Kafka for message queuing. Start the local Kafka instance using Podman or Docker.
-
-**Podman (Preferred):**
-```bash
-podman compose -f tools/dev-setup/setup-kafka.yml up -d
-```
-
-**Docker:**
-```bash
-docker compose -f tools/dev-setup/setup-kafka.yml up -d
-```
-
-> 🎯 **Tip:** You can access the **Kafdrop** UI at `http://localhost:9000` to monitor your topics.
-
-### 3. Azure Service Bus Emulator Setup
-
-Altinn Notifications is being migrated from Kafka to Azure Service Bus. A local ASB emulator is available for development. The `tools/asb-emulator/.env` file is pre-configured with local dev defaults. Note that the emulator exposes AMQP on port `5672` and an HTTP management endpoint on port `5300`. The connection string for local development is pre-configured in `appsettings.Development.json` of each service.
+Altinn Notifications uses Azure Service Bus for message queuing. A local ASB emulator is available for development. The `tools/asb-emulator/.env` file is pre-configured with local dev defaults. Note that the emulator exposes AMQP on port `5672` and an HTTP management endpoint on port `5300`. The connection string for local development is pre-configured in `appsettings.Development.json` of each service.
 
 **Podman (Preferred):**
 ```bash
@@ -73,7 +57,7 @@ docker compose up -d
 
 > 🎯 **Tip:** Use [PurpleExplorer](https://github.com/philipmat/PurpleExplorer) to browse queues and messages. It supports the `UseDevelopmentEmulator=true` flag for the local emulator connection string.
 
-### 4. Database Setup (PostgreSQL)
+### 3. Database Setup (PostgreSQL)
 
 1.  Ensure PostgreSQL is running.
 2.  Open **pgAdmin** and connect to your local server.

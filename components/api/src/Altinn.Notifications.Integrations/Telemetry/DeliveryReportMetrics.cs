@@ -56,7 +56,7 @@ public sealed class DeliveryReportMetrics : IDisposable
         {
             { "channel",                          "email" },
             { "email.status",                     status ?? string.Empty },
-            { "email.status_message",             statusMessage ?? string.Empty },
+            { "email.status_message",             EmailMaskingHelper.RedactEmailAddressesFromMessage(statusMessage, recipient ?? string.Empty, sender ?? string.Empty) },
             { "email.recipient_mail_server",      recipientMailServerHostName ?? string.Empty },
             { "email.sender",                     EmailMaskingHelper.MaskEmailAddress(sender) },
             { "email.recipient",                  EmailMaskingHelper.MaskEmailAddress(recipient) },

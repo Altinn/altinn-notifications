@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Tools.Tests.Utils;
 
 /// <summary>
 /// Simplified service utility for tests that only need persistence layer.
-/// Avoids the need for full application configuration (Kafka, Platform, etc.)
+/// Avoids the need for full application configuration (Platform services, etc.)
 /// </summary>
 public static class TestServiceUtil
 {

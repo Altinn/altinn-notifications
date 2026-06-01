@@ -13,45 +13,57 @@ jobs:
       contents: read
     env:
       altinn_env: TT02
-      encodedJwk: ${{ secrets.MP_ENCODEDJWK }}
-      mpClientId: ${{ secrets.MP_CLIENT_ID }}
-      mpKid: ${{ secrets.MP_KID }}
       runFullTestSet: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up K6
         uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+      - name: Create k6 secrets file
+        id: k6-secrets
+        env:
+          MP_ENCODEDJWK: ${{ secrets.MP_ENCODEDJWK }}
+          MP_CLIENT_ID: ${{ secrets.MP_CLIENT_ID }}
+          MP_KID: ${{ secrets.MP_KID }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY }}
+        run: |
+          umask 077
+          SECRETS_FILE="${{ runner.temp }}/k6.secrets"
+          printf 'encodedJwk=%s\n' "$MP_ENCODEDJWK" > "$SECRETS_FILE"
+          printf 'mpClientId=%s\n' "$MP_CLIENT_ID" >> "$SECRETS_FILE"
+          printf 'mpKid=%s\n' "$MP_KID" >> "$SECRETS_FILE"
+          printf 'subscriptionKey=%s\n' "$APIM_SUBSCRIPTION_KEY" >> "$SECRETS_FILE"
+          echo "file=$SECRETS_FILE" >> "$GITHUB_OUTPUT"
       - name: Run email notification order regression tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-email.js
-          flags: -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run contact(s) lookup by organization number regression tests with generating an email notification
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no.js
-          flags: -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_RESOURCE_ID }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run sms notification order regression tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-sms.js
-          flags: -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run API v2 notification order regression tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-v2.js
-          flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run API v2 org lookup regression tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no-v2.js
-          flags: -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=urn:altinn:resource:${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_URN_RESOURCE_ID }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
   slack-notify:
     if: failure()

@@ -22,12 +22,8 @@ public class SendEmailCommandHandlerTests
         ToAddress = "recipient@example.com"
     };
 
-    /// <summary>
-    /// Verifies that a general <see cref="Exception"/> thrown by
-    /// <see cref="ISendingService.SendAsync"/> is logged at error level and then rethrown.
-    /// </summary>
     [Fact]
-    public async Task HandleAsync_GeneralException_LogsErrorAndRethrows()
+    public async Task HandleAsync_GeneralException_LogsWarningAndRethrows()
     {
         // Arrange
         var exception = new InvalidOperationException("SMTP connection failed");
@@ -48,18 +44,14 @@ public class SendEmailCommandHandlerTests
 
         loggerMock.Verify(
             l => l.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email") && v.ToString()!.Contains(_validSendEmailCommand.NotificationId.ToString())),
-                exception,
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 
-    /// <summary>
-    /// Verifies that an unknown <see cref="SendEmailCommand.ContentType"/> value is
-    /// logged at error level and the email is sent with <see cref="EmailContentType.Plain"/> as the fallback.
-    /// </summary>
     [Fact]
     public async Task HandleAsync_UnknownContentType_LogsErrorAndDefaultsToPlain()
     {
@@ -94,17 +86,16 @@ public class SendEmailCommandHandlerTests
         Assert.Equal(EmailContentType.Plain, capturedEmail!.ContentType);
     }
 
-    /// <summary>
-    /// Verifies that an <see cref="OperationCanceledException"/> thrown by <see cref="ISendingService.SendAsync"/> is rethrown directly without invoking the send-failure error logger.
-    /// </summary>
     [Fact]
-    public async Task HandleAsync_OperationCanceledException_RethrowsWithoutLoggingException()
+    public async Task HandleAsync_OperationCanceledException_LogsWarningAndRethrows()
     {
         // Arrange
+        var exception = new OperationCanceledException();
+
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
             .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-            .ThrowsAsync(new OperationCanceledException());
+            .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
@@ -115,11 +106,11 @@ public class SendEmailCommandHandlerTests
 
         loggerMock.Verify(
             l => l.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email")),
-                It.IsAny<Exception>(),
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Once);
     }
 }
