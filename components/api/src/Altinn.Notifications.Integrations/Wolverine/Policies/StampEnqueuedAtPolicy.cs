@@ -17,7 +17,9 @@ internal sealed class StampEnqueuedAtPolicy : IHandlerPolicy
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
     {
-        foreach (var chain in chains)
+        foreach (var chain in chains.Where(chain => !chain.Middleware
+            .OfType<MethodCall>()
+            .Any(m => m.HandlerType == typeof(EnqueuedAtMiddleware))))
         {
             chain.Middleware.Add(new MethodCall(typeof(EnqueuedAtMiddleware), nameof(EnqueuedAtMiddleware.Before)));
         }

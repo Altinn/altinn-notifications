@@ -1,5 +1,6 @@
 using System.Reflection;
 
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
@@ -10,7 +11,6 @@ using Altinn.Notifications.Sms.Telemetry;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
-
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
 
@@ -21,6 +21,7 @@ using OpenTelemetry.Trace;
 
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Wolverine;
 
 ILogger logger;
 const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
@@ -50,10 +51,25 @@ var app = appBuilder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => 
+    app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Altinn Notifications SMS API V1");
         c.RoutePrefix = string.Empty;
+    });
+
+    var sendSmsQueueName = app.Configuration["WolverineSettings:SendSmsQueueName"] ?? "altinn.notifications.sms.send";
+    app.MapPost("/test/queue-sms", async (IMessageBus bus) =>
+    {
+        var command = new SendSmsCommand
+        {
+            NotificationId = Guid.NewGuid(),
+            MobileNumber = "+4799999999",
+            Body = "Lock expiry test",
+            SenderNumber = "Altinn"
+        };
+        var endpoint = bus.EndpointFor(new Uri($"asb://queue/{sendSmsQueueName}"));
+        await endpoint.SendAsync(command);
+        return Results.Ok(new { command.NotificationId, sendSmsQueueName });
     });
 }
 

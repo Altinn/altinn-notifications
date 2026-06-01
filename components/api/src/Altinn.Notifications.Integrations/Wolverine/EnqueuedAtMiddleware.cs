@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 /// the first time a message is received. Subsequent attempts (retries) are no-ops
 /// because the header is already present and survives re-enqueue via envelope serialization.
 /// </summary>
-internal static class EnqueuedAtMiddleware
+public static class EnqueuedAtMiddleware
 {
     /// <summary>
     /// Called by Wolverine before the handler executes on each attempt.

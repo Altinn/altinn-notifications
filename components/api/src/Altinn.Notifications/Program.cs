@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
-
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
@@ -18,25 +17,20 @@ using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.Exporter;
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-
 using Npgsql;
-
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -106,6 +100,49 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // Inside the existing if (app.Environment.IsDevelopment()) block,
+    // after app.UseSwaggerUI():
+    var emailDeliveryReportQueueName = app.Configuration["WolverineSettings:EmailDeliveryReportQueueName"]
+        ?? "altinn.notifications.email.deliveryreports";
+    var serviceBusConnectionString = app.Configuration["WolverineSettings:ServiceBusConnectionString"]
+        ?? throw new InvalidOperationException("WolverineSettings:ServiceBusConnectionString is not configured.");
+
+    app.MapPost("/test/queue-email-delivery-report", async (string operationId, string status = "Delivered") =>
+    {
+        var eventGridPayload = new
+        {
+            id = Guid.NewGuid().ToString(),
+            topic = "/subscriptions/test/resourceGroups/test/providers/Microsoft.Communication/communicationServices/test",
+            subject = $"sender/DoNotReply@altinn.no/message/{operationId}",
+            data = new
+            {
+                sender = "DoNotReply@altinn.no",
+                recipient = "recipient@example.com",
+                messageId = operationId,
+                status,
+                deliveryStatusDetails = new { statusMessage = "OK" },
+                deliveryAttemptTimeStamp = DateTime.UtcNow.ToString("o")
+            },
+            eventType = "Microsoft.Communication.EmailDeliveryReportReceived",
+            dataVersion = "1.0",
+            metadataVersion = "1",
+            eventTime = DateTime.UtcNow.ToString("o")
+        };
+
+        string body = JsonSerializer.Serialize(eventGridPayload);
+
+        await using var client = new ServiceBusClient(serviceBusConnectionString);
+        await using var sender = client.CreateSender(emailDeliveryReportQueueName);
+        await sender.SendMessageAsync(new ServiceBusMessage(body));
+
+        return Results.Ok(new { operationId, status, emailDeliveryReportQueueName });
+    })
+    .WithName("QueueEmailDeliveryReport")
+    .WithSummary("DEV ONLY — posts a fake ACS email delivery report directly to the ASB queue.")
+    .WithDescription(
+        "Simulates an Azure Communication Services delivery report arriving via Event Grid. " +
+        "Valid status values: Delivered, Bounced, Failed, FilteredSpam, Quarantined, Suppressed.");
 }
 
 app.UseAuthorization();
