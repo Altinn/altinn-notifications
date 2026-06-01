@@ -230,28 +230,36 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
 
     // ── Empty list file early-exit ────────────────────────────────────────────
     [Fact]
-    public async Task ProcessSendingExpired_WhenListFileDoesNotExist_ReturnsGracefully()
+    public async Task ProcessSendingExpired_WhenListFileDoesNotExist_ReportsFileNotFound()
     {
         var (_, _, _, queueSettings) = CreateTempListFiles();
 
-        // Act — no list file pre-written; service should report "File not found" and return cleanly
-        await RunMenuAsync(CreateService(queueSettings), "2\n0\n");
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n", output);
+
+        Assert.Contains("File not found", output.ToString());
     }
 
     [Fact]
-    public async Task ProcessSendingPending_WhenListFileDoesNotExist_ReturnsGracefully()
+    public async Task ProcessSendingPending_WhenListFileDoesNotExist_ReportsFileNotFound()
     {
         var (_, _, _, queueSettings) = CreateTempListFiles();
 
-        await RunMenuAsync(CreateService(queueSettings), "3\n0\n");
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "3\n0\n", output);
+
+        Assert.Contains("File not found", output.ToString());
     }
 
     [Fact]
-    public async Task PurgeOtherStatus_WhenListFileDoesNotExist_ReturnsGracefully()
+    public async Task PurgeOtherStatus_WhenListFileDoesNotExist_ReportsFileNotFound()
     {
         var (_, _, _, queueSettings) = CreateTempListFiles();
 
-        await RunMenuAsync(CreateService(queueSettings), "4\n0\n");
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "4\n0\n", output);
+
+        Assert.Contains("File not found", output.ToString());
     }
 
     // ── Non-target DLQ messages are abandoned ────────────────────────────────
