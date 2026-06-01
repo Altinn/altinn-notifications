@@ -21,7 +21,7 @@ public static class EnvelopeExtensions
     /// </summary>
     public static DateTimeOffset EnqueuedAt(this Envelope envelope)
     {
-        if (envelope.Headers.TryGetValue(_enqueuedAtKey, out var raw)
+        if (envelope.Headers.TryGetValue(EnqueuedAtHeaderKey, out var raw)
             && raw is not null
             && long.TryParse(raw, out var ticks))
         {
@@ -37,12 +37,12 @@ public static class EnvelopeExtensions
     /// </summary>
     public static void SetEnqueuedAt(this Envelope envelope, DateTimeOffset enqueuedAt)
     {
-        envelope.Headers[_enqueuedAtKey] = enqueuedAt.UtcTicks.ToString();
+        envelope.Headers[EnqueuedAtHeaderKey] = enqueuedAt.UtcTicks.ToString();
     }
 
     /// <summary>
     /// Returns true if the enqueued-at header has already been stamped on this envelope.
     /// </summary>
     public static bool HasEnqueuedAt(this Envelope envelope)
-        => envelope.Headers.ContainsKey(_enqueuedAtKey);
+        => envelope.Headers.ContainsKey(EnqueuedAtHeaderKey);
 }
