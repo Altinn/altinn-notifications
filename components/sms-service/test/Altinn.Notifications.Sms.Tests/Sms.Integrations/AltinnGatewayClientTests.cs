@@ -3,8 +3,6 @@ using System.Text;
 
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
-using LinkMobility.PSWin.Client;
-
 using LinkMobilityModel = LinkMobility.PSWin.Client.Model;
 
 namespace Altinn.Notifications.Sms.Tests.Sms.Integrations;
@@ -78,19 +76,19 @@ public class AltinnGatewayClientTests
     }
 
     [Fact]
-    public async Task SendAsync_GatewayReturnsNonSuccessStatusCode_ThrowsSendMessageException()
+    public async Task SendAsync_GatewayReturnsNonSuccessStatusCode_ThrowsSmsGatewayException()
     {
         var client = CreateClient(new FakeHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.GatewayTimeout)));
 
-        await Assert.ThrowsAsync<SendMessageException>(() => client.SendAsync(_testSms));
+        await Assert.ThrowsAsync<SmsGatewayException>(() => client.SendAsync(_testSms));
     }
 
     [Fact]
-    public async Task SendAsync_RequestTimesOut_ThrowsOperationCanceledException()
+    public async Task SendAsync_RequestTimesOut_ThrowsSmsGatewayException()
     {
         var client = CreateClient(new HangingHttpMessageHandler(), timeout: TimeSpan.FromMilliseconds(1));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.SendAsync(_testSms));
+        await Assert.ThrowsAsync<SmsGatewayException>(() => client.SendAsync(_testSms));
     }
 
     private sealed class FakeHttpMessageHandler(HttpResponseMessage response) : HttpMessageHandler
