@@ -433,9 +433,11 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
             DlqDeadLetterErrorDescription = "Seeded by test"
         };
 
+    private static readonly JsonSerializerOptions _writeOptions = new() { WriteIndented = true };
+
     private static async Task WriteListFileAsync(string filePath, List<DlqSmsItem> items)
     {
-        string json = JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(items, _writeOptions);
         await File.WriteAllTextAsync(filePath, json);
     }
 

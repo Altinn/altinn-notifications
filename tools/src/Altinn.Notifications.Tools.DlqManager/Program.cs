@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Altinn.Notifications.Tools.DlqManager.Configuration;
 using Altinn.Notifications.Tools.DlqManager.Repositories;
 using Altinn.Notifications.Tools.DlqManager.Services;
@@ -8,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
+
+[assembly: ExcludeFromCodeCoverage]
 
 var builder = Host.CreateApplicationBuilder(args);
 
