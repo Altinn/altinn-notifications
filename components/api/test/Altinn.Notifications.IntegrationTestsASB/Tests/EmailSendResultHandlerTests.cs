@@ -1,10 +1,14 @@
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using Moq;
 
@@ -168,6 +172,145 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 queueName,
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — unknown SendResult should not be retried");
+        }
+    }
+
+    [Fact]
+    public async Task EmailSendResult_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
+    {
+        // Arrange - Capture logs to count handler attempts via NotificationNotFoundException
+        var logCapture = new LogCapture(nameof(NotificationNotFoundException));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ConfigureTestServices(services =>
+                services.AddSingleton<ILoggerProvider>(logCapture))
+            .Initialize();
+
+        await using (factory)
+        {
+            var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
+            string operationId = Guid.NewGuid().ToString();
+
+            // Act - Send a command with a notificationId that doesn't exist in the database
+            var command = new EmailSendResultCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                OperationId = operationId,
+                SendResult = EmailNotificationResultType.Delivered.ToString()
+            };
+            await factory.SendToQueueAsync(queueName, command);
+
+            // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
+            DeadDeliveryReportRow? deadReport = null;
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByOperationId(
+                        _fixture.PostgresConnectionString,
+                        operationId);
+                    return deadReport is not null;
+                },
+                maxAttempts: 40,
+                delayMs: 500);
+            Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
+            Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
+
+            // Assert - Queue should be empty (message was handled, not moved to DLQ)
+            var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(queueEmpty, "Queue should be empty — report is saved to dead delivery reports, not DLQ");
+
+            // Assert - DLQ is empty
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
+
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, logCapture.Count);
+        }
+    }
+
+    [Fact]
+    public async Task EmailSendResult_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
+    {
+        // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
+        var logCapture = new LogCapture(nameof(NotificationExpiredException));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ConfigureTestServices(services =>
+                services.AddSingleton<ILoggerProvider>(logCapture))
+            .Initialize();
+
+        await using (factory)
+        {
+            // Arrange - Create notification, set operationId via Succeeded status,
+            // then expire it. Must set operationId before expiring — the SQL function
+            // blocks updates on expired notifications.
+            string operationId = Guid.NewGuid().ToString();
+            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
+            var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+
+            // Now expire the notification by backdating its expiry time
+            await PostgreUtil.RunSql(
+                _fixture.PostgresConnectionString,
+                "UPDATE notifications.emailnotifications SET expirytime = now() - interval '1 minute' WHERE alternateid = $1",
+                new NpgsqlParameter { Value = notification.Id });
+
+            // Act - Send send-result command for the expired notification
+            var command = new EmailSendResultCommand
+            {
+                NotificationId = notification.Id,
+                OperationId = operationId,
+                SendResult = EmailNotificationResultType.Delivered.ToString()
+            };
+            await factory.SendToQueueAsync(queueName, command);
+
+            // Assert - Poll the dead delivery reports table until the report appears
+            DeadDeliveryReportRow? deadReport = null;
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    deadReport = await PostgreUtil.GetDeadDeliveryReportByOperationId(
+                        _fixture.PostgresConnectionString,
+                        operationId);
+                    return deadReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+            Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
+            Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
+
+            // Assert - Queue should be empty (message was handled, no retry)
+            var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(queueEmpty, "Queue should be empty — expired notifications are not retried");
+
+            // Assert - DLQ is empty
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationExpiredException should not trigger DLQ");
+
+            // Assert - Verify the handler encountered the exception exactly once (no retries)
+            Console.WriteLine($"[Test] NotificationExpiredException logged {logCapture.Count} times");
+            Assert.Equal(1, logCapture.Count);
         }
     }
 
