@@ -286,6 +286,157 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         Assert.Equal("Accepted", result);
     }
 
+    // ── SmsSendQueueService sub-menu: invalid input + stream end ─────────────
+    [Fact]
+    public async Task SmsSendQueueMenu_WhenInputStreamEnds_ExitsGracefully()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        // Empty stream → ReadLine returns null → service exits back to caller
+        await RunMenuAsync(CreateService(queueSettings), string.Empty);
+    }
+
+    [Fact]
+    public async Task SmsSendQueueMenu_InvalidInput_PrintsErrorAndContinues()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "xyz\n0\n", output);
+
+        Assert.Contains("Invalid choice", output.ToString());
+    }
+
+    // ── Inspect DLQ: notification not in DB ──────────────────────────────────
+    [Fact]
+    public async Task InspectDlq_WhenNotificationNotInDatabase_ClassifiesAsOther()
+    {
+        // Arrange — put a message on the DLQ for a notification that does NOT exist in DB.
+        var orphanId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = orphanId,
+            MobileNumber = "+4712345678",
+            Body = "Orphan message",
+            SenderNumber = "Altinn"
+        };
+        string msgId = await SeedDlqMessageAsync(command);
+        var (expiredPath, pendingPath, otherPath, queueSettings) = CreateTempListFiles();
+
+        await RunMenuAsync(CreateService(queueSettings), "1\n0\n");
+
+        // No DB row → result is null → classified as "other"
+        var otherItems = await ReadListFileAsync(otherPath);
+        Assert.Contains(otherItems, i => i.NotificationId == orphanId && i.DlqMessageId == msgId);
+        Assert.Empty(await ReadListFileAsync(expiredPath));
+        Assert.Empty(await ReadListFileAsync(pendingPath));
+    }
+
+    // ── Inspect DLQ: malformed message body ──────────────────────────────────
+    [Fact]
+    public async Task InspectDlq_WhenMessageBodyIsNotValidJson_SkipsMessageWithWarning()
+    {
+        // Arrange — put a message with a non-JSON body on the DLQ.
+        await SeedRawDlqMessageAsync("not-valid-json");
+        var (expiredPath, pendingPath, otherPath, queueSettings) = CreateTempListFiles();
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "1\n0\n", output);
+
+        // Message is skipped — warn is printed and nothing appears in any list file.
+        Assert.Contains("[WARN] Could not deserialize message", output.ToString());
+        Assert.Empty(await ReadListFileAsync(expiredPath));
+        Assert.Empty(await ReadListFileAsync(pendingPath));
+        Assert.Empty(await ReadListFileAsync(otherPath));
+    }
+
+    // ── ProcessSendingExpired: notification not in DB ─────────────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenNotificationNotInDatabase_PurgesDlqMessageWithoutDbUpdate()
+    {
+        // Arrange — a DLQ message for a notification that no longer exists in DB (currentResult is null).
+        var orphanId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = orphanId,
+            MobileNumber = "+4712345678",
+            Body = "Orphan message",
+            SenderNumber = "Altinn"
+        };
+        string msgId = await SeedDlqMessageAsync(command);
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(expiredPath, [BuildDlqSmsItem(orphanId, command, msgId)]);
+
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n");
+
+        // DLQ message was completed (purged) even though no DB row existed.
+        Assert.True(await WaitForDlqEmptyAsync(), "DLQ message should be purged even when notification is not in DB");
+    }
+
+    // ── ProcessSendingExpired: item in list not found in DLQ ─────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenListItemNotPresentInDlq_ReportsNotFoundCount()
+    {
+        // Arrange — list file references a DLQ message ID that doesn't exist on the DLQ.
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+
+        // Use a fake message ID — no corresponding message on the DLQ.
+        string fakeMsgId = Guid.NewGuid().ToString();
+        await WriteListFileAsync(expiredPath, [BuildDlqSmsItem(notificationId, command, fakeMsgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n", output);
+
+        Assert.Contains("not found in DLQ", output.ToString());
+
+        // DB state is unchanged — no message was received to process.
+        var (result, _, _, _) = await new SmsNotificationRepository(_fixture.DataSource).GetNotificationStateAsync(notificationId);
+        Assert.Equal("Sending", result);
+    }
+
+    // ── QueryDbState: sub-choices 1 and 3 ────────────────────────────────────
+    [Fact]
+    public async Task QueryDbState_SubChoiceOne_PrintsCurrentDbState()
+    {
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(expiredPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "5\n1\n0\n", output);
+
+        Assert.Contains(notificationId.ToString(), output.ToString());
+    }
+
+    [Fact]
+    public async Task QueryDbState_SubChoiceThree_PrintsCurrentDbState()
+    {
+        var (notificationId, command) = await SeedNotificationAsync("Accepted", DateTime.UtcNow.AddHours(-1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, _, otherPath, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(otherPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "5\n3\n0\n", output);
+
+        Assert.Contains(notificationId.ToString(), output.ToString());
+    }
+
+    [Fact]
+    public async Task QueryDbState_WhenListFileDoesNotExist_ReportsFileNotFound()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        var output = new StringWriter();
+
+        // Pending file was never written — file doesn't exist → items.Count == 0 early return
+        await RunMenuAsync(CreateService(queueSettings), "5\n2\n0\n", output);
+
+        Assert.Contains("File not found", output.ToString());
+    }
+
     // ── Helpers: DB ──────────────────────────────────────────────────────────
     private async Task<(Guid NotificationId, SendSmsCommand Command)> SeedNotificationAsync(
         string result,
@@ -333,14 +484,17 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
     /// Sends <paramref name="command"/> to the main queue then immediately receives it
     /// with PeekLock and dead-letters it. Returns the <c>MessageId</c> that will appear on the DLQ.
     /// </summary>
-    private async Task<string> SeedDlqMessageAsync(SendSmsCommand command)
+    private Task<string> SeedDlqMessageAsync(SendSmsCommand command) =>
+        SeedRawDlqMessageAsync(JsonSerializer.Serialize(command));
+
+    private async Task<string> SeedRawDlqMessageAsync(string rawBody)
     {
         string messageId = Guid.NewGuid().ToString();
 
         await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
 
         await using var sender = client.CreateSender(_queueName);
-        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromString(JsonSerializer.Serialize(command)))
+        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromString(rawBody))
         {
             MessageId = messageId,
             ContentType = "application/json"

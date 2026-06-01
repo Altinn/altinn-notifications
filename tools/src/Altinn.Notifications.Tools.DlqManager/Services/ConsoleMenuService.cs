@@ -44,6 +44,7 @@ public class ConsoleMenuService(IServiceProvider serviceProvider)
             Console.Write($"Enter choice (0-{_queueLabels.Count}): ");
 
             var input = Console.ReadLine()?.Trim();
+            if (input is null) break;
 
             if (input == "0")
             {

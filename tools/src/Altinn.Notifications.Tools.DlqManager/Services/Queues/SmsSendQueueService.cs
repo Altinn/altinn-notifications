@@ -65,6 +65,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             Console.Write("Enter choice (0-5): ");
 
             var choice = Console.ReadLine()?.Trim();
+            if (choice is null) return;
 
             switch (choice)
             {

@@ -16,6 +16,28 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 public class ConsoleMenuServiceTests
 {
     [Fact]
+    public async Task RunMenuAsync_WhenInputStreamEnds_ExitsGracefully()
+    {
+        var service = new ConsoleMenuService(new ServiceCollection().BuildServiceProvider());
+        var originalIn = Console.In;
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetIn(new StringReader(string.Empty));
+            Console.SetOut(TextWriter.Null);
+
+            int result = await service.RunMenuAsync();
+
+            Assert.Equal(0, result);
+        }
+        finally
+        {
+            Console.SetIn(originalIn);
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
     public async Task RunMenuAsync_ExitOption_ReturnsZero()
     {
         var service = new ConsoleMenuService(new ServiceCollection().BuildServiceProvider());
