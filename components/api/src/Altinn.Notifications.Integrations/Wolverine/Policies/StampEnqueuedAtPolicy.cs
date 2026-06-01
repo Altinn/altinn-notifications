@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Integrations.Wolverine.Policies;
 /// to every handler chain, ensuring all queues stamp the original enqueue time
 /// on the envelope before the handler runs.
 /// </summary>
-internal sealed class StampEnqueuedAtPolicy : IHandlerPolicy
+public sealed class StampEnqueuedAtPolicy : IHandlerPolicy
 {
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
