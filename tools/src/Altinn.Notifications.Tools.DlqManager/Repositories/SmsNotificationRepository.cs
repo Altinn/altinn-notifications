@@ -31,10 +31,11 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
         await using var reader = await cmd.ExecuteReaderAsync();
         if (await reader.ReadAsync())
         {
-            var result     = await reader.IsDBNullAsync(0) ? null : await reader.GetFieldValueAsync<string>(0);
-            var expiryTime = await reader.IsDBNullAsync(1) ? (DateTime?)null : DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(1), DateTimeKind.Utc);
+            // All four columns are NOT NULL in the schema — read them directly.
+            var result     = await reader.GetFieldValueAsync<string>(0);
+            var expiryTime = DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(1), DateTimeKind.Utc);
             var isExpired  = await reader.GetFieldValueAsync<bool>(2);
-            var resultTime = await reader.IsDBNullAsync(3) ? (DateTime?)null : DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(3), DateTimeKind.Utc);
+            var resultTime = DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(3), DateTimeKind.Utc);
             return (result, expiryTime, isExpired, resultTime);
         }
 

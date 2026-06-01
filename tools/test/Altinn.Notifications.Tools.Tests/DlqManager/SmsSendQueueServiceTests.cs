@@ -202,6 +202,82 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         Assert.True(await WaitForDlqMessageAsync(msgId), "DLQ message should NOT be purged when the operator declines");
     }
 
+    // ── Query DB state ────────────────────────────────────────────────────────
+    [Fact]
+    public async Task QueryDbState_WithListFile_PrintsCurrentDbState()
+    {
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, pendingPath, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(pendingPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "5\n2\n0\n", output);
+
+        Assert.Contains(notificationId.ToString(), output.ToString());
+    }
+
+    [Fact]
+    public async Task QueryDbState_WithInvalidSubChoice_PrintsInvalidAndReturns()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "5\n9\n0\n", output);
+
+        Assert.Contains("Invalid choice", output.ToString());
+    }
+
+    // ── Empty list file early-exit ────────────────────────────────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenListFileDoesNotExist_ReturnsGracefully()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        // Act — no list file pre-written; service should report "File not found" and return cleanly
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n");
+    }
+
+    [Fact]
+    public async Task ProcessSendingPending_WhenListFileDoesNotExist_ReturnsGracefully()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        await RunMenuAsync(CreateService(queueSettings), "3\n0\n");
+    }
+
+    [Fact]
+    public async Task PurgeOtherStatus_WhenListFileDoesNotExist_ReturnsGracefully()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        await RunMenuAsync(CreateService(queueSettings), "4\n0\n");
+    }
+
+    // ── Non-target DLQ messages are abandoned ────────────────────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenDlqContainsExtraMessages_AbandonsNonTargetMessages()
+    {
+        // Arrange — two notifications on the DLQ, but only one is in the list file.
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        var (_, extraCommand) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+
+        string targetMsgId = await SeedDlqMessageAsync(command);
+        string extraMsgId = await SeedDlqMessageAsync(extraCommand);
+
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+
+        // Only the first notification is in the list — the extra message should be abandoned.
+        await WriteListFileAsync(expiredPath, [BuildDlqSmsItem(notificationId, command, targetMsgId)]);
+
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n");
+
+        // Target message was processed and purged.
+        Assert.True(await WaitForDlqMessageAsync(extraMsgId), "The extra DLQ message should have been abandoned (still present)");
+        var (result, _, _, _) = await new SmsNotificationRepository(_fixture.DataSource).GetNotificationStateAsync(notificationId);
+        Assert.Equal("Accepted", result);
+    }
+
     // ── Helpers: DB ──────────────────────────────────────────────────────────
     private async Task<(Guid NotificationId, SendSmsCommand Command)> SeedNotificationAsync(
         string result,
@@ -383,14 +459,14 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
             new ServiceBusClient(_fixture.ServiceBusConnectionString));
     }
 
-    private static async Task RunMenuAsync(SmsSendQueueService service, string consoleInput)
+    private static async Task RunMenuAsync(SmsSendQueueService service, string consoleInput, TextWriter? output = null)
     {
         var originalIn = Console.In;
         var originalOut = Console.Out;
         try
         {
             Console.SetIn(new StringReader(consoleInput));
-            Console.SetOut(TextWriter.Null);
+            Console.SetOut(output ?? TextWriter.Null);
             await service.RunMenuAsync();
         }
         finally
@@ -421,7 +497,7 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
     }
 
     private static DlqSmsItem BuildDlqSmsItem(Guid notificationId, SendSmsCommand command, string dlqMessageId) =>
-        new DlqSmsItem
+        new()
         {
             NotificationId = notificationId,
             MobileNumber = command.MobileNumber,

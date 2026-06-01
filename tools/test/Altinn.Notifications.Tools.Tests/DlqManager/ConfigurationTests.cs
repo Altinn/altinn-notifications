@@ -108,6 +108,30 @@ public class ConsoleMenuServiceTests
     }
 
     [Fact]
+    public async Task RunMenuAsync_NegativeIntegerInput_PrintsErrorAndContinues()
+    {
+        var service = new ConsoleMenuService(new ServiceCollection().BuildServiceProvider());
+        var originalIn = Console.In;
+        var originalOut = Console.Out;
+        var output = new StringWriter();
+        try
+        {
+            Console.SetIn(new StringReader("-1\n0\n"));
+            Console.SetOut(output);
+
+            int result = await service.RunMenuAsync();
+
+            Assert.Equal(0, result);
+            Assert.Contains("Invalid choice", output.ToString());
+        }
+        finally
+        {
+            Console.SetIn(originalIn);
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
     public async Task RunMenuAsync_InvalidInput_PrintsErrorAndContinues()
     {
         var service = new ConsoleMenuService(new ServiceCollection().BuildServiceProvider());
