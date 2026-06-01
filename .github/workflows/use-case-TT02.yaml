@@ -39,31 +39,31 @@ jobs:
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-v2.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run API v2 recipientOrganization tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no-v2.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=urn:altinn:resource:${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_URN_RESOURCE_ID }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run email notification order use case tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-email.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run contact(s) lookup by organization number use case tests with generating an email notification
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_RESOURCE_ID }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run sms notification order use case tests
         uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
           path: components/api/test/k6/src/tests/orders-sms.js
-          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
   slack-notify:
     if: failure()

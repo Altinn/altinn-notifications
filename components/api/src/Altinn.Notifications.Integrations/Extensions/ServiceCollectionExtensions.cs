@@ -5,17 +5,13 @@ using Altinn.Common.PEP.Clients;
 using Altinn.Common.PEP.Implementation;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.InstantEmailService;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
-using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Integrations.ShortMessageService;
-using Altinn.Notifications.Integrations.Telemetry;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,32 +23,6 @@ namespace Altinn.Notifications.Integrations.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>
-    /// Adds kafka services and configurations to DI container.
-    /// </summary>
-    /// <param name="services">service collection.</param>
-    /// <param name="config">the configuration collection</param>
-    public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
-    {
-        _ = config.GetSection(nameof(KafkaSettings))
-            .Get<KafkaSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-
-        services
-        .AddSingleton<DeliveryReportMetrics>()
-        .AddSingleton<IKafkaProducer, KafkaProducer>()
-        .AddHostedService<SmsStatusConsumer>()
-        .AddHostedService<EmailStatusConsumer>()
-        .AddHostedService<PastDueOrdersConsumer>()
-        .AddHostedService<SmsStatusRetryConsumer>()
-        .AddHostedService<EmailStatusRetryConsumer>()
-        .AddHostedService<PastDueOrdersRetryConsumer>()
-        .AddHostedService<AltinnServiceUpdateConsumer>()
-        .AddHostedService<SmsPublishBackgroundService>()
-        .AddHostedService<EmailPublishBackgroundService>()
-        .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
-    }
-
     /// <summary>
     /// Adds Altinn clients and configurations to DI container.
     /// </summary>
@@ -85,7 +55,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
         services.AddTransient<ISigningCredentialsResolver, SigningCredentialsResolver>();
 
-        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(
-            config.GetSection("SendConditionClient:MaskinportenSettings"));
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"));
     }
 }

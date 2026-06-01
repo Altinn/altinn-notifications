@@ -1,5 +1,7 @@
 using System.Diagnostics.Metrics;
+
 using Altinn.Notifications.Integrations.Telemetry;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Telemetry;
@@ -181,8 +183,8 @@ public sealed class DeliveryReportMetricsTests : IDisposable
 
     [Theory]
     [InlineData("sender@example.com", "se***@example.com")]
-    [InlineData("ab@example.com", "***@example.com")]     // local part <= 2 chars
-    [InlineData("a@example.com", "***@example.com")]      // local part <= 2 chars
+    [InlineData("ab@example.com", "***@example.com")] // local part <= 2 chars
+    [InlineData("a@example.com", "***@example.com")] // local part <= 2 chars
     [InlineData("longaddress@domain.org", "lo***@domain.org")]
     public void MaskEmailAddress_ValidEmail_MasksLocalPartCorrectly(string input, string expected)
     {

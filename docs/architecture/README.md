@@ -10,7 +10,7 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 | [Notifications API](notifications.md) | API controllers, database schema, ASB integration, cron jobs, dependencies |
 | [Email service](email.md) | ASB integration, ACS delivery report routing, dependencies |
 | [SMS service](sms.md) | ASB integration, Link Mobility, dependencies |
-| [Azure Service Bus](asb.md) | Queue overview, feature flags, retry policy, all publishers and handlers |
+| [Azure Service Bus](asb.md) | Queue overview, retry policy, all publishers and handlers |
 | [Instant notifications](instant-notifications.md) | Synchronous HTTP dispatch flow for instant email and SMS (no queue) |
 
 ## Solution diagram

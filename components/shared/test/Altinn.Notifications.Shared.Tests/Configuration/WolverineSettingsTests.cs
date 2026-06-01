@@ -11,7 +11,6 @@ public class WolverineSettingsTests
     {
         var settings = new WolverineSettingsBase();
 
-        Assert.True(settings.EnableWolverine);
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
     }
 

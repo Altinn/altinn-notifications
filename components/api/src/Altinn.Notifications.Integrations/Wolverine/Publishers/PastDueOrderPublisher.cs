@@ -18,8 +18,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 public class PastDueOrderPublisher(
     ILogger<PastDueOrderPublisher> logger,
     IServiceProvider serviceProvider,
-    IOptions<WolverineSettings> options) : IPastDueOrderPublisher    
+    IOptions<WolverineSettings> options) : IPastDueOrderPublisher
 {
+    private readonly ILogger<PastDueOrderPublisher> _logger = logger;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly int _publishConcurrency = options.Value.PastDueOrdersPublishConcurrency <= 0 ? 10 : options.Value.PastDueOrdersPublishConcurrency;
 
     /// <inheritdoc/>
@@ -34,7 +36,7 @@ public class PastDueOrderPublisher(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var failed = new ConcurrentBag<NotificationOrder>();
@@ -46,7 +48,7 @@ public class PastDueOrderPublisher(
 
             try
             {
-                var failedOrder = await SendAsync(order,messageBus,cancellationToken);
+                var failedOrder = await SendAsync(order, messageBus, cancellationToken);
                 if (failedOrder is not null)
                 {
                     failed.Add(failedOrder);
@@ -58,7 +60,7 @@ public class PastDueOrderPublisher(
             }
         }));
 
-       return [.. failed];
+        return [.. failed];
     }
 
     private async Task<NotificationOrder?> SendAsync(
@@ -78,7 +80,7 @@ public class PastDueOrderPublisher(
         }
         catch (Exception ex)
         {
-            logger.LogError(
+            _logger.LogError(
                 ex,
                 "PastDueOrderPublisher failed to publish order {OrderId} to ASB queue",
                 order.Id);

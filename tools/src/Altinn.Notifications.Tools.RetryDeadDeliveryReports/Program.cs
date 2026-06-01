@@ -9,6 +9,7 @@ using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 
 [assembly: ExcludeFromCodeCoverage]
