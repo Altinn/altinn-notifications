@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>Altinn/renovate-config"
+    "local>Altinn/renovate-config",
+    ":prHourlyLimit6"
   ],
   "packageRules": [
     {
