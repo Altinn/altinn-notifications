@@ -91,6 +91,14 @@ public class AltinnGatewayClientTests
         await Assert.ThrowsAsync<SmsGatewayException>(() => client.SendAsync(_testSms));
     }
 
+    [Fact]
+    public async Task SendAsync_HttpRequestExceptionThrown_ThrowsSmsGatewayException()
+    {
+        var client = CreateClient(new ThrowingHttpMessageHandler(new HttpRequestException("Connection refused")));
+
+        await Assert.ThrowsAsync<SmsGatewayException>(() => client.SendAsync(_testSms));
+    }
+
     private sealed class FakeHttpMessageHandler(HttpResponseMessage response) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -104,5 +112,11 @@ public class AltinnGatewayClientTests
             await Task.Delay(Timeout.Infinite, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
+    }
+
+    private sealed class ThrowingHttpMessageHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromException<HttpResponseMessage>(exception);
     }
 }
