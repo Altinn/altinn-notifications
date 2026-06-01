@@ -292,8 +292,13 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
     {
         var (_, _, _, queueSettings) = CreateTempListFiles();
 
+        var output = new StringWriter();
+
         // Empty stream → ReadLine returns null → service exits back to caller
-        await RunMenuAsync(CreateService(queueSettings), string.Empty);
+        await RunMenuAsync(CreateService(queueSettings), string.Empty, output);
+
+        // Menu header is printed before the null ReadLine causes exit
+        Assert.Contains("SMS Send Queue", output.ToString());
     }
 
     [Fact]
