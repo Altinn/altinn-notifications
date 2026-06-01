@@ -34,10 +34,10 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Mock<IMetricsService> serviceMock = new();
         serviceMock
             .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DailySmsMetrics());
+            .ReturnsAsync(new DailyMetrics<DailySmsMetricsRecord>());
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes("test"));
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary
             {
                 Environment = "Development",
@@ -69,7 +69,7 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Assert.Equal("Development", response.Headers.GetValues("X-Environment").FirstOrDefault());
 
         serviceMock.Verify(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()), Times.Once);
-        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()), Times.Once);
+        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -79,8 +79,8 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Mock<IMetricsService> serviceMock = new();
         serviceMock
             .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailySmsMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         var client = GetTestClient(
@@ -104,8 +104,8 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Mock<IMetricsService> serviceMock = new();
         serviceMock
             .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailySmsMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         var client = GetTestClient(
@@ -129,8 +129,8 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Mock<IMetricsService> serviceMock = new();
         serviceMock
             .Setup(e => e.GetDailySmsMetrics(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DailySmsMetrics());
-        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailySmsMetrics>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailySmsMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
         // Create client overriding configuration to remove the configured API key
@@ -154,6 +154,142 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         }).CreateClient();
 
         string url = _basePath + "/sms";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetEmailDailyMetrics_ReturnsOk()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailyEmailMetrics(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailyEmailMetricsRecord>());
+
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("test"));
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MetricsSummary
+            {
+                Environment = "Development",
+                GeneratedAt = DateTimeOffset.UtcNow,
+                FileName = "emailmetrics",
+                FileStream = stream,
+                FileSizeBytes = stream.Length,
+                TotalFileTransferCount = 1,
+                FileHash = "dummyhash"
+            });
+            
+        var client = GetTestClient(
+            metricsService: serviceMock.Object);
+
+        string url = _basePath + "/email";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "valid-api-key");
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/octet-stream", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("dummyhash", response.Headers.GetValues("X-File-Hash").FirstOrDefault());
+        Assert.Equal("4", response.Headers.GetValues("X-File-Size").FirstOrDefault());
+        Assert.Equal("1", response.Headers.GetValues("X-Total-FileTransfer-Count").FirstOrDefault());
+        Assert.NotNull(response.Headers.GetValues("X-Generated-At").FirstOrDefault());
+        Assert.Equal("Development", response.Headers.GetValues("X-Environment").FirstOrDefault());
+
+        serviceMock.Verify(e => e.GetDailyEmailMetrics(It.IsAny<CancellationToken>()), Times.Once);
+        serviceMock.Verify(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEmailDailyMetrics_WithoutValidApiKey_ReturnsUnauthorized()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailyEmailMetrics(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailyEmailMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MetricsSummary());
+
+        var client = GetTestClient(
+            metricsService: serviceMock.Object);
+
+        string url = _basePath + "/email";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("API key required", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetEmailDailyMetrics_WithInvalidApiKey_ReturnsUnauthorized()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailyEmailMetrics(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailyEmailMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MetricsSummary());
+
+        var client = GetTestClient(
+            metricsService: serviceMock.Object);
+
+        string url = _basePath + "/email";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "invalid-api-key");
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetEmailDailyMetrics_NoConfiguredApiKey_ReturnsUnauthorized()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.GetDailyEmailMetrics(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DailyMetrics<DailyEmailMetricsRecord>());
+        serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MetricsSummary());
+
+        // Create client overriding configuration to remove the configured API key
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                // override MetricsApiKey to empty (treat as not configured)
+                var overrides = new Dictionary<string, string?>
+                {
+                    ["MetricsApiKey"] = string.Empty
+                };
+                config.AddInMemoryCollection(overrides!);
+            });
+
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton(serviceMock.Object);
+                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+            });
+        }).CreateClient();
+
+        string url = _basePath + "/email";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act

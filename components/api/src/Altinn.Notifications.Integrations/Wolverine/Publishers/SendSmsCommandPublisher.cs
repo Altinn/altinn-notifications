@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
@@ -15,10 +15,6 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// Wolverine-based implementation of <see cref="ISendSmsPublisher"/> that publishes
 /// SMS notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
 /// </summary>
-/// <remarks>
-/// This class implements the <see cref="ISendSmsPublisher"/> interface to enable asynchronous publication of SMS
-/// commands to Azure Service Bus via Wolverine. Ensure that the provided <see cref="Sms"/> object is properly configured before calling PublishAsync.
-/// </remarks>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
 /// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
 /// <param name="options">Configuration options for Wolverine settings, including SMS publish concurrency.</param>
@@ -36,7 +32,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        return await SendAsync(sms, messageBus);
+        return await SendAsync(sms, messageBus, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -61,7 +57,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
 
             try
             {
-                var failedMessage = await SendAsync(sms, messageBus);
+                var failedMessage = await SendAsync(sms, messageBus, cancellationToken);
                 if (failedMessage is not null)
                 {
                     failedSms.Add(failedMessage);
@@ -81,11 +77,12 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
     /// </summary>
     /// <param name="sms">The SMS notification to send.</param>
     /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>
     /// <see langword="null"/> if the command was dispatched successfully;
     /// otherwise the original <paramref name="sms"/> if an error occurred.
     /// </returns>
-    private async Task<Sms?> SendAsync(Sms sms, IMessageBus messageBus)
+    private async Task<Sms?> SendAsync(Sms sms, IMessageBus messageBus, CancellationToken cancellationToken)
     {
         var sendSmsCommand = new SendSmsCommand
         {
@@ -97,6 +94,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await messageBus.SendAsync(sendSmsCommand);
 
             return null;

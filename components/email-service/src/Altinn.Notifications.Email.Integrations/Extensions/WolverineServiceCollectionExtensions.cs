@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Email.Integrations.Publishers;
 using Altinn.Notifications.Email.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
@@ -9,7 +11,6 @@ using Altinn.Notifications.Shared.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -18,12 +19,10 @@ namespace Altinn.Notifications.Email.Integrations.Extensions;
 /// <summary>
 /// Extension methods for registering Wolverine with Azure Service Bus in the email service.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class WolverineServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Wolverine with Azure Service Bus transport.
-    /// Each listener/publisher queue is individually enabled via its own flag.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
@@ -32,10 +31,6 @@ public static class WolverineServiceCollectionExtensions
     {
         IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
         WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
-        if (!wolverineSettings.EnableWolverine)
-        {
-            return;
-        }
 
         services.Configure<WolverineSettings>(wolverineSection);
 
@@ -51,33 +46,34 @@ public static class WolverineServiceCollectionExtensions
             AddEmailStatusCheckListener(wolverineSettings, opts);
 
             // Publishers
-            AddEmailSendResultPublisher(wolverineSettings, opts);
-            AddEmailStatusCheckPublisher(wolverineSettings, opts);
+            AddEmailSendResultPublisher(services, wolverineSettings, opts);
+            AddEmailStatusCheckPublisher(services, wolverineSettings, opts);
+            AddEmailServiceRateLimitPublisher(services, wolverineSettings, opts);
         });
     }
 
     /// <summary>
     /// Registers the Wolverine listener for the Azure Service Bus email send queue, enabling
     /// the email service to consume <see cref="SendEmailCommand"/> messages.
-    /// This method is invoked only when <see cref="WolverineSettings.EnableSendEmailListener"/> is <c>true</c>.
     /// </summary>
     /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
     /// <param name="wolverineOptions">The Wolverine options to configure.</param>
     private static void AddEmailSendQueueListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableSendEmailListener)
+        if (wolverineSettings.EmailSendListenerCount <= 0)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailSendListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured when {nameof(WolverineSettings.EnableSendEmailListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailSendQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailSendListenerCount);
 
         wolverineOptions.Policies.Add(new SendEmailCommandHandlerPolicy(wolverineSettings));
     }
@@ -85,22 +81,19 @@ public static class WolverineServiceCollectionExtensions
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="EmailSendResultCommand"/>, routing
     /// outbound commands to the Azure Service Bus email sending status queue consumed by the API.
-    /// This method is invoked only when <see cref="WolverineSettings.EnableEmailSendResultPublisher"/> is <c>true</c>.
     /// </summary>
+    /// <param name="services">The service collection.</param>
     /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
     /// <param name="wolverineOptions">The Wolverine options to configure.</param>
-    private static void AddEmailSendResultPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddEmailSendResultPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailSendResultPublisher)
-        {
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendResultQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailSendResultPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailSendResultQueueName)} must be configured.");
         }
+
+        services.AddSingleton<IEmailSendResultDispatcher, EmailSendResultPublisher>();
 
         wolverineOptions.PublishMessage<EmailSendResultCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailSendResultQueueName);
@@ -110,25 +103,25 @@ public static class WolverineServiceCollectionExtensions
     /// Registers the Wolverine listener for the Azure Service Bus email status check queue, enabling
     /// the email service to consume <see cref="CheckEmailSendStatusCommand"/> messages and
     /// poll Azure Communication Services (ACS) for delivery status.
-    /// This method is invoked only when <see cref="WolverineSettings.EnableEmailStatusCheckListener"/> is <c>true</c>.
     /// </summary>
     /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
     /// <param name="wolverineOptions">The Wolverine options to configure.</param>
     private static void AddEmailStatusCheckListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailStatusCheckListener)
+        if (wolverineSettings.EmailStatusCheckListenerCount <= 0)
         {
-            return;
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailStatusCheckListenerCount)} must be greater than 0.");
         }
 
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckListener)} is enabled.");
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured.");
         }
 
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName)
-                        .ListenerCount(wolverineSettings.ListenerCount);
+                        .ListenerCount(wolverineSettings.EmailStatusCheckListenerCount);
 
         wolverineOptions.Policies.Add(new CheckEmailSendStatusHandlerPolicy(wolverineSettings));
     }
@@ -136,24 +129,39 @@ public static class WolverineServiceCollectionExtensions
     /// <summary>
     /// Registers Wolverine publishing rules for <see cref="CheckEmailSendStatusCommand"/>, routing
     /// outbound commands to the Azure Service Bus email status check queue.
-    /// This method is invoked only when <see cref="WolverineSettings.EnableEmailStatusCheckPublisher"/> is <c>true</c>.
     /// </summary>
+    /// <param name="services">The service collection.</param>
     /// <param name="wolverineSettings">The Wolverine settings containing queue names and feature flags.</param>
     /// <param name="wolverineOptions">The Wolverine options to configure.</param>
-    private static void AddEmailStatusCheckPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddEmailStatusCheckPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (!wolverineSettings.EnableEmailStatusCheckPublisher)
-        {
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailStatusCheckQueueName))
         {
             throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured when {nameof(WolverineSettings.EnableEmailStatusCheckPublisher)} is enabled.");
+                $"{nameof(WolverineSettings.EmailStatusCheckQueueName)} must be configured.");
         }
+
+        services.AddSingleton<IEmailStatusCheckDispatcher, EmailStatusCheckPublisher>();
 
         wolverineOptions.PublishMessage<CheckEmailSendStatusCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.EmailStatusCheckQueueName);
+    }
+
+    /// <summary>
+    /// Registers Wolverine publishing rules for <see cref="EmailServiceRateLimitCommand"/>, routing
+    /// outbound commands to the Azure Service Bus service update queue consumed by the API.
+    /// </summary>
+    private static void AddEmailServiceRateLimitPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (string.IsNullOrWhiteSpace(wolverineSettings.EmailServiceRateLimitQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.EmailServiceRateLimitQueueName)} must be configured.");
+        }
+
+        services.AddSingleton<IEmailServiceRateLimitDispatcher, EmailServiceRateLimitPublisher>();
+
+        wolverineOptions.PublishMessage<EmailServiceRateLimitCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.EmailServiceRateLimitQueueName);
     }
 }

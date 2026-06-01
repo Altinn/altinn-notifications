@@ -1,4 +1,3 @@
-import { stopIterationOnFail } from "./errorhandler.js";
 import { environment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
@@ -18,15 +17,14 @@ const maskinportenBaseUrls = {
 };
 
 if (!environment) {
-    stopIterationOnFail("Environment variable 'altinn_env' is not set", false);
+    throw new Error("Environment variable 'altinn_env' is not set");
 }
 
 const baseUrl = baseUrls[environment];
 if (!baseUrl) {
-    stopIterationOnFail(`Invalid value for environment variable 'altinn_env': '${environment}'.`, false);
+    throw new Error(`Invalid value for environment variable 'altinn_env': '${environment}'.`);
 }
 
-const subscriptionKey = __ENV.subscriptionKey;
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
 // Altinn TestTools token generator URL.
@@ -43,7 +41,9 @@ export const notifications = {
 
     orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
 
-    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_old_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/sms`,
+    orders_email_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/email`,
 
     shipment_v2: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
 
@@ -59,7 +59,7 @@ export const notifications = {
 
     orders_fromSendersRef: (sendersReference) => `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`,
 
-    conditionCheck: (conditionMet) => `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`
+    conditionCheck: (conditionMet, subscriptionKey) => `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`
 };
 
 // Provides endpoints for handling authentication work-flows on the Altinn platform.

@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 
 /// <summary>
 /// Integration tests for the SMS delivery report ASB publisher.
-/// Verifies that when the ASB publisher is enabled, calling <c>ISmsDeliveryReportPublisher.PublishAsync</c>
+/// Verifies that calling <c>ISmsDeliveryReportPublisher.PublishAsync</c>
 /// sends a correctly shaped <see cref="SmsDeliveryReportCommand"/> to the ASB queue.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
@@ -28,7 +28,7 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
     /// into a flat <see cref="SmsDeliveryReportCommand"/> and sends it to the configured queue.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_WhenEnabled_SendsCommandToQueue()
+    public async Task PublishAsync_SendsCommandToQueue()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
 
@@ -36,11 +36,19 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
         {
             // Arrange
             var publisher = factory.Host.Services.GetRequiredService<ISmsDeliveryReportPublisher>();
+            var deliveryTime = DateTime.UtcNow.ToString("o");
             var result = new SendOperationResult
             {
                 NotificationId = Guid.NewGuid(),
                 GatewayReference = Guid.NewGuid().ToString(),
-                SendResult = SmsSendResult.Delivered
+                SendResult = SmsSendResult.Delivered,
+                DeliveryReport = JsonSerializer.Serialize(new
+                {
+                    reference = "test-reference",
+                    receiver = "12345678",
+                    state = "DELIVRD",
+                    deliveryTime
+                })
             };
 
             // Act
@@ -60,6 +68,14 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             Assert.Equal(result.NotificationId, command.NotificationId);
             Assert.Equal(result.GatewayReference, command.GatewayReference);
             Assert.Equal(result.SendResult.ToString(), command.SendResult);
+
+            // The delivery report is serialized as a JSON string, so we can deserialize it back to verify its content
+            var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
+            Assert.NotNull(deliveryReport);
+            Assert.Equal("test-reference", deliveryReport["reference"]);
+            Assert.Equal("12345678", deliveryReport["receiver"]);
+            Assert.Equal("DELIVRD", deliveryReport["state"]);
+            Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
         }
     }
 
@@ -78,12 +94,13 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             // Arrange
             var statusService = factory.Host.Services.GetRequiredService<IStatusService>();
             string gatewayReference = Guid.NewGuid().ToString();
+            var deliveryTime = DateTime.UtcNow.ToString("o");
 
             var drMessage = new LinkMobility.PSWin.Receiver.Model.DrMessage(
                 gatewayReference,
                 "12345678",
                 LinkMobility.PSWin.Receiver.Model.DeliveryState.DELIVRD,
-                DateTime.UtcNow.ToString("o"));
+                deliveryTime);
 
             // Act
             await statusService.UpdateStatusAsync(drMessage);
@@ -101,6 +118,14 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             Assert.NotNull(command);
             Assert.Equal(gatewayReference, command.GatewayReference);
             Assert.Equal("Delivered", command.SendResult);
+
+            // Assert delivery report content
+            var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
+            Assert.NotNull(deliveryReport);
+            Assert.Equal(gatewayReference, deliveryReport["reference"]);
+            Assert.Equal("12345678", deliveryReport["receiver"]);
+            Assert.Equal("DELIVRD", deliveryReport["state"]);
+            Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
         }
     }
 }

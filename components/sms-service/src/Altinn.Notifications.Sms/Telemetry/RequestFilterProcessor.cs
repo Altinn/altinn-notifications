@@ -42,9 +42,9 @@ namespace Altinn.Notifications.Sms.Telemetry
         }
 
         /// <summary>
-        /// No action on end
+        /// Captures the X-Forwarded-For IP address as an activity tag on inbound HTTP requests.
         /// </summary>
-        /// <param name="activity">xx</param>
+        /// <param name="activity">The activity that has ended.</param>
         public override void OnEnd(Activity activity)
         {
             if (activity.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null && 

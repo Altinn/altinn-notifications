@@ -1,7 +1,5 @@
 using System.Collections.Immutable;
 using System.Data;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;

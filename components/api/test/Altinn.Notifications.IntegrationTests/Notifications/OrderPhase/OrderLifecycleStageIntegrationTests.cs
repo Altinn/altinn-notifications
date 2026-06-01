@@ -23,6 +23,8 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
 {
     private const string _basePath = "/notifications/api/v1/future/orders";
     private readonly SpyContactPointServiceFactory _factory = factory;
+    private readonly List<Guid> _orderIdsToDelete = [];
+    private readonly List<Guid> _orderChainIdsToDelete = [];
     private HttpClient _client = null!;
 
     [Fact]
@@ -213,17 +215,41 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        _client?.Dispose();
-
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
+        try
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+            await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
+        }
+        finally
+        {
+            _client?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 
     private async Task<HttpResponseMessage> SendPostRequest(NotificationOrderChainRequestExt request)
     {
         using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        return await _client.PostAsync(_basePath, content);
+        var response = await _client.PostAsync(_basePath, content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (result?.OrderChainReceipt is not null)
+            {
+                _orderIdsToDelete.Add(result.OrderChainReceipt.ShipmentId);
+                _orderChainIdsToDelete.Add(result.OrderChainId);
+
+                if (result.OrderChainReceipt.Reminders is not null)
+                {
+                    _orderIdsToDelete.AddRange(result.OrderChainReceipt.Reminders.Select(r => r.ShipmentId));
+                }
+            }
+        }
+
+        return response;
     }
 }

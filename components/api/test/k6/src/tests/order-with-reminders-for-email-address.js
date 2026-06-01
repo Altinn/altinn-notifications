@@ -14,11 +14,7 @@
 
     Command:    
     podman compose run k6 run /src/tests/order-with-reminders-for-email-address.js \
-    -e tokenGeneratorUserName={the user name to access the token generator} \
-    -e tokenGeneratorUserPwd={the password to access the token generator} \
-    -e mpClientId={the identifier of an integration defined in maskinporten} \
-    -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    --secret-source=file=/.secrets \
     -e altinn_env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
     -e emailRecipient={Email address to include as notification recipient} \
     -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \
@@ -138,13 +134,13 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Test context from setup phase
  */
-export default function runTests(data) {
+export default async function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientEmailFromOrderChainPayload
     });
 
-    const processingResults = processVariants(variants, {
+    const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,

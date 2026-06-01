@@ -2,6 +2,7 @@ using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -26,7 +27,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v2($1, $2, $3)"; // (_result, _operationid, _alternateid)
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v3($1, $2, $3, $4)"; // (_result, _operationid, _alternateid, _deliveryreport)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
@@ -62,7 +63,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         await pgcom.ExecuteNonQueryAsync();
     }
 
-     /// <inheritdoc/>
+    /// <inheritdoc/>
     public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
     {
         List<EmailRecipient> searchResult = [];
@@ -86,13 +87,14 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
         if (!hasOperationId && !hasNotificationId)
         {
-            throw new ArgumentException("The provided Email identifier is invalid.");
+            throw new InvalidNotificationIdentifierException("The provided Email identifier is invalid.");
         }
 
         await ExecuteUpdateWithTransactionAsync(
@@ -102,6 +104,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
             },
             NotificationChannel.Email,
             notificationId,

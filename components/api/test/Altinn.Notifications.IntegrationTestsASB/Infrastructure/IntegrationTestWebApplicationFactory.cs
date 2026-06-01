@@ -1,14 +1,10 @@
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
 
 using Npgsql;
 
@@ -43,8 +39,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
-        Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
-        Console.WriteLine($"[Factory] ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
+        Console.WriteLine($"[Factory] Loaded WolverineSettings - ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
         Console.WriteLine($"[Factory] Postgres connection: {Truncate(Fixture.PostgresConnectionString, 50)}...");
 
         string? uri = configuration["GeneralSettings:BaseUri"];
@@ -60,27 +55,26 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             dataSourceBuilder.EnableDynamicJson();
             return dataSourceBuilder.Build();
         }));
-
-        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
     }
 
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        if (WolverineSettings == null)
         {
             return;
         }
 
         await DrainDeadLetterQueuesAsync(
             Fixture.ServiceBusConnectionString,
+            WolverineSettings.SendSmsQueueName,
             WolverineSettings.EmailSendQueueName,
             WolverineSettings.EmailSendResultQueueName,
-            WolverineSettings.SendSmsQueueName,
+            WolverineSettings.SmsSendResultQueueName,
             WolverineSettings.SmsDeliveryReportQueueName,
-            WolverineSettings.EmailDeliveryReportQueueName);
+            WolverineSettings.EmailDeliveryReportQueueName,
+            WolverineSettings.EmailServiceRateLimitQueueName,
+            WolverineSettings.PastDueOrdersQueueName);
     }
 
     /// <inheritdoc/>
@@ -90,11 +84,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         {
             await using var dataSource = NpgsqlDataSource.Create(Fixture.PostgresConnectionString);
             await using var cmd = dataSource.CreateCommand(
-                "DELETE FROM notifications.emailnotifications; " +
-                "DELETE FROM notifications.smsnotifications; " +
-                "DELETE FROM notifications.orders; " +
-                "DELETE FROM notifications.statusfeed; " +
-                "DELETE FROM notifications.deaddeliveryreports;");
+                "TRUNCATE notifications.orderschain, notifications.orders, " +
+                "notifications.statusfeed, notifications.resourcelimitlog, " +
+                "notifications.deaddeliveryreports CASCADE;");
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex)

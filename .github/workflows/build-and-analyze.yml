@@ -163,7 +163,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
@@ -182,7 +182,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:18.3@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
+        image: postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -194,27 +194,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      kafka:
-        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_NODE_ID: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-        options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
@@ -283,7 +262,7 @@ jobs:
           path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -336,7 +315,7 @@ jobs:
           path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -349,28 +328,6 @@ jobs:
     permissions:
       contents: read
       checks: write
-    services:
-      kafka:
-        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_NODE_ID: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-        options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
@@ -431,7 +388,7 @@ jobs:
           path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -444,28 +401,6 @@ jobs:
     permissions:
       contents: read
       checks: write
-    services:
-      kafka:
-        image: confluentinc/cp-kafka:8.2.0@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_NODE_ID: 1
-          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-          KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-        options: >-
-          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
@@ -526,7 +461,7 @@ jobs:
           path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -541,7 +476,7 @@ jobs:
       checks: write
     services:
       postgres:
-        image: postgres:18.3@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
+        image: postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -599,7 +534,7 @@ jobs:
           path: '**/TestResults/**/coverage.opencover.xml'
       - name: Process test results
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -626,7 +561,7 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Cache NuGet packages
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}

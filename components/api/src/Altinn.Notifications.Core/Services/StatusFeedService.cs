@@ -30,9 +30,9 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public Task DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
+    public Task<int> DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
     {
-       return _statusFeedRepository.DeleteOldStatusFeedRecords(cancellationToken);
+        return _statusFeedRepository.DeleteOldStatusFeedRecords(cancellationToken);
     }
 
     /// <inheritdoc />

@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
@@ -24,8 +25,6 @@ using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
-
-using Confluent.Kafka.Extensions.OpenTelemetry;
 
 using FluentValidation;
 
@@ -72,14 +71,14 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     IncludeXmlComments(options);
-    
+
     options.EnableAnnotations();
     options.UseInlineDefinitionsForEnums();
-    options.SchemaFilter<SwaggerDefaultValues>();
+    options.SchemaFilter<OpenApiSchemaEnrichmentFilter>();
     options.OperationFilter<AddResponseHeadersFilter>();
-    
+
     options.ExampleFilters();
-    
+
     options.AddServer(new OpenApiServer()
     {
         Url = "https://platform.tt02.altinn.no/",
@@ -162,8 +161,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                "Altinn.Notifications.KafkaProducer",
-                "Altinn.Notifications.KafkaConsumer");
+                DeliveryReportMetrics.MeterName);
         })
         .WithTracing(tracing =>
         {
@@ -179,8 +177,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
-
-            tracing.AddConfluentKafkaInstrumentation();
 
             tracing.AddSource("Wolverine");
         });
@@ -236,10 +232,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         // This avoids requiring Maskinporten credentials when running against local mock services.
         services.AddHttpClient<IConditionClient, SendConditionClient>(); // TODO: Why is SendConditionClient added here?
     }
-
-    services.AddKafkaServices(config);
-    services.AddWolverineServices(config, builder.Environment);
     
+    services.AddWolverineServices(config, builder.Environment);
+
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }

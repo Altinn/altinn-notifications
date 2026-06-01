@@ -102,17 +102,16 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.SendSmsQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             var queueName = GetQueueName(factory);
 
             // Act
             await factory.SendToQueueAsync(queueName, command);
 
-            // Assert
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms, 500ms, 500ms) = 5 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 5 scheduled retries = 9 attempts
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
             bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref callCount) >= 9),
+                () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
                 maxAttempts: 40,
                 delayMs: 500);
 
@@ -123,17 +122,70 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
                     sms.Recipient == command.MobileNumber &&
                     sms.Message == command.Body &&
                     sms.Sender == command.SenderNumber)),
-                Times.Exactly(9));
+                Times.Exactly(expectedAttempts));
         }
     }
 
     /// <summary>
-    /// Verifies that when a SendSmsCommand has an empty NotificationId, the handler throws
-    /// an <see cref="InvalidOperationException"/> which is not covered by the retry policy,
-    /// causing the message to go directly to the dead letter queue without any retries.
+    /// Verifies that when the ISendingService.SendAsync method throws a gateway error (e.g., HttpRequestException),
+    /// the SendSmsCommandHandler retries the operation according to the gateway error policy, which skips
+    /// in-lock cooldown retries and goes directly to spread-out scheduled retries.
     /// </summary>
     [Fact]
-    public async Task HandleAsync_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
+    public async Task HandleAsync_WhenSendingServiceThrowsAGatewayException_RetriesAccordingToGatewayErrorPolicy()
+    {
+        // Arrange
+        var command = new SendSmsCommand
+        {
+            NotificationId = Guid.NewGuid(),
+            MobileNumber = "+4799999999",
+            Body = "Integration test SMS body",
+            SenderNumber = "Altinn"
+        };
+
+        int callCount = 0;
+        var mockService = new Mock<ISendingService>();
+        mockService
+            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()))
+            .Callback(() => Interlocked.Increment(ref callCount))
+            .ThrowsAsync(new HttpRequestException("Gateway error"));
+
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .ReplaceService(_ => mockService.Object)
+            .Initialize();
+
+        await using (factory)
+        {
+            var policy = factory.WolverineSettings!.SendSmsQueueGatewayErrorPolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+            var queueName = GetQueueName(factory);
+
+            // Act
+            await factory.SendToQueueAsync(queueName, command);
+
+            // Assert - Verify the handler was called exactly as many times as the gateway error policy dictates
+            bool handled = await WaitForUtils.WaitForAsync(
+                () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
+                maxAttempts: 40,
+                delayMs: 500);
+
+            Assert.True(handled, "ISendingService.SendAsync was not retried as expected for gateway errors.");
+            mockService.Verify(
+                s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
+                    sms.NotificationId == command.NotificationId &&
+                    sms.Recipient == command.MobileNumber &&
+                    sms.Message == command.Body &&
+                    sms.Sender == command.SenderNumber)),
+                Times.Exactly(expectedAttempts));
+        }
+    }
+
+    /// <summary>
+    /// Verifies that when a SendSmsCommand has an empty NotificationId, the handler discards
+    /// the message silently without invoking the sending service or dead-lettering the message.
+    /// </summary>
+    [Fact]
+    public async Task HandleAsync_WhenNotificationIdIsEmpty_DiscardsMessageWithoutCallingService()
     {
         // Arrange
         var mockService = new Mock<ISendingService>();
@@ -146,7 +198,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
         {
             string queueName = GetQueueName(factory);
 
-            // Act - NotificationId = Guid.Empty triggers InvalidOperationException in the handler guard clause
+            // Act - NotificationId = Guid.Empty triggers the guard clause which logs and returns early
             await factory.SendToQueueAsync(queueName, new SendSmsCommand
             {
                 NotificationId = Guid.Empty,
@@ -155,15 +207,18 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
                 SenderNumber = "Altinn"
             });
 
-            // Assert - Message should appear in DLQ quickly as InvalidOperationException is not retried by the policy
+            // Allow time for the message to be processed
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // Assert - Message should NOT appear in the DLQ as it is discarded, not failed
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
-                TimeSpan.FromSeconds(10));
+                TimeSpan.FromSeconds(2));
 
-            Assert.NotNull(deadLetterMessage);
+            Assert.Null(deadLetterMessage);
 
-            // Assert - The sending service should never have been called since the guard throws before it
+            // Assert - The sending service should never have been called
             mockService.Verify(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()), Times.Never);
         }
     }

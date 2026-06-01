@@ -3,6 +3,7 @@ using System.Text.Json;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
@@ -27,50 +28,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     };
 
     [Theory]
-    [InlineData(EmailSendResult.Delivered)]
-    [InlineData(EmailSendResult.Failed)]
-    [InlineData(EmailSendResult.Failed_Bounced)]
-    [InlineData(EmailSendResult.Failed_FilteredSpam)]
-    public async Task CheckEmailSendStatus_WhenTerminalResult_PublishesToKafka(EmailSendResult terminalResult)
-    {
-        // Arrange
-        var command = ValidCommand();
-        var producerCalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var producerMock = new Mock<ICommonProducer>();
-        producerMock
-            .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((_, _) => producerCalled.TrySetResult())
-            .ReturnsAsync(true);
-
-        var emailClientMock = new Mock<IEmailServiceClient>();
-        emailClientMock
-            .Setup(c => c.GetOperationUpdate(command.SendOperationId))
-            .ReturnsAsync(terminalResult);
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService(_ => producerMock.Object)
-            .ReplaceService(_ => emailClientMock.Object)
-            .Initialize();
-
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
-
-            // Act
-            await factory.SendToQueueAsync(queueName, command);
-
-            // Assert
-            var completed = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(producerCalled.Task.IsCompleted),
-                maxAttempts: 20,
-                delayMs: 500);
-            Assert.True(completed, "Handler should publish to Kafka when ACS returns a terminal result");
-        }
-    }
-
-    [Theory]
     [InlineData(EmailSendResult.Failed)]
     [InlineData(EmailSendResult.Delivered)]
     [InlineData(EmailSendResult.Failed_Bounced)]
@@ -86,8 +43,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ReturnsAsync(terminalResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .WithConfig("WolverineSettings:EnableEmailSendResultPublisher", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
@@ -116,47 +71,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     }
 
     [Fact]
-    public async Task CheckEmailSendStatus_WhenStillSending_ReschedulesAndEventuallyPublishes()
-    {
-        // Arrange
-        var command = ValidCommand();
-        var producerCalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var producerMock = new Mock<ICommonProducer>();
-        producerMock
-            .Setup(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((_, _) => producerCalled.TrySetResult())
-            .ReturnsAsync(true);
-
-        var emailClientMock = new Mock<IEmailServiceClient>();
-        emailClientMock
-            .SetupSequence(c => c.GetOperationUpdate(command.SendOperationId))
-            .ReturnsAsync(EmailSendResult.Sending)
-            .ReturnsAsync(EmailSendResult.Delivered);
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
-            .ReplaceService(_ => producerMock.Object)
-            .ReplaceService(_ => emailClientMock.Object)
-            .Initialize();
-
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
-
-            // Act
-            await factory.SendToQueueAsync(queueName, command);
-
-            // Assert - Higher timeout to account for the 8-second rescheduling delay in the handler
-            var completed = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(producerCalled.Task.IsCompleted),
-                maxAttempts: 40,
-                delayMs: 500);
-            Assert.True(completed, "Handler should reschedule and eventually publish once ACS returns a terminal result");
-        }
-    }
-
-    [Fact]
     public async Task CheckEmailSendStatus_WhenAcsClientThrows_RetriesAndMovesToDeadLetterQueue()
     {
         // Arrange
@@ -169,12 +83,13 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             .ThrowsAsync(new InvalidOperationException("Simulated ACS error"));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .ReplaceService(_ => emailClientMock.Object)
             .Initialize();
 
         await using (factory)
         {
+            var policy = factory.WolverineSettings!.EmailStatusCheckQueuePolicy;
+            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
 
             // Act
@@ -187,12 +102,9 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
                 TimeSpan.FromSeconds(30));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms) = 3 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 3 scheduled retries = 7 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(7, attemptCount);
+            // Assert - Verify the handler was called exactly as many times as the policy dictates
+            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+            Assert.Equal(expectedAttempts, attemptCount);
         }
     }
 
@@ -200,7 +112,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .WithConfig("WolverineSettings:EnableEmailStatusCheckListener", "true")
             .Initialize();
 
         await using (factory)
@@ -212,6 +123,34 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
             {
                 NotificationId = Guid.Empty,
                 SendOperationId = Guid.NewGuid().ToString(),
+                LastCheckedAtUtc = DateTime.UtcNow
+            });
+
+            // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
+            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(10));
+            Assert.NotNull(deadLetterMessage);
+        }
+    }
+
+    [Fact]
+    public async Task CheckEmailSendStatus_WhenSendOperationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture)
+            .Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+
+            // Act - SendOperationId = string.Empty triggers ArgumentException in the handler guard clause.
+            // ArgumentException is not in the CheckEmailSendStatusHandlerPolicy chain → DLQ immediately.
+            await factory.SendToQueueAsync(queueName, new CheckEmailSendStatusCommand
+            {
+                NotificationId = Guid.NewGuid(),
+                SendOperationId = string.Empty,
                 LastCheckedAtUtc = DateTime.UtcNow
             });
 

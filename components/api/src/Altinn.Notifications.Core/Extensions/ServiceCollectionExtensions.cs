@@ -20,13 +20,16 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection("KafkaSettings")
-            .Get<KafkaSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-
         _ = config.GetSection("NotificationConfig")
             .Get<NotificationConfig>()
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
+
+        services
+            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+
+        services
+            .AddHostedService<SmsPublishBackgroundService>()
+            .AddHostedService<EmailPublishBackgroundService>();
 
         services
             .AddSingleton<IGuidService, GuidService>()
@@ -55,8 +58,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
-            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
-            .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>();
     }
 }

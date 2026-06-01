@@ -3,20 +3,15 @@
 
     Command:
     podman compose run k6 run /src/tests/orders-email.js \
-    -e tokenGeneratorUserName={the user name to access the token generator} \
-    -e tokenGeneratorUserPwd={the password to access the token generator} \
-    -e mpClientId={the id of an integration defined in maskinporten} \
-    -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    --secret-source=file=/.secrets \
     -e altinn_env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
-    -e subscriptionKey={the subscription key with access to the automated tests product} \
     -e runFullTestSet=true
 
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
-    - The `subscriptionKey` is required and can be retrieved from API management in Azure.
+    - Setting `subscriptionKey` in .secrets is required - can be retrieved from Azure APIM.
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
@@ -29,6 +24,7 @@ import { notifications } from "../config.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
+import { getFromSecretSource } from "../secret-reader.js";
 import * as setupToken from "../setup.js";
 import { getEmailRecipient } from "../shared/functions.js";
 import * as ordersApi from "../api/notifications/orders.js";
@@ -58,11 +54,12 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and emailOrderRequest.
  */
-export function setup() {
+export async function setup() {
     const sendersReference = uuidv4();
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
+    const subscriptionKey = await getFromSecretSource("subscriptionKey");
 
-    const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, conditionEndpoint: notifications.conditionCheck(true), recipients: [] };
+    const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, conditionEndpoint: notifications.conditionCheck(true, subscriptionKey), recipients: [] };
 
     if (ninRecipient) {
         emailOrderRequest.recipients.push({ nationalIdentityNumber: ninRecipient });
@@ -81,6 +78,7 @@ export function setup() {
         runFullTestSet,
         sendersReference,
         emailOrderRequest,
+        subscriptionKey
     };
 }
 
@@ -139,7 +137,7 @@ function getEmailNotificationSummary(data, orderId) {
  * @param {Object} data - The data object containing emailOrderRequest and token.
  */
 function postEmailNotificationOrderWithNegativeConditionCheck(data) {
-    const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false) };
+    const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false, data.subscriptionKey) };
 
     let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),

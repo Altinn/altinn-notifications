@@ -50,9 +50,13 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// <summary>
     /// Updates the send status of an SMS notification and sets the operation identifier.
     /// </summary>
-    /// <param name="notificationId">The unique identifier of the SMS notification.</param>
+    /// <param name="notificationId">The unique identifier of the SMS notification (optional if <paramref name="gatewayReference"/> is provided).</param>
     /// <param name="result">The result status of the SMS notification.</param>
-    /// <param name="gatewayReference">The gateway reference (optional).</param>
+    /// <param name="gatewayReference">The gateway reference from the SMS provider (optional if <paramref name="notificationId"/> is provided).</param>
+    /// <param name="deliveryReport">The raw delivery report payload received from the SMS gateway (optional).</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null);
+    /// <exception cref="Exceptions.InvalidNotificationIdentifierException">
+    /// Thrown when both <paramref name="notificationId"/> and <paramref name="gatewayReference"/> are null or empty.
+    /// </exception>
+    Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null);
 }

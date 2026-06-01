@@ -29,7 +29,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             // Arrange - Create notification and set status to Succeeded with an operationId
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
             string operationId = Guid.NewGuid().ToString();
-            await PostgreUtil.UpdateSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
+            await PostgreUtil.UpdateEmailSendStatus(factory, notification.Id, EmailNotificationResultType.Succeeded, operationId);
 
             string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
@@ -79,7 +79,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
-            string queueName = factory.WolverineSettings.EmailSendResultQueueName;
+            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
             var command = new EmailSendResultCommand
             {
@@ -108,7 +108,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
     [Fact]
     public async Task EmailSendResult_WhenSendResultIsUnknown_SavesDeadDeliveryReportAndDiscardsMessage()
     {
-        // Arrange - mock service to confirm the handler short-circuits before UpdateSendStatus
+        // Arrange - mock service to confirm the handler short-circuits before UpdateEmailSendStatus
         var mockService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -150,7 +150,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
             Assert.True(deadReportFound, "Dead delivery report should be saved when SendResult is unrecognized");
 
-            // Assert - ArgumentException fires before the service is reached; UpdateSendStatus must never be called
+            // Assert - ArgumentException fires before the service is reached; UpdateEmailSendStatus must never be called
             mockService.Verify(
                 s => s.UpdateSendStatus(It.IsAny<Core.Models.Notification.EmailSendOperationResult>()),
                 Times.Never);
@@ -168,6 +168,62 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 queueName,
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — unknown SendResult should not be retried");
+        }
+    }
+
+    [Fact]
+    public async Task EmailSendResult_WhenBothIdentifiersEmpty_SavesDeadDeliveryReportWithoutRetry()
+    {
+        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+
+        await using (factory)
+        {
+            string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
+
+            // NotificationId = Guid.Empty and OperationId = null causes
+            // InvalidNotificationIdentifierException in EmailNotificationRepository.UpdateSendStatus
+            var command = new EmailSendResultCommand
+            {
+                NotificationId = Guid.Empty,
+                OperationId = null,
+                SendResult = EmailNotificationResultType.Delivered.ToString()
+            };
+
+            // Act
+            await factory.SendToQueueAsync(queueName, command);
+
+            // Assert - Dead delivery report saved with the correct reason
+            DeadDeliveryReportRow? deadReport = null;
+            var deadReportFound = await WaitForUtils.WaitForAsync(
+                async () =>
+                {
+                    deadReport = await PostgreUtil.GetLatestDeadDeliveryReportByReason(
+                        _fixture.PostgresConnectionString,
+                        "INVALID_NOTIFICATION_IDENTIFIER");
+                    return deadReport is not null;
+                },
+                maxAttempts: 20,
+                delayMs: 500);
+
+            Assert.True(deadReportFound, "Dead delivery report should be saved when both identifiers are empty");
+            Assert.Equal("INVALID_NOTIFICATION_IDENTIFIER", deadReport!.Reason);
+            Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
+            Assert.Equal(1, deadReport.AttemptCount);
+            Assert.False(deadReport.Resolved);
+
+            // Assert - Message discarded, not moved to DLQ
+            var dlqEmpty = await ServiceBusTestUtils.WaitForDeadLetterEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(dlqEmpty, "Dead letter queue should be empty — InvalidNotificationIdentifierException should not trigger DLQ");
+
+            // Assert - Queue is empty (no retries)
+            var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
+                _fixture.ServiceBusConnectionString,
+                queueName,
+                TimeSpan.FromSeconds(5));
+            Assert.True(queueEmpty, "Queue should be empty — invalid identifiers should not be retried");
         }
     }
 }

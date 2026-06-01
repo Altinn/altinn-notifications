@@ -14,31 +14,21 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailPublishConcurrency { get; set; } = 10;
 
     /// <summary>
-    /// Determines whether to publish email send commands via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableSendEmailPublisher { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for publishing email send commands.
     /// Produced by this API and consumed by the email service.
     /// </summary>
     public string EmailSendQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Retry policy for the email send queue.
+    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
     /// </summary>
-    public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
+    public int SmsPublishConcurrency { get; set; } = 10;
 
     /// <summary>
-    /// ASB queue name used for publishing sms messages.
+    /// ASB queue name used for publishing SMS messages.
     /// Produced by the API and consumed by the SMS Service and service provider.
     /// </summary>
     public string SendSmsQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Whether to enable the email delivery report queue listener.
-    /// </summary>
-    public bool EnableEmailDeliveryReportListener { get; set; } = false;
 
     /// <summary>
     /// ASB queue name for receiving email delivery reports.
@@ -52,23 +42,13 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
+    /// Number of concurrent listeners for the email delivery report queue per pod.
     /// </summary>
-    public int SmsPublishConcurrency { get; set; } = 10;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the SMS publisher is enabled.
-    /// </summary>
-    public bool EnableSendSmsPublisher { get; set; } = false;
-
-    /// <summary>
-    /// Whether to enable the SMS delivery report queue listener.
-    /// </summary>
-    public bool EnableSmsDeliveryReportListener { get; set; } = false;
+    public int EmailDeliveryReportListenerCount { get; set; } = 10;
 
     /// <summary>
     /// ASB queue name for receiving SMS delivery reports.
-    /// Published by the SMS service when <c>EnableSmsDeliveryReportPublisher</c> is <c>true</c> there.
+    /// Produced by the SMS service and consumed by this API.
     /// </summary>
     public string SmsDeliveryReportQueueName { get; set; } = string.Empty;
 
@@ -78,9 +58,9 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy SmsDeliveryReportQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether to consume email send results via Wolverine and Azure Service Bus or via Kafka.
+    /// Number of concurrent listeners for the SMS delivery report queue per pod.
     /// </summary>
-    public bool EnableEmailSendResultListener { get; set; } = false;
+    public int SmsDeliveryReportListenerCount { get; set; } = 10;
 
     /// <summary>
     /// ASB queue name for receiving email send results.
@@ -92,4 +72,68 @@ public class WolverineSettings : WolverineSettingsBase
     /// Retry policy for the email send result queue.
     /// </summary>
     public QueueRetryPolicy EmailSendResultQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the email send result queue per pod.
+    /// </summary>
+    public int EmailSendResultListenerCount { get; set; } = 10;
+
+    /// <summary>
+    /// ASB queue name for receiving SMS send results.
+    /// Produced by the SMS service and consumed by this API.
+    /// </summary>
+    public string SmsSendResultQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the SMS send result queue.
+    /// </summary>
+    public QueueRetryPolicy SmsSendResultQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the SMS send result queue per pod.
+    /// </summary>
+    public int SmsSendResultListenerCount { get; set; } = 10;
+
+    /// <summary>
+    /// ASB queue name for receiving email service rate limit notifications.
+    /// Published by the email service and consumed by the API to update service availability.
+    /// </summary>
+    public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the email service rate limit queue.
+    /// </summary>
+    public QueueRetryPolicy EmailServiceRateLimitQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the email service rate limit queue per pod.
+    /// </summary>
+    public int EmailServiceRateLimitListenerCount { get; set; } = 1;
+
+    /// <summary>
+    /// ASB queue name for past-due order processing commands.
+    /// Both produced and consumed by this API (internal queue).
+    /// </summary>
+    public string PastDueOrdersQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the past-due orders queue.
+    /// </summary>
+    public QueueRetryPolicy PastDueOrdersQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the past-due orders queue per pod.
+    /// </summary>
+    public int PastDueOrdersListenerCount { get; set; } = 10;
+
+    /// <summary>
+    /// Delay in milliseconds before the single scheduled retry for inconclusive send conditions
+    /// and platform dependency failures.
+    /// </summary>
+    public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
+
+    /// <summary>
+    /// Maximum number of past-due orders send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int PastDueOrdersPublishConcurrency { get; set; } = 10;
 }

@@ -3,8 +3,7 @@
 
     Command:
     podman compose run k6 run /src/tests/orders-sms.js \
-        -e tokenGeneratorUserName={the user name to access the token generator} \
-        -e tokenGeneratorUserPwd={the password to access the token generator} \
+        --secret-source=file=/.secrets \
         -e mpClientId={the id of an integration defined in maskinporten} \
         -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
         -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
@@ -51,9 +50,9 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and smsOrderRequest.
  */
-export function setup() {
+export async function setup() {
     const sendersReference = uuidv4();
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
 
     const smsOrderRequest = {
         senderNumber: "Altinn",

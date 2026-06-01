@@ -22,6 +22,25 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 
 ---
 
+## Configuring the secret source
+
+**Never put secrets on the command line** - sensitive values should be passed to the k6 script via a secret source, as this provides full k6 redaction. In other words, secrets loaded via k6/secrets are automatically redacted from all k6 log output as `***SECRET_REDACTED***`, effectively preventing the values to leak into logs.
+
+1. Create a `.secrets` file in the k6 folder
+2. Copy contents from `.secrets.sample`
+3. Assign valid values to the variables that are required in your intended environment (refer to the table below)
+
+
+| Variable | Description | When is it required |
+|----------|-------------|----------|
+| `tokenGeneratorUserName` | Username for token generator | For running in envs ATxx |
+| `tokenGeneratorUserPwd` | Password for token generator | For running in envs ATxx |
+| `encodedJwk` | Base64-encoded JWK for signing maskinporten token requests. | For running in envs [tt02, prod] |
+| `mpKid` | The key identifier of the JSON web key used to sign the maskinporten token request | For running in envs [tt02, prod] |
+| `mpClientId` | The client-ID of the integration set up in Maskinporten | For running in envs [tt02, prod] |
+| `subscriptionKey` | An APIM subscription key with access to the automated tests product | For running `orders-email.js` |
+
+
 ## Running tests
 
 All tests are defined in the `src/tests` folder. At the top of each test file, an example command to run the test is provided.
@@ -42,8 +61,7 @@ Run the test suite by specifying the filename.
 **Podman (Preferred):**
 ```bash
 podman compose run k6 run /src/tests/orders-email.js \
-    -e tokenGeneratorUserName=*** \
-    -e tokenGeneratorUserPwd=*** \
+    --secret-source=file=/.secrets \
     -e altinn_env=*** \
     -e emailRecipient=*** \
     -e ninRecipient=*** \
@@ -53,8 +71,7 @@ podman compose run k6 run /src/tests/orders-email.js \
 **Docker:**
 ```bash
 docker compose run k6 run /src/tests/orders-email.js \
-    -e tokenGeneratorUserName=*** \
-    -e tokenGeneratorUserPwd=*** \
+    --secret-source=file=/.secrets \
     -e altinn_env=*** \
     -e emailRecipient=*** \
     -e ninRecipient=*** \
@@ -67,8 +84,7 @@ docker compose run k6 run /src/tests/orders-email.js \
 2. **`k6 run {path to test file}`**: Points to the test file you want to run, e.g., `/src/tests/orders-email.js`.
 3. **Script parameters**: Provided as environment variables for the container:
    ```bash
-   -e tokenGeneratorUserName=***
-   -e tokenGeneratorUserPwd=***
+    --secret-source=file=/.secrets \
    -e altinn_env=***
    -e emailRecipient=***
    -e ninRecipient=***
@@ -90,8 +106,7 @@ Run a test with 10 virtual users (VUs) for 5 minutes:
 **Podman:**
 ```bash
 podman compose run k6 run /src/tests/orders-email.js \
-    -e tokenGeneratorUserName=*** \
-    -e tokenGeneratorUserPwd=*** \
+    --secret-source=file=/.secrets \
     -e altinn_env=*** \
     --vus=10 \
     --duration=5m
@@ -100,8 +115,7 @@ podman compose run k6 run /src/tests/orders-email.js \
 **Docker:**
 ```bash
 docker compose run k6 run /src/tests/orders-email.js \
-    -e tokenGeneratorUserName=*** \
-    -e tokenGeneratorUserPwd=*** \
+    --secret-source=file=/.secrets \
     -e altinn_env=*** \
     --vus=10 \
     --duration=5m

@@ -18,7 +18,7 @@ public static class CheckEmailSendStatusHandler
 
     /// <summary>
     /// Polls ACS for delivery status. If the result is terminal, dispatches the result
-    /// via <see cref="IEmailSendResultDispatcher"/> (Kafka or ASB depending on configuration)
+    /// via <see cref="IEmailSendResultDispatcher"/> 
     /// so the API can update the notification status. If still sending, re-schedules the command
     /// on ASB with an 8-second delay so the polling loop continues.
     /// </summary>

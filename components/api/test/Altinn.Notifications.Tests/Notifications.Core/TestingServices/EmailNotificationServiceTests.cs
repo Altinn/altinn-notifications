@@ -15,7 +15,6 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -175,7 +174,7 @@ public class EmailNotificationServiceTests
         await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
 
         // Assert
-        repoMock.Verify();
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
     }
 
     [Fact]
@@ -265,10 +264,7 @@ public class EmailNotificationServiceTests
             SendResult = EmailNotificationResultType.Succeeded
         };
 
-        var mockRepo = new Mock<EmailNotificationRepository>(
-            (null as NpgsqlDataSource)!,
-            (null as ILogger<EmailNotificationRepository>)!,
-            Options.Create(new NotificationConfig()))
+        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
         {
             CallBase = true
         };
@@ -324,6 +320,8 @@ public class EmailNotificationServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
             async () => await service.SendNotifications(cts.Token));
+
+        repoMock.Verify(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -332,7 +330,7 @@ public class EmailNotificationServiceTests
         // Arrange
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
         emailNotificationRepositoryMock
-            .Setup(e => e.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException()); // Simulate cancellation during fetch
 
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -351,7 +349,7 @@ public class EmailNotificationServiceTests
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
-            .SetupSequence(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_email, _email]) // First fetch returns a batch to process
             .ThrowsAsync(new OperationCanceledException()); // Second fetch simulates cancellation between iterations
 
@@ -505,7 +503,7 @@ public class EmailNotificationServiceTests
         using var cts = new CancellationTokenSource();
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .Callback<int, CancellationToken>((_, _) => cts.Cancel())
             .ReturnsAsync(emails);
 
@@ -526,7 +524,7 @@ public class EmailNotificationServiceTests
         var emails = new List<Email> { _email, _email, _email };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
@@ -549,7 +547,7 @@ public class EmailNotificationServiceTests
         var emails = new List<Email> { _email };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
@@ -562,6 +560,123 @@ public class EmailNotificationServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(CancellationToken.None));
 
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithDeliveryReport_ForwardsDeliveryReportToRepository()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"abc","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded,
+            DeliveryReport = deliveryReport
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == deliveryReport)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == deliveryReport)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithNullDeliveryReport_PassesNullDeliveryReportToRepository()
+    {
+        // Arrange
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded,
+            DeliveryReport = null
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == null)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == null)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_TransientErrorWithDeliveryReport_ConvertedToNewAndDeliveryReportForwarded()
+    {
+        // Arrange — a transient error still carries a delivery report payload; it should be forwarded
+        // even after the result is reset to New for re-processing.
+        Guid notificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string deliveryReport = """{"messageId":"abc","status":"TransientFailure"}""";
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationId,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Failed_TransientError,
+            DeliveryReport = deliveryReport
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationId),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
+            It.Is<string>(s => s.Equals(operationId)),
+            It.Is<string?>(d => d == deliveryReport)))
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert — result was mapped to New, but delivery report is still forwarded
+        repoMock.Verify(
+            r => r.UpdateSendStatus(
+                It.Is<Guid>(n => n == notificationId),
+                It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
+                It.Is<string>(s => s.Equals(operationId)),
+                It.Is<string?>(d => d == deliveryReport)),
+            Times.Once);
     }
 
     private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null)
