@@ -1,13 +1,10 @@
-﻿using System.Threading;
-
-using Altinn.Notifications.Shared.Commands;
+﻿using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 using Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
-
 using Moq;
-
 using Xunit;
 
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
@@ -127,7 +124,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
     }
 
     /// <summary>
-    /// Verifies that when the ISendingService.SendAsync method throws a gateway error (e.g., HttpRequestException),
+    /// Verifies that when the ISendingService.SendAsync method throws a gateway error (rethrown as SmsGatewayException),
     /// the SendSmsCommandHandler retries the operation according to the gateway error policy, which skips
     /// in-lock cooldown retries and goes directly to spread-out scheduled retries.
     /// </summary>
@@ -148,7 +145,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
         mockService
             .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()))
             .Callback(() => Interlocked.Increment(ref callCount))
-            .ThrowsAsync(new HttpRequestException("Gateway error"));
+            .ThrowsAsync(new SmsGatewayException("Gateway error", new HttpRequestException("Gateway timeout")));
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
             .ReplaceService(_ => mockService.Object)
