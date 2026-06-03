@@ -48,7 +48,8 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
     /// Maps the envelope back to an outgoing ServiceBusMessage by copying the original
     /// Event Grid payload. This is required for Wolverine retry policies
     /// (e.g. <c>ScheduleRetry</c>) that re-enqueue the message.
-    /// Preserves the current attempt counter and original enqueue time so the retry policy can track progress.
+    /// Preserves the current attempt counter, original enqueue time, and scheduled
+    /// delivery time so the retry policy can track progress and delay re-delivery correctly.
     /// </summary>
     /// <param name="envelope">The envelope whose message is an <see cref="EmailDeliveryReportCommand"/>.</param>
     /// <param name="outgoing">The outgoing ServiceBusMessage to populate.</param>
@@ -65,6 +66,11 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         outgoing.ContentType = command.Message.ContentType;
         outgoing.Subject = command.Message.Subject;
         outgoing.ApplicationProperties[_attemptsKey] = envelope.Attempts;
+
+        if (envelope.ScheduledTime.HasValue)
+        {
+            outgoing.ScheduledEnqueueTime = envelope.ScheduledTime.Value.UtcDateTime;
+        }
 
         if (envelope.HasEnqueuedAt())
         {
