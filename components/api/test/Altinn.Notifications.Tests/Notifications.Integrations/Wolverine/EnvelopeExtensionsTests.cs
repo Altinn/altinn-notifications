@@ -1,7 +1,7 @@
-﻿using Altinn.Notifications.Integrations.Wolverine;
+﻿using System;
 
+using Altinn.Notifications.Integrations.Wolverine;
 using Wolverine;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
