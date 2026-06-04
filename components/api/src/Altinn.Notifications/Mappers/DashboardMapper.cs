@@ -28,11 +28,11 @@ public static class DashboardMapper
             ResourceId = notification.ResourceId,
             SendersReference = notification.SendersReference,
             RequestedSendTime = notification.RequestedSendTime,
-            Recipients = notification.Recipients.Select(r => new RecipientExt
+            Recipients = [.. notification.Recipients.Select(r => new RecipientExt
             {
                 NationalIdentityNumber = r.NationalIdentityNumber,
                 OrganizationNumber = r.OrganizationNumber,
-            }).ToList(),
+            })],
             Channel = notification.Channel,
             Result = notification.Result,
             ResultTime = notification.ResultTime,

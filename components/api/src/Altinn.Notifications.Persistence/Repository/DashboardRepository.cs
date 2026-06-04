@@ -58,7 +58,7 @@ public class DashboardRepository : IDashboardRepository
                     [new Recipient { NationalIdentityNumber = reader.GetValue<string>("recipientnin") }],
                     reader.GetValue<string>("channel"),
                     reader.GetValue<string>("result"),
-                    reader.GetValue<DateTime>("resulttime")));
+                    reader.GetValue<DateTime?>("resulttime")));
             }
         }
 

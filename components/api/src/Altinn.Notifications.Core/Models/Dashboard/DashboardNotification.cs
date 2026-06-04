@@ -15,7 +15,7 @@ public record DashboardNotification
     /// <summary>
     /// The short name of the organisation that created the order.
     /// </summary>
-    public string CreatorName { get; init; } = string.Empty;
+    public string CreatorName { get; init; }
 
     /// <summary>
     /// The Altinn resource the notification is related to.
@@ -35,12 +35,12 @@ public record DashboardNotification
     /// <summary>
     /// The recipients of this notification.
     /// </summary>
-    public List<Recipient> Recipients { get; init; } = [];
+    public List<Recipient> Recipients { get; init; }
 
     /// <summary>
     /// The delivery channel: "email" or "sms".
     /// </summary>
-    public string Channel { get; init; } = string.Empty;
+    public string Channel { get; init; }
 
     /// <summary>
     /// The delivery result status.
