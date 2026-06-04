@@ -1,4 +1,6 @@
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
@@ -44,6 +46,7 @@ public class DashboardController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
     [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByNin(
         [FromQuery] string nin,
         [FromQuery] DateTimeOffset? from,
@@ -60,7 +63,15 @@ public class DashboardController : ControllerBase
             return BadRequest("'from' must be earlier than 'to'.");
         }
 
-        var result = await _dashboardService.GetNotificationsByNinAsync(nin, from, to, cancellationToken);
-        return Ok(result.MapToDashboardNotificationExtList());
+        try
+        {
+            var result = await _dashboardService.GetNotificationsByNinAsync(nin, from, to, cancellationToken);
+            return Ok(result.MapToDashboardNotificationExtList());
+        }
+        catch (OperationCanceledException)
+        {
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
     }
 }
