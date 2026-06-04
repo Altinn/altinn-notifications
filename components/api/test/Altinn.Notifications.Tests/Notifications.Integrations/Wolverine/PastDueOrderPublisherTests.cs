@@ -241,7 +241,7 @@ public class PastDueOrderPublisherTests
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
             .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_,_) => new ValueTask(Task.Run(async () =>
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
             {
                 int current = Interlocked.Increment(ref currentConcurrent);
                 lock (lockObj)
@@ -250,7 +250,7 @@ public class PastDueOrderPublisherTests
                 }
 
                 await Task.Delay(30);
-                Interlocked.Decrement( ref currentConcurrent);
+                Interlocked.Decrement(ref currentConcurrent);
             })));                                
         
         var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);

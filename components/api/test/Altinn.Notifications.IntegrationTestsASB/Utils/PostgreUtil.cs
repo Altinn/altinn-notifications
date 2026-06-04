@@ -233,6 +233,37 @@ public static class PostgreUtil
         return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
     }
 
+    /// <summary>
+    /// Returns the firstseen and lastattempt timestamps for a dead delivery report
+    /// identified by its messageId.
+    /// </summary>
+    public static async Task<(DateTime FirstSeen, DateTime LastAttempt)?> GetDeadDeliveryReportTimestampsAsync(
+        string connectionString,
+        string messageId)
+    {
+        const string sql = """
+            SELECT firstseen, lastattempt
+            FROM notifications.deaddeliveryreports
+            WHERE deliveryreport ->> 'messageId' = @messageId
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("messageId", messageId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return (
+            FirstSeen: await reader.GetFieldValueAsync<DateTime>(0),
+            LastAttempt: await reader.GetFieldValueAsync<DateTime>(1));
+    }
+
     private static async Task<DeadDeliveryReportRow> ReadDeadDeliveryReportRow(NpgsqlDataReader reader)
     {
         return new DeadDeliveryReportRow(
