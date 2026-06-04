@@ -17,10 +17,10 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz
 )
-LANGUAGE plpgsql
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
 AS $$
-BEGIN
-    RETURN QUERY
     WITH combined AS (
         SELECT
             e.alternateid AS notificationid,
@@ -62,7 +62,6 @@ BEGIN
     )
     SELECT * FROM combined
     ORDER BY requestedsendtime DESC;
-END;
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_nin IS
