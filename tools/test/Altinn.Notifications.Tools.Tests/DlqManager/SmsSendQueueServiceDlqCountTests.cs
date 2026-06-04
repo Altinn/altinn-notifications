@@ -77,6 +77,58 @@ public class SmsSendQueueServiceDlqCountTests
     }
 
     [Fact]
+    public async Task RunMenuAsync_WhenDlqHasMessages_ShowsCountOnMenu()
+    {
+        // Exercises the normal exit path of PeekCountDlqAsync (line 478):
+        //   first peek returns messages → count increments → second peek returns empty → return count.
+        var fakeMsg = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString("{}"),
+            messageId: Guid.NewGuid().ToString(),
+            sequenceNumber: 1);
+
+        var mockClient = new Mock<ServiceBusClient>();
+        var mockReceiver = new Mock<ServiceBusReceiver>();
+
+        mockClient
+            .Setup(c => c.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()))
+            .Returns(mockReceiver.Object);
+
+        // First peek (fromSeq=0): one message.  Second peek (fromSeq=2): empty → breaks loop.
+        mockReceiver
+            .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+            .ReturnsAsync([fakeMsg])
+            .ReturnsAsync([]);
+
+        mockReceiver.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        mockClient.Setup(c => c.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
+        var service = new SmsSendQueueService(
+            Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
+            Options.Create(new SmsSendQueueSettings()),
+            new Mock<ISmsNotificationRepository>().Object,
+            mockClient.Object);
+
+        var output = new StringWriter();
+        var originalIn = Console.In;
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetIn(new StringReader("0\n"));
+            Console.SetOut(output);
+
+            await service.RunMenuAsync();
+        }
+        finally
+        {
+            Console.SetIn(originalIn);
+            Console.SetOut(originalOut);
+            await service.DisposeAsync();
+        }
+
+        Assert.Contains("DLQ count: 1", output.ToString());
+    }
+
+    [Fact]
     public async Task ProcessSendingPending_WhenSendMessageThrows_AbandonsDlqMessageAndReportsFailure()
     {
         // Arrange — build a fake DLQ message matching the list file entry.
