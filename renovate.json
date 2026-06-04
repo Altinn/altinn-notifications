@@ -3,6 +3,7 @@
   "extends": [
     "local>Altinn/renovate-config"
   ],
+  "prHourlyLimit": 6,
   "packageRules": [
     {
       "matchFileNames": [
