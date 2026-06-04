@@ -2,13 +2,12 @@
 
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using Azure.Messaging.ServiceBus;
 
 using JasperFx;
 using JasperFx.CodeGeneration;
-
-using LinkMobility.PSWin.Client;
 
 using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
@@ -45,6 +44,7 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
            .OnException<TimeoutException>()
            .Or<ServiceBusException>()
            .Or<TaskCanceledException>()
+           .Or<HttpRequestException>()
            .RetryWithCooldown(infrastructurePolicy.GetCooldownDelays())
            .Then.ScheduleRetry(infrastructurePolicy.GetScheduleDelays())
            .Then.MoveToErrorQueue();
@@ -53,8 +53,7 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
         // on the gateway during outages or rate-limiting windows (e.g. 504 responses from Link Mobility).
         // Goes directly to spread-out scheduled retries to allow the gateway time to recover.
         chain
-           .OnException<HttpRequestException>()
-           .Or<SendMessageException>()
+           .OnException<SmsGatewayException>()
            .ScheduleRetry(gatewayErrorPolicy.GetScheduleDelays())
            .Then.MoveToErrorQueue();
     }

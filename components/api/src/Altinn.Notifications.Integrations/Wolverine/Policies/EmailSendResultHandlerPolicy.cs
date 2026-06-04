@@ -26,6 +26,8 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
 {
     private const string _unrecognizedSendResultReason = "UNRECOGNIZED_SEND_RESULT";
     private const string _invalidNotificationIdentifierReason = "INVALID_NOTIFICATION_IDENTIFIER";
+    private const string _retryExceededReason = "RETRY_THRESHOLD_EXCEEDED";
+    private const string _notificationExpiredReason = "NOTIFICATION_EXPIRED";
 
     /// <inheritdoc/>
     public void Apply(IReadOnlyList<HandlerChain> chains, GenerationRules rules, IServiceContainer container)
@@ -44,6 +46,16 @@ internal sealed class EmailSendResultHandlerPolicy(WolverineSettings settings) :
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
+
+        chain
+            .OnException<NotificationNotFoundException>()
+            .RetryWithCooldown(policy.GetCooldownDelays())
+            .Then.ScheduleRetry(policy.GetScheduleDelays())
+            .Then.SaveDeadDeliveryReport(_retryExceededReason, DeliveryReportChannel.AzureCommunicationServices);
+
+        chain
+            .OnException<NotificationExpiredException>()
+            .SaveDeadDeliveryReport(_notificationExpiredReason, DeliveryReportChannel.AzureCommunicationServices);
 
         chain
             .OnException<UnrecognizedSendResultException>()
