@@ -15,6 +15,8 @@ using Azure.Messaging.ServiceBus;
 
 using Microsoft.Extensions.Options;
 
+using Moq;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -440,6 +442,104 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         await RunMenuAsync(CreateService(queueSettings), "5\n2\n0\n", output);
 
         Assert.Contains("File not found", output.ToString());
+    }
+
+    // ── Null ReadLine in PurgeOtherStatus confirmation prompt (line 295) ────────
+    [Fact]
+    public async Task PurgeOtherStatus_WhenConfirmationStreamEnds_Aborts()
+    {
+        // Arrange — list file must be non-empty so the method reaches the confirmation prompt.
+        var (notificationId, command) = await SeedNotificationAsync("Delivered", DateTime.UtcNow.AddHours(-1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, _, otherPath, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(otherPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+
+        // Input "4\n" only — stream ends before the "Proceed? (y/N): " confirmation.
+        // Console.ReadLine() returns null → null branch of ?. is covered → method aborts.
+        await RunMenuAsync(CreateService(queueSettings), "4\n", output);
+
+        Assert.Contains("Aborted", output.ToString());
+
+        // DLQ message was NOT purged (operator never confirmed).
+        Assert.True(await WaitForDlqMessageAsync(msgId), "DLQ message should remain after aborted purge");
+    }
+
+    // ── Null ReadLine in QueryDbState sub-choice prompt (line 324) ────────────
+    [Fact]
+    public async Task QueryDbState_WhenSubChoiceStreamEnds_PrintsInvalidAndReturns()
+    {
+        var (_, _, _, queueSettings) = CreateTempListFiles();
+
+        var output = new StringWriter();
+
+        // Input "5\n" only — stream ends before sub-choice is read.
+        // Console.ReadLine() returns null → null → matches _ arm → "Invalid choice."
+        await RunMenuAsync(CreateService(queueSettings), "5\n", output);
+
+        Assert.Contains("Invalid choice", output.ToString());
+    }
+
+    // ── QueryDbState: notification not in DB (line 358 null paths) ────────────
+    [Fact]
+    public async Task QueryDbState_WhenNotificationNotInDatabase_PrintsNotFound()
+    {
+        // Arrange — list file with an orphan notification that has no DB row.
+        var orphanId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = orphanId,
+            MobileNumber = "+4712345678",
+            Body = "Orphan",
+            SenderNumber = "Altinn"
+        };
+        var (_, pendingPath, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(pendingPath, [BuildDlqSmsItem(orphanId, command, Guid.NewGuid().ToString())]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "5\n2\n0\n", output);
+
+        // result ?? NotFound → "NOT FOUND"; FormatUtc(null) → "N/A"
+        Assert.Contains("NOT FOUND", output.ToString());
+    }
+
+    // ── ProcessDlqItems exception catch (lines 418-422) ──────────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenRepositoryThrows_HitsExceptionCatchAndAbandonsDlqMessage()
+    {
+        // Arrange — seed a real DLQ message; mock the repository to throw.
+        var notificationId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = notificationId,
+            MobileNumber = "+4712345678",
+            Body = "Throw test",
+            SenderNumber = "Altinn"
+        };
+        string msgId = await SeedDlqMessageAsync(command);
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(expiredPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var mockRepo = new Mock<ISmsNotificationRepository>();
+        mockRepo.Setup(r => r.GetNotificationStateAsync(It.IsAny<Guid>()))
+            .ThrowsAsync(new InvalidOperationException("Simulated DB failure"));
+
+        var service = new SmsSendQueueService(
+            Options.Create(new AsbSettings
+            {
+                ConnectionString = _fixture.ServiceBusConnectionString,
+                SmsSendQueueName = _queueName
+            }),
+            queueSettings,
+            mockRepo.Object,
+            new ServiceBusClient(_fixture.ServiceBusConnectionString));
+
+        var output = new StringWriter();
+        await RunMenuAsync(service, "2\n0\n", output);
+
+        Assert.Contains("Unexpected error", output.ToString());
+        Assert.True(await WaitForDlqMessageAsync(msgId), "DLQ message should be abandoned after exception");
     }
 
     // ── Helpers: DB ──────────────────────────────────────────────────────────
