@@ -4,6 +4,9 @@ using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
+using Altinn.Notifications.Validators.Extensions;
+
+using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,22 +27,23 @@ namespace Altinn.Notifications.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
+    private readonly IValidator<GetNotificationsByNinRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
     /// </summary>
     /// <param name="dashboardService">The dashboard service.</param>
-    public DashboardController(IDashboardService dashboardService)
+    /// <param name="validator">The validator for NIN lookup requests.</param>
+    public DashboardController(IDashboardService dashboardService, IValidator<GetNotificationsByNinRequestExt> validator)
     {
         _dashboardService = dashboardService;
+        _validator = validator;
     }
 
     /// <summary>
     /// Retrieves all notifications for a recipient identified by their national identity number.
     /// </summary>
-    /// <param name="nin">The national identity number of the recipient.</param>
-    /// <param name="from">Start of the date range (inclusive). Defaults to 7 days ago if not provided.</param>
-    /// <param name="to">End of the date range (exclusive). Defaults to now if not provided.</param>
+    /// <param name="request">The request containing the NIN and optional date range.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of notifications matching the search criteria.</returns>
     [HttpGet("notifications/nin")]
@@ -48,24 +52,19 @@ public class DashboardController : ControllerBase
     [SwaggerResponse(400, "Invalid request parameters")]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByNin(
-        [FromQuery] string nin,
-        [FromQuery] DateTimeOffset? from,
-        [FromQuery] DateTimeOffset? to,
+        [FromQuery] GetNotificationsByNinRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(nin))
+        var validationResult = _validator.Validate(request);
+        if (!validationResult.IsValid)
         {
-            return BadRequest("'nin' is required and cannot be empty");
-        }
-
-        if (from.HasValue && to.HasValue && from.Value >= to.Value)
-        {
-            return BadRequest("'from' must be earlier than 'to'.");
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
         }
 
         try
         {
-            var result = await _dashboardService.GetNotificationsByNinAsync(nin, from, to, cancellationToken);
+            var result = await _dashboardService.GetNotificationsByNinAsync(request.Nin, request.From, request.To, cancellationToken);
             return Ok(result.MapToDashboardNotificationExtList());
         }
         catch (OperationCanceledException)

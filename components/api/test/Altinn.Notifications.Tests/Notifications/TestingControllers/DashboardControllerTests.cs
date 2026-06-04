@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Models.Dashboard;
+using Altinn.Notifications.Validators.Dashboard;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,52 +24,52 @@ public class DashboardControllerTests
 
     public DashboardControllerTests()
     {
-        _controller = new DashboardController(_dashboardServiceMock.Object);
+        _controller = new DashboardController(_dashboardServiceMock.Object, new GetNotificationsByNinRequestValidator());
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task GetNotificationsByNin_NinNullEmptyOrWhitespace_ReturnsBadRequest(string? nin)
+    public async Task GetNotificationsByNin_NinNullEmptyOrWhitespace_ReturnsValidationProblem(string? nin)
     {
         // Act
-        var result = await _controller.GetNotificationsByNin(nin!, from: null, to: null, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = nin! }, CancellationToken.None);
 
         // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("'nin' is required and cannot be empty", badRequest.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
         _dashboardServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetNotificationsByNin_FromEqualToTo_ReturnsBadRequest()
+    public async Task GetNotificationsByNin_FromEqualToTo_ReturnsValidationProblem()
     {
         // Arrange
         var instant = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", instant, instant, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = instant, To = instant }, CancellationToken.None);
 
         // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("'from' must be earlier than 'to'.", badRequest.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
         _dashboardServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetNotificationsByNin_FromAfterTo_ReturnsBadRequest()
+    public async Task GetNotificationsByNin_FromAfterTo_ReturnsValidationProblem()
     {
         // Arrange
         var from = new DateTimeOffset(2026, 05, 10, 0, 0, 0, TimeSpan.Zero);
         var to = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", from, to, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from, To = to }, CancellationToken.None);
 
         // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("'from' must be earlier than 'to'.", badRequest.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
         _dashboardServiceMock.VerifyNoOtherCalls();
     }
 
@@ -81,7 +83,7 @@ public class DashboardControllerTests
             .ReturnsAsync(new List<DashboardNotification>());
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", from, to: null, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from }, CancellationToken.None);
 
         // Assert
         Assert.IsType<OkObjectResult>(result.Result);
@@ -98,7 +100,7 @@ public class DashboardControllerTests
             .ReturnsAsync(new List<DashboardNotification>());
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", from, to, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from, To = to }, CancellationToken.None);
 
         // Assert
         Assert.IsType<OkObjectResult>(result.Result);
