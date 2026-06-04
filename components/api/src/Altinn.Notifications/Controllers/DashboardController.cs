@@ -1,6 +1,7 @@
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Mappers;
+using Altinn.Notifications.Models.Dashboard;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,9 +42,9 @@ public class DashboardController : ControllerBase
     /// <returns>A list of notifications matching the search criteria.</returns>
     [HttpGet("notifications/nin")]
     [Produces("application/json")]
-    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotification>))]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
     [SwaggerResponse(400, "Invalid request parameters")]
-    public async Task<ActionResult<List<DashboardNotification>>> GetNotificationsByNin(
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByNin(
         [FromQuery] string nin,
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
@@ -60,6 +61,6 @@ public class DashboardController : ControllerBase
         }
 
         var result = await _dashboardService.GetNotificationsByNinAsync(nin, from, to, cancellationToken);
-        return Ok(result);
+        return Ok(result.MapToDashboardNotificationExtList());
     }
 }
