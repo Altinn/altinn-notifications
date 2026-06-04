@@ -178,4 +178,57 @@ public class SmsSendQueueServiceDlqCountTests
             }
         }
     }
+
+    [Fact]
+    public async Task ReadListFile_WhenFileContainsJsonNull_ThrowsInvalidOperation()
+    {
+        // "null" is valid JSON but deserialises to null for a List type,
+        // hitting the ?? throw on line 531.
+        string expiredPath = Path.Combine(Path.GetTempPath(), $"dlq-expired-{Guid.NewGuid()}.json");
+        try
+        {
+            await File.WriteAllTextAsync(expiredPath, "null");
+
+            var mockClient = new Mock<ServiceBusClient>();
+            var mockReceiver = new Mock<ServiceBusReceiver>();
+
+            mockClient
+                .Setup(c => c.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()))
+                .Returns(mockReceiver.Object);
+            mockReceiver
+                .Setup(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+                .ReturnsAsync([]);
+            mockReceiver.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+            mockClient.Setup(c => c.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
+            var service = new SmsSendQueueService(
+                Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
+                Options.Create(new SmsSendQueueSettings { SendingExpiredListFilePath = expiredPath }),
+                new Mock<ISmsNotificationRepository>().Object,
+                mockClient.Object);
+
+            var originalIn = Console.In;
+            var originalOut = Console.Out;
+            try
+            {
+                Console.SetIn(new StringReader("2\n"));
+                Console.SetOut(TextWriter.Null);
+
+                await Assert.ThrowsAsync<InvalidOperationException>(service.RunMenuAsync);
+            }
+            finally
+            {
+                Console.SetIn(originalIn);
+                Console.SetOut(originalOut);
+                await service.DisposeAsync();
+            }
+        }
+        finally
+        {
+            if (File.Exists(expiredPath))
+            {
+                File.Delete(expiredPath);
+            }
+        }
+    }
 }
