@@ -454,32 +454,42 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     {
         try
         {
-            await using var receiver = _sbClient.CreateReceiver(
-                _asbSettings.SmsSendQueueName,
-                new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
-
-            long count = 0;
-            long fromSeq = 0;
-
-            while (true)
-            {
-                var page = await receiver.PeekMessagesAsync(
-                    maxMessages: 100,
-                    fromSequenceNumber: fromSeq);
-
-                if (page.Count == 0)
-                    break;
-
-                count += page.Count;
-                fromSeq = page[^1].SequenceNumber + 1;
-            }
-
-            return count;
+            return await CountDlqMessagesAsync();
         }
         catch
         {
             return -1;
         }
+    }
+
+    /// <summary>
+    /// Inner implementation for <see cref="PeekCountDlqAsync"/>.
+    /// Separated so that the <c>await using</c> disposal and the <c>try/catch</c>
+    /// are not nested — keeping the catch's synthetic state-machine branch measurable.
+    /// </summary>
+    private async Task<long> CountDlqMessagesAsync()
+    {
+        await using var receiver = _sbClient.CreateReceiver(
+            _asbSettings.SmsSendQueueName,
+            new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+
+        long count = 0;
+        long fromSeq = 0;
+
+        while (true)
+        {
+            var page = await receiver.PeekMessagesAsync(
+                maxMessages: 100,
+                fromSequenceNumber: fromSeq);
+
+            if (page.Count == 0)
+                break;
+
+            count += page.Count;
+            fromSeq = page[^1].SequenceNumber + 1;
+        }
+
+        return count;
     }
 
     private static int GetDlqBatchSize(int minSize)
