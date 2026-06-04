@@ -1,24 +1,47 @@
 #!/bin/bash
 #
-# Sets up a local PostgreSQL database in Podman for Altinn Notifications.
+# Sets up a local PostgreSQL database in Docker or Podman for Altinn Notifications.
 # Handles only infrastructure: container, database, and roles.
 # Migrations are applied by the application itself on startup (Yuniql).
 #
 # Usage: bash tools/dev-setup/setup-db.sh
 #
+# The container engine is auto-detected. Override with CONTAINER_ENGINE, e.g.:
+#   CONTAINER_ENGINE=podman bash tools/dev-setup/setup-db.sh
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# On Windows (Git Bash / MSYS2), use podman.exe and convert Unix paths
-# to Windows paths so the compose provider can find the files.
-if command -v podman.exe &>/dev/null; then
-  PODMAN=podman.exe
-  # Convert /mnt/c/foo or /c/foo to C:/foo for Windows tools
-  SCRIPT_DIR="$(echo "$SCRIPT_DIR" | sed -e 's|^/mnt/\([a-zA-Z]\)/|\U\1:/|' -e 's|^/\([a-zA-Z]\)/|\U\1:/|')"
-else
-  PODMAN=podman
-fi
+# Detect a container engine. Honour an explicit override first, otherwise probe
+# the common binaries in preference order. On Windows (Git Bash / MSYS2) the
+# real engines are the .exe variants, so they are included in the search.
+detect_engine() {
+  local candidates
+  if [ -n "${CONTAINER_ENGINE:-}" ]; then
+    candidates=("$CONTAINER_ENGINE")
+  else
+    candidates=(docker podman docker.exe podman.exe)
+  fi
+  for candidate in "${candidates[@]}"; do
+    if command -v "$candidate" &>/dev/null; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo "ERROR: No container engine found. Install Docker or Podman, or set CONTAINER_ENGINE." >&2
+  exit 1
+}
+
+ENGINE="$(detect_engine)"
+
+# When the engine is a native Windows tool (.exe), convert Unix-style paths to
+# Windows paths so the compose provider can find the files.
+case "$ENGINE" in
+  *.exe)
+    SCRIPT_DIR="$(echo "$SCRIPT_DIR" | sed -e 's|^/mnt/\([a-zA-Z]\)/|\U\1:/|' -e 's|^/\([a-zA-Z]\)/|\U\1:/|')"
+    ;;
+esac
 
 DB_NAME=notificationsdb
 DB_ADMIN_USER=platform_notifications_admin
@@ -29,7 +52,7 @@ CONTAINER_NAME=altinn-notifications-db
 
 # Helper: run psql inside the container
 run_psql() {
-  $PODMAN exec -e PGPASSWORD="$DB_ADMIN_PASSWORD" "$CONTAINER_NAME" \
+  $ENGINE exec -e PGPASSWORD="$DB_ADMIN_PASSWORD" "$CONTAINER_NAME" \
     psql -U "$DB_ADMIN_USER" -d "$DB_NAME" "$@"
 }
 
@@ -37,7 +60,7 @@ run_psql() {
 wait_for_postgres() {
   local elapsed=0
   local timeout=60
-  until $PODMAN exec "$CONTAINER_NAME" pg_isready -U "$DB_ADMIN_USER" -d "$DB_NAME" > /dev/null 2>&1; do
+  until $ENGINE exec "$CONTAINER_NAME" pg_isready -U "$DB_ADMIN_USER" -d "$DB_NAME" > /dev/null 2>&1; do
     if [ "$elapsed" -ge "$timeout" ]; then
       echo "ERROR: PostgreSQL did not become ready within ${timeout}s." >&2
       exit 1
@@ -48,8 +71,8 @@ wait_for_postgres() {
 }
 
 # ── 1. Start PostgreSQL container ──────────────────────────────────────────────
-echo "==> Starting PostgreSQL container..."
-$PODMAN compose -f "$SCRIPT_DIR/setup-db.yml" up -d
+echo "==> Starting PostgreSQL container (engine: $ENGINE)..."
+$ENGINE compose -f "$SCRIPT_DIR/setup-db.yml" up -d
 
 echo "==> Waiting for PostgreSQL to become ready..."
 wait_for_postgres
@@ -76,7 +99,7 @@ END \$\$;"
 
 # Restart container to apply max_connections change
 echo "==> Restarting PostgreSQL to apply settings..."
-$PODMAN restart "$CONTAINER_NAME" > /dev/null
+$ENGINE restart "$CONTAINER_NAME" > /dev/null
 wait_for_postgres
 
 echo ""
