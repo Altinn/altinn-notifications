@@ -759,12 +759,10 @@ CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin
 )
 RETURNS TABLE (
     notificationid uuid,
-    _orderid bigint,
     sendersreference text,
     creatorname text,
     resourceid text,
     requestedsendtime timestamptz,
-    recipientorgno text,
     recipientnin text,
     channel text,
     result text,
@@ -777,12 +775,10 @@ AS $$
     WITH combined AS (
         SELECT
             e.alternateid AS notificationid,
-            o._id AS _orderid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
             o.requestedsendtime,
-            e.recipientorgno,
             e.recipientnin,
             'email'::text AS channel,
             e.result::text AS result,
@@ -797,12 +793,10 @@ AS $$
 
         SELECT
             s.alternateid AS notificationid,
-            o._id AS _orderid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
             o.requestedsendtime,
-            s.recipientorgno,
             s.recipientnin,
             'sms'::text AS channel,
             s.result::text AS result,
@@ -825,12 +819,10 @@ Parameters:
 - _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:
 - notificationid: The unique identifier for the notification
-- _orderid: The internal order ID
 - creatorname: The short name of the organisation that created the order
 - resourceid: The Altinn resource the notification is related to (may be null)
 - sendersreference: The sender''s reference for the order
 - requestedsendtime: When the notification was requested to be sent
-- recipientorgno: The recipient''s organisation number (if applicable)
 - recipientnin: The recipient''s national identity number
 - channel: The delivery channel (''email'' or ''sms'')
 - result: The delivery result status

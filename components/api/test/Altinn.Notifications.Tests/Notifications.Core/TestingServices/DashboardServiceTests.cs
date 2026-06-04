@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -22,14 +23,16 @@ public class DashboardServiceTests
         // Arrange
         var expected = new List<DashboardNotification>
         {
-            new()
-            {
-                NotificationId = Guid.NewGuid(),
-                OrderId = 1,
-                RecipientNin = _recipientNin,
-                Channel = "email",
-                Result = "Succeeded",
-            },
+            new(
+                Guid.NewGuid(),
+                "test",
+                null,
+                null,
+                DateTime.UtcNow,
+                [new Recipient { NationalIdentityNumber = _recipientNin }],
+                "email",
+                "Succeeded",
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();
@@ -55,7 +58,7 @@ public class DashboardServiceTests
 
         var entry = Assert.Single(result);
         Assert.Equal(expected[0].NotificationId, entry.NotificationId);
-        Assert.Equal(_recipientNin, entry.RecipientNin);
+        Assert.Equal(_recipientNin, Assert.Single(entry.Recipients).NationalIdentityNumber);
     }
 
     [Fact]

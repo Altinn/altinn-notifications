@@ -44,9 +44,8 @@ public class DashboardRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, n => n.Channel == "email" && n.RecipientNin == _recipientNin);
-        Assert.Contains(result, n => n.Channel == "sms" && n.RecipientNin == _recipientNin);
-        Assert.All(result, n => Assert.NotEqual(0L, n.OrderId));
+        Assert.Contains(result, n => n.Channel == "email" && n.Recipients.Any(r => r.NationalIdentityNumber == _recipientNin));
+        Assert.Contains(result, n => n.Channel == "sms" && n.Recipients.Any(r => r.NationalIdentityNumber == _recipientNin));
     }
 
     [Fact]

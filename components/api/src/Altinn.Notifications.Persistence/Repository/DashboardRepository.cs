@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -48,20 +49,16 @@ public class DashboardRepository : IDashboardRepository
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                searchResult.Add(new DashboardNotification()
-                {
-                    NotificationId = reader.GetValue<Guid>("notificationid"),
-                    OrderId = reader.GetValue<long>("_orderid"),
-                    SendersReference = reader.GetValue<string>("sendersreference"),
-                    RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
-                    RecipientOrgNo = reader.GetValue<string>("recipientorgno"),
-                    RecipientNin = reader.GetValue<string>("recipientnin"),
-                    Channel = reader.GetValue<string>("channel"),
-                    Result = reader.GetValue<string>("result"),
-                    ResultTime = reader.GetValue<DateTime>("resulttime"),
-                    ResourceId = reader.GetValue<string>("resourceid"),
-                    CreatorName = reader.GetValue<string>("creatorname")
-                });
+                searchResult.Add(new DashboardNotification(
+                    reader.GetValue<Guid>("notificationid"),
+                    reader.GetValue<string>("creatorname"),
+                    reader.GetValue<string>("resourceid"),
+                    reader.GetValue<string>("sendersreference"),
+                    reader.GetValue<DateTime>("requestedsendtime"),
+                    [new Recipient { NationalIdentityNumber = reader.GetValue<string>("recipientnin") }],
+                    reader.GetValue<string>("channel"),
+                    reader.GetValue<string>("result"),
+                    reader.GetValue<DateTime>("resulttime")));
             }
         }
 

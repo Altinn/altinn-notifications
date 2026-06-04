@@ -1,3 +1,5 @@
+using Altinn.Notifications.Core.Models;
+
 namespace Altinn.Notifications.Core.Models.Dashboard;
 
 /// <summary>
@@ -11,14 +13,9 @@ public record DashboardNotification
     public Guid NotificationId { get; init; }
 
     /// <summary>
-    /// The internal order ID.
-    /// </summary>
-    public long OrderId { get; init; }
-
-    /// <summary>
     /// The short name of the organisation that created the order.
     /// </summary>
-    public string? CreatorName { get; init; }
+    public string CreatorName { get; init; } = string.Empty;
 
     /// <summary>
     /// The Altinn resource the notification is related to.
@@ -36,14 +33,9 @@ public record DashboardNotification
     public DateTime RequestedSendTime { get; init; }
 
     /// <summary>
-    /// The recipient's organisation number, if applicable.
+    /// The recipients of this notification.
     /// </summary>
-    public string? RecipientOrgNo { get; init; }
-
-    /// <summary>
-    /// The recipient's national identity number.
-    /// </summary>
-    public string? RecipientNin { get; init; }
+    public List<Recipient> Recipients { get; init; } = [];
 
     /// <summary>
     /// The delivery channel: "email" or "sms".
@@ -59,4 +51,38 @@ public record DashboardNotification
     /// When the result was recorded.
     /// </summary>
     public DateTime? ResultTime { get; init; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DashboardNotification"/> record.
+    /// </summary>
+    /// <param name="notificationId">The unique identifier for the notification.</param>
+    /// <param name="creatorName">The short name of the organisation that created the order.</param>
+    /// <param name="resourceId">The Altinn resource the notification is related to.</param>
+    /// <param name="sendersReference">The sender's reference for the order.</param>
+    /// <param name="requestedSendTime">When the notification was requested to be sent.</param>
+    /// <param name="recipients">The recipients of this notification.</param>
+    /// <param name="channel">The delivery channel: "email" or "sms".</param>
+    /// <param name="result">The delivery result status.</param>
+    /// <param name="resultTime">When the result was recorded.</param>
+    public DashboardNotification(
+        Guid notificationId,
+        string creatorName,
+        string? resourceId,
+        string? sendersReference,
+        DateTime requestedSendTime,
+        List<Recipient> recipients,
+        string channel,
+        string? result,
+        DateTime? resultTime)
+    {
+        NotificationId = notificationId;
+        CreatorName = creatorName;
+        ResourceId = resourceId;
+        SendersReference = sendersReference;
+        RequestedSendTime = requestedSendTime;
+        Recipients = recipients;
+        Channel = channel;
+        Result = result;
+        ResultTime = resultTime;
+    }
 }
