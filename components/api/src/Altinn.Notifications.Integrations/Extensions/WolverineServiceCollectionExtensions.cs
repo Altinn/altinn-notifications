@@ -49,8 +49,6 @@ public static class WolverineServiceCollectionExtensions
             opts.Policies.AllSenders(x => x.SendInline());
             opts.Policies.AllListeners(x => x.ProcessInline());
 
-            opts.Policies.Add(new StampEnqueuedAtPolicy());
-
             // Listeners
             AddEmailSendResultListener(wolverineSettings, opts);
             AddSmsSendResultListener(wolverineSettings, opts);
