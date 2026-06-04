@@ -17,18 +17,12 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 /// Each test seeds a minimal order + SMS notification row and cleans up after itself.
 /// </summary>
 [Collection(nameof(IntegrationContainersCollection))]
-public class SmsNotificationRepositoryTests : IAsyncLifetime
+public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
 {
-    private readonly IntegrationContainersFixture _fixture;
-    private readonly SmsNotificationRepository _repository;
+    private readonly IntegrationContainersFixture _fixture = fixture;
+    private readonly SmsNotificationRepository _repository = new SmsNotificationRepository(fixture.DataSource);
     private readonly List<Guid> _notificationIds = [];
     private readonly List<Guid> _orderIds = [];
-
-    public SmsNotificationRepositoryTests(IntegrationContainersFixture fixture)
-    {
-        _fixture = fixture;
-        _repository = new SmsNotificationRepository(fixture.DataSource);
-    }
 
     public Task InitializeAsync() => Task.CompletedTask;
 

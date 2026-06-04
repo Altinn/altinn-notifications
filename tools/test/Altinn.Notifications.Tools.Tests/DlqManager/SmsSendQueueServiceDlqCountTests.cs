@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Tools.DlqManager.Configuration;
+using Altinn.Notifications.Tools.DlqManager.Models;
 using Altinn.Notifications.Tools.DlqManager.Repositories;
 using Altinn.Notifications.Tools.DlqManager.Services.Queues;
 
@@ -71,5 +74,108 @@ public class SmsSendQueueServiceDlqCountTests
 
         // PeekCountDlqAsync threw → catch returned -1 → menu shows "N/A"
         Assert.Contains("N/A", output.ToString());
+    }
+
+    [Fact]
+    public async Task ProcessSendingPending_WhenSendMessageThrows_AbandonsDlqMessageAndReportsFailure()
+    {
+        // Arrange — build a fake DLQ message matching the list file entry.
+        var notificationId = Guid.NewGuid();
+        var dlqMsgId = Guid.NewGuid().ToString();
+        var command = new SendSmsCommand
+        {
+            NotificationId = notificationId,
+            MobileNumber = "+4712345678",
+            Body = "Send-fail test",
+            SenderNumber = "Altinn"
+        };
+
+        var fakeMsg = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString(JsonSerializer.Serialize(command)),
+            messageId: dlqMsgId,
+            sequenceNumber: 1);
+
+        var mockClient = new Mock<ServiceBusClient>();
+        var mockReceiver = new Mock<ServiceBusReceiver>();
+        var mockSender = new Mock<ServiceBusSender>();
+
+        mockClient
+            .Setup(c => c.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()))
+            .Returns(mockReceiver.Object);
+        mockClient
+            .Setup(c => c.CreateSender(It.IsAny<string>()))
+            .Returns(mockSender.Object);
+
+        // Count peek returns empty (DLQ count = 0 for the menu display).
+        mockReceiver
+            .Setup(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+
+        // ProcessDlqItemsAsync receives the fake message.
+        mockReceiver
+            .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
+            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg });
+
+        // Sender throws → triggers lines 271-272.
+        mockSender
+            .Setup(s => s.SendMessageAsync(It.IsAny<ServiceBusMessage>(), default))
+            .ThrowsAsync(new ServiceBusException("Simulated send failure", ServiceBusFailureReason.ServiceBusy));
+
+        mockReceiver.Setup(r => r.AbandonMessageAsync(It.IsAny<ServiceBusReceivedMessage>(), null, default))
+            .Returns(Task.CompletedTask);
+        mockReceiver.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        mockSender.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        mockClient.Setup(c => c.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
+        // Write the pending list file with a matching item.
+        string pendingPath = Path.Combine(Path.GetTempPath(), $"dlq-pending-{Guid.NewGuid()}.json");
+        try
+        {
+            var item = new DlqSmsItem
+            {
+                NotificationId = notificationId,
+                MobileNumber = command.MobileNumber,
+                Body = command.Body,
+                SenderNumber = command.SenderNumber,
+                DlqMessageId = dlqMsgId,
+                DlqEnqueuedTime = DateTime.UtcNow
+            };
+            string json = JsonSerializer.Serialize(new List<DlqSmsItem> { item });
+            await File.WriteAllTextAsync(pendingPath, json);
+
+            var service = new SmsSendQueueService(
+                Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
+                Options.Create(new SmsSendQueueSettings { SendingPendingListFilePath = pendingPath }),
+                new Mock<ISmsNotificationRepository>().Object,
+                mockClient.Object);
+
+            var output = new StringWriter();
+            var originalIn = Console.In;
+            var originalOut = Console.Out;
+            try
+            {
+                Console.SetIn(new StringReader("3\n0\n"));
+                Console.SetOut(output);
+
+                await service.RunMenuAsync();
+            }
+            finally
+            {
+                Console.SetIn(originalIn);
+                Console.SetOut(originalOut);
+                await service.DisposeAsync();
+            }
+
+            // Catch block fired → "Send failed" in output; message was abandoned.
+            Assert.Contains("Send failed", output.ToString());
+            mockReceiver.Verify(r => r.AbandonMessageAsync(fakeMsg, null, default), Times.Once);
+        }
+        finally
+        {
+            if (File.Exists(pendingPath))
+            {
+                File.Delete(pendingPath);
+            }
+        }
     }
 }
