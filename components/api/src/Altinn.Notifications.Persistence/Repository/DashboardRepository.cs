@@ -1,4 +1,5 @@
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -49,14 +50,26 @@ public class DashboardRepository : IDashboardRepository
         {
             while (await reader.ReadAsync(cancellationToken))
             {
+                string channel = reader.GetValue<string>("channel");
+                string? address = reader.GetValue<string>("address");
+
+                IAddressPoint? addressPoint = (channel, address) switch
+                {
+                    ("email", not null) => new EmailAddressPoint(address),
+                    ("sms", not null) => new SmsAddressPoint(address),
+                    _ => null
+                };
+
+                List<IAddressPoint> addressInfo = addressPoint is not null ? [addressPoint] : [];
+
                 searchResult.Add(new DashboardNotification(
                     reader.GetValue<Guid>("notificationid"),
                     reader.GetValue<string>("creatorname"),
                     reader.GetValue<string>("resourceid"),
                     reader.GetValue<string>("sendersreference"),
                     reader.GetValue<DateTime>("requestedsendtime"),
-                    [new Recipient { NationalIdentityNumber = reader.GetValue<string>("recipientnin") }],
-                    reader.GetValue<string>("channel"),
+                    [new Recipient(addressInfo, nationalIdentityNumber: reader.GetValue<string>("recipientnin"))],
+                    channel,
                     reader.GetValue<string>("result"),
                     reader.GetValue<DateTime?>("resulttime")));
             }

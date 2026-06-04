@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Dashboard;
@@ -32,6 +33,8 @@ public static class DashboardMapper
             {
                 NationalIdentityNumber = r.NationalIdentityNumber,
                 OrganizationNumber = r.OrganizationNumber,
+                EmailAddress = r.AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault()?.EmailAddress,
+                MobileNumber = r.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault()?.MobileNumber,
             })],
             Channel = notification.Channel,
             Result = notification.Result,

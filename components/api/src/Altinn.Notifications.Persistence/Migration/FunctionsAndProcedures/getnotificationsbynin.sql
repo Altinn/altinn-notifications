@@ -11,6 +11,7 @@ RETURNS TABLE (
     resourceid text,
     requestedsendtime timestamptz,
     recipientnin text,
+    address text,
     channel text,
     result text,
     resulttime timestamptz
@@ -27,6 +28,7 @@ AS $$
             o.notificationorder->>'ResourceId' AS resourceid,
             o.requestedsendtime,
             e.recipientnin,
+            e.toaddress AS address,
             'email'::text AS channel,
             e.result::text AS result,
             e.resulttime
@@ -45,6 +47,7 @@ AS $$
             o.notificationorder->>'ResourceId' AS resourceid,
             o.requestedsendtime,
             s.recipientnin,
+            s.mobilenumber AS address,
             'sms'::text AS channel,
             s.result::text AS result,
             s.resulttime
@@ -71,6 +74,7 @@ Returns a table with the following columns:
 - sendersreference: The sender''s reference for the order
 - requestedsendtime: When the notification was requested to be sent
 - recipientnin: The recipient''s national identity number
+- address: The address the notification was sent to (email address or mobile number)
 - channel: The delivery channel (''email'' or ''sms'')
 - result: The delivery result status
 - resulttime: When the result was recorded';
