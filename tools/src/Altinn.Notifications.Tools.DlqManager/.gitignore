@@ -1,7 +1,5 @@
 # Generated DLQ list files may contain sensitive data (phone numbers, message bodies)
-sms-send-dlq-sending-expired.json
-sms-send-dlq-sending-pending.json
-sms-send-dlq-other.json
+sms-send-dlq-*.json
 
 # Build artefacts
 bin/

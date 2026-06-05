@@ -65,7 +65,7 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         }
 
         await DrainQueueAsync(_queueName);
-        await DrainQueueAsync($"{_queueName}/$deadletterqueue");
+        await DrainQueueAsync(_queueName, SubQueue.DeadLetter);
     }
 
     // ── Inspect DLQ ───────────────────────────────────────────────────────────
@@ -609,7 +609,32 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         {
             ReceiveMode = ServiceBusReceiveMode.PeekLock
         });
-        var received = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(15));
+
+        ServiceBusReceivedMessage? received = null;
+        for (int attempt = 0; attempt < 30 && received is null; attempt++)
+        {
+            var msg = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(5));
+            if (msg is null)
+            {
+                await Task.Delay(200);
+                continue;
+            }
+
+            if (msg.MessageId == messageId)
+            {
+                received = msg;
+            }
+            else
+            {
+                await receiver.AbandonMessageAsync(msg);
+            }
+        }
+
+        if (received is null)
+        {
+            throw new InvalidOperationException($"Message {messageId} was not received within the timeout.");
+        }
+
         await receiver.DeadLetterMessageAsync(received, "MaxDeliveryCountExceeded", "Seeded by test");
 
         return messageId;
@@ -688,12 +713,14 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         return false;
     }
 
-    private async Task DrainQueueAsync(string queueOrDlqName)
+    private async Task DrainQueueAsync(string queueName, SubQueue subQueue = SubQueue.None)
     {
         try
         {
             await using var client = new ServiceBusClient(_fixture.ServiceBusConnectionString);
-            await using var receiver = client.CreateReceiver(queueOrDlqName);
+            await using var receiver = client.CreateReceiver(
+                queueName,
+                new ServiceBusReceiverOptions { SubQueue = subQueue });
 
             while (true)
             {

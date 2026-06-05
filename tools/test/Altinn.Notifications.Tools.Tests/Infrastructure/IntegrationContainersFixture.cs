@@ -44,7 +44,9 @@ public class IntegrationContainersFixture : IAsyncLifetime
 
         if (!_containers.IsRunning)
         {
-            return;
+            throw new InvalidOperationException(
+                "Integration test containers failed to start. " +
+                "Ensure Docker is running and the required images are available.");
         }
 
         DataSource = new NpgsqlDataSourceBuilder(PostgresConnectionString).Build();

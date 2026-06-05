@@ -15,7 +15,7 @@ Interactive console tool for inspecting and remediating messages stuck on Azure 
 ```bash
 cd tools/src/Altinn.Notifications.Tools.DlqManager
 dotnet user-secrets set "AsbSettings:ConnectionString" "<your-asb-connection-string>"
-dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "Host=<host>;Port=5432;Username=<user>;Password=<pwd>;Database=notificationsdb;Ssl Mode=Require;"
+dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "Host=<host>;Port=5432;Username=<user>;Password=<pwd>;Database=notificationsdb;"
 ```
 
 Non-secret defaults (queue names, output file paths) live in `appsettings.json`.
@@ -38,6 +38,8 @@ The typical operator workflow for `altinn.notifications.sms.send`:
    - `sms-send-dlq-other.json` — any other DB result (already terminal, Accepted, etc.)
 
 2. *(Optional)* Open any list file and remove rows you do **not** want to act on yet.
+
+> **Warning**: Steps 3–5 purge DLQ messages permanently. Review list files carefully before proceeding.
 
 3. **Process sending-expired list** — sets the DB result to `Accepted` for notifications still in `Sending` state, then purges their DLQ messages. The existing expiry-termination cron (`terminateexpirednotifications`) subsequently finalises them as `Failed_TTL` and completes the order lifecycle.
 

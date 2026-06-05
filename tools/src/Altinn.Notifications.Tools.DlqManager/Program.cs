@@ -45,6 +45,20 @@ builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
 
 builder.Services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
 
+// ── Azure Service Bus ────────────────────────────────────────────────────────
+
+builder.Services.AddSingleton<ServiceBusClient>(sp =>
+{
+    var asbSettings = sp.GetRequiredService<IOptions<AsbSettings>>();
+
+    if (string.IsNullOrWhiteSpace(asbSettings.Value.ConnectionString))
+        throw new InvalidOperationException(
+            "AsbSettings:ConnectionString is not configured. " +
+            "Set it in appsettings.json or via user secrets.");
+
+    return new ServiceBusClient(asbSettings.Value.ConnectionString);
+});
+
 // ── Services ──────────────────────────────────────────────────────────────────
 
 builder.Services.AddSingleton<ISmsSendQueueService>(sp =>
@@ -52,7 +66,7 @@ builder.Services.AddSingleton<ISmsSendQueueService>(sp =>
     var asbSettings = sp.GetRequiredService<IOptions<AsbSettings>>();
     var queueSettings = sp.GetRequiredService<IOptions<SmsSendQueueSettings>>();
     var repository = sp.GetRequiredService<ISmsNotificationRepository>();
-    var sbClient = new ServiceBusClient(asbSettings.Value.ConnectionString);
+    var sbClient = sp.GetRequiredService<ServiceBusClient>();
     return new SmsSendQueueService(asbSettings, queueSettings, repository, sbClient);
 });
 
