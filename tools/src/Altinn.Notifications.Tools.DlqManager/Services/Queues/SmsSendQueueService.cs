@@ -349,9 +349,8 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         var states = await _repository.GetNotificationStatesAsync(
             items.Select(i => i.NotificationId).ToList());
 
-        foreach (var item in items)
+        foreach (var (item, state) in items.Select(i => (i, states.GetValueOrDefault(i.NotificationId))))
         {
-            states.TryGetValue(item.NotificationId, out var state);
             var (result, expiryTime, _, resultTime) = state;
 
             Console.WriteLine(
@@ -460,7 +459,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     /// <paramref name="targetMessageIds"/>. Uses a non-locking peek so no messages
     /// are consumed. Returns <c>-1</c> if the peek fails.
     /// </summary>
-    private async Task<int> PeekDlqMatchCountAsync(IReadOnlySet<string> targetMessageIds)
+    private async Task<int> PeekDlqMatchCountAsync(HashSet<string> targetMessageIds)
     {
         try
         {

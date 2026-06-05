@@ -395,7 +395,8 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         var output = new StringWriter();
         await RunMenuAsync(CreateService(queueSettings), "2\n0\n", output);
 
-        Assert.Contains("not found in DLQ", output.ToString());
+        // PeekDlqMatchCountAsync finds 0 matches → early exit before receive.
+        Assert.Contains("0 of 1 item(s) from list found on DLQ", output.ToString());
 
         // DB state is unchanged — no message was received to process.
         var (result, _, _, _) = await new SmsNotificationRepository(_fixture.DataSource).GetNotificationStateAsync(notificationId);

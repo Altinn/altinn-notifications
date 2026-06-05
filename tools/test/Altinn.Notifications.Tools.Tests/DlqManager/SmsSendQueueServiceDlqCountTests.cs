@@ -106,9 +106,14 @@ public class SmsSendQueueServiceDlqCountTests
             .Setup(c => c.CreateSender(It.IsAny<string>()))
             .Returns(mockSender.Object);
 
-        // Count peek returns empty (DLQ count = 0 for the menu display).
+        // Peek call sequence:
+        //   1. Menu DLQ count display  → empty (count = 0)
+        //   2. PeekDlqMatchCountAsync  → returns fakeMsg (1 match found)
+        //   3. PeekDlqMatchCountAsync loop end → empty
         mockReceiver
-            .Setup(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+            .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
+            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg })
             .ReturnsAsync(new List<ServiceBusReceivedMessage>());
 
         // ProcessDlqItemsAsync receives the fake message.
