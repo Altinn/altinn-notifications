@@ -372,6 +372,13 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     {
         var targetByMessageId = items.ToDictionary(i => i.DlqMessageId);
 
+        var dlqCount = await GetDlqCountAsync();
+        if (dlqCount == 0)
+        {
+            Console.WriteLine("  DLQ is empty — nothing to process.");
+            return;
+        }
+
         int batchSize = GetDlqBatchSize(items.Count);
 
         await using var receiver = _sbClient.CreateReceiver(
