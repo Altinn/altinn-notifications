@@ -346,8 +346,8 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         Console.WriteLine(
             $"  {new string('-', 38)} {new string('-', 28)} {new string('-', 22)} {new string('-', 22)}");
 
-        var ids = items.Select(i => i.NotificationId).ToList();
-        var states = await _repository.GetNotificationStatesAsync(ids);
+        var states = await _repository.GetNotificationStatesAsync(
+            items.Select(i => i.NotificationId).ToList());
 
         foreach (var item in items)
         {

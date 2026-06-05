@@ -59,10 +59,7 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
         var result = new Dictionary<Guid, (string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)>();
 
         await using var cmd = _dataSource.CreateCommand(sql);
-        cmd.Parameters.Add(new NpgsqlParameter("notificationIds", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-        {
-            Value = notificationIds.ToArray()
-        });
+        cmd.Parameters.Add(new NpgsqlParameter<Guid[]>("notificationIds", notificationIds.ToArray()));
 
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
