@@ -14,6 +14,13 @@ public interface ISmsNotificationRepository
     Task<(string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)> GetNotificationStateAsync(Guid notificationId);
 
     /// <summary>
+    /// Bulk variant of <see cref="GetNotificationStateAsync"/> — fetches state for all
+    /// <paramref name="notificationIds"/> in a single query.
+    /// Returns a dictionary keyed by notification id; ids with no matching row are absent.
+    /// </summary>
+    Task<Dictionary<Guid, (string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)>> GetNotificationStatesAsync(IReadOnlyList<Guid> notificationIds);
+
+    /// <summary>
     /// Sets <c>result = 'Accepted'</c> and <c>resulttime = NOW()</c> for the notification,
     /// but only when the current result is <c>'Sending'</c> and <c>expirytime &lt; NOW()</c>.
     /// </summary>

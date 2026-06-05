@@ -91,6 +91,68 @@ public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture
         Assert.False(isExpired);
     }
 
+    // ── GetNotificationStatesAsync ────────────────────────────────────────────
+    [Fact]
+    public async Task GetNotificationStatesAsync_WhenEmptyList_ReturnsEmptyDictionary()
+    {
+        var result = await _repository.GetNotificationStatesAsync([]);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetNotificationStatesAsync_WhenNoIdsMatch_ReturnsEmptyDictionary()
+    {
+        var result = await _repository.GetNotificationStatesAsync([Guid.NewGuid(), Guid.NewGuid()]);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetNotificationStatesAsync_WhenSingleId_ReturnsMatchingEntry()
+    {
+        var (notificationId, _) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(1));
+
+        var result = await _repository.GetNotificationStatesAsync([notificationId]);
+
+        Assert.Single(result);
+        var (res, expiryTime, isExpired, _) = result[notificationId];
+        Assert.Equal("Sending", res);
+        Assert.NotNull(expiryTime);
+        Assert.False(isExpired);
+    }
+
+    [Fact]
+    public async Task GetNotificationStatesAsync_WhenMultipleIds_ReturnsAllMatching()
+    {
+        var (id1, _) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(1));
+        var (id2, _) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        var (id3, _) = await SeedNotificationAsync("Accepted", DateTime.UtcNow.AddHours(1));
+
+        var result = await _repository.GetNotificationStatesAsync([id1, id2, id3]);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal("Sending", result[id1].Result);
+        Assert.False(result[id1].IsExpired);
+        Assert.Equal("Sending", result[id2].Result);
+        Assert.True(result[id2].IsExpired);
+        Assert.Equal("Accepted", result[id3].Result);
+    }
+
+    [Fact]
+    public async Task GetNotificationStatesAsync_WhenSomeIdsNotFound_ReturnsOnlyExisting()
+    {
+        var (notificationId, _) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(1));
+        var absentId = Guid.NewGuid();
+
+        var result = await _repository.GetNotificationStatesAsync([notificationId, absentId]);
+
+        Assert.Single(result);
+        Assert.True(result.ContainsKey(notificationId));
+        Assert.False(result.ContainsKey(absentId));
+    }
+
+    // ── UpdateResultToAcceptedAsync ───────────────────────────────────────────
     [Fact]
     public async Task UpdateResultToAcceptedAsync_WhenSendingAndExpired_UpdatesToAcceptedAndReturnsOne()
     {

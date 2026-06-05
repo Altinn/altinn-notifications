@@ -43,6 +43,42 @@ public class SmsNotificationRepository(NpgsqlDataSource dataSource) : ISmsNotifi
     }
 
     /// <inheritdoc/>
+    public async Task<Dictionary<Guid, (string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)>> GetNotificationStatesAsync(
+        IReadOnlyList<Guid> notificationIds)
+    {
+        const string sql = """
+            SELECT alternateid,
+                   result,
+                   expirytime,
+                   expirytime IS NOT NULL AND expirytime <= NOW() AS isexpired,
+                   resulttime
+            FROM notifications.smsnotifications
+            WHERE alternateid = ANY(@notificationIds)
+            """;
+
+        var result = new Dictionary<Guid, (string? Result, DateTime? ExpiryTime, bool IsExpired, DateTime? ResultTime)>();
+
+        await using var cmd = _dataSource.CreateCommand(sql);
+        cmd.Parameters.Add(new NpgsqlParameter("notificationIds", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
+        {
+            Value = notificationIds.ToArray()
+        });
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            var id         = await reader.GetFieldValueAsync<Guid>(0);
+            var res        = await reader.GetFieldValueAsync<string>(1);
+            var expiryTime = DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(2), DateTimeKind.Utc);
+            var isExpired  = await reader.GetFieldValueAsync<bool>(3);
+            var resultTime = DateTime.SpecifyKind(await reader.GetFieldValueAsync<DateTime>(4), DateTimeKind.Utc);
+            result[id] = (res, expiryTime, isExpired, resultTime);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<int> UpdateResultToAcceptedAsync(Guid notificationId)
     {
         // Only updates notifications whose result is still 'Sending' and whose expiry time

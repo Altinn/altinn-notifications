@@ -346,14 +346,13 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         Console.WriteLine(
             $"  {new string('-', 38)} {new string('-', 28)} {new string('-', 22)} {new string('-', 22)}");
 
-        // Batch all DB queries in parallel instead of sequential per-item awaits.
-        var states = await Task.WhenAll(
-            items.Select(item => _repository.GetNotificationStateAsync(item.NotificationId)));
+        var ids = items.Select(i => i.NotificationId).ToList();
+        var states = await _repository.GetNotificationStatesAsync(ids);
 
-        for (int i = 0; i < items.Count; i++)
+        foreach (var item in items)
         {
-            var item = items[i];
-            var (result, expiryTime, _, resultTime) = states[i];
+            states.TryGetValue(item.NotificationId, out var state);
+            var (result, expiryTime, _, resultTime) = state;
 
             Console.WriteLine(
                 $"  {item.NotificationId,-38} {result ?? NotFound,-28} " +
