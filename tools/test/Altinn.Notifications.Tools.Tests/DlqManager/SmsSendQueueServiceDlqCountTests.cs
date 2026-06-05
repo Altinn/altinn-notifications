@@ -185,6 +185,92 @@ public class SmsSendQueueServiceDlqCountTests
     }
 
     [Fact]
+    public async Task ProcessSendingExpired_WhenPeekDlqMatchCountThrows_CatchesAndProceeds()
+    {
+        // Arrange — peek throws during PeekDlqMatchCountAsync → catch returns -1.
+        // -1 != 0 so the early-exit is skipped; processing continues to ReceiveMessagesAsync.
+        var dlqMsgId = Guid.NewGuid().ToString();
+        var notificationId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = notificationId,
+            MobileNumber = "+4712345678",
+            Body = "Peek-fail test",
+            SenderNumber = "Altinn"
+        };
+
+        var mockClient = new Mock<ServiceBusClient>();
+        var mockReceiver = new Mock<ServiceBusReceiver>();
+
+        mockClient
+            .Setup(c => c.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()))
+            .Returns(mockReceiver.Object);
+
+        // Peek call sequence:
+        //   1. Menu DLQ count display         → empty (count = 0)
+        //   2. PeekDlqMatchCountAsync page 1   → throws → catch returns -1
+        mockReceiver
+            .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
+            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
+            .ThrowsAsync(new ServiceBusException("Simulated peek failure", ServiceBusFailureReason.ServiceBusy));
+
+        // Processing continues with an empty snapshot — nothing to receive.
+        mockReceiver
+            .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
+            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+
+        mockReceiver.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        mockClient.Setup(c => c.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
+        string expiredPath = Path.Combine(Path.GetTempPath(), $"dlq-expired-{Guid.NewGuid()}.json");
+        try
+        {
+            var item = new DlqSmsItem
+            {
+                NotificationId = notificationId,
+                MobileNumber = command.MobileNumber,
+                Body = command.Body,
+                SenderNumber = command.SenderNumber,
+                DlqMessageId = dlqMsgId,
+                DlqEnqueuedTime = DateTime.UtcNow
+            };
+            await File.WriteAllTextAsync(expiredPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }));
+
+            var service = new SmsSendQueueService(
+                Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
+                Options.Create(new SmsSendQueueSettings { SendingExpiredListFilePath = expiredPath }),
+                new Mock<ISmsNotificationRepository>().Object,
+                mockClient.Object);
+
+            var output = new StringWriter();
+            var originalIn = Console.In;
+            var originalOut = Console.Out;
+            try
+            {
+                Console.SetIn(new StringReader("2\n0\n"));
+                Console.SetOut(output);
+                await service.RunMenuAsync();
+            }
+            finally
+            {
+                Console.SetIn(originalIn);
+                Console.SetOut(originalOut);
+                await service.DisposeAsync();
+            }
+
+            // Peek threw → catch returned -1 → processing continued to receive.
+            Assert.Contains("Done.", output.ToString());
+        }
+        finally
+        {
+            if (File.Exists(expiredPath))
+            {
+                File.Delete(expiredPath);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ReadListFile_WhenFileContainsJsonNull_ThrowsInvalidOperation()
     {
         // "null" is valid JSON but deserialises to null for a List type,

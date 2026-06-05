@@ -288,6 +288,30 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         Assert.Equal("Accepted", result);
     }
 
+    // ── [WARN] block: list items not present in DLQ snapshot ─────────────────
+    [Fact]
+    public async Task ProcessSendingExpired_WhenSomeListItemsAbsentFromDlq_PrintsWarnForMissingOnes()
+    {
+        // Arrange — one real DLQ message + one fake message ID (not on DLQ).
+        // PeekDlqMatchCountAsync finds 1 match → does not early-exit.
+        // After receive, the fake ID is absent from the snapshot → [WARN] fires.
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        string realMsgId = await SeedDlqMessageAsync(command);
+        string fakeMsgId = Guid.NewGuid().ToString();
+
+        var (expiredPath, _, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(expiredPath, [
+            BuildDlqSmsItem(notificationId, command, realMsgId),
+            BuildDlqSmsItem(Guid.NewGuid(), command, fakeMsgId)
+        ]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "2\n0\n", output);
+
+        Assert.Contains("[WARN]", output.ToString());
+        Assert.Contains("not found in DLQ snapshot", output.ToString());
+    }
+
     // ── SmsSendQueueService sub-menu: invalid input + stream end ─────────────
     [Fact]
     public async Task SmsSendQueueMenu_WhenInputStreamEnds_ExitsGracefully()
