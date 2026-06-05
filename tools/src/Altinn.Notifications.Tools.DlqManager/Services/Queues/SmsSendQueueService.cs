@@ -463,32 +463,42 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     {
         try
         {
-            await using var receiver = _sbClient.CreateReceiver(
-                _asbSettings.SmsSendQueueName,
-                new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
-
-            int matchCount = 0;
-            long fromSeq = 0;
-
-            while (true)
-            {
-                var page = await receiver.PeekMessagesAsync(
-                    maxMessages: 100,
-                    fromSequenceNumber: fromSeq);
-
-                if (page.Count == 0)
-                    break;
-
-                matchCount += page.Count(m => targetMessageIds.Contains(m.MessageId));
-                fromSeq = page[^1].SequenceNumber + 1;
-            }
-
-            return matchCount;
+            return await CountDlqMatchesAsync(targetMessageIds);
         }
         catch
         {
             return -1;
         }
+    }
+
+    /// <summary>
+    /// Inner implementation for <see cref="PeekDlqMatchCountAsync"/>.
+    /// Separated so that the <c>await using</c> disposal and the <c>try/catch</c>
+    /// are not nested — keeping the catch's synthetic state-machine branch measurable.
+    /// </summary>
+    private async Task<int> CountDlqMatchesAsync(HashSet<string> targetMessageIds)
+    {
+        await using var receiver = _sbClient.CreateReceiver(
+            _asbSettings.SmsSendQueueName,
+            new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+
+        int matchCount = 0;
+        long fromSeq = 0;
+
+        while (true)
+        {
+            var page = await receiver.PeekMessagesAsync(
+                maxMessages: 100,
+                fromSequenceNumber: fromSeq);
+
+            if (page.Count == 0)
+                break;
+
+            matchCount += page.Count(m => targetMessageIds.Contains(m.MessageId));
+            fromSeq = page[^1].SequenceNumber + 1;
+        }
+
+        return matchCount;
     }
 
     /// <summary>
