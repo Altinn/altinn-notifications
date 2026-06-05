@@ -309,7 +309,7 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         await RunMenuAsync(CreateService(queueSettings), "2\n0\n", output);
 
         Assert.Contains("[WARN]", output.ToString());
-        Assert.Contains("not found in DLQ snapshot", output.ToString());
+        Assert.Contains("not found in the DLQ snapshot", output.ToString());
     }
 
     // ── SmsSendQueueService sub-menu: invalid input + stream end ─────────────
