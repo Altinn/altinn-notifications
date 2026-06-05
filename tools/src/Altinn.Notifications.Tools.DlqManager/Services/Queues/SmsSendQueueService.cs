@@ -372,12 +372,17 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     {
         var targetByMessageId = items.ToDictionary(i => i.DlqMessageId);
 
-        var dlqCount = await GetDlqCountAsync();
-        if (dlqCount == 0)
+        Console.WriteLine("  Scanning DLQ for matches...");
+        int remainingOnDlq = await PeekDlqMatchCountAsync(targetByMessageId.Keys.ToHashSet());
+
+        if (remainingOnDlq == 0)
         {
-            Console.WriteLine("  DLQ is empty — nothing to process.");
+            Console.WriteLine($"  0 of {items.Count} item(s) from list found on DLQ — nothing to process.");
             return;
         }
+
+        Console.WriteLine($"  {remainingOnDlq} of {items.Count} item(s) from list still on DLQ.");
+        Console.WriteLine();
 
         int batchSize = GetDlqBatchSize(items.Count);
 
@@ -397,7 +402,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             maxWaitTime: TimeSpan.FromMinutes(2));
 
         int matchedCount = snapshot.Count(msg => targetByMessageId.ContainsKey(msg.MessageId));
-        Console.WriteLine($"  {matchedCount} of {items.Count} item(s) found on DLQ — processing now.");
+        Console.WriteLine($"  Received {matchedCount} of {remainingOnDlq} — processing now.");
         Console.WriteLine();
 
         int succeeded = 0, failed = 0, index = 0;
@@ -443,11 +448,49 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 "(they may have already been processed or expired from the DLQ).");
         }
 
+        int estimatedRemaining = Math.Max(0, remainingOnDlq - succeeded);
         Console.WriteLine();
-        Console.WriteLine($"Done. {succeeded} succeeded, {failed} failed, {notFound} not found in DLQ.");
+        Console.WriteLine($"Done. {succeeded} succeeded, {failed} failed, {notFound} not found in DLQ. ~{estimatedRemaining} still on DLQ from this list.");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Counts how many DLQ messages have a <c>MessageId</c> that appears in
+    /// <paramref name="targetMessageIds"/>. Uses a non-locking peek so no messages
+    /// are consumed. Returns <c>-1</c> if the peek fails.
+    /// </summary>
+    private async Task<int> PeekDlqMatchCountAsync(IReadOnlySet<string> targetMessageIds)
+    {
+        try
+        {
+            await using var receiver = _sbClient.CreateReceiver(
+                _asbSettings.SmsSendQueueName,
+                new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+
+            int matchCount = 0;
+            long fromSeq = 0;
+
+            while (true)
+            {
+                var page = await receiver.PeekMessagesAsync(
+                    maxMessages: 100,
+                    fromSequenceNumber: fromSeq);
+
+                if (page.Count == 0)
+                    break;
+
+                matchCount += page.Count(m => targetMessageIds.Contains(m.MessageId));
+                fromSeq = page[^1].SequenceNumber + 1;
+            }
+
+            return matchCount;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
 
     /// <summary>
     /// Counts DLQ messages via AMQP peek — works on both the local ASB emulator and
