@@ -108,4 +108,35 @@ public class DashboardControllerTests
             x => x.GetNotificationsByNinAsync("16069412345", from, to, It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task GetNotificationsByNin_OnlyToProvidedAndTooFarInPast_ReturnsValidationProblem()
+    {
+        // Arrange — To is more than 7 days in the past with no From, which the validator rejects
+        var to = DateTimeOffset.UtcNow.AddDays(-8);
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", To = to }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByNin_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345" }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
 }
