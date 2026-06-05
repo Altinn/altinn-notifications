@@ -448,9 +448,9 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 "(they may have already been processed or expired from the DLQ).");
         }
 
-        int estimatedRemaining = Math.Max(0, remainingOnDlq - succeeded);
+        int stillOnDlq = Math.Max(0, remainingOnDlq - succeeded);
         Console.WriteLine();
-        Console.WriteLine($"Done. {succeeded} succeeded, {failed} failed, {notFound} not found in DLQ. ~{estimatedRemaining} still on DLQ from this list.");
+        Console.WriteLine($"Done. {succeeded} succeeded, {failed} failed, {notFound} not found in DLQ. {stillOnDlq} still on DLQ from this list.");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
