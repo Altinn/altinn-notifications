@@ -186,7 +186,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
 
         Console.WriteLine();
         Console.WriteLine($"Processing sending-expired list ({_queueSettings.SendingExpiredListFilePath})...");
-        Console.WriteLine($"{items.Count} item(s) to process.");
+        Console.WriteLine($"{items.Count} item(s) in list file.");
         Console.WriteLine();
 
         await ProcessDlqItemsAsync(
@@ -222,7 +222,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
 
         Console.WriteLine();
         Console.WriteLine($"Processing sending-pending list ({_queueSettings.SendingPendingListFilePath})...");
-        Console.WriteLine($"{items.Count} item(s) to process.");
+        Console.WriteLine($"{items.Count} item(s) in list file.");
         Console.WriteLine();
 
         await using var sender = _sbClient.CreateSender(_asbSettings.SmsSendQueueName);
@@ -389,6 +389,10 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             maxMessages: batchSize,
             maxWaitTime: TimeSpan.FromMinutes(2));
 
+        int matchedCount = snapshot.Count(msg => targetByMessageId.ContainsKey(msg.MessageId));
+        Console.WriteLine($"  {matchedCount} of {items.Count} item(s) found on DLQ — processing now.");
+        Console.WriteLine();
+
         int succeeded = 0, failed = 0, index = 0;
         var foundIds = new HashSet<string>(snapshot.Count);
 
@@ -404,7 +408,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             }
 
             index++;
-            Console.Write($"  [{index}/{items.Count}] {item.NotificationId}... ");
+            Console.Write($"  [{index}/{matchedCount}] {item.NotificationId}... ");
 
             try
             {
