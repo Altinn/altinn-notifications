@@ -177,6 +177,49 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
         Assert.True(await WaitForDlqEmptyAsync(), "DLQ should be empty after resubmitting the pending message");
     }
 
+    [Fact]
+    public async Task ProcessSendingPending_WhenDbResultIsNotSending_PurgesDlqWithoutRequeue()
+    {
+        // Arrange — notification is no longer 'Sending' (e.g. already Delivered) by the
+        // time the pending list is processed. ResubmitPendingItemAsync must purge the DLQ
+        // message without touching the DB or requeuing the command.
+        var (notificationId, command) = await SeedNotificationAsync("Delivered", DateTime.UtcNow.AddHours(-1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, pendingPath, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(pendingPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "3\n0\n", output);
+
+        Assert.True(await WaitForDlqEmptyAsync(), "DLQ message should be purged when DB result is not Sending");
+        Assert.Contains("not Sending", output.ToString());
+
+        var (result, _, _, _) = await new SmsNotificationRepository(_fixture.DataSource).GetNotificationStateAsync(notificationId);
+        Assert.Equal("Delivered", result);
+    }
+
+    [Fact]
+    public async Task ProcessSendingPending_WhenItemExpiredSinceInspection_UpdatesDbAndPurgesDlq()
+    {
+        // Arrange — notification was 'Sending' when Inspect ran, but has since expired
+        // (expirytime is in the past). It ends up on the sending-pending list rather than
+        // the expired list. ResubmitPendingItemAsync must detect isExpired=true and route
+        // to the expired path: update DB to 'Accepted' and purge the DLQ message.
+        var (notificationId, command) = await SeedNotificationAsync("Sending", DateTime.UtcNow.AddHours(-1));
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, pendingPath, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(pendingPath, [BuildDlqSmsItem(notificationId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "3\n0\n", output);
+
+        Assert.True(await WaitForDlqEmptyAsync(), "DLQ message should be purged when item expired since inspection");
+        Assert.Contains("expired since inspection", output.ToString());
+
+        var (result, _, _, _) = await new SmsNotificationRepository(_fixture.DataSource).GetNotificationStateAsync(notificationId);
+        Assert.Equal("Accepted", result);
+    }
+
     // ── Purge other-status ────────────────────────────────────────────────────
     [Fact]
     public async Task PurgeOtherStatus_WhenUserConfirms_PurgesDlqMessage()
