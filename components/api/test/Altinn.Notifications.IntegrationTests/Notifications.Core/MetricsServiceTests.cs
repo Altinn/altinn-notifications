@@ -17,9 +17,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async ValueTask InitializeAsync()
+        public ValueTask InitializeAsync()
         {
-            await ValueTask.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()

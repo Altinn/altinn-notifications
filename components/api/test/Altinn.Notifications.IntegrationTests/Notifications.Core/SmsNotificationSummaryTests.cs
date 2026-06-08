@@ -19,9 +19,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async ValueTask InitializeAsync()
+        public ValueTask InitializeAsync()
         {
-            await Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()

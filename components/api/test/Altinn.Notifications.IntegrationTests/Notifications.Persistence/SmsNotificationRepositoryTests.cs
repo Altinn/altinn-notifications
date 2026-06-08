@@ -30,9 +30,9 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
-    public async ValueTask InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]
