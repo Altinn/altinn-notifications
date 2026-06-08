@@ -148,7 +148,5 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 }

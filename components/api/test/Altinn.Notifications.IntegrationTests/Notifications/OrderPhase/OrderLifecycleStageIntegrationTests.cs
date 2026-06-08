@@ -225,7 +225,6 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         finally
         {
             _client?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 

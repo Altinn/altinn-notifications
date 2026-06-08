@@ -45,8 +45,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsCo
                 string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
             }
-            
-            GC.SuppressFinalize(this);
         }
 
         [Fact]

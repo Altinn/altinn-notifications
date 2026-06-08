@@ -171,8 +171,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

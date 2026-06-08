@@ -25,7 +25,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         public async ValueTask DisposeAsync()
         {
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
-            GC.SuppressFinalize(this);
         }
 
         [Fact]

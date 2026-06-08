@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -27,8 +27,6 @@ public class MetricsRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(id);
             await PostgreUtil.DeleteOrderFromDb(id);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -71,7 +69,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
+        var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.InRange(result.Metrics.Count, 2, int.MaxValue);
@@ -99,7 +97,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailyEmailMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
+        var result = await sut.GetDailyEmailMetrics(date.Day, date.Month, date.Year, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.InRange(result.Metrics.Count, 2, int.MaxValue);

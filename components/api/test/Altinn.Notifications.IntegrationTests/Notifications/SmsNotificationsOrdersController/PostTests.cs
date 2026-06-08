@@ -125,8 +125,6 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
 
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

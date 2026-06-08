@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -28,8 +28,6 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     public async ValueTask InitializeAsync()
@@ -120,7 +118,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customBody);
 
         // Act
-        List<Sms> batch = await sut.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Daytime);
+        List<Sms> batch = await sut.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
         Sms? result = batch.FirstOrDefault(x => x.NotificationId == smsNotification.Id);
 
         // Assert
@@ -144,7 +142,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, CancellationToken.None, SendingTimePolicy.Anytime);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Equal(15, smsToBeSent.Count);
@@ -164,7 +162,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Anytime);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Contains(smsToBeSent, e => e.NotificationId == smsNotification.Id);
@@ -185,7 +183,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None, sendingTimePolicy);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, sendingTimePolicy);
 
         // Assert
         Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
@@ -245,7 +243,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        var claimed = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
+        var claimed = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Equal(count, claimed.Count);
@@ -278,8 +276,8 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        var firstBatch = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
-        var secondBatch = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
+        var firstBatch = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        var secondBatch = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Equal(count, firstBatch.Count);
@@ -305,7 +303,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .OfType<SmsNotificationRepository>().First();
 
         // Act
-        var result = await repo.GetNewNotifications(0, CancellationToken.None, SendingTimePolicy.Anytime);
+        var result = await repo.GetNewNotifications(0, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Empty(result);
@@ -325,7 +323,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .OfType<SmsNotificationRepository>().First();
 
         // Act
-        var result = await repo.GetNewNotifications(-10, CancellationToken.None, SendingTimePolicy.Anytime);
+        var result = await repo.GetNewNotifications(-10, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Empty(result);
@@ -349,7 +347,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customizedBody);
 
         // Act
-        List<Sms> batch = await sut.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Daytime);
+        List<Sms> batch = await sut.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
         Sms? itemWithCustomizedBody = batch.FirstOrDefault(b => b.NotificationId == smsNotification.Id);
         
         // Assert

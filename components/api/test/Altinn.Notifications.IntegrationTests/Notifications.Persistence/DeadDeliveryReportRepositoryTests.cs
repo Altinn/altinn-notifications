@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -34,7 +34,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
@@ -67,14 +67,14 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var azureId = await sut.InsertAsync(azureReport, CancellationToken.None);
-        var linkId = await sut.InsertAsync(linkMobilityReport, CancellationToken.None);
+        var azureId = await sut.InsertAsync(azureReport, TestContext.Current.CancellationToken);
+        var linkId = await sut.InsertAsync(linkMobilityReport, TestContext.Current.CancellationToken);
 
         _createdIds.AddRange([azureId, linkId]);
 
         // Assert
-        var azureReportVerify = await sut.GetAsync(azureId, CancellationToken.None);
-        var linkMobilityReportVerify = await sut.GetAsync(linkId, CancellationToken.None);
+        var azureReportVerify = await sut.GetAsync(azureId, TestContext.Current.CancellationToken);
+        var linkMobilityReportVerify = await sut.GetAsync(linkId, TestContext.Current.CancellationToken);
 
         Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, azureReportVerify.Channel);
         Assert.Equal(DeliveryReportChannel.LinkMobility, linkMobilityReportVerify.Channel);
@@ -96,11 +96,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         Assert.Equal(1, reportVerify.AttemptCount);
     }
 
@@ -120,11 +120,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         Assert.Equal(100, reportVerify.AttemptCount);
     }
 
@@ -144,7 +144,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<PostgresException>(() => sut.InsertAsync(report, CancellationToken.None));
+        await Assert.ThrowsAsync<PostgresException>(() => sut.InsertAsync(report, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -164,11 +164,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         Assert.Null(reportVerify.Reason);
     }
 
@@ -189,11 +189,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         Assert.Null(reportVerify.Message);
     }
 
@@ -213,11 +213,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         Assert.True(reportVerify.Resolved);
     }
 
@@ -246,10 +246,10 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
-        var persistedReport = await sut.GetAsync(id, CancellationToken.None);
+        var persistedReport = await sut.GetAsync(id, TestContext.Current.CancellationToken);
         var deliveryReportDeserialized = JsonSerializer.Deserialize<EmailSendOperationResult>(persistedReport.DeliveryReport, JsonSerializerOptionsProvider.Options);
 
         // Assert
@@ -299,11 +299,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             Message = "Failed after multiple retries"
         };
 
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Act
-        var result = await sut.GetAsync(id, CancellationToken.None);
+        var result = await sut.GetAsync(id, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -324,7 +324,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            sut.GetAsync(nonExistentId, CancellationToken.None));
+            sut.GetAsync(nonExistentId, TestContext.Current.CancellationToken));
 
         Assert.Contains(nonExistentId.ToString(), exception.Message);
     }
@@ -346,11 +346,11 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             Message = null
         };
 
-        var id = await sut.InsertAsync(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
         _createdIds.Add(id);
 
         // Act
-        var result = await sut.GetAsync(id, CancellationToken.None);
+        var result = await sut.GetAsync(id, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result.Reason);
@@ -387,12 +387,12 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             Reason = reason
         };
 
-        var id1 = await sut.InsertAsync(report1, CancellationToken.None);
-        var id2 = await sut.InsertAsync(report2, CancellationToken.None);
+        var id1 = await sut.InsertAsync(report1, TestContext.Current.CancellationToken);
+        var id2 = await sut.InsertAsync(report2, TestContext.Current.CancellationToken);
         _createdIds.AddRange([id1, id2]);
 
         // Act
-        var results = await sut.GetAllAsync(id1, id2 + 1, reason, channel, CancellationToken.None);
+        var results = await sut.GetAllAsync(id1, id2 + 1, reason, channel, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(results);
@@ -409,7 +409,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         var channel = DeliveryReportChannel.AzureCommunicationServices;
 
         // Act
-        var results = await sut.GetAllAsync(1, 100, reason, channel, CancellationToken.None);
+        var results = await sut.GetAllAsync(1, 100, reason, channel, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(results);
@@ -444,16 +444,16 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             Reason = reason
         };
 
-        var azureId = await sut.InsertAsync(azureReport, CancellationToken.None);
-        var smsId = await sut.InsertAsync(smsReport, CancellationToken.None);
+        var azureId = await sut.InsertAsync(azureReport, TestContext.Current.CancellationToken);
+        var smsId = await sut.InsertAsync(smsReport, TestContext.Current.CancellationToken);
         _createdIds.AddRange([azureId, smsId]);
 
         var minId = Math.Min(azureId, smsId);
         var maxId = Math.Max(azureId, smsId) + 1;
 
         // Act
-        var azureResults = await sut.GetAllAsync(minId, maxId, reason, DeliveryReportChannel.AzureCommunicationServices, CancellationToken.None);
-        var smsResults = await sut.GetAllAsync(minId, maxId, reason, DeliveryReportChannel.LinkMobility, CancellationToken.None);
+        var azureResults = await sut.GetAllAsync(minId, maxId, reason, DeliveryReportChannel.AzureCommunicationServices, TestContext.Current.CancellationToken);
+        var smsResults = await sut.GetAllAsync(minId, maxId, reason, DeliveryReportChannel.LinkMobility, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(azureResults, r => Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, r.Channel));
@@ -501,13 +501,13 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             Reason = reason
         };
 
-        var id1 = await sut.InsertAsync(report1, CancellationToken.None);
-        var id2 = await sut.InsertAsync(report2, CancellationToken.None);
-        var id3 = await sut.InsertAsync(report3, CancellationToken.None);
+        var id1 = await sut.InsertAsync(report1, TestContext.Current.CancellationToken);
+        var id2 = await sut.InsertAsync(report2, TestContext.Current.CancellationToken);
+        var id3 = await sut.InsertAsync(report3, TestContext.Current.CancellationToken);
         _createdIds.AddRange([id1, id2, id3]);
 
         // Act - Get only the middle report
-        var results = await sut.GetAllAsync(id2, id2 + 1, reason, channel, CancellationToken.None);
+        var results = await sut.GetAllAsync(id2, id2 + 1, reason, channel, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(results);
@@ -540,14 +540,14 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         var ids = new List<long>();
         foreach (var report in reports)
         {
-            var id = await sut.InsertAsync(report, CancellationToken.None);
+            var id = await sut.InsertAsync(report, TestContext.Current.CancellationToken);
             ids.Add(id);
         }
 
         _createdIds.AddRange(ids);
 
         // Act
-        var results = await sut.GetAllAsync(ids.Min(), ids.Max() + 1, reason, channel, CancellationToken.None);
+        var results = await sut.GetAllAsync(ids.Min(), ids.Max() + 1, reason, channel, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, results.Count);
@@ -572,8 +572,6 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
 
             await PostgreUtil.RunSql(deleteSql, parameters);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()

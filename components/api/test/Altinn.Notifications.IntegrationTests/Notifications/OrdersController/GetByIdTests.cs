@@ -150,8 +150,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

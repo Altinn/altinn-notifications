@@ -116,8 +116,6 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     {
         string sql = $"delete from notifications.orders where sendersreference like '{_sendersRefBase}%'";
         await PostgreUtil.RunSql(sql);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()
