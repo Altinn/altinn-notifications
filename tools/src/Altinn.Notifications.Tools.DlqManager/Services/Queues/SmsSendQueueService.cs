@@ -18,28 +18,20 @@ namespace Altinn.Notifications.Tools.DlqManager.Services.Queues;
 ///   <item>Query DB state — print current database state for a list file.</item>
 /// </list>
 /// </summary>
-public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
+public sealed class SmsSendQueueService(
+    IOptions<AsbSettings> asbSettings,
+    IOptions<SmsSendQueueSettings> queueSettings,
+    ISmsNotificationRepository repository,
+    ServiceBusClient sbClient) : ISmsSendQueueService, IAsyncDisposable
 {
-    private readonly AsbSettings _asbSettings;
-    private readonly SmsSendQueueSettings _queueSettings;
-    private readonly ISmsNotificationRepository _repository;
-    private readonly ServiceBusClient _sbClient;
+    private readonly AsbSettings _asbSettings = asbSettings.Value;
+    private readonly SmsSendQueueSettings _queueSettings = queueSettings.Value;
+    private readonly ISmsNotificationRepository _repository = repository;
+    private readonly ServiceBusClient _sbClient = sbClient;
 
     private static readonly JsonSerializerOptions _writeOptions = new() { WriteIndented = true };
 
     private const string NotFound = "NOT FOUND";
-
-    public SmsSendQueueService(
-        IOptions<AsbSettings> asbSettings,
-        IOptions<SmsSendQueueSettings> queueSettings,
-        ISmsNotificationRepository repository,
-        ServiceBusClient sbClient)
-    {
-        _asbSettings = asbSettings.Value;
-        _queueSettings = queueSettings.Value;
-        _repository = repository;
-        _sbClient = sbClient;
-    }
 
     // ── Top-level sub-menu loop ────────────────────────────────────────────────
 
