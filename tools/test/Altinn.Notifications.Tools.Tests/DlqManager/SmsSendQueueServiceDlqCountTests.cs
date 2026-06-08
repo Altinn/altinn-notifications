@@ -112,14 +112,14 @@ public class SmsSendQueueServiceDlqCountTests
         //   3. PeekDlqMatchCountAsync loop end → empty
         mockReceiver
             .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg })
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+            .ReturnsAsync([])
+            .ReturnsAsync([fakeMsg])
+            .ReturnsAsync([]);
 
         // ProcessDlqItemsAsync receives the fake message.
         mockReceiver
             .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg });
+            .ReturnsAsync([fakeMsg]);
 
         // Sender throws → triggers lines 271-272.
         mockSender
@@ -216,13 +216,13 @@ public class SmsSendQueueServiceDlqCountTests
         //   2. PeekDlqMatchCountAsync page 1   → throws → catch returns -1
         mockReceiver
             .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
+            .ReturnsAsync([])
             .ThrowsAsync(new ServiceBusException("Simulated peek failure", ServiceBusFailureReason.ServiceBusy));
 
         // Processing continues with an empty snapshot — nothing to receive.
         mockReceiver
             .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+            .ReturnsAsync([]);
 
         mockReceiver.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
         mockClient.Setup(c => c.DisposeAsync()).Returns(ValueTask.CompletedTask);
@@ -313,13 +313,13 @@ public class SmsSendQueueServiceDlqCountTests
         //   3. PeekDlqMatchCountAsync p2  → empty (loop ends)
         mockReceiver
             .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg })
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+            .ReturnsAsync([])
+            .ReturnsAsync([fakeMsg])
+            .ReturnsAsync([]);
 
         mockReceiver
             .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg });
+            .ReturnsAsync([fakeMsg]);
 
         // DB: Sending + expired, but UPDATE returns 0 rows (concurrent modification).
         var mockRepo = new Mock<ISmsNotificationRepository>();
@@ -424,13 +424,13 @@ public class SmsSendQueueServiceDlqCountTests
         //   3. PeekDlqMatchCountAsync p2  → empty (loop ends)
         mockReceiver
             .SetupSequence(r => r.PeekMessagesAsync(It.IsAny<int>(), It.IsAny<long?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>())
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg })
-            .ReturnsAsync(new List<ServiceBusReceivedMessage>());
+            .ReturnsAsync([])
+            .ReturnsAsync([fakeMsg])
+            .ReturnsAsync([]);
 
         mockReceiver
             .Setup(r => r.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan?>(), default))
-            .ReturnsAsync(new List<ServiceBusReceivedMessage> { fakeMsg });
+            .ReturnsAsync([fakeMsg]);
 
         // processItem throws via GetNotificationStateAsync → outer catch fires.
         var mockRepo = new Mock<ISmsNotificationRepository>();
