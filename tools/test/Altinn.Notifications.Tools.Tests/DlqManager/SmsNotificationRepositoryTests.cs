@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
 {
     private readonly IntegrationContainersFixture _fixture = fixture;
-    private readonly SmsNotificationRepository _repository = new SmsNotificationRepository(fixture.DataSource);
+    private readonly SmsNotificationRepository _repository = new(fixture.DataSource);
     private readonly List<Guid> _notificationIds = [];
     private readonly List<Guid> _orderIds = [];
 
