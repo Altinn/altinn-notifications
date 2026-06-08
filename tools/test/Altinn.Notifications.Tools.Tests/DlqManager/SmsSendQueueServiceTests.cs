@@ -178,6 +178,30 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
     }
 
     [Fact]
+    public async Task ProcessSendingPending_WhenNotificationNotInDatabase_PurgesDlqWithoutRequeue()
+    {
+        // Arrange — orphan notification (not in DB): GetNotificationStateAsync returns null,
+        // which != "Sending", so the not-Sending branch fires and the ?? NotFound path is taken.
+        var orphanId = Guid.NewGuid();
+        var command = new SendSmsCommand
+        {
+            NotificationId = orphanId,
+            MobileNumber = "+4712345678",
+            Body = "Orphan pending test",
+            SenderNumber = "Altinn"
+        };
+        string msgId = await SeedDlqMessageAsync(command);
+        var (_, pendingPath, _, queueSettings) = CreateTempListFiles();
+        await WriteListFileAsync(pendingPath, [BuildDlqSmsItem(orphanId, command, msgId)]);
+
+        var output = new StringWriter();
+        await RunMenuAsync(CreateService(queueSettings), "3\n0\n", output);
+
+        Assert.True(await WaitForDlqEmptyAsync(), "DLQ message should be purged when notification is not in DB");
+        Assert.Contains("NOT FOUND", output.ToString());
+    }
+
+    [Fact]
     public async Task ProcessSendingPending_WhenDbResultIsNotSending_PurgesDlqWithoutRequeue()
     {
         // Arrange — notification is no longer 'Sending' (e.g. already Delivered) by the

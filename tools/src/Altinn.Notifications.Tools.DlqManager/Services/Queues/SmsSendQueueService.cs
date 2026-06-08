@@ -371,8 +371,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
 
                 matchedCount++;
                 index++;
-                succeeded += result.Value ? 1 : 0;
-                failed    += result.Value ? 0 : 1;
+                if (result.Value) succeeded++; else failed++;
             }
         }
 
@@ -398,7 +397,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     /// </summary>
     private static async Task<bool?> ProcessOneMessageAsync(
         ServiceBusReceivedMessage msg,
-        IReadOnlyDictionary<string, DlqSmsItem> targetByMessageId,
+        Dictionary<string, DlqSmsItem> targetByMessageId,
         int displayIndex,
         int totalExpected,
         ServiceBusReceiver receiver,
