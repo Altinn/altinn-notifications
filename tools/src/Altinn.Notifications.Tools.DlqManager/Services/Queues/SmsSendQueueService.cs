@@ -231,6 +231,27 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
             items,
             async (msg, item, rcv) =>
             {
+                var (currentResult, _, isExpired, _) = await _repository.GetNotificationStateAsync(item.NotificationId);
+
+                if (currentResult != "Sending")
+                {
+                    await rcv.CompleteMessageAsync(msg);
+                    return (true, $"DB result is '{currentResult ?? NotFound}' (not Sending) — DLQ message purged without requeue.");
+                }
+
+                if (isExpired)
+                {
+                    int rows = await _repository.UpdateResultToAcceptedAsync(item.NotificationId);
+                    if (rows > 0)
+                    {
+                        await rcv.CompleteMessageAsync(msg);
+                        return (true, "Item expired since inspection; DB updated to 'Accepted'. DLQ message purged.");
+                    }
+
+                    await rcv.AbandonMessageAsync(msg);
+                    return (false, "Item expired since inspection, but DB update returned 0 rows. DLQ message NOT purged.");
+                }
+
                 var command = new SendSmsCommand
                 {
                     NotificationId = item.NotificationId,
@@ -393,47 +414,51 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 ReceiveMode = ServiceBusReceiveMode.PeekLock
             });
 
-        // Receive the current DLQ snapshot. ReceiveMessagesAsync returns when it reaches
-        // maxMessages OR when maxWaitTime expires. The 2-minute timeout gives it enough
-        // time to drain large DLQs (hundreds to low thousands of messages) in one call.
-        var snapshot = await receiver.ReceiveMessagesAsync(
-            maxMessages: batchSize,
-            maxWaitTime: TimeSpan.FromMinutes(2));
-
-        int matchedCount = snapshot.Count(msg => targetByMessageId.ContainsKey(msg.MessageId));
-        Console.WriteLine($"  Received {matchedCount} of {remainingOnDlq} — processing now.");
-        Console.WriteLine();
-
         int succeeded = 0, failed = 0, index = 0;
-        var foundIds = new HashSet<string>(snapshot.Count);
+        int matchedCount = 0;
+        var foundIds = new HashSet<string>();
 
-        foreach (var msg in snapshot)
+        // Loop in batches until all peeked targets are found or the DLQ is drained.
+        // A single batch risks missing targets when more than batchSize non-target
+        // messages sit ahead of them in the queue.
+        while (remainingOnDlq < 0 || matchedCount < remainingOnDlq)
         {
-            foundIds.Add(msg.MessageId);
+            var snapshot = await receiver.ReceiveMessagesAsync(
+                maxMessages: batchSize,
+                maxWaitTime: TimeSpan.FromMinutes(2));
 
-            if (!targetByMessageId.TryGetValue(msg.MessageId, out var item))
+            if (snapshot.Count == 0)
+                break;
+
+            foreach (var msg in snapshot)
             {
-                // Not in our target set — release the lock immediately.
-                await receiver.AbandonMessageAsync(msg);
-                continue;
-            }
+                foundIds.Add(msg.MessageId);
 
-            index++;
-            Console.Write($"  [{index}/{matchedCount}] {item.NotificationId}... ");
+                if (!targetByMessageId.TryGetValue(msg.MessageId, out var item))
+                {
+                    // Not in our target set — release the lock immediately.
+                    await receiver.AbandonMessageAsync(msg);
+                    continue;
+                }
 
-            try
-            {
-                var (success, message) = await processItem(msg, item, receiver);
-                Console.WriteLine($"→ {message} {(success ? "✓" : "✗")}");
+                matchedCount++;
+                index++;
+                Console.Write($"  [{index}/{remainingOnDlq}] {item.NotificationId}... ");
 
-                if (success) succeeded++;
-                else         failed++;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"→ Unexpected error: {ex.Message} ✗");
-                try { await receiver.AbandonMessageAsync(msg); } catch { /* best-effort */ }
-                failed++;
+                try
+                {
+                    var (success, message) = await processItem(msg, item, receiver);
+                    Console.WriteLine($"→ {message} {(success ? "✓" : "✗")}");
+
+                    if (success) succeeded++;
+                    else         failed++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"→ Unexpected error: {ex.Message} ✗");
+                    try { await receiver.AbandonMessageAsync(msg); } catch { /* best-effort */ }
+                    failed++;
+                }
             }
         }
 

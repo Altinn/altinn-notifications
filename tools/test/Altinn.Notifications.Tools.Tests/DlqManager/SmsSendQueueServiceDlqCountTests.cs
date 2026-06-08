@@ -148,10 +148,15 @@ public class SmsSendQueueServiceDlqCountTests
             string json = JsonSerializer.Serialize(new List<DlqSmsItem> { item });
             await File.WriteAllTextAsync(pendingPath, json);
 
+            var mockRepo = new Mock<ISmsNotificationRepository>();
+            mockRepo
+                .Setup(r => r.GetNotificationStateAsync(notificationId))
+                .ReturnsAsync(("Sending", DateTime.UtcNow.AddHours(1), false, (DateTime?)null));
+
             var service = new SmsSendQueueService(
                 Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
                 Options.Create(new SmsSendQueueSettings { SendingPendingListFilePath = pendingPath }),
-                new Mock<ISmsNotificationRepository>().Object,
+                mockRepo.Object,
                 mockClient.Object);
 
             var output = new StringWriter();
