@@ -24,9 +24,9 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         _testFilePath = Path.Combine(Path.GetTempPath(), $"test-orders-{Guid.NewGuid()}.json");
     }
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         // Clean up file
         if (File.Exists(_testFilePath))
