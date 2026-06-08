@@ -227,72 +227,7 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
 
         await using var sender = _sbClient.CreateSender(_asbSettings.SmsSendQueueName);
 
-        await ProcessDlqItemsAsync(
-            items,
-            async (msg, item, rcv) =>
-            {
-                var (currentResult, _, isExpired, _) = await _repository.GetNotificationStateAsync(item.NotificationId);
-
-                if (currentResult != "Sending")
-                {
-                    await rcv.CompleteMessageAsync(msg);
-                    return (true, $"DB result is '{currentResult ?? NotFound}' (not Sending) — DLQ message purged without requeue.");
-                }
-
-                if (isExpired)
-                {
-                    int rows = await _repository.UpdateResultToAcceptedAsync(item.NotificationId);
-                    if (rows > 0)
-                    {
-                        await rcv.CompleteMessageAsync(msg);
-                        return (true, "Item expired since inspection; DB updated to 'Accepted'. DLQ message purged.");
-                    }
-
-                    await rcv.AbandonMessageAsync(msg);
-                    return (false, "Item expired since inspection, but DB update returned 0 rows. DLQ message NOT purged.");
-                }
-
-                var command = new SendSmsCommand
-                {
-                    NotificationId = item.NotificationId,
-                    MobileNumber   = item.MobileNumber,
-                    Body           = item.Body,
-                    SenderNumber   = item.SenderNumber
-                };
-
-                var newMsg = new ServiceBusMessage(
-                    BinaryData.FromString(JsonSerializer.Serialize(command)))
-                {
-                    ContentType = "application/json",
-                    Subject     = msg.Subject,
-                    // Fresh MessageId so the duplicate-detection window on the main
-                    // queue does not silently drop the re-queued message (the original
-                    // was sent recently enough to still be inside the window).
-                    MessageId = Guid.NewGuid().ToString()
-                };
-
-                // Wolverine requires its envelope application properties (at minimum
-                // the message-type header) to route and deserialize the message.
-                // Copy them from the original DLQ message — they survive DLQ intact.
-                // The ASB delivery count resets automatically on the new message, so
-                // the retry policy gets a clean slate regardless.
-                foreach (var (key, value) in msg.ApplicationProperties)
-                {
-                    newMsg.ApplicationProperties[key] = value;
-                }
-
-                try
-                {
-                    await sender.SendMessageAsync(newMsg);
-                    await rcv.CompleteMessageAsync(msg);
-                    return (true, "Sent to main queue. DLQ message purged.");
-                }
-                catch (Exception ex)
-                {
-                    await rcv.AbandonMessageAsync(msg);
-                    return (false, $"Send failed ({ex.GetType().Name}: {ex.Message}). DLQ message NOT purged.");
-                }
-            });
+        await ProcessDlqItemsAsync(items, (msg, item, rcv) => ResubmitPendingItemAsync(msg, item, rcv, sender));
     }
 
     // ── Operation 4: Purge other-status ───────────────────────────────────────
@@ -383,8 +318,9 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
     // ── Shared processing helper ──────────────────────────────────────────────
 
     /// <summary>
-    /// Receives the current DLQ snapshot in one batch, processes messages that match
-    /// <paramref name="items"/> (by <c>MessageId</c>), and abandons any non-target messages.
+    /// Loops through DLQ batches until all peeked targets are found or the queue is drained,
+    /// processes messages that match <paramref name="items"/> (by <c>MessageId</c>),
+    /// and abandons any non-target messages.
     /// </summary>
     private async Task ProcessDlqItemsAsync(
         List<DlqSmsItem> items,
@@ -414,56 +350,33 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
                 ReceiveMode = ServiceBusReceiveMode.PeekLock
             });
 
-        int succeeded = 0, failed = 0, index = 0;
-        int matchedCount = 0;
-        var foundIds = new HashSet<string>();
+        int succeeded = 0, failed = 0, index = 0, matchedCount = 0;
 
         // Loop in batches until all peeked targets are found or the DLQ is drained.
         // A single batch risks missing targets when more than batchSize non-target
         // messages sit ahead of them in the queue.
         while (remainingOnDlq < 0 || matchedCount < remainingOnDlq)
         {
-            var snapshot = await receiver.ReceiveMessagesAsync(
-                maxMessages: batchSize,
-                maxWaitTime: TimeSpan.FromMinutes(2));
+            var snapshot = await receiver.ReceiveMessagesAsync(batchSize, TimeSpan.FromMinutes(2));
 
             if (snapshot.Count == 0)
                 break;
 
             foreach (var msg in snapshot)
             {
-                foundIds.Add(msg.MessageId);
+                bool? result = await ProcessOneMessageAsync(msg, targetByMessageId, index + 1, remainingOnDlq, receiver, processItem);
 
-                if (!targetByMessageId.TryGetValue(msg.MessageId, out var item))
-                {
-                    // Not in our target set — release the lock immediately.
-                    await receiver.AbandonMessageAsync(msg);
+                if (result is null)
                     continue;
-                }
 
                 matchedCount++;
                 index++;
-                Console.Write($"  [{index}/{remainingOnDlq}] {item.NotificationId}... ");
-
-                try
-                {
-                    var (success, message) = await processItem(msg, item, receiver);
-                    Console.WriteLine($"→ {message} {(success ? "✓" : "✗")}");
-
-                    if (success) succeeded++;
-                    else         failed++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"→ Unexpected error: {ex.Message} ✗");
-                    try { await receiver.AbandonMessageAsync(msg); } catch { /* best-effort */ }
-                    failed++;
-                }
+                succeeded += result.Value ? 1 : 0;
+                failed    += result.Value ? 0 : 1;
             }
         }
 
-        // Report items from the file that were not present in the DLQ snapshot.
-        int notFound = items.Count(i => !foundIds.Contains(i.DlqMessageId));
+        int notFound = items.Count - matchedCount;
         if (notFound > 0)
         {
             Console.WriteLine();
@@ -477,7 +390,119 @@ public sealed class SmsSendQueueService : ISmsSendQueueService, IAsyncDisposable
         Console.WriteLine($"Done. {succeeded} succeeded, {failed} failed, {notFound} not found in DLQ. {stillOnDlq} still on DLQ from this list.");
     }
 
+    /// <summary>
+    /// Checks whether <paramref name="msg"/> is a target, logs progress, and invokes
+    /// <paramref name="processItem"/>. Returns <c>null</c> for non-target messages
+    /// (abandoned on the spot), <c>true</c> on success, <c>false</c> on failure.
+    /// Separated from <see cref="ProcessDlqItemsAsync"/> to keep its nesting shallow.
+    /// </summary>
+    private static async Task<bool?> ProcessOneMessageAsync(
+        ServiceBusReceivedMessage msg,
+        IReadOnlyDictionary<string, DlqSmsItem> targetByMessageId,
+        int displayIndex,
+        int totalExpected,
+        ServiceBusReceiver receiver,
+        Func<ServiceBusReceivedMessage, DlqSmsItem, ServiceBusReceiver, Task<(bool Success, string Message)>> processItem)
+    {
+        if (!targetByMessageId.TryGetValue(msg.MessageId, out var item))
+        {
+            await receiver.AbandonMessageAsync(msg);
+            return null;
+        }
+
+        Console.Write($"  [{displayIndex}/{totalExpected}] {item.NotificationId}... ");
+
+        try
+        {
+            var (success, message) = await processItem(msg, item, receiver);
+            Console.WriteLine($"→ {message} {(success ? "✓" : "✗")}");
+            return success;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"→ Unexpected error: {ex.Message} ✗");
+            try { await receiver.AbandonMessageAsync(msg); } catch { /* best-effort */ }
+            return false;
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Re-checks the DB state before resubmitting a sending-pending item. Guards
+    /// against duplicate sends when the notification moved out of 'Sending' or expired
+    /// since the list file was produced by Inspect.
+    /// Separated from <see cref="ProcessSendingPendingListAsync"/> so that coverage
+    /// tools can instrument each branch independently.
+    /// </summary>
+    private async Task<(bool Success, string Message)> ResubmitPendingItemAsync(
+        ServiceBusReceivedMessage msg,
+        DlqSmsItem item,
+        ServiceBusReceiver rcv,
+        ServiceBusSender sender)
+    {
+        var (currentResult, _, isExpired, _) = await _repository.GetNotificationStateAsync(item.NotificationId);
+
+        if (currentResult != "Sending")
+        {
+            await rcv.CompleteMessageAsync(msg);
+            return (true, $"DB result is '{currentResult ?? NotFound}' (not Sending) — DLQ message purged without requeue.");
+        }
+
+        if (isExpired)
+        {
+            int rows = await _repository.UpdateResultToAcceptedAsync(item.NotificationId);
+            if (rows > 0)
+            {
+                await rcv.CompleteMessageAsync(msg);
+                return (true, "Item expired since inspection; DB updated to 'Accepted'. DLQ message purged.");
+            }
+
+            await rcv.AbandonMessageAsync(msg);
+            return (false, "Item expired since inspection, but DB update returned 0 rows. DLQ message NOT purged.");
+        }
+
+        var command = new SendSmsCommand
+        {
+            NotificationId = item.NotificationId,
+            MobileNumber   = item.MobileNumber,
+            Body           = item.Body,
+            SenderNumber   = item.SenderNumber
+        };
+
+        var newMsg = new ServiceBusMessage(
+            BinaryData.FromString(JsonSerializer.Serialize(command)))
+        {
+            ContentType = "application/json",
+            Subject     = msg.Subject,
+            // Fresh MessageId so the duplicate-detection window on the main
+            // queue does not silently drop the re-queued message (the original
+            // was sent recently enough to still be inside the window).
+            MessageId = Guid.NewGuid().ToString()
+        };
+
+        // Wolverine requires its envelope application properties (at minimum
+        // the message-type header) to route and deserialize the message.
+        // Copy them from the original DLQ message — they survive DLQ intact.
+        // The ASB delivery count resets automatically on the new message, so
+        // the retry policy gets a clean slate regardless.
+        foreach (var (key, value) in msg.ApplicationProperties)
+        {
+            newMsg.ApplicationProperties[key] = value;
+        }
+
+        try
+        {
+            await sender.SendMessageAsync(newMsg);
+            await rcv.CompleteMessageAsync(msg);
+            return (true, "Sent to main queue. DLQ message purged.");
+        }
+        catch (Exception ex)
+        {
+            await rcv.AbandonMessageAsync(msg);
+            return (false, $"Send failed ({ex.GetType().Name}: {ex.Message}). DLQ message NOT purged.");
+        }
+    }
 
     /// <summary>
     /// Counts how many DLQ messages have a <c>MessageId</c> that appears in
