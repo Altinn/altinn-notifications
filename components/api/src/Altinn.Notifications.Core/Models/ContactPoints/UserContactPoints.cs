@@ -31,6 +31,16 @@ public class UserContactPoints
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the timestamp for when the mobile number was last updated by the user.
+    /// </summary>
+    public DateTime? MobileNumberLastTouched { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timestamp for when the email address was last updated by the user.
+    /// </summary>
+    public DateTime? EmailLastTouched { get; set; }
+
+    /// <summary>
     /// Create a new instance with the same values as the existing instance
     /// </summary>
     /// <returns>The new instance with copied values.</returns>
@@ -42,7 +52,9 @@ public class UserContactPoints
             NationalIdentityNumber = NationalIdentityNumber,
             IsReserved = IsReserved,
             MobileNumber = MobileNumber,
-            Email = Email
+            Email = Email,
+            MobileNumberLastTouched = MobileNumberLastTouched,
+            EmailLastTouched = EmailLastTouched,
         };
     }
 }

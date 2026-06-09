@@ -29,4 +29,14 @@ public class UserContactPointsDto
     /// Gets or sets the email address
     /// </summary>
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timestamp for when the mobile number was last updated by the user.
+    /// </summary>
+    public DateTime? MobileNumberLastTouched { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timestamp for when the email address was last updated by the user.
+    /// </summary>
+    public DateTime? EmailLastTouched { get; set; }
 }

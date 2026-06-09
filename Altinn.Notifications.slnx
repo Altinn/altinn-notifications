@@ -44,6 +44,7 @@
   </Folder>
   <Folder Name="/Tools/" />
   <Folder Name="/Tools/src/">
+    <Project Path="tools/src/Altinn.Notifications.Tools.DlqManager/Altinn.Notifications.Tools.DlqManager.csproj" />
     <Project Path="tools/src/Altinn.Notifications.Tools.RetryDeadDeliveryReports/Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
     <Project Path="tools/src/Altinn.Notifications.Tools.StatusFeedBackfillTool/Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </Folder>

@@ -22,11 +22,13 @@ public class ContactPointService(
     private const string _profileClientName = "ProfileClient";
     private const string _authorizationServiceName = "AuthorizationService";
 
+    private const int ActiveContactPointMonths = 18;
+
     private readonly IProfileClient _profileClient = profile;
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
-    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, Creator creator, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -35,11 +37,12 @@ public class ContactPointService(
             ApplyEmailForOrganization,
             ApplyEmailForExternalIdentity,
             orderLifecycleStage,
+            creator,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, Creator creator, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -48,11 +51,12 @@ public class ContactPointService(
             ApplySmsForOrganization,
             ApplySmsForExternalIdentity,
             orderLifecycleStage,
+            creator,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, Creator creator, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -61,11 +65,12 @@ public class ContactPointService(
             ApplyEmailAndSmsForOrganization,
             ApplyEmailAndSmsForExternalIdentity,
             orderLifecycleStage,
+            creator,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, Creator creator, string? resourceAction = null)
     {
         switch (channel)
         {
@@ -77,6 +82,7 @@ public class ContactPointService(
                     ApplyEmailPreferredForOrganization,
                     ApplyEmailPreferredForExternalIdentity,
                     orderLifecycleStage,
+                    creator,
                     resourceAction);
                 break;
             case NotificationChannel.SmsPreferred:
@@ -87,6 +93,7 @@ public class ContactPointService(
                     ApplySmsPreferredForOrganization,
                     ApplySmsPreferredForExternalIdentity,
                     orderLifecycleStage,
+                    creator,
                     resourceAction);
                 break;
             default:
@@ -356,6 +363,7 @@ public class ContactPointService(
     /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
     /// </param>
+    /// <param name="creator">The service owner ordering the notifications.</param>
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
@@ -369,9 +377,10 @@ public class ContactPointService(
         Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
         Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints,
         OrderLifecycleStage orderLifecycleStage,
+        Creator creator,
         string? resourceAction = null)
     {
-        var personLookupTask = LookupPersonContactPoints(recipients);
+        var personLookupTask = LookupPersonContactPoints(recipients, creator);
         var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
         var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderLifecycleStage, resourceAction);
 
@@ -449,11 +458,12 @@ public class ContactPointService(
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
     /// </param>
+    /// <param name="creator">The service owner ordering the notifications.</param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result contains a list of <see cref="UserContactPoints"/> 
     /// corresponding to the provided national identity numbers. If no valid national identity numbers are found, an empty list is returned.
     /// </returns>
-    private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
+    private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients, Creator creator)
     {
         List<string> nationalIdentityNumbers = [.. recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
@@ -464,17 +474,29 @@ public class ContactPointService(
             return [];
         }
 
+        DateTime cutoffDate = DateTime.UtcNow.AddMonths(-ActiveContactPointMonths);
+
+        bool isSkd = creator.ShortName.Equals("skd", StringComparison.OrdinalIgnoreCase);
+
         try
         {
             List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
 
             contactPoints.ForEach(contactPoint =>
             {
+                var emailTooOld = IsContactPointTooOld(contactPoint.EmailLastTouched, cutoffDate);
+                var mobileTooOld = IsContactPointTooOld(contactPoint.MobileNumberLastTouched, cutoffDate);
+
                 contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
 
-                if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+                if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber) || (mobileTooOld && !isSkd))
                 {
                     contactPoint.MobileNumber = string.Empty;
+                }
+
+                if (emailTooOld && !isSkd)
+                {
+                    contactPoint.Email = string.Empty;
                 }
             });
 
@@ -779,5 +801,10 @@ public class ContactPointService(
         }
 
         return userContact;
+    }
+
+    private static bool IsContactPointTooOld(DateTime? lastTouched, DateTime cutoffDate)
+    {
+        return !lastTouched.HasValue || lastTouched.Value < cutoffDate;
     }
 }
