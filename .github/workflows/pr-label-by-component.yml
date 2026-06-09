@@ -12,6 +12,7 @@ on:
       - 'components/email-service/**'
       - 'components/sms-service/**'
       - 'components/shared/**'
+      - 'tools/**'
 
 jobs:
   add_component_labels:

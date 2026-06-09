@@ -9,7 +9,7 @@ using Azure.Messaging.ServiceBus;
 
 using JasperFx;
 using JasperFx.CodeGeneration;
-
+using JasperFx.CodeGeneration.Frames;
 using Npgsql;
 
 using Wolverine.Configuration;
@@ -32,6 +32,8 @@ internal sealed class SmsDeliveryReportHandlerPolicy(WolverineSettings settings)
     {
         var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SmsDeliveryReportCommand))
             ?? throw new UnreachableException($"No handler chain found for {nameof(SmsDeliveryReportCommand)}. Ensure the handler is registered before adding this policy.");
+
+        chain.Middleware.Insert(0, new MethodCall(typeof(EnqueuedAtMiddleware), nameof(EnqueuedAtMiddleware.Before)));
 
         var policy = settings.SmsDeliveryReportQueuePolicy;
 

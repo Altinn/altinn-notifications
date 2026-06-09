@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Shared.Commands;
-
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +48,7 @@ public static class FailureActionsExtensions
                 var deadDeliveryReport = new DeadDeliveryReport
                 {
                     Channel = channel,
-                    FirstSeen = innerEnvelope.SentAt.UtcDateTime,
+                    FirstSeen = innerEnvelope.EnqueuedAt().UtcDateTime,
                     LastAttempt = DateTime.UtcNow,
                     AttemptCount = Math.Max(1, innerEnvelope.Attempts),
                     Resolved = false,
