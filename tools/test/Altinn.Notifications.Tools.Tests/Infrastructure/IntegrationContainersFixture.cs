@@ -38,7 +38,7 @@ public class IntegrationContainersFixture : IAsyncLifetime
     public NpgsqlDataSource DataSource { get; private set; } = null!;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _containers.InitializeAsync();
 
@@ -55,7 +55,7 @@ public class IntegrationContainersFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (DataSource is not null)
         {

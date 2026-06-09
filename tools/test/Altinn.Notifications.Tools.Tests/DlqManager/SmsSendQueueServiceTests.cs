@@ -44,9 +44,9 @@ public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IA
     private readonly List<Guid> _orderIds = [];
     private readonly List<string> _tempFiles = [];
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         foreach (var file in _tempFiles)
         {

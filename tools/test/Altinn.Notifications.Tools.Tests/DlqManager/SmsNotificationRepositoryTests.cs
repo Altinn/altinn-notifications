@@ -24,9 +24,9 @@ public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture
     private readonly List<Guid> _notificationIds = [];
     private readonly List<Guid> _orderIds = [];
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_notificationIds.Count == 0 && _orderIds.Count == 0)
         {
@@ -38,6 +38,7 @@ public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture
             "DELETE FROM notifications.orders WHERE alternateid = ANY(@orderIds);");
         cmd.Parameters.Add(new NpgsqlParameter("ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = _notificationIds.ToArray() });
         cmd.Parameters.Add(new NpgsqlParameter("orderIds", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = _orderIds.ToArray() });
+
         await cmd.ExecuteNonQueryAsync();
     }
 
