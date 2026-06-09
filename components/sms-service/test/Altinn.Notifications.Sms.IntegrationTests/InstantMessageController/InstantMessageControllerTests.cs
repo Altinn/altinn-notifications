@@ -58,12 +58,12 @@ public class InstantMessageControllerTests : IClassFixture<IntegrationTestWebApp
         var httpClient = GetTestClient(sendingServiceMock.Object);
 
         // Act
-        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", instantMessageRequest);
+        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", instantMessageRequest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(responseBody, _jsonOptions);
 
         Assert.NotNull(problemDetails);
@@ -92,12 +92,12 @@ public class InstantMessageControllerTests : IClassFixture<IntegrationTestWebApp
         var httpClient = GetTestClient(sendingServiceMock.Object);
 
         // Act
-        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", instantMessageRequest);
+        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", instantMessageRequest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(responseBody, _jsonOptions);
 
         Assert.NotNull(problemDetails);
@@ -131,12 +131,12 @@ public class InstantMessageControllerTests : IClassFixture<IntegrationTestWebApp
         var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
 
         // Act
-        var response = await httpClient.PostAsync("/notifications/sms/api/v1/instantmessage/send", content);
+        var response = await httpClient.PostAsync("/notifications/sms/api/v1/instantmessage/send", content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(responseBody, _jsonOptions);
 
         Assert.NotNull(problemDetails);
@@ -165,7 +165,7 @@ public class InstantMessageControllerTests : IClassFixture<IntegrationTestWebApp
         var httpClient = GetTestClient(sendingServiceMock.Object);
 
         // Act
-        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", oneTimePasswordRequest);
+        var response = await httpClient.PostAsJsonAsync("/notifications/sms/api/v1/instantmessage/send", oneTimePasswordRequest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -46,7 +46,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     {
         // Arrange
         var orderIds = new List<Guid>();
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var orderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -70,7 +70,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
 
             // Verify file still exists and is still empty (no modifications)
             Assert.True(File.Exists(_testFilePath));
-            var fileContent = await File.ReadAllTextAsync(_testFilePath);
+            var fileContent = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
             var deserializedOrders = JsonSerializer.Deserialize<List<Guid>>(fileContent);
             Assert.Empty(deserializedOrders!);
         }
@@ -93,7 +93,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await orderRepo.SetProcessingStatus(order2Id, OrderProcessingStatus.Completed);
 
         var orderIds = new List<Guid> { order1Id, order2Id };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -137,10 +137,10 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await TestDataUtil.UpdateOrderStatusLegacy(order1Id, OrderProcessingStatus.Completed);
         await TestDataUtil.UpdateOrderStatusLegacy(order2Id, OrderProcessingStatus.Completed);
 
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         var orderIds = new List<Guid> { order1Id, order2Id };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -164,7 +164,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             // Assert - should have created status feed entries
             // Note: SelectStatusFeedEntryCount may return 0 for entries created within the last 2 seconds
             // due to filtering in GetStatusFeed, so we wait a bit
-            await Task.Delay(50); // Wait for status feed entries to be selectable
+            await Task.Delay(50, TestContext.Current.CancellationToken); // Wait for status feed entries to be selectable
 
             int count1 = await TestDataUtil.GetStatusFeedEntryCount(order1Id);
             int count2 = await TestDataUtil.GetStatusFeedEntryCount(order2Id);
@@ -224,7 +224,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await orderRepo.SetProcessingStatus(existingOrderId, OrderProcessingStatus.Completed);
 
         var orderIds = new List<Guid> { nonExistentOrderId, existingOrderId };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -247,7 +247,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
 
             // Assert - Service logs error for invalid order but continues processing valid orders
             // Verify that the valid order was still processed successfully
-            await Task.Delay(50);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
             int count = await TestDataUtil.GetStatusFeedEntryCount(existingOrderId);
             Assert.Equal(1, count);
         }
@@ -265,7 +265,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
         var orderIds = new List<Guid> { orderId };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -287,7 +287,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "n", so DryRun should be false (insertion happens)
-            await Task.Delay(50);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(1, count); // Not dry run = insertion happened
         }
@@ -305,7 +305,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
         var orderIds = new List<Guid> { orderId };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -327,7 +327,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "y", so DryRun should be true (no insertion)
-            await Task.Delay(50);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(0, count); // Dry run = no insertion
         }
@@ -345,7 +345,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
         var orderIds = new List<Guid> { orderId };
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -367,7 +367,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "yes", so DryRun should be true (no insertion)
-            await Task.Delay(50);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(0, count); // Dry run = no insertion
         }
@@ -381,7 +381,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     public async Task Run_WithNullJsonResult_ReturnsEmptyList()
     {
         // Arrange - Write "null" as valid JSON (deserializes to null, should be coalesced to empty list)
-        await File.WriteAllTextAsync(_testFilePath, "null");
+        await File.WriteAllTextAsync(_testFilePath, "null", TestContext.Current.CancellationToken);
 
         var orderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -423,7 +423,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             orderIds.Add(orderId);
         }
 
-        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
+        await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds), TestContext.Current.CancellationToken);
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var settings = Options.Create(new BackfillSettings
@@ -487,7 +487,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     {
         // Arrange: Use a file path that exists but contains invalid JSON to trigger deserialization exception
         var tempFilePath = Path.Combine(Path.GetTempPath(), $"invalid-json-{Guid.NewGuid()}.json");
-        await File.WriteAllTextAsync(tempFilePath, "not-a-json-list");
+        await File.WriteAllTextAsync(tempFilePath, "not-a-json-list", TestContext.Current.CancellationToken);
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = tempFilePath,

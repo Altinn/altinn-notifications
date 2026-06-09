@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Configuration;
 using Altinn.Notifications.Tools.StatusFeedBackfillTool.Services;
 using Altinn.Notifications.Tools.Tests.Utils;
+
 using Microsoft.Extensions.Options;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;
@@ -71,7 +75,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         // Assert
         Assert.True(File.Exists(_testFilePath));
 
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var deserializedOrders = JsonSerializer.Deserialize<List<Guid>>(json);
 
         Assert.NotNull(deserializedOrders);
@@ -128,7 +132,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should NOT be found (already has status feed)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
@@ -157,7 +161,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order SHOULD be found (missing status feed)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
@@ -190,7 +194,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should NOT be found (already has status feed)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
@@ -219,7 +223,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order SHOULD be found (missing status feed)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
@@ -249,7 +253,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should NOT be found (not a final status)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
@@ -276,7 +280,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should NOT be found (not a final status)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         
         Assert.DoesNotContain(orderId, discoveredOrders);
@@ -296,7 +300,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await orderRepo.SetProcessingStatus(order1Id, OrderProcessingStatus.Processing);
         await emailRepo.UpdateSendStatus(email1Id, EmailNotificationResultType.Delivered);
         
-        await Task.Delay(100); // Ensure time difference
+        await Task.Delay(100, TestContext.Current.CancellationToken); // Ensure time difference
         
         // Order 2: Completed WITHOUT status feed, processed AFTER min date (should be found) - legacy scenario
         var (order2Id, _) = await TestDataUtil.CreateEmailOrder("date-filter-2");
@@ -318,9 +322,9 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
-        
+
         Assert.NotNull(discoveredOrders);
         Assert.DoesNotContain(order1Id, discoveredOrders); // Has status feed
         Assert.Contains(order2Id, discoveredOrders); // Missing status feed, processed after min date
@@ -351,7 +355,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Only SendConditionNotMet should be found
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
@@ -385,7 +389,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should be found (Completed without status feed)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
@@ -413,7 +417,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should be found (no creator restriction)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
 
         Assert.NotNull(discoveredOrders);
@@ -445,7 +449,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should be found (processed after provided min date)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
 
         Assert.NotNull(discoveredOrders);
@@ -477,7 +481,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await service.Run();
 
         // Assert - Order should be found (matches status filter and date)
-        var json = await File.ReadAllTextAsync(_testFilePath);
+        var json = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
 
         Assert.NotNull(discoveredOrders);
