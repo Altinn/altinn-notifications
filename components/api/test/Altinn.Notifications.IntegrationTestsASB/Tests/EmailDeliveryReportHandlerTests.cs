@@ -8,11 +8,16 @@ using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.IntegrationTestsASB.Utils;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
+
 using Azure.Messaging.ServiceBus;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
@@ -50,7 +55,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                     return result == EmailNotificationResultType.Delivered.ToString();
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(statusUpdated, "Notification status should be updated to 'Delivered'");
 
             // Assert - Verify operationId is preserved
@@ -96,7 +103,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                     return deadReport is not null;
                 },
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
@@ -166,7 +175,9 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
             Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
@@ -259,7 +270,8 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                     return persistedReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(reportPersisted, "The delivery_report column should be populated after the handler runs");
             Assert.NotNull(persistedReport);
@@ -480,7 +492,8 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                     return row is not null;
                 },
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted.");
 
