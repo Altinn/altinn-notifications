@@ -54,7 +54,7 @@ public class DashboardServiceTests
             Times.Once);
 
         var entry = Assert.Single(result);
-        Assert.Equal(expected[0].NotificationId, entry.NotificationId);
+        Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
         Assert.Equal(_recipientNin, Assert.Single(entry.Recipients).NationalIdentityNumber);
     }
 

@@ -8,7 +8,7 @@ public record DashboardNotification
     /// <summary>
     /// The unique identifier for the notification order.
     /// </summary>
-    public Guid NotificationId { get; init; }
+    public Guid ShipmentId { get; init; }
 
     /// <summary>
     /// The short name of the organisation that created the order.
@@ -44,7 +44,7 @@ public record DashboardNotification
     /// Initializes a new instance of the <see cref="DashboardNotification"/> record.
     /// </summary>
     public DashboardNotification(
-        Guid notificationId,
+        Guid shipmentId,
         string creatorName,
         string? resourceId,
         string? sendersReference,
@@ -52,7 +52,7 @@ public record DashboardNotification
         string? notificationChannel,
         List<DashboardRecipient> recipients)
     {
-        NotificationId = notificationId;
+        ShipmentId = shipmentId;
         CreatorName = creatorName;
         ResourceId = resourceId;
         SendersReference = sendersReference;

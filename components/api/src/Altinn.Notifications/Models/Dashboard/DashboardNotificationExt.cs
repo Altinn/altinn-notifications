@@ -10,8 +10,8 @@ public record DashboardNotificationExt
     /// <summary>
     /// The unique identifier for the notification order.
     /// </summary>
-    [JsonPropertyName("notificationId")]
-    public Guid NotificationId { get; init; }
+    [JsonPropertyName("shipmentId")]
+    public Guid ShipmentId { get; init; }
 
     /// <summary>
     /// The short name of the organisation that created the order.

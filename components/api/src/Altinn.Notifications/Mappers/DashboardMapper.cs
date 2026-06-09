@@ -22,7 +22,7 @@ public static class DashboardMapper
     {
         return new DashboardNotificationExt
         {
-            NotificationId = notification.NotificationId,
+            ShipmentId = notification.ShipmentId,
             CreatorName = notification.CreatorName,
             ResourceId = notification.ResourceId,
             SendersReference = notification.SendersReference,

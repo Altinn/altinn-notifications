@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 
 public class DashboardMapperTests
 {
-    private static readonly Guid _notificationId = Guid.NewGuid();
+    private static readonly Guid _shipmentId = Guid.NewGuid();
     private const string _nin = "16069412345";
 
     [Fact]
@@ -65,7 +65,7 @@ public class DashboardMapperTests
         var notifications = new List<DashboardNotification>
         {
             new(
-                _notificationId,
+                _shipmentId,
                 "ttd",
                 "urn:altinn:resource:app-ttd-test",
                 "ref-123",
@@ -77,7 +77,7 @@ public class DashboardMapperTests
         var result = notifications.MapToDashboardNotificationExtList();
 
         var ext = Assert.Single(result);
-        Assert.Equal(_notificationId, ext.NotificationId);
+        Assert.Equal(_shipmentId, ext.ShipmentId);
         Assert.Equal("ttd", ext.CreatorName);
         Assert.Equal("urn:altinn:resource:app-ttd-test", ext.ResourceId);
         Assert.Equal("ref-123", ext.SendersReference);
@@ -119,7 +119,7 @@ public class DashboardMapperTests
         return
         [
             new DashboardNotification(
-                _notificationId,
+                _shipmentId,
                 "ttd",
                 null,
                 null,
