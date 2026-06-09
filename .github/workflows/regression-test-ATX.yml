@@ -6,66 +6,75 @@ on:
       environment:
         required: true
         type: string
-    secrets:
-      TOKENGENERATOR_USERNAME:
-        required: true
-      TOKENGENERATOR_USERPASSWORD:
-        required: true
-      AUTOMATEDTEST_EMAILRECIPIENT:
-        required: true
-      AUTOMATEDTEST_NINRECIPIENT:
-        required: true
-      AUTOMATEDTEST_ORG_NO_RECIPIENT:
-        required: true
-      AUTOMATEDTEST_RESOURCE_ID:
-        required: true
-      SLACK_WEBHOOK_URL_TEST:
-        required: true
 
 jobs:
   regression-tests:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    env:
+      altinn_env: ${{ inputs.environment }}
+      runFullTestSet: true
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up K6
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+      - name: Create k6 secrets file
+        id: k6-secrets
+        env:
+          TOKEN_GENERATOR_USERNAME: ${{ secrets.TOKENGENERATOR_USERNAME }}
+          TOKEN_GENERATOR_USERPASSWORD: ${{ secrets.TOKENGENERATOR_USERPASSWORD }}
+          APIM_SUBSCRIPTION_KEY: ${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY }}
+        run: |
+          umask 077
+          SECRETS_FILE="${{ runner.temp }}/k6.secrets"
+          printf 'tokenGeneratorUserName=%s\n' "$TOKEN_GENERATOR_USERNAME" > "$SECRETS_FILE"
+          printf 'tokenGeneratorUserPwd=%s\n' "$TOKEN_GENERATOR_USERPASSWORD" >> "$SECRETS_FILE"
+          printf 'subscriptionKey=%s\n' "$APIM_SUBSCRIPTION_KEY" >> "$SECRETS_FILE"
+          echo "file=$SECRETS_FILE" >> "$GITHUB_OUTPUT"
       - name: Run email notification order regression tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
-          filename: test/k6/src/tests/orders-email.js
-          flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          path: components/api/test/k6/src/tests/orders-email.js
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }}
+          inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run contact(s) lookup by organization number regression tests with generating an email notification
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
-          filename: test/k6/src/tests/orders-org-no.js
-          flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          path: components/api/test/k6/src/tests/orders-org-no.js
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_RESOURCE_ID }}
+          inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
       - name: Run sms notification order regression tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
-          filename: test/k6/src/tests/orders-sms.js
-          flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
+          path: components/api/test/k6/src/tests/orders-sms.js
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
+          inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
-      - name: Build failure report
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-        if: failure()
-        run: |
-          UUID=$(uuidgen)
-          {
-            echo "stepreport<<EOF$UUID"
-            echo ":warning: Notifications regression test failure in $ENVIRONMENT :warning: \n \n"
-            echo "Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "EOF$UUID"
-          } >> "$GITHUB_ENV"
-      - name: Report failure to Slack
-        if: failure()
-        id: slack
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+      - name: Run API v2 notification order regression tests
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
         with:
-          webhook-type: incoming-webhook
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL_TEST }}
-          payload: |
-            {
-              "text": "${{ env.stepreport }}"
-            }
+          path: components/api/test/k6/src/tests/orders-v2.js
+          flags: >-
+            --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }}
+            -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
+          inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
+
+      - name: Run API v2 org lookup regression tests
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        with:
+          path: components/api/test/k6/src/tests/orders-org-no-v2.js
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_URN_RESOURCE_ID }}
+          inspect-flags: -e altinn_env=${{ inputs.environment }} # Supplies the value for pre-run validation, when env vars / flags are not yet defined
+  slack-notify:
+    if: failure()
+    needs: regression-tests
+    uses: ./.github/workflows/send-slack-warning.yml
+    permissions: {}
+    with:
+      warning-message: 'Notifications regression test failure in ${{ inputs.environment }}'
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_TEST }}

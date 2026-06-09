@@ -1,0 +1,131 @@
+﻿using System.Text;
+using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Profile.Mappers;
+using Altinn.Notifications.Integrations.Profile.Models;
+
+using Microsoft.Extensions.Options;
+
+namespace Altinn.Notifications.Integrations.Clients;
+
+/// <summary>
+/// Implementation of the <see cref="IProfileClient"/>
+/// </summary>
+public class ProfileClient : IProfileClient
+{
+    private readonly HttpClient _client;
+    private const string _jsonMediaType = "application/json";
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptionsProvider.Options;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfileClient"/> class.
+    /// </summary>
+    public ProfileClient(HttpClient client, IOptions<PlatformSettings> settings)
+    {
+        _client = client;
+        _client.BaseAddress = new Uri(settings.Value.ApiProfileEndpoint);
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers)
+    {
+        var lookupObject = new UserContactPointLookup
+        {
+            NationalIdentityNumbers = nationalIdentityNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
+
+        var response = await _client.PostAsync("users/contactpoint/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, _jsonOptions)!.ContactPointsList;
+
+        return contactPoints.Select(contactPointDto => contactPointDto.ToUserContactPoint()).ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId)
+    {
+        var lookupObject = new UnitContactPointLookup()
+        {
+            ResourceId = resourceId,
+            OrganizationNumbers = organizationNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
+
+        var response = await _client.PostAsync("units/contactpoint/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserRegisteredContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonOptions)!;
+
+        return contactPoints.ContactPointsList;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<ExternalIdentityContactPoints>> GetExternalIdentityContactPoints(List<string> externalIdentities)
+    {
+        var lookupObject = new ExternalIdentityContactPointsLookup
+        {
+            ExternalIdentities = externalIdentities
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
+
+        var response = await _client.PostAsync("users/contactpoint/lookupsi", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetExternalIdentityContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<ExternalIdentityContactPointsList>(responseContent, _jsonOptions);
+
+        return contactPoints?.ContactPointsList ?? [];
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
+    {
+        if (organizationNumbers == null || organizationNumbers.Count == 0)
+        {
+            return [];
+        }
+
+        var lookupObject = new OrgContactPointLookup
+        {
+            OrganizationNumbers = organizationNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);
+        var response = await _client.PostAsync("organizations/notificationaddresses/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetOrganizationContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonOptions);
+
+        return contactPoints?.ContactPointsList ?? [];
+    }
+}

@@ -1,0 +1,110 @@
+using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Publishers;
+using Altinn.Notifications.Sms.Integrations.Wolverine.Policies;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+using Wolverine;
+using Wolverine.AzureServiceBus;
+
+namespace Altinn.Notifications.Sms.Integrations.Extensions;
+
+/// <summary>
+/// Extension methods for registering Wolverine with Azure Service Bus in the SMS service.
+/// </summary>
+public static class WolverineServiceCollectionExtensions
+{
+    /// <summary>
+    /// Adds Wolverine with Azure Service Bus transport.
+    /// The send-SMS listener and publisher queues are all mandatory.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="hostEnvironment">The host environment (used for dev/prod ASB emulator detection).</param>
+    public static void AddWolverineServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment hostEnvironment)
+    {
+        IConfigurationSection wolverineSection = configuration.GetSection(nameof(WolverineSettings));
+        WolverineSettings wolverineSettings = wolverineSection.Get<WolverineSettings>() ?? new WolverineSettings();
+
+        services
+            .AddSingleton(wolverineSettings)
+            .Configure<WolverineSettings>(wolverineSection);
+
+        services.AddWolverine(opts =>
+        {
+            opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
+            opts.Policies.AllListeners(x => x.ProcessInline());
+            opts.Policies.AllSenders(x => x.SendInline());
+
+            // Listener
+            AddSendSmsListener(wolverineSettings, opts);
+
+            // Publishers
+            AddSmsDeliveryReportPublisher(services, wolverineSettings, opts);
+            AddSmsSendResultPublisher(services, wolverineSettings, opts);
+        });
+    }
+
+    /// <summary>
+    /// Configures Wolverine to listen to the Azure Service Bus SMS send queue
+    /// and applies the <see cref="SendSmsCommandHandlerPolicy"/> retry/error-handling policy.
+    /// </summary>
+    private static void AddSendSmsListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (wolverineSettings.SendSmsListenerCount <= 0)
+        {
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SendSmsListenerCount)} must be greater than 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
+        {
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SendSmsQueueName)} must be configured.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName)
+                        .ListenerCount(wolverineSettings.SendSmsListenerCount);
+
+        wolverineOptions.Policies.Add(new SendSmsCommandHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Configures Wolverine to publish <see cref="SmsDeliveryReportCommand"/> messages
+    /// to the Azure Service Bus SMS delivery report queue and registers
+    /// <see cref="SmsDeliveryReportPublisher"/> as the <see cref="ISmsDeliveryReportPublisher"/> implementation.
+    /// </summary>
+    private static void AddSmsDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsDeliveryReportQueueName))
+        {
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SmsDeliveryReportQueueName)} must be configured.");
+        }
+
+        services.AddSingleton<ISmsDeliveryReportPublisher, SmsDeliveryReportPublisher>();
+
+        wolverineOptions.PublishMessage<SmsDeliveryReportCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SmsDeliveryReportQueueName);
+    }
+
+    /// <summary>
+    /// Configures Wolverine to publish <see cref="SmsSendResultCommand"/> messages
+    /// to the Azure Service Bus SMS send result queue and registers
+    /// <see cref="SmsSendResultPublisher"/> as the <see cref="ISmsSendResultDispatcher"/> implementation.
+    /// </summary>
+    private static void AddSmsSendResultPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (string.IsNullOrWhiteSpace(wolverineSettings.SmsSendResultQueueName))
+        {
+            throw new InvalidOperationException($"{nameof(WolverineSettings.SmsSendResultQueueName)} must be configured.");
+        }
+
+        services.AddSingleton<ISmsSendResultDispatcher, SmsSendResultPublisher>();
+
+        wolverineOptions.PublishMessage<SmsSendResultCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.SmsSendResultQueueName);
+    }
+}

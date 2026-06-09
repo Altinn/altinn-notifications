@@ -1,0 +1,27 @@
+name: Send Slack Warning
+
+on:
+  workflow_call:
+    inputs:
+      warning-message:
+        required: true
+        type: string
+        description: 'The warning message to include in the Slack notification'
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: true
+
+jobs:
+  notify-warning-on-slack:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Send notification to Slack
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": ":warning: ${{ inputs.warning-message }} :warning: \n\n Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }

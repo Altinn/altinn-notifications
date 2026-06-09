@@ -1,21 +1,188 @@
 name: .NET Analysis
+
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'test/k6/**'
-      - '.github/**'
+    paths-ignore: &paths-ignore
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/*.svg'
+      - '**/*.png'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'renovate.json'
+      - 'stylecop.json'
+      - '.dockerignore'
+      - '.gitattributes'
+      - '.github/CODEOWNERS'
+      - '.github/labeler.yml'
+      - 'components/api/test/k6/**'
+      - 'components/api/test/bruno/**'
+      - '.github/workflows/pr-label-*.yml'
+      - '.github/workflows/send-slack-warning.yml'
+      - '.github/workflows/assign-issue-to-project.yml'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+    paths-ignore: *paths-ignore
   workflow_dispatch:
+
+concurrency:
+  group: dotnet-analysis-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build-test-analyze:
-    name: Build, test & analyze
+  validate-solutions:
+    name: Validate Solution Structure
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Validate all solutions
+        run: |
+          echo "Validating solution files..."
+          for sln in $(find . -name "*.slnx" -type f); do
+            echo "Checking: $sln"
+            dotnet sln "$sln" list || { echo "❌ Invalid solution: $sln"; exit 1; }
+          done
+          echo "✅ All solutions valid"
+
+  changes:
+    name: Detect changes
+    needs: validate-solutions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      sms: ${{ steps.filter.outputs.sms }}
+      email: ${{ steps.filter.outputs.email }}
+      tools: ${{ steps.filter.outputs.tools }}
+      shared: ${{ steps.filter.outputs.shared }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'global.json'
+              - 'components/api/src/**'
+              - 'components/api/Altinn.Notifications.API.slnx'
+              - 'components/api/test/Altinn.Notifications.Tests/**'
+              - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
+              - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
+            shared:
+              - 'global.json'
+              - 'components/shared/src/**'
+              - 'components/shared/test/**'
+              - 'components/shared/Altinn.Notifications.Shared.slnx'
+            sms:
+              - 'global.json'
+              - 'components/sms-service/src/**'
+              - 'components/sms-service/test/**'
+              - 'components/sms-service/Altinn.Notifications.Sms.slnx'
+            email:
+              - 'global.json'
+              - 'components/email-service/src/**'
+              - 'components/email-service/test/**'
+              - 'components/email-service/Altinn.Notifications.Email.slnx'
+            tools:
+              - 'global.json'
+              - 'tools/src/**'
+              - 'tools/test/**'
+              - 'tools/Altinn.Notifications.Tools.slnx'
+      - name: Build dynamic matrix
+        id: set-matrix
+        run: |
+          matrix='{"include":['
+
+          if [[ "${{ steps.filter.outputs.api }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"api","solution":"components/api/Altinn.Notifications.API.slnx"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"shared","solution":"components/shared/Altinn.Notifications.Shared.slnx"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.email }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"email","solution":"components/email-service/Altinn.Notifications.Email.slnx"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.sms }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"sms","solution":"components/sms-service/Altinn.Notifications.Sms.slnx"},'
+          fi
+
+          if [[ "${{ steps.filter.outputs.tools }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            matrix+='{"component":"tools","solution":"tools/Altinn.Notifications.Tools.slnx"},'
+          fi
+
+          # Remove trailing comma and close JSON
+          matrix="${matrix%,}]}"
+
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $matrix"
+      - name: Summary of detected changes
+        run: |
+          echo "### Detected Changes" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Changed |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API | ${{ steps.filter.outputs.api }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shared | ${{ steps.filter.outputs.shared }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SMS | ${{ steps.filter.outputs.sms }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Email | ${{ steps.filter.outputs.email }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tools | ${{ steps.filter.outputs.tools }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Matrix:** \`${{ steps.set-matrix.outputs.matrix }}\`" >> $GITHUB_STEP_SUMMARY
+
+  build:
+    name: Build solution
+    needs: changes
+    if: needs.changes.outputs.matrix != '{"include":[]}'
+    strategy:
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build solution
+        run: dotnet build ${{ matrix.solution }} -c Release -v q
+          
+  test-api:
+    name: "Test: Notifications API"
+    needs: [changes, build]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     services:
-      postgres: # note that updating this image (might break the pipeline if the agent doesn't support the new version) AND (requires updating the version on line 55 below)
-        image: postgres:16@sha256:4eb532412200f7fbbf15d62ee0d96e020a9eae9eaed76066692474a7371c4d83
+      postgres:
+        image: postgres:18.4@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -28,73 +195,505 @@ jobs:
         ports:
           - 5432:5432
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
         with:
           dotnet-version: |
-            9.0.x
-      - name: Set up Java
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Install SonarCloud scanners
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
+            10.0.x
       - name: Setup PostgreSQL
         run: |
-          chmod +x dbsetup.sh
-          ./dbsetup.sh
+          chmod +x tools/dev-setup/dbsetup.sh
+          ./tools/dev-setup/dbsetup.sh
       - name: Restart database to enable config changes
+        run: docker restart ${{ job.services.postgres.id }}
+      - name: Increase inotify watchers
+        run: sudo sysctl -w fs.inotify.max_user_instances=524288
+      - name: Run API unit tests
         run: |
-          # Restart only the Postgres service
-          docker ps \
-            --filter "ancestor=postgres:16@sha256:4eb532412200f7fbbf15d62ee0d96e020a9eae9eaed76066692474a7371c4d83" \
-            -q \
-          | xargs docker restart
-      - name: Set up Kafka
-        uses: ybyzek/cp-all-in-one-action@58cb2014706e386a7207356586a4fd64b6a9f7ab # v0.2.1
-        with:
-          service: broker
-      - name: Sleep for 30 seconds to allow Kafka to start
-        uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
-        with:
-          time: '30s'
-      - name: Build & Test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
-
-          dotnet build Altinn.Notifications.sln -v q
-
-          dotnet test Altinn.Notifications.sln \
+          dotnet test components/api/test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
           -v q \
           --collect:"XPlat Code Coverage" \
-          --results-directory TestResults/ \
-          --logger "trx;" \
-          --configuration release \
+          --results-directory TestResults/api-unit/ \
+          --logger "trx;LogFileName=api-unit.trx" \
+          --configuration Release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-      - name: Complete sonar analysis
-        if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Run API integration tests
+        timeout-minutes: 30
         run: |
-          dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration/ \
+          --logger "trx;LogFileName=api-integration.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run API ASB integration tests
+        timeout-minutes: 30
+        run: |
+          dotnet test components/api/test/Altinn.Notifications.IntegrationTestsASB/Altinn.Notifications.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/api-integration-asb/ \
+          --logger "trx;LogFileName=api-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: TestResults
-          path: '**/TestResults/*.trx'
-      - name: Process unit test result
+          name: test-results-api
+          path: TestResults/
+      - name: Verify coverage files exist
         if: always()
-        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-api
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  test-shared:
+    name: "Test: Shared"
+    needs: [changes, build]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Run Shared unit tests
+        run: |
+          dotnet test components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/shared-unit/ \
+          --logger "trx;LogFileName=shared-unit.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-shared
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-shared
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-email:
+    name: "Test: Email Delivery Service"
+    needs: [changes, build]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.email == 'true' || needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Run Email unit tests
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-unit/ \
+          --logger "trx;LogFileName=email-unit.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run Email integration tests
+        timeout-minutes: 30
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTests/Altinn.Notifications.Email.IntegrationTests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-integration/ \
+          --logger "trx;LogFileName=email-integration.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run Email ASB integration tests
+        timeout-minutes: 30
+        run: |
+          dotnet test components/email-service/test/Altinn.Notifications.Email.IntegrationTestsASB/Altinn.Notifications.Email.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/email-integration-asb/ \
+          --logger "trx;LogFileName=email-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-email
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-email
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-sms:
+    name: "Test: SMS Delivery Service"
+    needs: [changes, build]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sms == 'true' || needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Run SMS unit tests
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-unit/ \
+          --logger "trx;LogFileName=sms-unit.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run SMS integration tests
+        timeout-minutes: 30
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTests/Altinn.Notifications.Sms.IntegrationTests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-integration/ \
+          --logger "trx;LogFileName=sms-integration.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Run SMS ASB integration tests
+        timeout-minutes: 30
+        run: |
+          dotnet test components/sms-service/test/Altinn.Notifications.Sms.IntegrationTestsASB/Altinn.Notifications.Sms.IntegrationTestsASB.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/sms-integration-asb/ \
+          --logger "trx;LogFileName=sms-integration-asb.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-sms
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-sms
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-tools:
+    name: "Test: Tools"
+    needs: [changes, build]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.tools == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    services:
+      postgres:
+        image: postgres:18.4@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
+        env:
+          POSTGRES_USER: platform_notifications_admin
+          POSTGRES_PASSWORD: Password
+          POSTGRES_DB: notificationsdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Setup PostgreSQL
+        run: |
+          chmod +x tools/dev-setup/dbsetup.sh
+          ./tools/dev-setup/dbsetup.sh
+      - name: Restart database to enable config changes
+        run: docker restart ${{ job.services.postgres.id }}
+      - name: Run Tools tests
+        run: |
+          dotnet test tools/test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj \
+          -v q \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/tools/ \
+          --logger "trx;LogFileName=tools.trx" \
+          --configuration Release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-tools
+          path: TestResults/
+      - name: Verify coverage files exist
+        if: always()
+        run: |
+          if ! find TestResults -name "coverage.opencover.xml" | grep -q .; then
+            echo "❌ ERROR: No coverage files produced!"
+            echo "This usually means coverlet.collector is missing or coverage collection failed."
+            exit 1
+          fi
+          echo "✅ Coverage files found:"
+          find TestResults -name "coverage.opencover.xml" -exec echo "  {}" \;
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-tools
+          path: '**/TestResults/**/coverage.opencover.xml'
+      - name: Process test results
+        if: always()
+        uses: NasAmin/trx-parser@c720607ac80bcd6124fcb482e96e0bfe159f5b2f # v0.8.1
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    needs: [changes, build, test-api, test-shared, test-sms, test-email, test-tools]
+    if: always() && needs.build.result == 'success' && (
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.email == 'true' ||
+      needs.changes.outputs.sms == 'true' ||
+      needs.changes.outputs.tools == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Download Shared coverage
+        if: needs.test-shared.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-shared
+          path: coverage/shared
+        continue-on-error: true
+      - name: Download API coverage
+        if: needs.test-api.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-api
+          path: coverage/api
+        continue-on-error: true
+      - name: Download SMS coverage
+        if: needs.test-sms.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-sms
+          path: coverage/sms
+        continue-on-error: true
+      - name: Download Email coverage
+        if: needs.test-email.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-email
+          path: coverage/email
+        continue-on-error: true
+      - name: Download Tools coverage
+        if: needs.test-tools.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-tools
+          path: coverage/tools
+        continue-on-error: true
+      - name: Install SonarCloud scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Run SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet-sonarscanner begin \
+            /k:"Altinn_altinn-notifications" \
+            /o:"altinn" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml" \
+            /d:sonar.exclusions="components/api/src/Altinn.Notifications.Persistence/Migration/**/*"
+
+          if [[ "${{ needs.changes.outputs.api }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
+            dotnet build components/api/Altinn.Notifications.API.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.shared }}" == "true" ]]; then
+            dotnet build components/shared/Altinn.Notifications.Shared.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.email }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
+            dotnet build components/email-service/Altinn.Notifications.Email.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.sms }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
+            dotnet build components/sms-service/Altinn.Notifications.Sms.slnx -c Release -v q
+          fi
+
+          if [[ "${{ needs.changes.outputs.tools }}" == "true" ]]; then
+            dotnet build tools/Altinn.Notifications.Tools.slnx -c Release -v q
+          fi
+
+          dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+  status-check:
+    permissions:
+      contents: read
+    name: Status Check
+    needs: [validate-solutions, build, test-api, test-shared, test-sms, test-email, test-tools, sonarcloud]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        run: |
+          echo "### Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Solutions | ${{ needs.validate-solutions.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Shared | ${{ needs.test-shared.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Notifications API | ${{ needs.test-api.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: SMS Delivery Service | ${{ needs.test-sms.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Email Delivery Service | ${{ needs.test-email.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test: Tools | ${{ needs.test-tools.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SonarCloud | ${{ needs.sonarcloud.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.validate-solutions.result }}" == "failure" ]]; then
+            echo "❌ Solution validation failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-shared.result }}" == "failure" ]]; then
+            echo "❌ Shared tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-api.result }}" == "failure" ]]; then
+            echo "❌ API tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-sms.result }}" == "failure" ]]; then
+            echo "❌ SMS tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-email.result }}" == "failure" ]]; then
+            echo "❌ Email tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-tools.result }}" == "failure" ]]; then
+            echo "❌ Tools tests failed"
+            exit 1
+          fi
+
+          echo "✅ All required checks passed"

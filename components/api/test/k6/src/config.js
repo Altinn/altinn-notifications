@@ -1,0 +1,77 @@
+import { environment } from "./shared/variables.js";
+
+// Base URLs for the Altinn platform across different environments.
+const baseUrls = {
+    prod: "altinn.no",
+    tt02: "tt02.altinn.no",
+    yt01: "yt01.altinn.cloud",
+    at22: "at22.altinn.cloud",
+    at23: "at23.altinn.cloud",
+    at24: "at24.altinn.cloud"
+};
+
+// Base URLs for Maskinporten authentication service in different environments.
+const maskinportenBaseUrls = {
+    prod: "https://maskinporten.no/",
+    tt02: "https://test.maskinporten.no/"
+};
+
+if (!environment) {
+    throw new Error("Environment variable 'altinn_env' is not set");
+}
+
+const baseUrl = baseUrls[environment];
+if (!baseUrl) {
+    throw new Error(`Invalid value for environment variable 'altinn_env': '${environment}'.`);
+}
+
+const maskinportenBaseUrl = maskinportenBaseUrls[environment];
+
+// Altinn TestTools token generator URL.
+export const tokenGenerator = {
+    getEnterpriseToken:
+        "https://altinn-testtools-token-generator.azurewebsites.net/api/GetEnterpriseToken"
+};
+
+// Endpoints for interacting with the Altinn Notifications API in different environments.
+export const notifications = {
+    orders_sms: `https://platform.${baseUrl}/notifications/api/v1/orders/sms/`,
+
+    orders_email: `https://platform.${baseUrl}/notifications/api/v1/orders/email/`,
+
+    orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
+
+    orders_sms_instant_old_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/sms`,
+    orders_email_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/email`,
+
+    shipment_v2: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
+
+    statusfeed_v2: (sequenceNumber) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/feed?seq=${sequenceNumber}`,
+
+    orders_fromId: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}`,
+
+    orders_status: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`,
+
+    notifications_sms: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`,
+
+    notifications_email: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`,
+
+    orders_fromSendersRef: (sendersReference) => `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`,
+
+    conditionCheck: (conditionMet, subscriptionKey) => `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`
+};
+
+// Provides endpoints for handling authentication work-flows on the Altinn platform.
+export const platformAuthentication = {
+    exchange: `https://platform.${baseUrl}/authentication/api/v1/exchange/maskinporten`,
+};
+
+/**
+ * Maskinporten URLs.
+ * Contains endpoints and audience values related to the Maskinporten authentication service.
+ */
+export const maskinporten = {
+    audience: maskinportenBaseUrl,
+    token: `${maskinportenBaseUrl}token`
+};

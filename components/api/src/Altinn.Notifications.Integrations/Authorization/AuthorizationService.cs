@@ -1,0 +1,336 @@
+﻿using System.Security.Claims;
+
+using Altinn.Authorization.ABAC.Xacml.JsonProfile;
+using Altinn.Common.PEP.Constants;
+using Altinn.Common.PEP.Helpers;
+using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.ContactPoints;
+
+using Microsoft.Extensions.Options;
+
+using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
+
+namespace Altinn.Notifications.Integrations.Authorization;
+
+/// <summary>
+/// An implementation of <see cref="IAuthorizationService"/> able to check that a potential
+/// recipient of a notification can access the resource that the notification is about.
+/// </summary>
+public class AuthorizationService : IAuthorizationService
+{
+    private const string _userIdUrn = "urn:altinn:userid";
+
+    private const string _defaultIssuer = "Altinn";
+    private const string _actionCategoryId = "action";
+    private const string _resourceCategoryIdPrefix = "resource";
+    private const string _accessSubjectCategoryIdPrefix = "subject";
+
+    private readonly IPDP _pdp;
+    private readonly int _authorizationBatchSize;
+
+    /// <summary>
+    /// Initialize a new instance the <see cref="AuthorizationService"/> class with the given dependenices.
+    /// </summary>
+    public AuthorizationService(IPDP pdp, IOptions<NotificationConfig> config)
+    {
+        _pdp = pdp;
+        _authorizationBatchSize = config.Value.AuthorizationBatchSize > 0
+            ? config.Value.AuthorizationBatchSize
+            : throw new ArgumentOutOfRangeException(
+                nameof(config),
+                "AuthorizationBatchSize must be greater than zero.");
+    }
+
+    /// <summary>
+    /// An implementation of <see cref="IAuthorizationService.AuthorizeUserContactPointsForResource"/> that
+    /// will generate an authorization call to Altinn Authorization to check that the given users have read access.
+    /// </summary>
+    /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
+    /// <param name="resourceId">The id of the resource.</param>
+    /// <param name="resourceAction">The action to authorize against the resource. Defaults to "read" when not specified.</param>
+    /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
+    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
+    {
+        int totalUsers = organizationContactPoints.Sum(o => o.UserContactPoints.Select(u => u.UserId).Distinct().Count());
+
+        if (totalUsers == 0)
+        {
+            return organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
+        }
+
+        if (totalUsers <= _authorizationBatchSize)
+        {
+            return await AuthorizeSingleBatch(organizationContactPoints, resourceId, resourceAction);
+        }
+
+        List<List<OrganizationContactPoints>> batches = CreateBatches(organizationContactPoints);
+
+        Task<List<OrganizationContactPoints>>[] batchTasks = batches
+            .Select(batch => AuthorizeSingleBatch(batch, resourceId, resourceAction))
+            .ToArray();
+
+        List<OrganizationContactPoints>[] batchResults = await Task.WhenAll(batchTasks);
+
+        return MergeBatchResults(organizationContactPoints, batchResults);
+    }
+
+    private async Task<List<OrganizationContactPoints>> AuthorizeSingleBatch(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
+    {
+        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId, resourceAction);
+
+        XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
+
+        if (xacmlJsonResponse?.Response is null)
+        {
+            throw new HttpRequestException("Authorization PDP returned a null or empty response.");
+        }
+
+        List<OrganizationContactPoints> filtered =
+            organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
+
+        foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
+        {
+            string? partyId = GetValue(response, MatchAttributeCategory.Resource, AltinnXacmlUrns.PartyId);
+            string? userId = GetValue(response, MatchAttributeCategory.Subject, _userIdUrn);
+
+            if (partyId == null || userId == null)
+            {
+                continue;
+            }
+
+            OrganizationContactPoints? sourceOrg = organizationContactPoints.Find(o => o.PartyId == int.Parse(partyId));
+            OrganizationContactPoints? targetOrg = filtered.Find(o => o.PartyId == int.Parse(partyId));
+
+            if (sourceOrg is null || targetOrg is null)
+            {
+                continue;
+            }
+
+            UserContactPoints? user = sourceOrg.UserContactPoints.Find(u => u.UserId == int.Parse(userId));
+
+            if (user is not null)
+            {
+                targetOrg.UserContactPoints.Add(user.Clone());
+            }
+        }
+
+        return filtered;
+    }
+
+    private List<List<OrganizationContactPoints>> CreateBatches(List<OrganizationContactPoints> organizationContactPoints)
+    {
+        List<List<OrganizationContactPoints>> batches = [];
+        List<OrganizationContactPoints> currentBatch = [];
+        int currentBatchCount = 0;
+
+        foreach (var org in organizationContactPoints)
+        {
+            List<int> distinctUserIds = org.UserContactPoints.Select(u => u.UserId).Distinct().ToList();
+
+            if (distinctUserIds.Count == 0)
+            {
+                continue;
+            }
+
+            int userIndex = 0;
+
+            // Process users from this organization, potentially splitting across multiple batches
+            while (userIndex < distinctUserIds.Count)
+            {
+                // Calculate how many more users can fit in current batch
+                int remaining = _authorizationBatchSize - currentBatchCount;
+
+                // Current batch is full - start a new batch
+                if (remaining == 0)
+                {
+                    batches.Add(currentBatch);
+                    currentBatch = [];
+                    currentBatchCount = 0;
+                    remaining = _authorizationBatchSize;
+                }
+
+                // Determine how many users to add: either fill the batch or take all remaining users from org
+                int take = Math.Min(remaining, distinctUserIds.Count - userIndex);
+                var userIdsForBatch = distinctUserIds.GetRange(userIndex, take);
+
+                // Create a partial copy of the organization with only the users for this batch
+                var batchOrg = new OrganizationContactPoints
+                {
+                    OrganizationNumber = org.OrganizationNumber,
+                    PartyId = org.PartyId,
+                    UserContactPoints = org.UserContactPoints
+                        .Where(u => userIdsForBatch.Contains(u.UserId))
+                        .ToList()
+                };
+
+                currentBatch.Add(batchOrg);
+                currentBatchCount += take;
+                userIndex += take;
+            }
+        }
+
+        if (currentBatch.Count > 0)
+        {
+            batches.Add(currentBatch);
+        }
+
+        return batches;
+    }
+
+    private static List<OrganizationContactPoints> MergeBatchResults(
+        List<OrganizationContactPoints> originalOrganizations,
+        List<OrganizationContactPoints>[] batchResults)
+    {
+        List<OrganizationContactPoints> merged =
+            originalOrganizations.Select(o => o.CloneWithoutContactPoints()).ToList();
+
+        foreach (var batchResult in batchResults)
+        {
+            foreach (var batchOrg in batchResult)
+            {
+                OrganizationContactPoints? targetOrg = merged.Find(o => o.PartyId == batchOrg.PartyId);
+
+                if (targetOrg is null)
+                {
+                    continue;
+                }
+
+                var usersToAdd = batchOrg.UserContactPoints
+                    .Where(user => !targetOrg.UserContactPoints.Exists(u => u.UserId == user.UserId));
+
+                foreach (var user in usersToAdd)
+                {
+                    targetOrg.UserContactPoints.Add(user);
+                }
+            }
+        }
+
+        return merged;
+    }
+
+    private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId, string? resourceAction = null)
+    {
+        XacmlJsonRequest request = new()
+        {
+            AccessSubject = [],
+            Action = [CreateActionCategory(resourceAction?.Trim() is { Length: > 0 } action ? action : "read")],
+            Resource = [],
+            MultiRequests = new XacmlJsonMultiRequests { RequestReference = [] }
+        };
+
+        foreach (var organization in organizationContactPoints)
+        {
+            XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.PartyId, resourceId);
+
+            if (request.Resource.TrueForAll(rc => rc.Id != resourceCategory.Id))
+            {
+                request.Resource.Add(resourceCategory);
+            }
+
+            foreach (int userId in organization.UserContactPoints.Select(u => u.UserId).Distinct())
+            {
+                XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
+
+                if (request.AccessSubject.TrueForAll(sc => sc.Id != subjectCategory.Id))
+                {
+                    request.AccessSubject.Add(subjectCategory);
+                }
+
+                request.MultiRequests.RequestReference.Add(CreateRequestReference(resourceCategory.Id, subjectCategory.Id));
+            }
+        }
+
+        XacmlJsonRequestRoot jsonRequest = new() { Request = request };
+        return jsonRequest;
+    }
+
+    private static XacmlJsonCategory CreateActionCategory(string action)
+    {
+        XacmlJsonAttribute attribute =
+            DecisionHelper.CreateXacmlJsonAttribute(
+                MatchAttributeIdentifiers.ActionId, action, "string", _defaultIssuer);
+
+        return new XacmlJsonCategory()
+        {
+            Id = _actionCategoryId,
+            Attribute = [attribute]
+        };
+    }
+
+    private static XacmlJsonCategory CreateResourceCategory(int resourceOwnerId, string resourceId)
+    {
+        XacmlJsonAttribute subjectAttribute =
+            DecisionHelper.CreateXacmlJsonAttribute(
+                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
+
+        string resourceCategoryId = _resourceCategoryIdPrefix + resourceOwnerId;
+
+        if (resourceId.StartsWith("app_"))
+        {
+            string[] appResource = resourceId.Split('_');
+
+            XacmlJsonAttribute orgAttribute =
+                DecisionHelper.CreateXacmlJsonAttribute(
+                    AltinnXacmlUrns.OrgId, appResource[1], ClaimValueTypes.String, _defaultIssuer);
+
+            XacmlJsonAttribute appAttribute =
+                DecisionHelper.CreateXacmlJsonAttribute(
+                    AltinnXacmlUrns.AppId, appResource[2], ClaimValueTypes.String, _defaultIssuer);
+
+            return new XacmlJsonCategory()
+            {
+                Id = resourceCategoryId,
+                Attribute = [orgAttribute, appAttribute, subjectAttribute]
+            };
+        }
+
+        XacmlJsonAttribute resourceAttribute =
+            DecisionHelper.CreateXacmlJsonAttribute(
+                AltinnXacmlUrns.ResourceId, resourceId, ClaimValueTypes.String, _defaultIssuer);
+
+        return new XacmlJsonCategory()
+        {
+            Id = resourceCategoryId,
+            Attribute = [resourceAttribute, subjectAttribute]
+        };
+    }
+
+    private static XacmlJsonCategory CreateAccessSubjectCategory(int userId)
+    {
+        XacmlJsonAttribute attribute =
+            DecisionHelper.CreateXacmlJsonAttribute(
+                _userIdUrn, userId.ToString(), ClaimValueTypes.String, _defaultIssuer, true);
+
+        return new XacmlJsonCategory()
+        {
+            Id = _accessSubjectCategoryIdPrefix + userId,
+            Attribute = [attribute]
+        };
+    }
+
+    private static XacmlJsonRequestReference CreateRequestReference(string resourceCategoryId, string subjectCategoryId)
+    {
+        return new XacmlJsonRequestReference
+        {
+            ReferenceId =
+            [
+                subjectCategoryId,
+                _actionCategoryId,
+                resourceCategoryId
+            ]
+        };
+    }
+
+    private static string? GetValue(XacmlJsonResult response, string categoryId, string attributeId)
+    {
+        XacmlJsonCategory? resourceCategory =
+            response.Category.Find(c => c.CategoryId == categoryId);
+
+        XacmlJsonAttribute? partyAttribute =
+            resourceCategory?.Attribute.Find(a => a.AttributeId == attributeId);
+
+        return partyAttribute?.Value;
+    }
+}
