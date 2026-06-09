@@ -1,6 +1,4 @@
-using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Dashboard;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Dashboard;
 
 namespace Altinn.Notifications.Mappers;
@@ -29,16 +27,17 @@ public static class DashboardMapper
             ResourceId = notification.ResourceId,
             SendersReference = notification.SendersReference,
             RequestedSendTime = notification.RequestedSendTime,
-            Recipients = [.. notification.Recipients.Select(r => new RecipientExt
+            NotificationChannel = notification.NotificationChannel,
+            Recipients = [.. notification.Recipients.Select(r => new DashboardRecipientExt
             {
                 NationalIdentityNumber = r.NationalIdentityNumber,
                 OrganizationNumber = r.OrganizationNumber,
-                EmailAddress = r.AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault()?.EmailAddress,
-                MobileNumber = r.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault()?.MobileNumber,
+                Channel = r.Channel,
+                EmailAddress = r.EmailAddress,
+                MobileNumber = r.MobileNumber,
+                Result = r.Result,
+                ResultTime = r.ResultTime,
             })],
-            Channel = notification.Channel,
-            Result = notification.Result,
-            ResultTime = notification.ResultTime,
         };
     }
 }

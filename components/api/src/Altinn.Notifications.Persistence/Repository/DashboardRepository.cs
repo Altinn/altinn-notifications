@@ -1,5 +1,3 @@
-using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -37,9 +35,12 @@ public class DashboardRepository : IDashboardRepository
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
     public async Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken)
     {
-        List<DashboardNotification> searchResult = [];
         DateTimeOffset from = dateTimeFrom ?? DateTimeOffset.UtcNow.AddDays(-7);
         DateTimeOffset to = dateTimeTo ?? DateTimeOffset.UtcNow;
+
+        // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
+        var orderList = new List<Guid>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, string? NotificationChannel, List<DashboardRecipient> Recipients)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNotificationsByNin);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientNin);
@@ -50,31 +51,43 @@ public class DashboardRepository : IDashboardRepository
         {
             while (await reader.ReadAsync(cancellationToken))
             {
+                var shipmentId = reader.GetValue<Guid>("shipmentid");
                 string channel = reader.GetValue<string>("channel");
                 string? address = reader.GetValue<string>("address");
 
-                IAddressPoint? addressPoint = (channel, address) switch
+                var recipient = new DashboardRecipient(
+                    nationalIdentityNumber: reader.GetValue<string>("recipientnin"),
+                    organizationNumber: null,
+                    channel: channel,
+                    emailAddress: channel == "email" ? address : null,
+                    mobileNumber: channel == "sms" ? address : null,
+                    result: reader.GetValue<string>("result"),
+                    resultTime: reader.GetValue<DateTime?>("resulttime"));
+
+                if (groups.TryGetValue(shipmentId, out var entry))
                 {
-                    ("email", not null) => new EmailAddressPoint(address),
-                    ("sms", not null) => new SmsAddressPoint(address),
-                    _ => null
-                };
+                    entry.Recipients.Add(recipient);
+                }
+                else
+                {
+                    var newEntry = (
+                        CreatorName: reader.GetValue<string>("creatorname"),
+                        ResourceId: reader.GetValue<string>("resourceid"),
+                        SendersReference: reader.GetValue<string>("sendersreference"),
+                        RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
+                        NotificationChannel: reader.GetValue<string>("notificationchannel"),
+                        Recipients: new List<DashboardRecipient> { recipient });
 
-                List<IAddressPoint> addressInfo = addressPoint is not null ? [addressPoint] : [];
-
-                searchResult.Add(new DashboardNotification(
-                    reader.GetValue<Guid>("notificationid"),
-                    reader.GetValue<string>("creatorname"),
-                    reader.GetValue<string>("resourceid"),
-                    reader.GetValue<string>("sendersreference"),
-                    reader.GetValue<DateTime>("requestedsendtime"),
-                    [new Recipient(addressInfo, nationalIdentityNumber: reader.GetValue<string>("recipientnin"))],
-                    channel,
-                    reader.GetValue<string>("result"),
-                    reader.GetValue<DateTime?>("resulttime")));
+                    groups[shipmentId] = newEntry;
+                    orderList.Add(shipmentId);
+                }
             }
         }
 
-        return searchResult;
+        return [.. orderList.Select(id =>
+        {
+            var e = groups[id];
+            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.Recipients);
+        })];
     }
 }

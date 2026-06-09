@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 
-using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
@@ -25,11 +23,9 @@ public class DashboardMapperTests
     }
 
     [Fact]
-    public void MapToDashboardNotificationExtList_EmailNotification_MapsEmailAddressAndNullMobile()
+    public void MapToDashboardNotificationExtList_EmailRecipient_MapsEmailAddressAndNullMobile()
     {
-        var notification = BuildNotification(
-            channel: "email",
-            addressPoints: [new EmailAddressPoint("test@example.com")]);
+        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
@@ -39,11 +35,9 @@ public class DashboardMapperTests
     }
 
     [Fact]
-    public void MapToDashboardNotificationExtList_SmsNotification_MapsMobileNumberAndNullEmail()
+    public void MapToDashboardNotificationExtList_SmsRecipient_MapsMobileNumberAndNullEmail()
     {
-        var notification = BuildNotification(
-            channel: "sms",
-            addressPoints: [new SmsAddressPoint("+4712345678")]);
+        var notification = BuildNotification([new DashboardRecipient(_nin, null, "sms", null, "+4712345678", null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
@@ -53,30 +47,14 @@ public class DashboardMapperTests
     }
 
     [Fact]
-    public void MapToDashboardNotificationExtList_NoAddressInfo_BothAddressFieldsNull()
+    public void MapToDashboardNotificationExtList_RecipientNinIsMapped()
     {
-        var notification = BuildNotification(channel: "email", addressPoints: []);
-
-        var result = notification.MapToDashboardNotificationExtList();
-
-        var recipient = Assert.Single(Assert.Single(result).Recipients);
-        Assert.Null(recipient.EmailAddress);
-        Assert.Null(recipient.MobileNumber);
-    }
-
-    [Fact]
-    public void MapToDashboardNotificationExtList_RecipientIdentifiersAreMapped()
-    {
-        var notification = BuildNotification(
-            channel: "email",
-            addressPoints: [new EmailAddressPoint("test@example.com")],
-            organizationNumber: "991825827");
+        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
         var recipient = Assert.Single(Assert.Single(result).Recipients);
         Assert.Equal(_nin, recipient.NationalIdentityNumber);
-        Assert.Equal("991825827", recipient.OrganizationNumber);
     }
 
     [Fact]
@@ -92,10 +70,8 @@ public class DashboardMapperTests
                 "urn:altinn:resource:app-ttd-test",
                 "ref-123",
                 sendTime,
-                [new Recipient([new EmailAddressPoint("a@b.com")], nationalIdentityNumber: _nin)],
-                "email",
-                "Succeeded",
-                resultTime),
+                "EmailPreferred",
+                [new DashboardRecipient(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]),
         };
 
         var result = notifications.MapToDashboardNotificationExtList();
@@ -106,31 +82,39 @@ public class DashboardMapperTests
         Assert.Equal("urn:altinn:resource:app-ttd-test", ext.ResourceId);
         Assert.Equal("ref-123", ext.SendersReference);
         Assert.Equal(sendTime, ext.RequestedSendTime);
-        Assert.Equal("email", ext.Channel);
-        Assert.Equal("Succeeded", ext.Result);
-        Assert.Equal(resultTime, ext.ResultTime);
+        Assert.Equal("EmailPreferred", ext.NotificationChannel);
     }
 
     [Fact]
-    public void MapToDashboardNotificationExtList_MultipleNotifications_AllMapped()
+    public void MapToDashboardNotificationExtList_RecipientResultFieldsMapped()
     {
-        var notifications = new List<DashboardNotification>
-        {
-            BuildNotification("email", [new EmailAddressPoint("a@b.com")])[0],
-            BuildNotification("sms", [new SmsAddressPoint("+4700000001")])[0],
-        };
+        var resultTime = new DateTime(2026, 5, 1, 12, 5, 0, DateTimeKind.Utc);
+        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]);
 
-        var result = notifications.MapToDashboardNotificationExtList();
+        var result = notification.MapToDashboardNotificationExtList();
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal("a@b.com", result[0].Recipients[0].EmailAddress);
-        Assert.Equal("+4700000001", result[1].Recipients[0].MobileNumber);
+        var recipient = Assert.Single(Assert.Single(result).Recipients);
+        Assert.Equal("Succeeded", recipient.Result);
+        Assert.Equal(resultTime, recipient.ResultTime);
     }
 
-    private static List<DashboardNotification> BuildNotification(
-        string channel,
-        List<IAddressPoint> addressPoints,
-        string? organizationNumber = null)
+    [Fact]
+    public void MapToDashboardNotificationExtList_MultipleRecipients_AllMapped()
+    {
+        var notification = BuildNotification([
+            new DashboardRecipient(_nin, null, "email", "a@b.com", null, null, null),
+            new DashboardRecipient(_nin, null, "sms", null, "+4700000001", null, null),
+        ]);
+
+        var result = notification.MapToDashboardNotificationExtList();
+
+        var recipients = Assert.Single(result).Recipients;
+        Assert.Equal(2, recipients.Count);
+        Assert.Equal("a@b.com", recipients[0].EmailAddress);
+        Assert.Equal("+4700000001", recipients[1].MobileNumber);
+    }
+
+    private static List<DashboardNotification> BuildNotification(List<DashboardRecipient> recipients)
     {
         return
         [
@@ -140,10 +124,8 @@ public class DashboardMapperTests
                 null,
                 null,
                 DateTime.UtcNow,
-                [new Recipient(addressPoints, organizationNumber: organizationNumber, nationalIdentityNumber: _nin)],
-                channel,
                 null,
-                null),
+                recipients),
         ];
     }
 }

@@ -3,12 +3,12 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models.Dashboard;
 
 /// <summary>
-/// Represents a single notification (email or SMS) returned from a dashboard lookup.
+/// Represents a notification order returned from a dashboard lookup, grouping all delivery attempts by channel.
 /// </summary>
 public record DashboardNotificationExt
 {
     /// <summary>
-    /// The unique identifier for the notification.
+    /// The unique identifier for the notification order.
     /// </summary>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; }
@@ -38,26 +38,14 @@ public record DashboardNotificationExt
     public DateTime RequestedSendTime { get; init; }
 
     /// <summary>
-    /// The recipients of this notification.
+    /// The requested notification channel from the order (e.g. "EmailPreferred", "SmsPreferred").
+    /// </summary>
+    [JsonPropertyName("notificationChannel")]
+    public string? NotificationChannel { get; init; }
+
+    /// <summary>
+    /// The delivery attempts for this notification, one per channel.
     /// </summary>
     [JsonPropertyName("recipients")]
-    public List<RecipientExt> Recipients { get; init; } = [];
-
-    /// <summary>
-    /// The delivery channel: "email" or "sms".
-    /// </summary>
-    [JsonPropertyName("channel")]
-    public string Channel { get; init; } = string.Empty;
-
-    /// <summary>
-    /// The delivery result status.
-    /// </summary>
-    [JsonPropertyName("result")]
-    public string? Result { get; init; }
-
-    /// <summary>
-    /// When the result was recorded.
-    /// </summary>
-    [JsonPropertyName("resultTime")]
-    public DateTime? ResultTime { get; init; }
+    public List<DashboardRecipientExt> Recipients { get; init; } = [];
 }

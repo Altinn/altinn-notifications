@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -29,10 +28,8 @@ public class DashboardServiceTests
                 null,
                 null,
                 DateTime.UtcNow,
-                [new Recipient { NationalIdentityNumber = _recipientNin }],
-                "email",
-                "Succeeded",
-                null),
+                "EmailPreferred",
+                [new DashboardRecipient(_recipientNin, null, "email", null, null, "Succeeded", null)]),
         };
 
         Mock<IDashboardRepository> repository = new();

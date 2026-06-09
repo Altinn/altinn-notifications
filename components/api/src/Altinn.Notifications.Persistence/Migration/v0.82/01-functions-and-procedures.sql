@@ -758,10 +758,11 @@ CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin
     _to_date timestamptz
 )
 RETURNS TABLE (
-    notificationid uuid,
+    shipmentid uuid,
     sendersreference text,
     creatorname text,
     resourceid text,
+    notificationchannel text,
     requestedsendtime timestamptz,
     recipientnin text,
     address text,
@@ -775,10 +776,11 @@ PARALLEL SAFE
 AS $$
     WITH combined AS (
         SELECT
-            e.alternateid AS notificationid,
+            o.alternateid AS shipmentid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
             o.requestedsendtime,
             e.recipientnin,
             e.toaddress AS address,
@@ -794,10 +796,11 @@ AS $$
         UNION ALL
 
         SELECT
-            s.alternateid AS notificationid,
+            o.alternateid AS shipmentid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
             o.requestedsendtime,
             s.recipientnin,
             s.mobilenumber AS address,
@@ -821,10 +824,11 @@ Parameters:
 - _from_date: Start of the date range (inclusive) based on requestedsendtime
 - _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:
-- notificationid: The unique identifier for the notification
+- shipmentid: The unique identifier for the shipment order
+- sendersreference: The sender''s reference for the order
 - creatorname: The short name of the organisation that created the order
 - resourceid: The Altinn resource the notification is related to (may be null)
-- sendersreference: The sender''s reference for the order
+- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
 - requestedsendtime: When the notification was requested to be sent
 - recipientnin: The recipient''s national identity number
 - address: The address the notification was sent to (email address or mobile number)
