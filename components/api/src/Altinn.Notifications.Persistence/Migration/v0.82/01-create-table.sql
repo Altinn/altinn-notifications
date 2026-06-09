@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog (
 ) PARTITION BY RANGE (created_timestamp);
 
 -- Add IF NOT EXISTS for partition tables
-CREATE TABLE IF NOT EXISTS notifications.notificationlog_2025 PARTITION OF notifications.notificationlog
-    FOR VALUES FROM ('2025-01-01 00:00:00+00') TO ('2026-01-01 00:00:00+00');
+CREATE TABLE IF NOT EXISTS notifications.notificationlog_2026 PARTITION OF notifications.notificationlog
+    FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2027-01-01 00:00:00+00');
 
 -- Add IF NOT EXISTS for default partition
 CREATE TABLE IF NOT EXISTS notifications.notificationlog_default PARTITION OF notifications.notificationlog
