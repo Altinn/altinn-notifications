@@ -110,6 +110,51 @@ public class DashboardControllerTests
     }
 
     [Fact]
+    public async Task GetNotificationsByNin_ToInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var to = DateTimeOffset.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", To = to }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByNin_FromInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTimeOffset.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByNin_FromMoreThan10YearsAgo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTimeOffset.UtcNow.AddYears(-10).AddDays(-1);
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task GetNotificationsByNin_OnlyToProvidedAndTooFarInPast_ReturnsValidationProblem()
     {
         // Arrange — To is more than 7 days in the past with no From, which the validator rejects
