@@ -78,6 +78,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 90090020,
                         IsReserved = true,
                         Email = emailAddress,
+                        EmailLastTouched = DateTime.UtcNow.AddDays(-10),
+                        MobileNumberLastTouched = DateTime.UtcNow.AddDays(-5),
                         MobileNumber = rawMobileNumber,
                         NationalIdentityNumber = nationalId
                     }
@@ -134,7 +136,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         IsReserved = true,
                         Email = emailAddress,
                         MobileNumber = rawMobileNumber,
-                        NationalIdentityNumber = nationalId
+                        NationalIdentityNumber = nationalId,
+                        EmailLastTouched = DateTime.UtcNow,
+                        MobileNumberLastTouched = DateTime.UtcNow
                     }
                 ]);
 
@@ -267,7 +271,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         IsReserved = false,
                         Email = emailAddress,
                         MobileNumber = rawMobileNumber,
-                        NationalIdentityNumber = nationalId
+                        NationalIdentityNumber = nationalId,
+                        EmailLastTouched = DateTime.UtcNow.AddDays(-10),
+                        MobileNumberLastTouched = DateTime.UtcNow.AddDays(-5)
                     }
                 ]);
 
@@ -324,7 +330,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 20202020,
                         IsReserved = false,
                         MobileNumber = rawMobileNumber,
-                        NationalIdentityNumber = nationalId
+                        NationalIdentityNumber = nationalId,
+                        MobileNumberLastTouched = DateTime.UtcNow
                     }
                 ]);
 
@@ -376,7 +383,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 20020488,
                         IsReserved = false,
                         Email = emailAddress,
-                        NationalIdentityNumber = nationalId
+                        NationalIdentityNumber = nationalId,
+                        EmailLastTouched = DateTime.UtcNow
                     }
                 ]);
 
@@ -430,6 +438,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 90090020,
                         IsReserved = false,
                         Email = emailAddress,
+                        EmailLastTouched = DateTime.UtcNow.AddDays(-10),
+                        MobileNumberLastTouched = DateTime.UtcNow.AddDays(-5),
                         MobileNumber = rawMobileNumber,
                         NationalIdentityNumber = nationalId
                     }
@@ -484,7 +494,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 90090020,
                         IsReserved = true,
                         Email = emailAddress,
+                        EmailLastTouched = DateTime.UtcNow.AddDays(-10),
                         MobileNumber = rawMobileNumber,
+                        MobileNumberLastTouched = DateTime.UtcNow.AddDays(-5),
                         NationalIdentityNumber = nationalId
                     }
                 ]);
@@ -537,6 +549,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 90090020,
                         IsReserved = false,
                         Email = emailAddress,
+                        EmailLastTouched = DateTime.UtcNow,
                         NationalIdentityNumber = nationalId
                     }
                 ]);
@@ -590,6 +603,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         UserId = 90090020,
                         IsReserved = true,
                         MobileNumber = rawMobileNumber,
+                        MobileNumberLastTouched = DateTime.UtcNow,
                         NationalIdentityNumber = nationalId
                     }
                 ]);
