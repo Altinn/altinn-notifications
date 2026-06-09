@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
@@ -145,14 +144,6 @@ public abstract class NotificationRepositoryBase
                 if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
                 {
                     await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
-                    await _notificationLogRepository.InsertAsync(
-                        new NotificationLogEntry
-                        {
-                            ShipmentId = alternateId,
-                            NotificationType = $"{SourceIdentifier}_Termination"
-                        },
-                        connection,
-                        transaction);
                 }
             }
 
@@ -179,6 +170,10 @@ public abstract class NotificationRepositoryBase
             try
             {
                 await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+                await _notificationLogRepository.InsertAsync(
+                    alternateId,
+                    connection,
+                    transaction);
             }
             catch (Exception ex)
             {

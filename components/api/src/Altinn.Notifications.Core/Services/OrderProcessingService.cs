@@ -18,6 +18,7 @@ namespace Altinn.Notifications.Core.Services;
 public class OrderProcessingService : IOrderProcessingService
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly INotificationLogRepository _notificationLogRepository;
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
     private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
@@ -31,6 +32,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// </summary>
     public OrderProcessingService(
         IOrderRepository orderRepository,
+        INotificationLogRepository notificationLogRepository,
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
         IPreferredChannelProcessingService preferredChannelProcessingService,
@@ -40,6 +42,7 @@ public class OrderProcessingService : IOrderProcessingService
         ILogger<OrderProcessingService> logger)
     {
         _orderRepository = orderRepository;
+        _notificationLogRepository = notificationLogRepository;
         _emailProcessingService = emailProcessingService;
         _smsProcessingService = smsProcessingService;
         _preferredChannelProcessingService = preferredChannelProcessingService;
@@ -137,6 +140,7 @@ public class OrderProcessingService : IOrderProcessingService
         if (isOrderCompleted)
         {
             await TryInsertStatusFeedForCompletedOrder(order.Id);
+            await _notificationLogRepository.InsertAsync(order.Id);
         }
 
         return new NotificationOrderProcessingResult

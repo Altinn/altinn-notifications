@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.NotificationLog;
-using Altinn.Notifications.Core.Persistence;
+﻿using Altinn.Notifications.Core.Persistence;
+
 using Npgsql;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -13,9 +13,9 @@ public interface ITransactionalNotificationLogRepository : INotificationLogRepos
     /// <summary>
     /// Inserts a notification log entry using an existing open connection and transaction.
     /// </summary>
-    /// <param name="entry">The log entry containing all notification metadata to persist.</param>
+    /// <param name="notificationId">The ID of the notification.</param>
     /// <param name="connection">An existing open database connection.</param>
     /// <param name="transaction">An existing database transaction to enlist in.</param>
     /// <returns>The auto-generated ID of the inserted log entry.</returns>
-    Task<long> InsertAsync(NotificationLogEntry entry, NpgsqlConnection connection, NpgsqlTransaction transaction);
+    Task<long> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction);
 }
