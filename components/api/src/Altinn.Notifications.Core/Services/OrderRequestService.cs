@@ -391,7 +391,7 @@ public class OrderRequestService : IOrderRequestService
     {
         var deliveryDetails = ExtractDeliveryDetails(orderRequest.Recipient);
 
-        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
+        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction, orderRequest.Creator.ShortName);
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
@@ -570,7 +570,7 @@ public class OrderRequestService : IOrderRequestService
 
             var deliveryDetails = ExtractDeliveryDetails(notificationReminder.Recipient);
 
-            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
+            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction, creator.ShortName);
 
             if (lookupResult?.MissingContact?.Count > 0)
             {

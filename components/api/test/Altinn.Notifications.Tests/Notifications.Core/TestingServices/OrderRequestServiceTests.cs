@@ -345,15 +345,15 @@ public class OrderRequestServiceTests
             Times.Once);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         orderRepositoryMock.VerifyAll();
@@ -989,19 +989,19 @@ public class OrderRequestServiceTests
         Assert.Equal(422, (int)result.Problem.StatusCode);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.AtLeastOnce);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>()),
+            cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         orderRepositoryMock.Verify(
@@ -2033,7 +2033,8 @@ public class OrderRequestServiceTests
                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
                It.Is<string?>(s => s == resourceId),
                OrderLifecycleStage.Registration,
-               It.Is<string?>(s => s == resourceAction)),  // Changed from It.IsAny<string?>()
+               It.Is<string?>(s => s == resourceAction),  // Changed from It.IsAny<string?>()
+               It.IsAny<string?>()),
            Times.Exactly(2));
 
         // Verify contact point added the expected SMS contact
@@ -2043,7 +2044,8 @@ public class OrderRequestServiceTests
                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
                It.Is<string?>(s => s == resourceId),
                OrderLifecycleStage.Registration,
-               It.Is<string?>(s => s == resourceAction)),  // Changed from It.IsAny<string?>()
+               It.Is<string?>(s => s == resourceAction),  // Changed from It.IsAny<string?>()
+               It.IsAny<string?>()),
            Times.Once);
     }
 
@@ -2170,6 +2172,7 @@ public class OrderRequestServiceTests
             It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
             It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resource-name"),
             OrderLifecycleStage.Registration,
+            It.IsAny<string?>(),
             It.IsAny<string?>()),
             Times.Once);
     }
@@ -2405,7 +2408,8 @@ public class OrderRequestServiceTests
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == nationalIdentityNumber)),
                 It.Is<string?>(s => s == "urn:altinn:resource:test-resource"),
                 OrderLifecycleStage.Registration,
-                It.Is<string?>(s => s == "sign")),
+                It.Is<string?>(s => s == "sign"),
+                It.IsAny<string?>()),
             Times.Once);
 
         orderRepositoryMock.VerifyAll();

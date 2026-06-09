@@ -28,7 +28,12 @@ public static class ServiceCollectionExtensions
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
 
         services
-            .Configure<KrrContactInfoRetentionSettings>(config.GetSection("KrrContactInfoRetention"));
+            .AddOptions<KrrContactInfoRetentionSettings>()
+            .Bind(config.GetSection("KrrContactInfoRetention"))
+            .Validate(
+                settings => settings.MaxAgeMonths >= 0,
+                "KrrContactInfoRetention.MaxAgeMonths must not be negative.")
+            .ValidateOnStart();
 
         services
             .AddHostedService<SmsPublishBackgroundService>()
