@@ -42,6 +42,20 @@ public class DashboardControllerTests
         _dashboardServiceMock.VerifyNoOtherCalls();
     }
 
+    [Theory]
+    [InlineData("1234567890")]
+    [InlineData("123456789012")]
+    public async Task GetNotificationsByNin_NinWrongLength_ReturnsValidationProblem(string nin)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = nin }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task GetNotificationsByNin_FromEqualToTo_ReturnsValidationProblem()
     {

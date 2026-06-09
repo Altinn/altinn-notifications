@@ -18,6 +18,11 @@ internal sealed class GetNotificationsByNinRequestValidator : AbstractValidator<
             .NotEmpty()
             .WithMessage("'nin' is required and cannot be empty");
 
+        RuleFor(x => x.Nin)
+            .Must(nin => nin.Length == 11)
+            .When(x => !string.IsNullOrEmpty(x.Nin))
+            .WithMessage("'nin' must be 11 digits long");
+
         RuleFor(x => x.From)
             .Must((request, from) => from < request.To)
             .When(x => x.From.HasValue && x.To.HasValue)
