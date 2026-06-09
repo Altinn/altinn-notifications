@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
@@ -35,17 +36,25 @@ public abstract class NotificationRepositoryBase
     private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
 
+    private readonly ITransactionalNotificationLogRepository _notificationLogRepository;
+
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
     /// </summary>
     /// <param name="dataSource">The datasource used to integrate with the database</param>
     /// <param name="logger">The logger associated with the above implementation</param>
     /// <param name="config">The notification configuration</param>
-    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger, IOptions<NotificationConfig> config)
+    /// <param name="notificationLogRepository">The notification log repository.</param>
+    protected NotificationRepositoryBase(
+        NpgsqlDataSource dataSource,
+        ILogger logger,
+        IOptions<NotificationConfig> config,
+        ITransactionalNotificationLogRepository notificationLogRepository)
     {
         _dataSource = dataSource;
         _logger = logger;
         _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
+        _notificationLogRepository = notificationLogRepository;
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -136,6 +145,14 @@ public abstract class NotificationRepositoryBase
                 if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
                 {
                     await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
+                    await _notificationLogRepository.InsertAsync(
+                        new NotificationLogEntry
+                        {
+                            ShipmentId = alternateId,
+                            NotificationType = $"{SourceIdentifier}_Termination"
+                        },
+                        connection,
+                        transaction);
                 }
             }
 

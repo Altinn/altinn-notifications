@@ -1,15 +1,17 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Altinn.Notifications.Core.Persistence;
+
+using Altinn.Notifications.Core.Models.NotificationLog;
+
 using Npgsql;
 
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <inheritdoc/>
 [ExcludeFromCodeCoverage]
-public class NotificationLogRepository(NpgsqlDataSource dataSource) : INotificationLogRepository
+public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransactionalNotificationLogRepository
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    
+
     private const string _insertNotificationLogSql = @"
         SELECT notifications.insert_notification_log(
             _shipmentid := @shipmentId,
@@ -27,35 +29,37 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : INotificat
         )";
 
     /// <inheritdoc/>
-    public async Task<long> InsertAsync(
-        Guid shipmentId,
-        string notificationType,
-        long? orderChainId = null,
-        Guid? dialogId = null,
-        string? transmissionId = null,
-        string? operationId = null,
-        string? gatewayReference = null,
-        string? recipient = null,
-        string? destination = null,
-        string? resource = null,
-        string? status = null,
-        DateTime? sentTimestamp = null)
+    public async Task<long> InsertAsync(NotificationLogEntry entry)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var command = new NpgsqlCommand(_insertNotificationLogSql, connection);
-        
-        command.Parameters.AddWithValue("@shipmentId", shipmentId);
-        command.Parameters.AddWithValue("@notificationType", notificationType);
-        command.Parameters.AddWithValue("@orderChainId", orderChainId ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@dialogId", dialogId ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@transmissionId", transmissionId ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@operationId", operationId ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@gatewayReference", gatewayReference ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@recipient", recipient ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@destination", destination ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@resource", resource ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@status", status ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@sentTimestamp", sentTimestamp ?? (object)DBNull.Value);
+        return await ExecuteInsertAsync(entry, connection, transaction: null);
+    }
+
+    /// <inheritdoc/>
+    public async Task<long> InsertAsync(NotificationLogEntry entry, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        return await ExecuteInsertAsync(entry, connection, transaction);
+    }
+
+    private static async Task<long> ExecuteInsertAsync(
+        NotificationLogEntry entry,
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction)
+    {
+        await using var command = new NpgsqlCommand(_insertNotificationLogSql, connection, transaction);
+
+        command.Parameters.AddWithValue("@shipmentId", entry.ShipmentId);
+        command.Parameters.AddWithValue("@notificationType", entry.NotificationType);
+        command.Parameters.AddWithValue("@orderChainId", entry.OrderChainId ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@dialogId", entry.DialogId ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@transmissionId", entry.TransmissionId ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@operationId", entry.OperationId ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@gatewayReference", entry.GatewayReference ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@recipient", entry.Recipient ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@destination", entry.Destination ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@resource", entry.Resource ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@status", entry.Status ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@sentTimestamp", entry.SentTimestamp ?? (object)DBNull.Value);
 
         var result = await command.ExecuteScalarAsync();
         return (long)result!;

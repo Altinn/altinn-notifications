@@ -32,23 +32,24 @@ BEGIN
     SELECT o.requestedsendtime, o.processedstatus
     INTO order_record
     FROM notifications.orders o
-    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
+    FOR UPDATE;
 
     -- If no order is found, return an empty result set
     IF NOT FOUND THEN
         RETURN;
     END IF;
-    
-     -- Check if order is already cancelled
-     IF order_record.processedstatus = 'Cancelled' THEN
+
+    -- Check if order is already cancelled
+    IF order_record.processedstatus = 'Cancelled' THEN
         RETURN QUERY 
         SELECT TRUE AS cancelallowed,
-           order_details.*
+               order_details.*
         FROM notifications.getorder_includestatus_v4(_alternateid, _creatorname) AS order_details;
-     ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
+    ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
         RETURN QUERY 
         SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
-     ELSE 
+    ELSE 
         -- Cancel the order by updating its status
         UPDATE notifications.orders o
         SET processedstatus = 'Cancelled', processed = NOW()
@@ -60,6 +61,72 @@ BEGIN
                order_details.*
         FROM notifications.getorder_includestatus_v4(_alternateid, _creatorname) AS order_details;
     END IF;      
+END;
+$$;
+
+-- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1311
+
+CREATE OR REPLACE FUNCTION notifications.cancelorder_v2(
+    _alternateid uuid,
+    _creatorname text
+)
+RETURNS TABLE(
+    cancelallowed boolean,
+    alternateid uuid,
+    creatorname text,
+    sendersreference text,
+    created timestamp with time zone,                  
+    requestedsendtime timestamp with time zone,
+    processed timestamp with time zone,
+    processedstatus orderprocessingstate,
+    notificationchannel text,
+    ignorereservation boolean,
+    resourceid text,
+    resourceaction text,
+    conditionendpoint text,
+    generatedemailcount bigint,
+    succeededemailcount bigint,
+    generatedsmscount bigint, 
+    succeededsmscount bigint
+) 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    order_record RECORD;
+BEGIN
+    -- Retrieve the order and its status
+    SELECT o.requestedsendtime, o.processedstatus
+    INTO order_record
+    FROM notifications.orders o
+    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
+    FOR UPDATE;
+
+    -- If no order is found, return an empty result set
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    -- Check if order is already cancelled
+    IF order_record.processedstatus = 'Cancelled' THEN
+        RETURN QUERY 
+        SELECT TRUE AS cancelallowed,
+               order_details.*
+        FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
+    ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
+        RETURN QUERY 
+        SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
+    ELSE 
+        -- Cancel the order by updating its status
+        UPDATE notifications.orders o
+        SET processedstatus = 'Cancelled', processed = NOW()
+        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+
+        -- Retrieve the updated order details
+        RETURN QUERY 
+        SELECT TRUE AS cancelallowed,
+               order_details.*
+        FROM notifications.getorder_includestatus_v5(_alternateid, _creatorname) AS order_details;
+    END IF;
 END;
 $$;
 
@@ -300,6 +367,50 @@ $$;
 COMMENT ON FUNCTION notifications.delete_old_status_feed_records() IS
 'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records. Uses an advisory lock to prevent concurrent executions.';
 
+-- Creates a new version of the function that accepts a batch_size parameter,
+-- deleting at most batch_size rows per invocation. Intended to be called
+-- repeatedly by a scheduled cron job instead of deleting all rows in one transaction.
+CREATE OR REPLACE FUNCTION notifications.deleteoldstatusfeedrecords_v2(batch_size int DEFAULT 10000)
+RETURNS bigint -- Returns the number of rows deleted in this invocation
+LANGUAGE 'plpgsql'
+VOLATILE
+AS $$
+DECLARE
+    v_batch_size int := GREATEST(1, COALESCE(batch_size, 10000));
+    -- Variable to hold the count of deleted rows
+    deleted_count bigint := 0;
+    -- Variable to hold the lock acquisition status
+    lock_acquired boolean;
+    -- Generate lock ID from function name using hashtext
+    lock_id bigint := hashtext('notifications.deleteoldstatusfeedrecords_v2');
+BEGIN
+    -- Acquire a transaction-scoped advisory lock to prevent concurrent cleanup operations
+    SELECT pg_try_advisory_xact_lock(lock_id) INTO lock_acquired;
+
+    IF NOT lock_acquired THEN
+        RETURN 0; -- Another cleanup is running
+    END IF;
+
+    WITH deleted_rows AS (
+        DELETE FROM notifications.statusfeed
+        WHERE _id IN (
+            SELECT _id FROM notifications.statusfeed
+            WHERE created <= NOW() - INTERVAL '90 days'
+            LIMIT v_batch_size
+        )
+        RETURNING _id
+    )
+    -- Count the rows that were captured in the CTE
+    SELECT count(*) INTO deleted_count FROM deleted_rows;
+
+    RETURN deleted_count;
+END;
+$$;
+
+-- Add a comment to describe the function's purpose
+COMMENT ON FUNCTION notifications.deleteoldstatusfeedrecords_v2(int) IS
+'Deletes up to batch_size records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records. Uses an advisory lock to prevent concurrent executions. Intended to be called repeatedly by a scheduled cron job.';
+
 
 -- deleteoldtestdata.sql:
 -- FUNCTION: notifications.delete_old_test_data()
@@ -348,6 +459,52 @@ COMMENT ON FUNCTION notifications.delete_old_test_data()
     IS 'This function performs cleanup of test-specific data based on hard-coded criteria used in use case tests. 
 	It removes records from notifications.orders, notifications.emailnotifications (cascading delete), and notifications.smsnotifications (cascading delete), 
 	using email addresses, mobile numbers, and synthetic organizations used only for testing. This ensures test data does not accumulate.';
+
+
+-- getemailmetrics.sql:
+-- FUNCTION: notifications.get_email_metrics(integer, integer, integer)
+CREATE OR REPLACE FUNCTION notifications.get_email_metrics(
+    day_input integer,
+	month_input integer,
+	year_input integer)
+    RETURNS TABLE(email_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, operationid text) 
+    LANGUAGE 'plpgsql'
+    COST 100
+    STABLE PARALLEL SAFE
+    ROWS 100000
+
+AS $BODY$
+DECLARE
+  start_date TIMESTAMPTZ;
+BEGIN
+  start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
+
+  RETURN QUERY
+  select 
+    -- references and correlation
+    email._id as email_id --unique recipient/"functional email"
+,   email.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
+,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
+,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
+,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
+,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
+
+     -- operator status
+,   email.result::text as result -- status of the delivery (error, but with an operationid may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
+,   email.operationid -- reference at ACS (a reference likely means that ACS bills for this - but not necessarily)
+
+from notifications.emailnotifications as email
+         inner join notifications.orders orders on orders._id = email._orderid
+         WHERE email.resulttime >= start_date
+			AND email.resulttime < start_date + INTERVAL '1 day'
+            AND email.result NOT IN ('New',
+                           'Sending',
+                           'Succeeded');
+END;
+$BODY$;
+
+ALTER FUNCTION notifications.get_email_metrics(integer, integer, integer)
+    OWNER TO platform_notifications_admin;
 
 
 -- getemailrecipients.sql:
@@ -670,6 +827,86 @@ BEGIN
 END;
 $BODY$;
 
+-- New version v5 introduced in https://github.com/Altinn/altinn-notifications/issues/1311
+
+CREATE OR REPLACE FUNCTION notifications.getorder_includestatus_v5(
+    _alternateid uuid,
+    _creatorname text
+)
+RETURNS TABLE(
+    alternateid uuid,
+    creatorname text,
+    sendersreference text,
+    created timestamp with time zone,                  
+    requestedsendtime timestamp with time zone,
+    processed timestamp with time zone,
+    processedstatus orderprocessingstate,
+    notificationchannel text,
+    ignorereservation boolean,
+    resourceid text,
+    resourceaction text,
+    conditionendpoint text,
+    generatedemailcount bigint,
+    succeededemailcount bigint,
+    generatedsmscount bigint, 
+    succeededsmscount bigint
+) 
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    _target_orderid BIGINT;
+    _succeededEmailCount BIGINT;
+    _generatedEmailCount BIGINT;
+    _succeededSmsCount BIGINT;
+    _generatedSmsCount BIGINT;
+BEGIN
+    SELECT _id INTO _target_orderid
+    FROM notifications.orders
+    WHERE orders.alternateid = _alternateid
+    AND orders.creatorname = _creatorname;
+
+    SELECT
+        SUM(CASE WHEN result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END),
+        COUNT(1) AS generatedEmailCount
+    INTO _succeededEmailCount, _generatedEmailCount
+    FROM notifications.emailnotifications
+    WHERE emailnotifications._orderid = _target_orderid;
+
+    SELECT
+        SUM(CASE WHEN result = 'Accepted' THEN 1 ELSE 0 END),
+        COUNT(1) AS generatedSmsCount
+    INTO _succeededSmsCount, _generatedSmsCount
+    FROM notifications.smsnotifications
+    WHERE smsnotifications._orderid = _target_orderid;
+
+    RETURN QUERY
+    SELECT
+        orders.alternateid,
+        orders.creatorname,
+        orders.sendersreference,
+        orders.created,
+        orders.requestedsendtime,
+        orders.processed,
+        orders.processedstatus,
+        orders.notificationorder->>'NotificationChannel',
+        CASE 
+            WHEN orders.notificationorder->>'IgnoreReservation' IS NULL THEN NULL
+            ELSE (orders.notificationorder->>'IgnoreReservation')::BOOLEAN
+        END AS IgnoreReservation,
+        orders.notificationorder->>'ResourceId',
+        orders.notificationorder->>'ResourceAction',
+        orders.notificationorder->>'ConditionEndpoint',
+        _generatedEmailCount,
+        _succeededEmailCount,
+        _generatedSmsCount, 
+        _succeededSmsCount
+    FROM
+        notifications.orders AS orders
+    WHERE 
+        orders._id = _target_orderid;
+END;
+$BODY$;
+
 
 -- getorderschaintracking.sql:
 -- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
@@ -898,6 +1135,56 @@ ALTER FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
 COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
     IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
 
+
+CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v3(_alternateid uuid)
+RETURNS TABLE(
+    alternateid       uuid,
+    reference         text,
+    status            text,
+    last_update       timestamp with time zone,
+    destination       text,
+    type              text
+)
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+STRICT
+ROWS 5
+AS $$
+WITH picked_order AS (
+    (
+        SELECT o.alternateid, o.creatorname
+        FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON o._id = e._orderid
+        WHERE e.alternateid = _alternateid
+
+        UNION ALL
+
+        SELECT o.alternateid, o.creatorname
+        FROM notifications.smsnotifications s
+        JOIN notifications.orders o ON o._id = s._orderid
+        WHERE s.alternateid = _alternateid
+    )
+    LIMIT 1
+)
+SELECT
+    p.alternateid,
+    t.reference,
+    t.status,
+    t.last_update,
+    t.destination,
+    t.type
+FROM picked_order p
+CROSS JOIN LATERAL notifications.get_shipment_tracking_v3(p.alternateid, p.creatorname) AS t;
+$$;
+
+ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
+    IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
+
+
 -- getshipmenttracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
     _alternateid UUID,
@@ -1056,6 +1343,166 @@ Includes:
  - SMS notification tracking (status, result time, destination)
 
 If no matching order exists, an empty result set is returned.';
+
+CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v3(
+    _alternateid UUID,
+    _creatorname TEXT)
+RETURNS TABLE (
+    reference          TEXT,
+    status             TEXT,
+    last_update        TIMESTAMPTZ,
+    destination        TEXT,
+    type               TEXT
+)
+LANGUAGE plpgsql
+STABLE PARALLEL SAFE
+ROWS 5
+AS $$
+DECLARE
+    v_order_exists BOOLEAN;
+BEGIN
+    -- Check for the existence of the order
+    SELECT EXISTS (
+        SELECT 1
+        FROM notifications.orders o
+        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
+    )
+    INTO v_order_exists;
+
+    -- Return empty set if no order is found
+    IF NOT v_order_exists THEN
+        RETURN;
+    END IF;
+
+    -- Return combined tracking info
+    RETURN QUERY
+    WITH order_data AS (
+        SELECT o._id, o.sendersreference, o.created, o.processed, o.processedstatus, o.type
+        FROM notifications.orders o
+        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
+    ),
+    order_tracking AS (
+        SELECT
+            od.sendersreference AS reference,
+            od.processedstatus::TEXT AS status,
+            GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
+            NULL::TEXT AS destination,
+            od.type::TEXT AS type
+        FROM order_data od
+    ),
+    email_tracking AS (
+        SELECT
+            od.sendersreference AS reference,
+            e.result::TEXT AS status,
+            e.resulttime AS last_update,
+            e.toaddress AS destination,
+            'email' AS type
+        FROM order_data od
+        JOIN notifications.emailnotifications e ON e._orderid = od._id
+    ),
+    sms_tracking AS (
+        SELECT
+            od.sendersreference AS reference,
+            s.result::TEXT AS status,
+            s.resulttime AS last_update,
+            s.mobilenumber AS destination,
+            'sms' AS type
+        FROM order_data od
+        JOIN notifications.smsnotifications s ON s._orderid = od._id
+    )
+    SELECT * FROM order_tracking
+    UNION ALL
+    SELECT * FROM email_tracking
+    UNION ALL
+    SELECT * FROM sms_tracking;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
+'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
+
+Returns:
+ - reference: Sender''s reference for the order
+ - status: Processing/delivery status  
+ - last_update: Timestamp of last status update
+ - destination: Email address or mobile number (NULL for order-level tracking)
+ - type: Type of tracking record
+
+Type field values:
+ - For order-level tracking: returns the order type from the database (''Notification'', ''Reminder'', or ''Instant'')
+ - For individual email notifications: returns ''email'' (literal string)
+ - For individual SMS notifications: returns ''sms'' (literal string)
+
+Includes:
+ - Order-level tracking (reference and status)
+ - Email notification tracking (status, result time, destination)
+ - SMS notification tracking (status, result time, destination)
+
+Changes from v2:
+ - Modified type field behavior to distinguish between order-level and notification-level tracking
+ - Order tracking uses database order type, notification tracking uses literal type identifiers
+
+If no matching order exists, an empty result set is returned.';
+
+
+-- getsmsmetrics.sql:
+-- FUNCTION: notifications.get_sms_metrics(integer, integer, integer)
+CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
+    day_input integer,
+	month_input integer,
+	year_input integer)
+    RETURNS TABLE(sms_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
+    LANGUAGE 'plpgsql'
+    COST 100
+    STABLE PARALLEL SAFE
+    ROWS 100000
+
+AS $BODY$
+DECLARE
+  start_date TIMESTAMPTZ;
+BEGIN
+  start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
+
+  RETURN QUERY
+  select 
+    -- references and correlation
+    sms._id as sms_id --unique per number/"functional SMS"
+,   sms.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
+,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
+,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
+,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
+,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
+
+     -- operator status
+,   sms.result::text as result -- status of the delivery (error, but with a GW reference may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
+,   sms.gatewayreference -- reference at Link Mobility (a reference likely means that Link Mobility bills for this - but not necessarily)
+
+     -- tariffing (price group + message splitting by the operator)
+,   CASE 
+        WHEN sms.mobilenumber IS NULL OR sms.mobilenumber = '' THEN 'n/a'
+        WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland' 
+        ELSE 'utland' 
+    END as rate  -- all numbers that are not Norwegian are defined in the international rate group.  
+,   left(sms.mobilenumber, 4) as mobilenumber_prefix --temporary field to verify the rate field
+,   sms.smscount as altinn_sms_count -- internal counting logic to split messages over 160 characters
+,   length(sms.customizedbody) as altinn_sms_custom_body_length --number of characters in the text (for messages with keywords)
+,   length(sms_text.body) as altinn_sms_body_length --number of characters in the text received from the  
+     
+--,  sms.*, sms_text.*, orders.*, order_chain.*
+from notifications.smsnotifications as sms
+         inner join notifications.orders orders on orders._id = sms._orderid
+         left join notifications.smstexts sms_text on orders._id = sms_text._orderid
+         WHERE sms.resulttime >= start_date
+			AND sms.resulttime < start_date + INTERVAL '1 day'
+            AND sms.result NOT IN ('New',
+                           'Sending',
+                           'Accepted');
+   
+END;
+$BODY$;
+
+ALTER FUNCTION notifications.get_sms_metrics(integer, integer, integer)
+    OWNER TO platform_notifications_admin;
 
 
 -- getsmsrecipients.sql:
@@ -1604,6 +2051,51 @@ Arguments:
 The function automatically records the current timestamp (`now()`) for the `created` column upon insertion. It returns void.';
 
 
+-- setemailtimeout.sql:
+CREATE OR REPLACE FUNCTION notifications.set_email_timeout(new_timeout TIMESTAMPTZ)
+RETURNS BOOLEAN 
+LANGUAGE plpgsql
+VOLATILE
+PARALLEL UNSAFE
+AS $$
+DECLARE
+    rows_affected INT;
+BEGIN
+    -- Acquire an advisory lock to serialize access
+    PERFORM pg_advisory_xact_lock(hashtext('resourcelimitlog_email_timeout'));
+    
+    -- Try to update the row with the highest id
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = new_timeout
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
+    
+    GET DIAGNOSTICS rows_affected = ROW_COUNT;
+    
+    -- If no row was updated, insert a new one
+    IF rows_affected = 0 THEN
+        INSERT INTO notifications.resourcelimitlog (emaillimittimeout)
+        VALUES (new_timeout);
+        RETURN TRUE;
+    END IF;
+    
+    RETURN rows_affected > 0;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.set_email_timeout(TIMESTAMPTZ) IS
+'Sets the email timeout value in the resource limit log.
+
+Updates the email timeout for the most recent resource limit log entry, or creates a new entry if none exists.
+Uses advisory locking to ensure thread-safe operation.
+
+Parameters:
+- new_timeout: The new timeout timestamp to set
+
+Returns:
+- TRUE if the operation was successful (either update or insert occurred)
+- Raises an exception if the operation fails';
+
+
 -- trymarkorderascompleted.sql:
 CREATE OR REPLACE FUNCTION notifications.trymarkorderascompleted(_alternateid uuid, _alternateidsource text)
 RETURNS boolean AS $$
@@ -1611,6 +2103,7 @@ DECLARE
     order_id bigint;
     order_status orderprocessingstate;
     has_pending_notifications boolean := false;
+    new_status orderprocessingstate;
 BEGIN
     IF _alternateid IS NULL THEN
         RAISE EXCEPTION 'Notification ID cannot be null';
@@ -1663,30 +2156,29 @@ BEGIN
     END IF;
 
     -- Step 5: Check if any notifications are still pending
-    WITH pending_notifications AS (
-        SELECT 1 AS is_pending
+    SELECT EXISTS(
+        SELECT 1
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-
-        UNION ALL
-
-        SELECT 1 AS is_pending
+    ) OR EXISTS(
+        SELECT 1
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-    )
-    SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
+    ) INTO has_pending_notifications;
 
     -- Step 6: Update order status based on notification states
+    new_status := CASE 
+                      WHEN has_pending_notifications THEN 'Processed'
+                      ELSE 'Completed'
+                  END::orderprocessingstate;
+        
     UPDATE notifications.orders
-    SET processedstatus = CASE 
-                            WHEN has_pending_notifications THEN 'Processed'
-                            ELSE 'Completed'
-                          END::orderprocessingstate,
+    SET processedstatus = new_status,
         processed = CURRENT_TIMESTAMP
     WHERE _id = order_id
-    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate);
+    AND processedstatus IS DISTINCT FROM new_status;
 
     RETURN NOT has_pending_notifications;
 END;
@@ -1715,6 +2207,7 @@ Throws:
   - Exception if _alternateidsource is NULL or empty
   - Exception if _alternateidsource is not one of: ''SMS'', ''EMAIL'', ''ORDER''
   - Exception if no order is found for the given notification ID and source';
+
 
 -- updateemailnotification.sql:
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
@@ -1755,6 +2248,174 @@ Precedence: If both _alternateid and _operationid are non-null, only alternateid
 Null return: NULL when neither identifier is provided OR no matching row exists (no update performed).
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+
+-- v2 introduces expiry time validation and conditional updates
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v2(
+    _result text,
+    _operationid text,
+    _alternateid uuid
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired boolean
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _operationid IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.emailnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::emailnotificationresulttype
+            ELSE result 
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime
+        END,
+        -- Update operationid only if not expired and alternateid was provided
+        operationid = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_operationid, operationid) 
+            ELSE operationid 
+        END
+    WHERE
+        -- Match by alternateid (takes priority) OR by operationid (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
+        (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
+        (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
+    RETURNING
+        emailnotifications.alternateid,
+        -- was_updated is true only if the notification was not expired at UPDATE time
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    -- If RETURNING didn't return any rows, the notification was not found
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updateemailnotification_v2 IS
+'Updates an email notification''s result and resulttime by alternateid or by operationid, with expiry time validation.
+
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if values were modified (notification not expired), false otherwise
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify fields only when expirytime > now()
+- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
+- If not found: returns (NULL, false, false)
+- If found and not expired: modifies values and returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are conditionally overwritten when not expired; operationid is only set when a non-null _operationid is supplied and notification is not expired.';
+
+-- v3 adds deliveryreport jsonb persistence
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v3(
+    _result text,
+    _operationid text,
+    _alternateid uuid,
+    _deliveryreport jsonb
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired boolean
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _operationid IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.emailnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::emailnotificationresulttype
+            ELSE result
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime
+        END,
+        -- Update operationid only if not expired and alternateid was provided
+        operationid = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_operationid, operationid)
+            ELSE operationid
+        END,
+        -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
+        deliveryreport = _deliveryreport
+    WHERE
+        -- Match by alternateid (takes priority) OR by operationid (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
+        (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
+        (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
+    RETURNING
+        emailnotifications.alternateid,
+        -- was_updated reflects whether status fields were modified; deliveryreport writes do not affect this flag
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updateemailnotification_v3 IS
+'Updates an email notification''s result, resulttime, operationid, and deliveryreport
+by alternateid or by operationid, with expiry time validation.
+
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used
+for lookup; _operationid may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if status fields (result, resulttime, operationid) were modified (notification not expired), false otherwise
+             NOTE: deliveryreport is always written and does not affect this flag
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify status fields only when expirytime > now()
+- deliveryreport is always overwritten unconditionally, including with NULL (observational data, not subject to expiry)
+- If expired:   UPDATE executes, status fields unchanged, deliveryreport written; returns (alternateid, false, true)
+- If not found: returns (NULL, false, false); deliveryreport is not written
+- If found and not expired: all fields modified; returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies
+at most one row when non-null.
+Overwrite policy: result, resulttime, and operationid are conditionally overwritten when not expired;
+operationid is only set when a non-null _operationid is supplied and notification is not expired;
+deliveryreport is always overwritten regardless of expiry.';
+
 
 -- updateemailstatus.sql:
 CREATE OR REPLACE PROCEDURE notifications.updateemailstatus(_alternateid UUID, _result text, _operationid text)
@@ -1843,5 +2504,175 @@ Parameters:
 - _limit (INT): maximum number of records to update
 - _expiry_offset_seconds (INT): grace period in seconds before marking as expired (default: 300)
 Returns a set of unique alternateid for the updated records.';
+
+
+-- updatesmsnotification.sql:
+-- v2 introduces expiry time validation and conditional updates
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
+    _result text,
+    _gatewayreference text,
+    _alternateid uuid
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired boolean
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _gatewayreference IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.smsnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::smsnotificationresulttype
+            ELSE result
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime 
+        END,
+        -- Update gatewayreference only if not expired and alternateid was provided
+        gatewayreference = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_gatewayreference, gatewayreference)
+            ELSE gatewayreference 
+        END
+    WHERE
+        -- Match by alternateid (takes priority) OR by gatewayreference (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
+        (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
+        (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
+    RETURNING
+        smsnotifications.alternateid,
+        -- was_updated is true only if the notification was not expired at UPDATE time
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    -- If RETURNING didn't return any rows, the notification was not found
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updatesmsnotification_v2 IS
+'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
+
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if values were modified (notification not expired), false otherwise
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify fields only when expirytime > now()
+- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
+- If not found: returns (NULL, false, false)
+- If found and not expired: modifies values and returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
+
+-- v3 adds _deliveryreport jsonb, mirroring updateemailnotification_v3 for channel symmetry.
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v3(
+    _result           text,
+    _gatewayreference text,
+    _alternateid      uuid,
+    _deliveryreport   jsonb
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired  boolean
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _gatewayreference IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.smsnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::smsnotificationresulttype
+            ELSE result
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime
+        END,
+        -- Update gatewayreference only if not expired and alternateid was provided
+        gatewayreference = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_gatewayreference, gatewayreference)
+            ELSE gatewayreference
+        END,
+        -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
+        deliveryreport = _deliveryreport
+    WHERE
+        -- Match by alternateid (takes priority) OR by gatewayreference (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
+        (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
+        (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
+    RETURNING
+        smsnotifications.alternateid,
+        -- was_updated reflects whether status fields were modified; deliveryreport writes do not affect this flag
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    -- If RETURNING didn't return any rows, the notification was not found
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updatesmsnotification_v3 IS
+'Updates an SMS notification''s result, resulttime, gatewayreference, and deliveryreport
+by alternateid or by gatewayreference, with expiry time validation.
+
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid
+is used for lookup; _gatewayreference may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if status fields (result, resulttime, gatewayreference) were modified (notification not expired), false otherwise
+             NOTE: deliveryreport is always written and does not affect this flag
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify status fields only when expirytime > now()
+- deliveryreport is always overwritten unconditionally, including with NULL (observational data, not subject to expiry)
+- If expired:   UPDATE executes, status fields unchanged, deliveryreport written; returns (alternateid, false, true)
+- If not found: returns (NULL, false, false); deliveryreport is not written
+- If found and not expired: all fields modified; returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely
+identifies at most one row when non-null.
+Overwrite policy: result, resulttime, and gatewayreference are conditionally overwritten when not expired;
+gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired;
+deliveryreport is always overwritten regardless of expiry.';
 
 
