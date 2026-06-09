@@ -122,7 +122,7 @@ jobs:
             matrix+='{"component":"sms","solution":"components/sms-service/Altinn.Notifications.Sms.slnx"},'
           fi
 
-          if [[ "${{ steps.filter.outputs.tools }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ steps.filter.outputs.tools }}" == "true" || "${{ steps.filter.outputs.shared }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             matrix+='{"component":"tools","solution":"tools/Altinn.Notifications.Tools.slnx"},'
           fi
 
@@ -469,7 +469,7 @@ jobs:
   test-tools:
     name: "Test: Tools"
     needs: [changes, build]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.tools == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.tools == 'true' || needs.changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -633,7 +633,7 @@ jobs:
             dotnet build components/sms-service/Altinn.Notifications.Sms.slnx -c Release -v q
           fi
 
-          if [[ "${{ needs.changes.outputs.tools }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.tools }}" == "true" || "${{ needs.changes.outputs.shared }}" == "true" ]]; then
             dotnet build tools/Altinn.Notifications.Tools.slnx -c Release -v q
           fi
 
