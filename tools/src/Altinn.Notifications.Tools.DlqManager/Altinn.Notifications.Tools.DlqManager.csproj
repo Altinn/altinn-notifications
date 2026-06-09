@@ -26,4 +26,8 @@
     <PackageReference Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -4,6 +4,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Shared.Commands;
+
 using Altinn.Notifications.Tools.DlqManager.Configuration;
 using Altinn.Notifications.Tools.DlqManager.Models;
 using Altinn.Notifications.Tools.DlqManager.Repositories;

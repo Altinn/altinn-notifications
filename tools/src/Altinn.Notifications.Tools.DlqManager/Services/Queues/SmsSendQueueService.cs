@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Tools.DlqManager.Configuration;
 using Altinn.Notifications.Tools.DlqManager.Models;
 using Altinn.Notifications.Tools.DlqManager.Repositories;
