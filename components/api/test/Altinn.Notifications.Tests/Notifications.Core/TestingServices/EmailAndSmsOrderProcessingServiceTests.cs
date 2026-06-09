@@ -35,8 +35,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -59,6 +60,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -99,8 +101,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -121,6 +124,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -160,8 +164,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].OrganizationNumber == organizationNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -184,6 +189,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].OrganizationNumber == organizationNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -228,6 +234,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -256,8 +263,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -280,6 +288,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -319,8 +328,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].OrganizationNumber == organizationNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -343,6 +353,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].OrganizationNumber == organizationNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -383,8 +394,9 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
@@ -405,6 +417,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -456,6 +469,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -526,6 +540,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -596,6 +611,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -663,6 +679,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 

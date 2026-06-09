@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -6,6 +7,9 @@ using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -17,16 +21,22 @@ namespace Altinn.Notifications.Core.Services;
 /// </remarks>
 public class ContactPointService(
     IProfileClient profile,
-    IAuthorizationService authorizationService) : IContactPointService
+    IAuthorizationService authorizationService,
+    IDateTimeService dateTimeService,
+    IOptions<KrrContactInfoRetentionSettings> retentionSettings,
+    ILogger<ContactPointService> logger) : IContactPointService
 {
     private const string _profileClientName = "ProfileClient";
     private const string _authorizationServiceName = "AuthorizationService";
 
     private readonly IProfileClient _profileClient = profile;
     private readonly IAuthorizationService _authorizationService = authorizationService;
+    private readonly IDateTimeService _dateTimeService = dateTimeService;
+    private readonly KrrContactInfoRetentionSettings _retentionSettings = retentionSettings.Value;
+    private readonly ILogger<ContactPointService> _logger = logger;
 
     /// <inheritdoc/>
-    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null, string? creatorShortName = null)
     {
         await AugmentRecipients(
             recipients,
@@ -35,11 +45,12 @@ public class ContactPointService(
             ApplyEmailForOrganization,
             ApplyEmailForExternalIdentity,
             orderLifecycleStage,
-            resourceAction);
+            resourceAction,
+            creatorShortName);
     }
 
     /// <inheritdoc/>
-    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null, string? creatorShortName = null)
     {
         await AugmentRecipients(
             recipients,
@@ -48,11 +59,12 @@ public class ContactPointService(
             ApplySmsForOrganization,
             ApplySmsForExternalIdentity,
             orderLifecycleStage,
-            resourceAction);
+            resourceAction,
+            creatorShortName);
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null, string? creatorShortName = null)
     {
         await AugmentRecipients(
             recipients,
@@ -61,11 +73,12 @@ public class ContactPointService(
             ApplyEmailAndSmsForOrganization,
             ApplyEmailAndSmsForExternalIdentity,
             orderLifecycleStage,
-            resourceAction);
+            resourceAction,
+            creatorShortName);
     }
 
     /// <inheritdoc/>
-    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null, string? creatorShortName = null)
     {
         switch (channel)
         {
@@ -77,7 +90,8 @@ public class ContactPointService(
                     ApplyEmailPreferredForOrganization,
                     ApplyEmailPreferredForExternalIdentity,
                     orderLifecycleStage,
-                    resourceAction);
+                    resourceAction,
+                    creatorShortName);
                 break;
             case NotificationChannel.SmsPreferred:
                 await AugmentRecipients(
@@ -87,7 +101,8 @@ public class ContactPointService(
                     ApplySmsPreferredForOrganization,
                     ApplySmsPreferredForExternalIdentity,
                     orderLifecycleStage,
-                    resourceAction);
+                    resourceAction,
+                    creatorShortName);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(channel), channel, $"Unsupported notification channel: {channel}");
@@ -359,6 +374,9 @@ public class ContactPointService(
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
+    /// <param name="creatorShortName">
+    /// The short name of the service owner that created the order, used to determine exemption from the KRR contact information retention check.
+    /// </param>
     /// <returns>
     /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
     /// </returns>
@@ -369,7 +387,8 @@ public class ContactPointService(
         Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
         Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints,
         OrderLifecycleStage orderLifecycleStage,
-        string? resourceAction = null)
+        string? resourceAction = null,
+        string? creatorShortName = null)
     {
         var personLookupTask = LookupPersonContactPoints(recipients);
         var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
@@ -380,6 +399,8 @@ public class ContactPointService(
         List<UserContactPoints> personContactPointsList = personLookupTask.Result;
         List<OrganizationContactPoints> organizationContactPointsList = organizationLookupTask.Result;
         List<ExternalIdentityContactPoints> externalIdentityContactPointsList = externalIdentityLookupTask.Result;
+
+        RemoveOutdatedPersonContactInfo(personContactPointsList, creatorShortName);
 
         foreach (Recipient recipient in recipients)
         {
@@ -395,6 +416,67 @@ public class ContactPointService(
             {
                 ApplyExternalIdentityContactPoints(recipient, externalIdentityContactPointsList, applyExternalIdentityContactPoints);
             }
+        }
+    }
+
+    /// <summary>
+    /// Removes contact information retrieved from KRR that has not been updated or confirmed within the configured
+    /// retention window, treating it as if it is not present. The check is skipped entirely when the feature is
+    /// disabled or when the order's service owner is exempt. Contact points without a last-updated timestamp are
+    /// kept (fail-open) and logged so the scope of missing timestamps can be monitored.
+    /// </summary>
+    private void RemoveOutdatedPersonContactInfo(List<UserContactPoints> personContactPointsList, string? creatorShortName)
+    {
+        if (!_retentionSettings.Enabled || personContactPointsList.Count == 0)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(creatorShortName)
+            && _retentionSettings.ExemptServiceOwners.Contains(creatorShortName, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        DateTime cutoff = _dateTimeService.UtcNow().AddMonths(-_retentionSettings.MaxAgeMonths);
+
+        int emailsMissingTimestamp = 0;
+        int mobilesMissingTimestamp = 0;
+
+        foreach (UserContactPoints contactPoint in personContactPointsList)
+        {
+            if (!string.IsNullOrWhiteSpace(contactPoint.Email))
+            {
+                if (contactPoint.EmailLastTouched is null)
+                {
+                    emailsMissingTimestamp++;
+                }
+                else if (contactPoint.EmailLastTouched.Value < cutoff)
+                {
+                    contactPoint.Email = string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(contactPoint.MobileNumber))
+            {
+                if (contactPoint.MobileNumberLastTouched is null)
+                {
+                    mobilesMissingTimestamp++;
+                }
+                else if (contactPoint.MobileNumberLastTouched.Value < cutoff)
+                {
+                    contactPoint.MobileNumber = string.Empty;
+                }
+            }
+        }
+
+        if (emailsMissingTimestamp > 0 || mobilesMissingTimestamp > 0)
+        {
+            _logger.LogError(
+                "KRR contact info retention: {EmailCount} email and {MobileCount} mobile contact point(s) from Profile were missing a last-updated timestamp for non-exempt service owner '{Creator}'. Treating as valid (fail-open). Investigate if the scope is unexpected.",
+                emailsMissingTimestamp,
+                mobilesMissingTimestamp,
+                creatorShortName ?? "(unknown)");
         }
     }
 

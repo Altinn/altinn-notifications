@@ -3,13 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using Moq;
 using Xunit;
@@ -108,6 +113,211 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        private static readonly DateTime _fixedNow = new(2026, 6, 9, 12, 0, 0, DateTimeKind.Utc);
+
+        private static ContactPointService GetRetentionTestService(IProfileClient profileClient, KrrContactInfoRetentionSettings settings)
+        {
+            var dateTimeServiceMock = new Mock<IDateTimeService>();
+            dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(_fixedNow);
+
+            return GetTestService(
+                profileClient: profileClient,
+                retentionSettings: settings,
+                dateTimeService: dateTimeServiceMock.Object);
+        }
+
+        private static IProfileClient GetProfileClientReturning(string nationalId, UserContactPoints contactPoints)
+        {
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync([contactPoints]);
+            return profileClientMock.Object;
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenOutdatedForNonExemptCreator_RemovesBothChannels()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = "recipient@example.com",
+                MobileNumber = "99999999",
+                EmailLastTouched = _fixedNow.AddMonths(-20),
+                MobileNumberLastTouched = _fixedNow.AddMonths(-20)
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = true,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = ["skd"]
+            });
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "nav");
+
+            // Assert
+            Assert.Empty(Assert.Single(recipients).AddressInfo);
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenOnlySmsOutdatedForNonExemptCreator_KeepsOnlyEmail()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            string emailAddress = "recipient@example.com";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = emailAddress,
+                MobileNumber = "99999999",
+                EmailLastTouched = _fixedNow.AddMonths(-1),
+                MobileNumberLastTouched = _fixedNow.AddMonths(-20)
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = true,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = ["skd"]
+            });
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "nav");
+
+            // Assert
+            var addressInfo = Assert.Single(Assert.Single(recipients).AddressInfo);
+            var emailAddressPoint = Assert.IsType<EmailAddressPoint>(addressInfo);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenOutdatedButCreatorExempt_KeepsBothChannels()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = "recipient@example.com",
+                MobileNumber = "99999999",
+                EmailLastTouched = _fixedNow.AddMonths(-20),
+                MobileNumberLastTouched = _fixedNow.AddMonths(-20)
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = true,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = ["skd"]
+            });
+
+            // Act - exemption is case-insensitive
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "SKD");
+
+            // Assert
+            Assert.Equal(2, Assert.Single(recipients).AddressInfo.Count);
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenRetentionDisabled_KeepsOutdatedChannels()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = "recipient@example.com",
+                MobileNumber = "99999999",
+                EmailLastTouched = _fixedNow.AddMonths(-20),
+                MobileNumberLastTouched = _fixedNow.AddMonths(-20)
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = false,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = []
+            });
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "nav");
+
+            // Assert
+            Assert.Equal(2, Assert.Single(recipients).AddressInfo.Count);
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenLastTouchedIsNull_KeepsChannelsFailOpen()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = "recipient@example.com",
+                MobileNumber = "99999999",
+                EmailLastTouched = null,
+                MobileNumberLastTouched = null
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = true,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = []
+            });
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "nav");
+
+            // Assert
+            Assert.Equal(2, Assert.Single(recipients).AddressInfo.Count);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenContactInfoIsWithinRetentionWindow_KeepsChannel()
+        {
+            // Arrange
+            string nationalId = "16219001324";
+            string emailAddress = "recipient@example.com";
+            var recipients = new List<Recipient> { new() { NationalIdentityNumber = nationalId } };
+
+            var profileClient = GetProfileClientReturning(nationalId, new()
+            {
+                NationalIdentityNumber = nationalId,
+                Email = emailAddress,
+                EmailLastTouched = _fixedNow.AddMonths(-17)
+            });
+
+            var service = GetRetentionTestService(profileClient, new KrrContactInfoRetentionSettings
+            {
+                Enabled = true,
+                MaxAgeMonths = 18,
+                ExemptServiceOwners = []
+            });
+
+            // Act
+            await service.AddEmailContactPoints(recipients, null, OrderLifecycleStage.Processing, null, creatorShortName: "nav");
+
+            // Assert
+            var emailAddressPoint = Assert.IsType<EmailAddressPoint>(Assert.Single(Assert.Single(recipients).AddressInfo));
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
         }
 
         [Fact]
@@ -2148,7 +2358,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
         private static ContactPointService GetTestService(
             IProfileClient? profileClient = null,
-            IAuthorizationService? authorizationService = null)
+            IAuthorizationService? authorizationService = null,
+            KrrContactInfoRetentionSettings? retentionSettings = null,
+            IDateTimeService? dateTimeService = null)
         {
             if (profileClient == null)
             {
@@ -2162,7 +2374,18 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService = authorizationServiceMock.Object;
             }
 
-            return new ContactPointService(profileClient, authorizationService);
+            // The retention check is disabled by default so existing tests are unaffected; tests that
+            // exercise the feature pass an explicit settings instance.
+            retentionSettings ??= new KrrContactInfoRetentionSettings { Enabled = false };
+
+            dateTimeService ??= new DateTimeService();
+
+            return new ContactPointService(
+                profileClient,
+                authorizationService,
+                dateTimeService,
+                Options.Create(retentionSettings),
+                NullLogger<ContactPointService>.Instance);
         }
     }
 }

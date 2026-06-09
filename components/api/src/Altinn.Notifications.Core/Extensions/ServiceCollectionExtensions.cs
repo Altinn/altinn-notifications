@@ -28,6 +28,9 @@ public static class ServiceCollectionExtensions
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
 
         services
+            .Configure<KrrContactInfoRetentionSettings>(config.GetSection("KrrContactInfoRetention"));
+
+        services
             .AddHostedService<SmsPublishBackgroundService>()
             .AddHostedService<EmailPublishBackgroundService>();
 

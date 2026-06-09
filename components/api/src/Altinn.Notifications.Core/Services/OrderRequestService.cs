@@ -51,7 +51,7 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime currentTime = _dateTime.UtcNow();
 
-        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId, orderRequest.ResourceAction);
+        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId, orderRequest.ResourceAction, orderRequest.Creator.ShortName);
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
@@ -434,11 +434,14 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
+    /// <param name="creatorShortName">
+    /// The short name of the service owner that created the order, used to determine exemption from the KRR contact information retention check.
+    /// </param>
     /// <returns>
     /// A <see cref="RecipientLookupResult"/> containing information about reserved recipients and those
     /// with missing contact details, or <c>null</c> if all recipients already have the required contact information.
     /// </returns>
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId, string? resourceAction = null)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId, string? resourceAction = null, string? creatorShortName = null)
     {
         List<Recipient> recipientsWithoutContactPoint = FilterRecipientsWithoutContactPoints(channel, originalRecipients);
         if (recipientsWithoutContactPoint.Count == 0)
@@ -449,20 +452,20 @@ public class OrderRequestService : IOrderRequestService
         switch (channel)
         {
             case NotificationChannel.Email:
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction, creatorShortName);
                 break;
 
             case NotificationChannel.Sms:
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction, creatorShortName);
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction, creatorShortName);
                 break;
 
             case NotificationChannel.SmsPreferred:
             case NotificationChannel.EmailPreferred:
-                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction, creatorShortName);
                 break;
         }
 

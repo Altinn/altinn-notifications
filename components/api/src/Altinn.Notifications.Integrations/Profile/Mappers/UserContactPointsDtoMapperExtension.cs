@@ -21,7 +21,9 @@ public static class UserContactPointsDtoMapperExtension
             NationalIdentityNumber = userContactPointDto.NationalIdentityNumber ?? string.Empty,
             IsReserved = userContactPointDto.IsReserved,
             MobileNumber = userContactPointDto.MobileNumber ?? string.Empty,
-            Email = userContactPointDto.Email ?? string.Empty
+            Email = userContactPointDto.Email ?? string.Empty,
+            MobileNumberLastTouched = userContactPointDto.MobileNumberLastTouched,
+            EmailLastTouched = userContactPointDto.EmailLastTouched
         };
     }
 }

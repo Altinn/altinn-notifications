@@ -39,6 +39,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -53,6 +54,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -70,6 +72,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -84,6 +87,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -105,6 +109,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -119,6 +124,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -141,6 +147,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -156,6 +163,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -178,6 +186,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -193,6 +202,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<string?>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
