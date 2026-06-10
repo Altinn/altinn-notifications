@@ -1,0 +1,26 @@
+meta {
+  name: Metrics SMS Empty Key
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/metrics/sms
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key:
+}
+
+tests {
+  test("returns 401 Unauthorized", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("mentions cannot be empty", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("cannot be empty");
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: v1-get-sms-notifications
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/notifications/sms
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{v1SmsOrderId}}
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

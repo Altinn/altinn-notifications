@@ -1,0 +1,17 @@
+meta {
+  name: trigger-sendsmsdaytime
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/trigger/sendsmsdaytime
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,35 @@
+# Mock services: WireMock stubs + JWT token generator + TriggerScheduler.
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+
+WORKDIR /src
+
+# Restore
+COPY tools/dev-setup/mock-services/*.csproj tools/dev-setup/mock-services/
+RUN dotnet restore tools/dev-setup/mock-services/Altinn.Notifications.MockServices.csproj
+
+# Build
+COPY tools/dev-setup/mock-services/ tools/dev-setup/mock-services/
+RUN dotnet publish tools/dev-setup/mock-services/Altinn.Notifications.MockServices.csproj \
+    -c Release -o /app --no-restore
+
+# Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+WORKDIR /app
+COPY --from=build /app .
+
+# Copy the JWT signing certificate
+COPY components/api/test/Altinn.Notifications.Tests/jwtselfsignedcert.pfx /app/jwtselfsignedcert.pfx
+
+# The app searches several candidate paths for the cert. Place it where it can be found
+# by adding the repo-root-relative path structure.
+RUN mkdir -p /repo/components/api/test/Altinn.Notifications.Tests && \
+    cp /app/jwtselfsignedcert.pfx /repo/components/api/test/Altinn.Notifications.Tests/
+
+# WireMock listens on 0.0.0.0, Kestrel on localhost by default.
+# Override Kestrel to listen on all interfaces.
+ENV ASPNETCORE_URLS=http://+:5101
+
+EXPOSE 5020 5030 5050 5092 5101 5199
+
+WORKDIR /repo
+ENTRYPOINT ["dotnet", "/app/Altinn.Notifications.MockServices.dll"]

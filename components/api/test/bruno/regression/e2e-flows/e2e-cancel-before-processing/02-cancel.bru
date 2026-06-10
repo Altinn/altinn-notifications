@@ -1,0 +1,21 @@
+meta {
+  name: 02-cancel
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/cancel
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{e2eCancelOrderId}}
+}
+
+tests {
+  test("cancel succeeds or already processed", function() {
+    expect([200, 409]).to.include(res.status);
+  });
+}

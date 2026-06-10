@@ -1,0 +1,32 @@
+meta {
+  name: regression
+  seq: 7
+}
+
+script:pre-request {
+  //Auto-fetch a valid auth-token
+  const jwt = bru.getEnvVar("jwt");
+
+  //jwt_from is stored as a string; coerce to number so the expiry arithmetic works
+  const jwtFrom = Number(bru.getEnvVar("jwt_from"));
+
+  if(
+    //no token
+    !jwt || jwt === "null" ||
+
+    //new env
+    bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
+
+    //old token (expired)
+    Number.isNaN(jwtFrom) || (jwtFrom + 15*60*1000) < Date.now()
+    ){
+    const requestResponse = await bru.runRequest("test-util/new auth token"
+  );
+
+    if(requestResponse.status == 200){
+      console.log('Automatically (re)-aquired a JWT');
+    }else{
+      console.log('Failed automatically (re)-aquirering a JWT');
+    }
+  }
+}

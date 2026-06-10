@@ -1,0 +1,34 @@
+meta {
+  name: 02-wait-and-check-delivered
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{e2eSlowDeliveryShipmentId}}
+}
+
+script:pre-request {
+  // Slow delivery: GetOperationUpdate returns Sending twice (polled every 8s), then Delivered
+  // Need to wait for: trigger (5s) + send (5s) + 2 Sending polls (16s) + Delivered poll (8s) ≈ 35s
+  await new Promise(resolve => setTimeout(resolve, 40000));
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("email recipient reached Email_Delivered despite slow delivery", function() {
+    expect(res.body).to.be.an("object");
+    expect(res.body.recipients).to.be.an("array").that.is.not.empty;
+    const statuses = res.body.recipients.map(r => r.status);
+    expect(statuses, `recipient statuses: ${statuses.join(", ")}`).to.include("Email_Delivered");
+  });
+}

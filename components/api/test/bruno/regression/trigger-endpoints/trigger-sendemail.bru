@@ -1,0 +1,17 @@
+meta {
+  name: trigger-sendemail
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/trigger/sendemail
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,29 @@
+meta {
+  name: 02-wait-and-check
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{e2eEmailShipmentId}}
+}
+
+script:pre-request {
+  await new Promise(resolve => setTimeout(resolve, 12000));
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shipment has been processed", function() {
+    expect(res.body).to.be.an("object");
+  });
+}

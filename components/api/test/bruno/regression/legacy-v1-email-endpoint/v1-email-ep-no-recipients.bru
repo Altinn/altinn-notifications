@@ -1,0 +1,32 @@
+meta {
+  name: v1-email-ep-no-recipients
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "subject": "(REGRESSION) No recipients test",
+    "body": "(REGRESSION) Test body",
+    "contentType": "Plain",
+    "recipients": []
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions recipient", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("recipient");
+  });
+}

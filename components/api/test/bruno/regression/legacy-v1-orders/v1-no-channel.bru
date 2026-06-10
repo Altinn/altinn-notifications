@@ -1,0 +1,38 @@
+meta {
+  name: v1-no-channel
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_regression-test",
+    "emailTemplate": {
+      "subject": "test",
+      "body": "test",
+      "contentType": "Plain"
+    },
+    "recipients": [
+      {
+        "emailAddress": "test@example.com"
+      }
+    ]
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error mentions notification channel", function() {
+    const body = JSON.stringify(res.body).toLowerCase();
+    expect(body).to.include("notification channel");
+  });
+}

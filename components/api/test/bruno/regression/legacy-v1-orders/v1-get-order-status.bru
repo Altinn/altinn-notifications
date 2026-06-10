@@ -1,0 +1,21 @@
+meta {
+  name: v1-get-order-status
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/status
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{v1OrderId}}
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,50 @@
+meta {
+  name: future-multiple-recipients
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "test@example.com",
+        "emailSettings": {
+          "subject": "test",
+          "body": "test",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      },
+      "recipientPerson": {
+        "nationalIdentityNumber": "12345678901",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "channelSchema": "Email",
+        "emailSettings": {
+          "subject": "test",
+          "body": "test",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 Bad Request", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  test("error should mention exactly one recipient", function() {
+    const body = res.getBody();
+    const bodyString = JSON.stringify(body);
+    expect(bodyString.toLowerCase()).to.include("exactly one recipient");
+  });
+}
