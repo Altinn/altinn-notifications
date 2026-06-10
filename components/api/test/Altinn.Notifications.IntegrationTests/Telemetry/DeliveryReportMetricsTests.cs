@@ -227,14 +227,16 @@ public sealed class DeliveryReportMetricsTests : IDisposable
         Assert.Equal(string.Empty, EmailMaskingHelper.RedactEmailAddressesFromMessage(message, "recipient@example.com"));
     }
 
-    private static MeterListener CreateListener(
+    private MeterListener CreateListener(
         Action<Instrument, long, ReadOnlySpan<KeyValuePair<string, object?>>> onMeasurement)
     {
         var listener = new MeterListener();
 
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Name == DeliveryReportMetrics.MeterName)
+            // Match on this test's own Meter instance, not the meter name; other tests (or the
+            // application host) create meters with the same name and would otherwise be counted.
+            if (ReferenceEquals(instrument.Meter, _sut.Meter))
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }

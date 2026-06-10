@@ -318,14 +318,16 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         return new EmailDeliveryReportCommand(message);
     }
 
-    private static MeterListener CreateListener(
+    private MeterListener CreateListener(
         Action<Instrument, long, ReadOnlySpan<KeyValuePair<string, object?>>> onMeasurement)
     {
         var listener = new MeterListener();
 
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Name == DeliveryReportMetrics.MeterName)
+            // Match on this test's own Meter instance, not the meter name; other test classes
+            // running in parallel create meters with the same name and would otherwise be counted.
+            if (ReferenceEquals(instrument.Meter, _metrics.Meter))
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }
