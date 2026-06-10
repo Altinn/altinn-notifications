@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Dashboard;
 using Altinn.Notifications.Validators.Dashboard;
 
@@ -92,9 +93,13 @@ public class DashboardControllerTests
     {
         // Arrange — only one side of the range provided, so the from >= to check must not trigger
         var from = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
+        };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByNinAsync("16069412345", from, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DashboardNotification>());
+            .ReturnsAsync(serviceResult);
 
         // Act
         var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from }, CancellationToken.None);
@@ -109,9 +114,13 @@ public class DashboardControllerTests
         // Arrange
         var from = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
         var to = new DateTimeOffset(2026, 05, 10, 0, 0, 0, TimeSpan.Zero);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
+        };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByNinAsync("16069412345", from, to, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DashboardNotification>());
+            .ReturnsAsync(serviceResult);
 
         // Act
         var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345", From = from, To = to }, CancellationToken.None);
@@ -121,6 +130,23 @@ public class DashboardControllerTests
         _dashboardServiceMock.Verify(
             x => x.GetNotificationsByNinAsync("16069412345", from, to, It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByNin_NinNotFound_Returns404()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new ServiceError(404);
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByNin(new GetNotificationsByNinRequestExt { Nin = "16069412345" }, CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(404, objectResult.StatusCode);
     }
 
     [Fact]

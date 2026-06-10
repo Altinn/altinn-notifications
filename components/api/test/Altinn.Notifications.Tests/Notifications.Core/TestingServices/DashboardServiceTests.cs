@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Shared;
 
 using Moq;
 using Xunit;
@@ -53,7 +54,8 @@ public class DashboardServiceTests
             x => x.GetDashboardNotificationsByNinAsync(_recipientNin, from, to, It.IsAny<CancellationToken>()),
             Times.Once);
 
-        var entry = Assert.Single(result);
+        Assert.True(result.IsSuccess);
+        var entry = Assert.Single(result.Value!);
         Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
         Assert.Equal(_recipientNin, Assert.Single(entry.Recipients).NationalIdentityNumber);
     }
@@ -81,7 +83,8 @@ public class DashboardServiceTests
             x => x.GetDashboardNotificationsByNinAsync(_recipientNin, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.Empty(result);
+        Assert.True(result.IsError);
+        Assert.Equal(404, result.Error!.ErrorCode);
     }
 
     [Fact]

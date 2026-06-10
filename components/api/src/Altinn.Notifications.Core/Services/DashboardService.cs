@@ -1,6 +1,7 @@
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -21,8 +22,15 @@ public class DashboardService : IDashboardService
     }
 
     /// <inheritdoc/>
-    public async Task<List<DashboardNotification>> GetNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken)
+    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken)
     {
-        return await _dashboardRepository.GetDashboardNotificationsByNinAsync(recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
+        var notifications = await _dashboardRepository.GetDashboardNotificationsByNinAsync(recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
+
+        if (notifications.Count == 0)
+        {
+            return new ServiceError(404);
+        }
+
+        return notifications;
     }
 }

@@ -1,7 +1,9 @@
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Errors;
+using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
 using Altinn.Notifications.Validators.Extensions;
@@ -50,6 +52,7 @@ public class DashboardController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
     [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(404, "No notifications found for the provided NIN.")]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByNin(
         [FromQuery] GetNotificationsByNinRequestExt request,
@@ -64,8 +67,12 @@ public class DashboardController : ControllerBase
 
         try
         {
-            var result = await _dashboardService.GetNotificationsByNinAsync(request.Nin, request.From, request.To, cancellationToken);
-            return Ok(result.MapToDashboardNotificationExtList());
+            Result<List<DashboardNotification>, ServiceError> result =
+                await _dashboardService.GetNotificationsByNinAsync(request.Nin, request.From, request.To, cancellationToken);
+
+            return result.Match(
+                notifications => Ok(notifications.MapToDashboardNotificationExtList()),
+                error => StatusCode(error.ErrorCode, error.ErrorMessage));
         }
         catch (OperationCanceledException)
         {
