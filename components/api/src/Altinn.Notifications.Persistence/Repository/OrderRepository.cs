@@ -487,6 +487,7 @@ public class OrderRepository : IOrderRepository
              reader.GetValue<DateTime>("created"),
              reader.GetValue<NotificationChannel>("notificationchannel"),
              reader.GetValue<bool?>("ignorereservation"),
+             false,
              reader.GetValue<string?>("resourceid"),
              conditionEndpoint,
              new ProcessingStatus(reader.GetValue<OrderProcessingStatus>("processedstatus"), reader.GetValue<DateTime>("processed")),

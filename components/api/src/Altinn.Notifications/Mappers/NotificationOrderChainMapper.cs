@@ -173,6 +173,7 @@ public static partial class NotificationOrderChainMapper
             ResourceId = recipientPersonExt.ResourceId,
             ResourceAction = recipientPersonExt.ResourceAction,
             IgnoreReservation = recipientPersonExt.IgnoreReservation,
+            UseStaleContactInformation = recipientPersonExt.UseStaleContactInformation,
             NationalIdentityNumber = recipientPersonExt.NationalIdentityNumber,
             ChannelSchema = (NotificationChannel)recipientPersonExt.ChannelSchema
         };

@@ -82,6 +82,15 @@ public class FutureOrdersController : ControllerBase
                 return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());
             }
 
+            /* The tax administration is demanding that we use stale contact information for all recipients.
+             * This is a temporary override until they've managed to implement a client that sets the correct flag. */
+
+            if (creator.Equals("skd", StringComparison.InvariantCultureIgnoreCase))
+            {
+                notificationOrderRequest.Recipient.RecipientPerson?.UseStaleContactInformation = true;
+                notificationOrderRequest.Reminders?.ForEach(r => r.Recipient.RecipientPerson?.UseStaleContactInformation = true);
+            }
+
             var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
 
             Result<NotificationOrderChainResponse> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);

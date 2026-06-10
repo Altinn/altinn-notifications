@@ -29,6 +29,11 @@ internal sealed record RecipientDeliveryDetails
     public bool? IgnoreReservation { get; init; }
 
     /// <summary>
+    /// Gets a flag indicating whether to use stale contact information.
+    /// </summary>
+    public bool UseStaleContactInformation { get; init; }
+
+    /// <summary>
     /// Gets an optional resource ID for authorization and tracking.
     /// </summary>
     public string? ResourceId { get; init; }
