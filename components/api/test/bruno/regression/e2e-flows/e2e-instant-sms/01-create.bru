@@ -26,7 +26,12 @@ body:json {
 }
 
 script:post-response {
-  if (res.status === 201 && res.body && res.body.notification && res.body.notification.shipmentId) {
+  // Clear any stale value so a failed create can never point the follow-up at a previous shipment
+  bru.setVar("e2eSmsShipmentId", null);
+  if (res.status === 201) {
+    if (!(res.body && res.body.notification && res.body.notification.shipmentId)) {
+      throw new Error("201 response is missing notification.shipmentId");
+    }
     bru.setVar("e2eSmsShipmentId", res.body.notification.shipmentId);
   }
 }

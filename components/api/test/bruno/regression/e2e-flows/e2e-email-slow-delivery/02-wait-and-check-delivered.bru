@@ -25,7 +25,10 @@ tests {
     expect(res.status).to.equal(200);
   });
 
-  test("shipment has been processed despite slow delivery", function() {
+  test("email recipient reached Email_Delivered despite slow delivery", function() {
     expect(res.body).to.be.an("object");
+    expect(res.body.recipients).to.be.an("array").that.is.not.empty;
+    const statuses = res.body.recipients.map(r => r.status);
+    expect(statuses, `recipient statuses: ${statuses.join(", ")}`).to.include("Email_Delivered");
   });
 }

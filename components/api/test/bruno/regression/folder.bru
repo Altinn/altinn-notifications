@@ -5,15 +5,20 @@ meta {
 
 script:pre-request {
   //Auto-fetch a valid auth-token
+  const jwt = bru.getEnvVar("jwt");
+
+  //jwt_from is stored as a string; coerce to number so the expiry arithmetic works
+  const jwtFrom = Number(bru.getEnvVar("jwt_from"));
+
   if(
     //no token
-    bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
+    !jwt || jwt === "null" ||
 
     //new env
     bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
 
     //old token (expired)
-    (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now()
+    Number.isNaN(jwtFrom) || (jwtFrom + 15*60*1000) < Date.now()
     ){
     const requestResponse = await bru.runRequest("test-util/new auth token"
   );

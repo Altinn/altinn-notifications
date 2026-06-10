@@ -33,7 +33,8 @@ public class MockSmsClient : ISmsClient
     /// <inheritdoc/>
     public Task<Result<string, SmsClientErrorResponse>> SendAsync(Core.Sending.Sms sms)
     {
-        string recipient = sms.Recipient.Trim();
+        // Strip CR/LF to prevent log forging; the recipient is logged below.
+        string recipient = sms.Recipient.Trim().Replace("\r", string.Empty).Replace("\n", string.Empty);
         int attempt = _sendAttempts.AddOrUpdate(sms.NotificationId, 1, (_, prev) => prev + 1);
 
         _logger.LogInformation(

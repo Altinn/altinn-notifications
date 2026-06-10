@@ -33,4 +33,13 @@ tests {
   test("returns 201 or 422 (missing contact info in mock)", function() {
     expect([201, 422]).to.include(res.status);
   });
+
+  test("response matches the contract for its status", function() {
+    if (res.status === 201) {
+      expect(res.body.notification).to.have.property("shipmentId");
+    } else {
+      // AltinnProblemDetails for Problems.MissingContactInformation
+      expect(JSON.stringify(res.body)).to.include("NOT-00001");
+    }
+  });
 }

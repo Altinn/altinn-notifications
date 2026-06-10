@@ -24,12 +24,11 @@ tests {
     expect(res.status).to.equal(200);
   });
 
-  test("shipment has been processed (email send failed in mock)", function() {
-    // The order was created and processed, but the mock email client returned a permanent failure.
-    // The shipment should exist and have been processed regardless of send outcome.
+  test("email recipient ended in failed state", function() {
+    // The mock email client returns a permanent failure for permanent-fail@test.com
     expect(res.body).to.be.an("object");
-    const body = JSON.stringify(res.body).toLowerCase();
-    // Should contain some status information showing it was processed
-    expect(body.length).to.be.greaterThan(10);
+    expect(res.body.recipients).to.be.an("array").that.is.not.empty;
+    const statuses = res.body.recipients.map(r => r.status);
+    expect(statuses, `recipient statuses: ${statuses.join(", ")}`).to.include("Email_Failed");
   });
 }

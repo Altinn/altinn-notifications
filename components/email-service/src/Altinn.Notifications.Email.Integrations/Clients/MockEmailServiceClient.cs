@@ -36,7 +36,8 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
     {
-        string toAddress = email.ToAddress.ToLowerInvariant().Trim();
+        // Strip CR/LF to prevent log forging; the address is logged below.
+        string toAddress = email.ToAddress.ToLowerInvariant().Trim().Replace("\r", string.Empty).Replace("\n", string.Empty);
         int attempt = _sendAttempts.AddOrUpdate(email.NotificationId, 1, (_, prev) => prev + 1);
 
         _logger.LogInformation(
