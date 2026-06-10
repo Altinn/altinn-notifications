@@ -122,6 +122,16 @@ public static class ServiceUtil
     }
 
     /// <summary>
+    /// Runs Yuniql database migrations at most once per test run, before any test executes.
+    /// Called from the assembly fixture so that parallel test hosts never race on creating
+    /// the schema against an empty database (e.g. on a fresh CI database).
+    /// </summary>
+    public static void EnsureDatabaseMigrated()
+    {
+        EnsurePostgreSqlSetup(BuildConfiguration());
+    }
+
+    /// <summary>
     /// Runs Yuniql database migrations at most once per test run.
     /// so a single invocation is sufficient.
     /// </summary>
