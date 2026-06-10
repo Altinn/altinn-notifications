@@ -37,6 +37,9 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
 
         command.Parameters.AddWithValue("@shipmentId", notificationId);
         var result = await command.ExecuteScalarAsync();
-        return (int)result!;
+
+        return result is null
+            ? throw new InvalidOperationException("Database function insert_notification_log returned null.")
+            : (int)result;
     }
 }
