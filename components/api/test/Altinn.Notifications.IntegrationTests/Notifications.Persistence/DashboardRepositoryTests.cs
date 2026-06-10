@@ -103,6 +103,30 @@ public class DashboardRepositoryTests : IAsyncLifetime
         Assert.All(result, n => Assert.All(n.Recipients, r => Assert.Equal("email", r.Channel)));
     }
 
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_SingleOrderWithEmailAndSms_GroupedUnderOneShipment()
+    {
+        // Arrange — one order that produced both an email and an SMS notification for the same NIN.
+        // The SQL function returns two rows with the same shipmentid, so the second row must hit
+        // the groups.TryGetValue(shipmentId, ...) == true branch and be appended to the same entry.
+        await SeedOrderWithEmailAndSmsNotifications(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc));
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTimeOffset(2023, 06, 01, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2023, 07, 01, 0, 0, 0, TimeSpan.Zero),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Recipients.Count);
+        Assert.Contains(result[0].Recipients, r => r.Channel == "email");
+        Assert.Contains(result[0].Recipients, r => r.Channel == "sms");
+    }
+
     private static DashboardRepository GetRepository() =>
         ServiceUtil.GetServices([typeof(IDashboardRepository)])
             .OfType<DashboardRepository>()
@@ -137,6 +161,57 @@ public class DashboardRepositoryTests : IAsyncLifetime
         };
 
         await emailRepo.AddNotification(notification, requestedSendTime.AddDays(1));
+
+        _orderIdsToDelete.Add(order.Id);
+        return order.Id;
+    }
+
+    private async Task<Guid> SeedOrderWithEmailAndSmsNotifications(string recipientNin, DateTime requestedSendTime)
+    {
+        var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)])
+            .OfType<OrderRepository>()
+            .First();
+        var emailRepo = ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
+            .OfType<EmailNotificationRepository>()
+            .First();
+        var smsRepo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        NotificationOrder order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        order.RequestedSendTime = requestedSendTime;
+
+        await orderRepo.Create(order);
+
+        EmailNotification emailNotification = new()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new()
+            {
+                ToAddress = "recipient@example.com",
+                NationalIdentityNumber = recipientNin
+            },
+            SendResult = new(EmailNotificationResultType.Succeeded, requestedSendTime)
+        };
+
+        SmsNotification smsNotification = new()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new()
+            {
+                MobileNumber = "+4799999999",
+                NationalIdentityNumber = recipientNin
+            },
+            SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
+        };
+
+        await emailRepo.AddNotification(emailNotification, requestedSendTime.AddDays(1));
+        await smsRepo.AddNotification(smsNotification, requestedSendTime.AddDays(1), 1);
 
         _orderIdsToDelete.Add(order.Id);
         return order.Id;
