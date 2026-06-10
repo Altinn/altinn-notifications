@@ -1810,7 +1810,7 @@ BEGIN
         src.gatewayreference,
         src.recipient,
         src.type,
-        src.endpointtype,
+        src.destination,
         NULL::text,
         src.status,
         src.sent_timestamp
@@ -1822,16 +1822,16 @@ BEGIN
             NULL::text AS transmissionid,
             email.operationid AS operationid,
             NULL::text AS gatewayreference,
-            email.toaddress AS recipient,
+            COALESCE(email.recipientorgno, email.recipientnin) AS recipient,
             o.type AS type,
-            'email'::text AS endpointtype,
+            email.toaddress AS destination,
             email.result::text AS status,
             email.resulttime AS sent_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
         WHERE o.alternateid = _shipmentid
 
-        UNION
+        UNION ALL
 
         SELECT
             NULL::bigint AS orderchainid,
@@ -1840,9 +1840,9 @@ BEGIN
             NULL::text AS transmissionid,
             NULL::text AS operationid,
             sms.gatewayreference AS gatewayreference,
-            sms.mobilenumber AS recipient,
+            COALESCE(sms.recipientorgno, sms.recipientnin) AS recipient,
             o.type AS type,
-            'sms'::text AS endpointtype,
+            sms.mobilenumber AS destination,
             sms.result::text AS status,
             sms.resulttime AS sent_timestamp
         FROM notifications.smsnotifications sms
