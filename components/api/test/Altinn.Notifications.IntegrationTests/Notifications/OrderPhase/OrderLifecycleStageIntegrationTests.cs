@@ -21,6 +21,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.OrderLifecycleStag
 /// </summary>
 public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private const string _basePath = "/notifications/api/v1/future/orders";
     private readonly SpyContactPointServiceFactory _factory = factory;
     private readonly List<Guid> _orderIdsToDelete = [];
@@ -236,7 +238,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         if (response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, _jsonOptions);
             if (result?.OrderChainReceipt is not null)
             {
                 _orderIdsToDelete.Add(result.OrderChainReceipt.ShipmentId);
