@@ -200,6 +200,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         {
             await CleanupAsync();
             await DrainQueuesAsync();
+            GC.SuppressFinalize(this);
         }
     }
 
