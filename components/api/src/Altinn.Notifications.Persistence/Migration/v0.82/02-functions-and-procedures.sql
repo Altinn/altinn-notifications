@@ -1778,25 +1778,14 @@ $BODY$;
 
 -- insertnotificationlog.sql:
 CREATE OR REPLACE FUNCTION notifications.insert_notification_log(
-    _shipmentid uuid,
-    _type notificationordertype,
-    _orderchainid bigint DEFAULT NULL,
-    _dialogid uuid DEFAULT NULL,
-    _transmissionid text DEFAULT NULL,
-    _operationid text DEFAULT NULL,
-    _gatewayreference text DEFAULT NULL,
-    _recipient text DEFAULT NULL,
-    _destination text DEFAULT NULL,
-    _resource text DEFAULT NULL,
-    _status text DEFAULT NULL,
-    _sent_timestamp timestamp with time zone DEFAULT NULL
+    _shipmentid uuid
 )
 RETURNS bigint
 LANGUAGE plpgsql
 VOLATILE PARALLEL UNSAFE
 AS $$
 DECLARE
-    new_id bigint;
+    _row_count bigint;
 BEGIN
     INSERT INTO notifications.notificationlog (
         orderchainid,
@@ -1811,30 +1800,66 @@ BEGIN
         resource,
         status,
         sent_timestamp
-    ) VALUES (
-        _orderchainid,
-        _shipmentid,
-        _dialogid,
-        _transmissionid,
-        _operationid,
-        _gatewayreference,
-        _recipient,
-        _type,
-        _destination,
-        _resource,
-        _status,
-        _sent_timestamp
-    ) RETURNING id INTO new_id;
-    
-    RETURN new_id;
+    )
+    SELECT
+        src.orderchainid,
+        src.shipmentid,
+        src.dialogid,
+        src.transmissionid,
+        src.operationid,
+        src.gatewayreference,
+        src.recipient,
+        src.type,
+        src.endpointtype,
+        NULL::text,
+        src.status,
+        src.sent_timestamp
+    FROM (
+        SELECT
+            NULL::bigint AS orderchainid,
+            o.alternateid AS shipmentid,
+            NULL::uuid AS dialogid,
+            NULL::text AS transmissionid,
+            email.operationid AS operationid,
+            NULL::text AS gatewayreference,
+            email.toaddress AS recipient,
+            o.type AS type,
+            'email'::text AS endpointtype,
+            email.result::text AS status,
+            email.resulttime AS sent_timestamp
+        FROM notifications.emailnotifications email
+        INNER JOIN notifications.orders o ON o._id = email._orderid
+        WHERE o.alternateid = _shipmentid
+
+        UNION
+
+        SELECT
+            NULL::bigint AS orderchainid,
+            o.alternateid AS shipmentid,
+            NULL::uuid AS dialogid,
+            NULL::text AS transmissionid,
+            NULL::text AS operationid,
+            sms.gatewayreference AS gatewayreference,
+            sms.mobilenumber AS recipient,
+            o.type AS type,
+            'sms'::text AS endpointtype,
+            sms.result::text AS status,
+            sms.resulttime AS sent_timestamp
+        FROM notifications.smsnotifications sms
+        INNER JOIN notifications.orders o ON o._id = sms._orderid
+        WHERE o.alternateid = _shipmentid
+    ) src;
+
+    GET DIAGNOSTICS _row_count = ROW_COUNT;
+    RETURN _row_count;
 END;
 $$;
 
 COMMENT ON FUNCTION notifications.insert_notification_log IS
-'Inserts a new notification log entry and returns the generated ID.
-Required parameters: _shipmentid, _type
-Optional parameters: all others (will use DEFAULT values if not provided)
-Returns: The auto-generated ID of the inserted row';
+'Inserts notification log entries derived from existing email and SMS notifications for a given shipment.
+Queries emailnotifications and smsnotifications joined with orders to derive all log fields.
+Required parameters: _shipmentid
+Returns: The number of inserted rows';
 
 
 -- insertorder.sql:

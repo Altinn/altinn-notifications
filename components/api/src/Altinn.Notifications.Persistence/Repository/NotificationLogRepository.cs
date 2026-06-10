@@ -16,19 +16,19 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
         )";
 
     /// <inheritdoc/>
-    public async Task<long> InsertAsync(Guid notificationId)
+    public async Task<int> InsertAsync(Guid notificationId)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         return await ExecuteInsertAsync(notificationId, connection, transaction: null);
     }
 
     /// <inheritdoc/>
-    public async Task<long> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    public async Task<int> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         return await ExecuteInsertAsync(notificationId, connection, transaction);
     }
 
-    private static async Task<long> ExecuteInsertAsync(
+    private static async Task<int> ExecuteInsertAsync(
         Guid notificationId,
         NpgsqlConnection connection,
         NpgsqlTransaction? transaction)
@@ -37,6 +37,6 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
 
         command.Parameters.AddWithValue("@shipmentId", notificationId);
         var result = await command.ExecuteScalarAsync();
-        return (long)result!;
+        return (int)result!;
     }
 }

@@ -9,6 +9,6 @@ public interface INotificationLogRepository
     /// Inserts a notification log entry.
     /// </summary>
     /// <param name="notificationId">The ID of the notification.</param>
-    /// <returns>The auto-generated ID of the inserted log entry.</returns>
-    Task<long> InsertAsync(Guid notificationId);
+    /// <returns>The number of rows inserted.</returns>
+    Task<int> InsertAsync(Guid notificationId);
 }

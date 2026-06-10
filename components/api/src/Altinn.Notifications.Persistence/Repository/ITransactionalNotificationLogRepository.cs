@@ -16,6 +16,6 @@ public interface ITransactionalNotificationLogRepository : INotificationLogRepos
     /// <param name="notificationId">The ID of the notification.</param>
     /// <param name="connection">An existing open database connection.</param>
     /// <param name="transaction">An existing database transaction to enlist in.</param>
-    /// <returns>The auto-generated ID of the inserted log entry.</returns>
-    Task<long> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction);
+    /// <returns>The number of rows inserted.</returns>
+    Task<int> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction);
 }
