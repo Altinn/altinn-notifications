@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core
 {
-    public class SmsNotificationSummaryTests : IAsyncLifetime
+    public sealed class SmsNotificationSummaryTests : IAsyncLifetime
     {
         private readonly List<Guid> _orderIdsToDelete;
 

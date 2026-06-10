@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
+public sealed class DeadDeliveryReportRepositoryTests : IAsyncLifetime
 {
     private readonly List<long> _createdIds = [];
 

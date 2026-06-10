@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsOrdersController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IAsyncLifetime
+public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/sms";
 

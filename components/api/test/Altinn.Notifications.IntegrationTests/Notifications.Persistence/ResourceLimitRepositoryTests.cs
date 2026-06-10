@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class ResourceLimitRepositoryTests : IAsyncLifetime
+public sealed class ResourceLimitRepositoryTests : IAsyncLifetime
 {
     public ValueTask InitializeAsync()
     {

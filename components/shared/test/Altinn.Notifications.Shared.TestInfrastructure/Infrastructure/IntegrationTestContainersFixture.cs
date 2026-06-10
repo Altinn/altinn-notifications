@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 /// xUnit fixture that starts all required containers for integration tests (PostgreSQL, MSSQL, Azure Service Bus Emulator).
 /// The fixture is shared across all tests in the collection to avoid starting/stopping containers repeatedly.
 /// </summary>
-public class IntegrationTestContainersFixture : IAsyncLifetime
+public sealed class IntegrationTestContainersFixture : IAsyncLifetime
 {
     private const string _mssqlSaPassword = "YourStrong!Passw0rd";
     private INetwork? _network;

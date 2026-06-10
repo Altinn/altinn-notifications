@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class MetricsRepositoryTests : IAsyncLifetime
+public sealed class MetricsRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete = [];
 

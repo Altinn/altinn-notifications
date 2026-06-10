@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 /// Each test seeds a minimal order + SMS notification row and cleans up after itself.
 /// </summary>
 [Collection(nameof(IntegrationContainersCollection))]
-public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
+public sealed class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
 {
     private readonly IntegrationContainersFixture _fixture = fixture;
     private readonly SmsNotificationRepository _repository = new(fixture.DataSource);

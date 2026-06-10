@@ -19,7 +19,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.OrderLifecycleStag
 /// The authorization is deferred to <see cref="Altinn.Notifications.Core.Enums.OrderLifecycleStage.Processing"/> when the order is
 /// picked up by the consumer for delivery.
 /// </summary>
-public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
+public sealed class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 

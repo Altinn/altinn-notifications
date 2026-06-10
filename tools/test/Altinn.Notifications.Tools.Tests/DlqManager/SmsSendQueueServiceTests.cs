@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 /// and asserts both queue state and database state after the operation completes.
 /// </summary>
 [Collection(nameof(IntegrationContainersCollection))]
-public class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IAsyncLifetime
+public sealed class SmsSendQueueServiceTests(IntegrationContainersFixture fixture) : IAsyncLifetime
 {
     private const string _queueName = "altinn.notifications.sms.send";
 

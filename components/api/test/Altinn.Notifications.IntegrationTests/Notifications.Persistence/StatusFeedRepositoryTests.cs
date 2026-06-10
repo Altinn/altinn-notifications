@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class StatusFeedRepositoryTests : IAsyncLifetime
+public sealed class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
     private readonly List<Guid> _ordersToDelete = [];

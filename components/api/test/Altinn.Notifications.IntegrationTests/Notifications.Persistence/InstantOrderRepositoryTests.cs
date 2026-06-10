@@ -16,7 +16,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 /// <summary>
 /// Integration tests for OrderRepository focusing on instant notification functionality with flattened structures.
 /// </summary>
-public class InstantOrderRepositoryTests : IAsyncLifetime
+public sealed class InstantOrderRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _ordersChainIdsToDelete;

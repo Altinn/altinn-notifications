@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tools.Tests.Infrastructure;
 /// emulator, then runs schema migrations so tests interact with the full database schema.
 /// Shared across all test collections that declare <see cref="IntegrationContainersCollection"/>.
 /// </summary>
-public class IntegrationContainersFixture : IAsyncLifetime
+public sealed class IntegrationContainersFixture : IAsyncLifetime
 {
     private readonly IntegrationTestContainersFixture _containers = new();
 

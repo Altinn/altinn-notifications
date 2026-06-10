@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;
 
-public class StatusFeedBackfillServiceTests : IAsyncLifetime
+public sealed class StatusFeedBackfillServiceTests : IAsyncLifetime
 {
     private readonly string _testFilePath;
 

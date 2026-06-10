@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IAsyncLifetime
+public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 

@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsController
 {
-    public class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController>>, IAsyncLifetime
+    public sealed class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController>>, IAsyncLifetime
     {
         private readonly string _basePath;
         private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;

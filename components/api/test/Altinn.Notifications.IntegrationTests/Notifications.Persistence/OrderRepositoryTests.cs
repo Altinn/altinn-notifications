@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class OrderRepositoryTests : IAsyncLifetime
+public sealed class OrderRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _ordersChainIdsToDelete;

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class SmsNotificationRepositoryTests : IAsyncLifetime
+public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToCleanup = [];
 

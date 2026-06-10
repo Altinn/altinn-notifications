@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class EmailNotificationRepositoryTests : IAsyncLifetime
+public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly int _publishBatchSize = 500;

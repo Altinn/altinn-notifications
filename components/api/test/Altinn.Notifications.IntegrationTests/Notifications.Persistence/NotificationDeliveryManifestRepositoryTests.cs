@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
+public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 {
     private const int _notificationExpiryHours = 48;
 
