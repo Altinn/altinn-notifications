@@ -52,8 +52,5 @@
       <_Parameter1>Altinn.Notifications.IntegrationTestsASB</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\NotificationLog\" />
-  </ItemGroup>
 
 </Project>
