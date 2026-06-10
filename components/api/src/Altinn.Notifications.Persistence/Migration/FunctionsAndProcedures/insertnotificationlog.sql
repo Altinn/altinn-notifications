@@ -52,7 +52,7 @@ BEGIN
         INNER JOIN notifications.orders o ON o._id = email._orderid
         WHERE o.alternateid = _shipmentid
 
-        UNION
+        UNION ALL
 
         SELECT
             NULL::bigint AS orderchainid,
