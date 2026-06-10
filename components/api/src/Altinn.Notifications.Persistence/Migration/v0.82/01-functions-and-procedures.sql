@@ -758,32 +758,32 @@ CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin
     _to_date timestamptz
 )
 RETURNS TABLE (
-    notificationid uuid,
-    _orderid bigint,
+    shipmentid uuid,
     sendersreference text,
     creatorname text,
     resourceid text,
+    notificationchannel text,
     requestedsendtime timestamptz,
-    recipientorgno text,
     recipientnin text,
+    address text,
     channel text,
     result text,
     resulttime timestamptz
 )
-LANGUAGE plpgsql
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
 AS $$
-BEGIN
-    RETURN QUERY
     WITH combined AS (
         SELECT
-            e.alternateid AS notificationid,
-            o._id AS _orderid,
+            o.alternateid AS shipmentid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
             o.requestedsendtime,
-            e.recipientorgno,
             e.recipientnin,
+            e.toaddress AS address,
             'email'::text AS channel,
             e.result::text AS result,
             e.resulttime
@@ -796,14 +796,14 @@ BEGIN
         UNION ALL
 
         SELECT
-            s.alternateid AS notificationid,
-            o._id AS _orderid,
+            o.alternateid AS shipmentid,
             o.sendersreference,
             o.creatorname,
             o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
             o.requestedsendtime,
-            s.recipientorgno,
             s.recipientnin,
+            s.mobilenumber AS address,
             'sms'::text AS channel,
             s.result::text AS result,
             s.resulttime
@@ -815,7 +815,6 @@ BEGIN
     )
     SELECT * FROM combined
     ORDER BY requestedsendtime DESC;
-END;
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_nin IS
@@ -825,14 +824,14 @@ Parameters:
 - _from_date: Start of the date range (inclusive) based on requestedsendtime
 - _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:
-- notificationid: The unique identifier for the notification
-- _orderid: The internal order ID
+- shipmentid: The unique identifier for the shipment order
+- sendersreference: The sender''s reference for the order
 - creatorname: The short name of the organisation that created the order
 - resourceid: The Altinn resource the notification is related to (may be null)
-- sendersreference: The sender''s reference for the order
+- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
 - requestedsendtime: When the notification was requested to be sent
-- recipientorgno: The recipient''s organisation number (if applicable)
 - recipientnin: The recipient''s national identity number
+- address: The address the notification was sent to (email address or mobile number)
 - channel: The delivery channel (''email'' or ''sms'')
 - result: The delivery result status
 - resulttime: When the result was recorded';
