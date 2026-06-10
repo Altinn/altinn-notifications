@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
+[Collection(GlobalStateSerialCollection.Name)]
 public class ResourceLimitRepositoryTests : IAsyncLifetime
 {
     public ValueTask InitializeAsync()
