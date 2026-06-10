@@ -1745,7 +1745,7 @@ public class OrderProcessingServiceTests
         IPastDueOrderPublisher? publisher = null,
         IConditionClient? conditionClient = null,
         IOrderRepository? orderRepository = null,
-        INotificationLogRepository notificationLogRepository = null,
+        INotificationLogRepository? notificationLogRepository = null,
         ISmsOrderProcessingService? smsOrderProcessingService = null,
         IEmailOrderProcessingService? emailOrderProcessingService = null,
         IPreferredChannelProcessingService? preferredChannelProcessingService = null,
