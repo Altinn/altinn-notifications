@@ -40,6 +40,6 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
 
         return result is null
             ? throw new InvalidOperationException("Database function insert_notification_log returned null.")
-            : (int)result;
+            : (int)Convert.ToInt64(result);
     }
 }
