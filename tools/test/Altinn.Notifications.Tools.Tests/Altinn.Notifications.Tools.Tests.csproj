@@ -25,6 +25,8 @@
     <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications\Altinn.Notifications.csproj" />
     <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
     <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </ItemGroup>
@@ -32,6 +34,12 @@
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.integrationtest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Infrastructure\config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
