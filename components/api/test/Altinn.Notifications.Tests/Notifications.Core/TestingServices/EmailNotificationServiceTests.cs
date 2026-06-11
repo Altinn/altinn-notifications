@@ -264,7 +264,7 @@ public class EmailNotificationServiceTests
             SendResult = EmailNotificationResultType.Succeeded
         };
 
-        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()), new Mock<ITransactionalNotificationLogRepository>().Object)
+        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
         {
             CallBase = true
         };

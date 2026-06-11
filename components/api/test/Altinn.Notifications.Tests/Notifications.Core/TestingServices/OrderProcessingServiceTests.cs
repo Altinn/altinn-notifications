@@ -1745,7 +1745,6 @@ public class OrderProcessingServiceTests
         IPastDueOrderPublisher? publisher = null,
         IConditionClient? conditionClient = null,
         IOrderRepository? orderRepository = null,
-        INotificationLogRepository? notificationLogRepository = null,
         ISmsOrderProcessingService? smsOrderProcessingService = null,
         IEmailOrderProcessingService? emailOrderProcessingService = null,
         IPreferredChannelProcessingService? preferredChannelProcessingService = null,
@@ -1793,12 +1792,6 @@ public class OrderProcessingServiceTests
             emailAndSmsOrderProcessingService = emailAndSmsProcessingService.Object;
         }
 
-        if (notificationLogRepository == null)
-        {
-            var notificationLogRepositoryMock = new Mock<INotificationLogRepository>();
-            notificationLogRepository = notificationLogRepositoryMock.Object;
-        }
-
-        return new OrderProcessingService(orderRepository, notificationLogRepository, emailOrderProcessingService, smsOrderProcessingService, preferredChannelProcessingService, emailAndSmsOrderProcessingService, conditionClient, publisher, new LoggerFactory().CreateLogger<OrderProcessingService>());
+        return new OrderProcessingService(orderRepository, emailOrderProcessingService, smsOrderProcessingService, preferredChannelProcessingService, emailAndSmsOrderProcessingService, conditionClient, publisher, new LoggerFactory().CreateLogger<OrderProcessingService>());
     }
 }

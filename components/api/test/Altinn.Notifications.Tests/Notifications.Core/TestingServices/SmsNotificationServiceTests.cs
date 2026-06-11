@@ -45,7 +45,7 @@ public class SmsNotificationServiceTests
             GatewayReference = Guid.NewGuid().ToString()
         };
 
-        var mockRepo = new Mock<SmsNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()), new Mock<ITransactionalNotificationLogRepository>().Object)
+        var mockRepo = new Mock<SmsNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
         {
             CallBase = true
         };
