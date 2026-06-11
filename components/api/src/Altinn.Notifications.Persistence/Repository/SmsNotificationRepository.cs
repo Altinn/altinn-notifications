@@ -43,9 +43,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     public SmsNotificationRepository(
         NpgsqlDataSource dataSource,
         ILogger<SmsNotificationRepository> logger,
-        IOptions<NotificationConfig> config,
-        ITransactionalNotificationLogRepository notificationLogRepository)
-    : base(dataSource, logger, config, notificationLogRepository)
+        ITransactionalNotificationLogRepository notificationLogRepository,
+        IOptions<NotificationConfig> config)
+        : base(dataSource, logger, config, notificationLogRepository)
     {
         _dataSource = dataSource;
     }

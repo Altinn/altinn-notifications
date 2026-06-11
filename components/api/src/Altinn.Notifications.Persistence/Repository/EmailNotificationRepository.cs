@@ -42,8 +42,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     public EmailNotificationRepository(
         NpgsqlDataSource dataSource,
         ILogger<EmailNotificationRepository> logger,
-        IOptions<NotificationConfig> config,
-        ITransactionalNotificationLogRepository notificationLogRepository)
+        ITransactionalNotificationLogRepository notificationLogRepository,
+        IOptions<NotificationConfig> config)
     : base(dataSource, logger, config, notificationLogRepository)
     {
         _dataSource = dataSource;
