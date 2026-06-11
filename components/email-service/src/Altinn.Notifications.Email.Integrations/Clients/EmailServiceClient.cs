@@ -154,6 +154,10 @@ public class EmailServiceClient : IEmailServiceClient
         {
             emailSendResult = Core.Status.EmailSendResult.Failed_SupressedRecipient;
         }
+        else if (e.Message.Contains(ErrorTypes.PayloadTooLargeErrorMessage))
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_PayloadTooLarge;
+        }
         else if (e.Message.Contains(ErrorTypes.InvalidEmailFormatErrorMessage))
         {
             emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;

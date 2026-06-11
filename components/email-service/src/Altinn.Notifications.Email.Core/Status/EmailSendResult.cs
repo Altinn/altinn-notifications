@@ -53,5 +53,10 @@ public enum EmailSendResult
     /// <summary>
     /// Failed, quarantined
     /// </summary>
-    Failed_Quarantined
+    Failed_Quarantined,
+
+    /// <summary>
+    /// Failed, email payload exceeds the 10 MB limit
+    /// </summary>
+    Failed_PayloadTooLarge
 }   

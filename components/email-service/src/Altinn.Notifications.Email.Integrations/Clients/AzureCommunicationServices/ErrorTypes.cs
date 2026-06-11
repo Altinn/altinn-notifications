@@ -19,4 +19,9 @@ public static class ErrorTypes
     /// The error message returned when the recipient email format is invalid
     /// </summary>
     public const string InvalidEmailFormatErrorMessage = "Invalid format for email address";
+
+    /// <summary>
+    /// The error message returned when the email payload exceeds the 10 MB limit
+    /// </summary>
+    public const string PayloadTooLargeErrorMessage = "Email payload must be less than 10 MB.";
 }
