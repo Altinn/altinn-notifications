@@ -1790,6 +1790,7 @@ BEGIN
     INSERT INTO notifications.notificationlog (
         orderchainid,
         shipmentid,
+        creatorname,
         dialogid,
         transmissionid,
         operationid,
@@ -1804,6 +1805,7 @@ BEGIN
     SELECT
         src.orderchainid,
         src.shipmentid,
+        src.creatorname,
         src.dialogid,
         src.transmissionid,
         src.operationid,
@@ -1811,13 +1813,15 @@ BEGIN
         src.recipient,
         src.type,
         src.destination,
-        NULL::text,
+        src.resource,
         src.status,
         src.sent_timestamp
     FROM (
         SELECT
             NULL::bigint AS orderchainid,
             o.alternateid AS shipmentid,
+            o.creatorname AS creatorname,
+            o.notificationorder->>'ResourceId' AS resource,
             NULL::uuid AS dialogid,
             NULL::text AS transmissionid,
             email.operationid AS operationid,
@@ -1836,6 +1840,8 @@ BEGIN
         SELECT
             NULL::bigint AS orderchainid,
             o.alternateid AS shipmentid,
+            o.creatorname AS creatorname,
+            o.notificationorder->>'ResourceId' AS resource,
             NULL::uuid AS dialogid,
             NULL::text AS transmissionid,
             NULL::text AS operationid,

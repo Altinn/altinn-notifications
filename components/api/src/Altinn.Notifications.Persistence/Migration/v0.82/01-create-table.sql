@@ -1,7 +1,12 @@
 CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     id bigint GENERATED ALWAYS AS IDENTITY,
     orderchainid int8,
+  -- information about the sender
+  -- size ? for internal use
+  -- destination source for internal use
+  -- flag to indicate if entry should be exposed through the api
     shipmentid uuid NOT NULL,
+    creatorname text,
     dialogid uuid,
     transmissionid text,
     operationid text, 
