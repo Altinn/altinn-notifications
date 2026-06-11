@@ -278,7 +278,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object, publishBatchSize: 1);
 
         // Act
-        await service.SendNotifications(CancellationToken.None, SendingTimePolicy.Anytime);
+        await service.SendNotifications(TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
 
         // Assert
         publisherMock.Verify(
@@ -328,7 +328,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         repoMock.Verify(e => e.UpdateSendStatus(firstSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
@@ -357,7 +357,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repositoryMock.Object, commandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(
@@ -389,7 +389,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(
@@ -437,7 +437,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object, publishBatchSize: customBatchSize);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         repoMock.Verify(r => r.GetNewNotifications(It.Is<int>(b => b == customBatchSize), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Once);
@@ -463,7 +463,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(CancellationToken.None, SendingTimePolicy.Anytime));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(TestContext.Current.CancellationToken, SendingTimePolicy.Anytime));
 
         publisherMock.Verify(e => e.PublishAsync(It.Is<IReadOnlyList<Sms>>(m => m.Count == firstBatch.Count), It.IsAny<CancellationToken>()), Times.Once);
 
@@ -546,7 +546,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(e => e.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -573,7 +573,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(
@@ -644,7 +644,7 @@ public class SmsNotificationServiceTests
             commandPublisher: commandPublisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert - PublishAsync called once with a batch containing both SMS items
         commandPublisherMock.Verify(
@@ -680,7 +680,7 @@ public class SmsNotificationServiceTests
             commandPublisher: commandPublisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert - only the failed SMS has its status reset
         repoMock.Verify(r => r.UpdateSendStatus(failedSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
@@ -795,7 +795,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repository: repoMock.Object, commandPublisher: commandPublisherMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(TestContext.Current.CancellationToken));
 
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), SmsNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(batch.Count));
     }

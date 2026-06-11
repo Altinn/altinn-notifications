@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
+public sealed class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
@@ -171,8 +171,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

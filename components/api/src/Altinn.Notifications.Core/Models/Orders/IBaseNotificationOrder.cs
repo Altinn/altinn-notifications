@@ -33,6 +33,11 @@ public interface IBaseNotificationOrder
     public bool? IgnoreReservation { get; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to use potentially stale contact information from the Common Contact Register (KRR).
+    /// </summary>
+    public bool UseStaleContactInformation { get; }
+
+    /// <summary>
     /// Gets or sets the id of the resource that the notification is related to
     /// </summary>
     public string? ResourceId { get; }
