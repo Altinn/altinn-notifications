@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -1022,8 +1022,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
         var validatorMock = SetupValidator();
-        var cancellationToken = CancellationToken.None;
         var orderServiceMock = new Mock<IOrderRequestService>();
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
             .ReturnsAsync((NotificationOrderChainResponse?)null)

@@ -33,7 +33,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync([], CancellationToken.None);
+        var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -75,7 +75,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(orders, CancellationToken.None);
+        var result = await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -97,7 +97,7 @@ public class PastDueOrderPublisherTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync([CreateOrder()], CancellationToken.None));
+            () => publisher.PublishAsync([CreateOrder()], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock, loggerMock);
 
         // Act
-        var result = await publisher.PublishAsync([order], CancellationToken.None);
+        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -152,7 +152,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync([successOrder, failOrder], CancellationToken.None);
+        var result = await publisher.PublishAsync([successOrder, failOrder], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -174,7 +174,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync([order1, order2], CancellationToken.None);
+        var result = await publisher.PublishAsync([order1, order2], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -215,7 +215,7 @@ public class PastDueOrderPublisherTests
         var publisher = CreatePublisher(messageBusMock, concurrency: concurrency);
 
         // Act
-        await publisher.PublishAsync(orders, CancellationToken.None);
+        await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {orderCount} orders were processed sequentially.");
@@ -260,7 +260,7 @@ public class PastDueOrderPublisherTests
             .ToList();
         
         // Act
-        var result = await publisher.PublishAsync(orders, CancellationToken.None);
+        var result = await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);

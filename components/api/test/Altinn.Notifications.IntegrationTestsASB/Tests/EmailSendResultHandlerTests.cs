@@ -58,7 +58,9 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                     return result == EmailNotificationResultType.Delivered.ToString();
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(statusUpdated, "Notification status should be updated to 'Delivered'");
         }
     }
@@ -145,7 +147,8 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.NotNull(deadReport);
             Assert.False(deadReport.Resolved);
@@ -213,7 +216,9 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                     return deadReport is not null;
                 },
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
@@ -287,7 +292,9 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
             Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.AzureCommunicationServices, deadReport.Channel);
@@ -346,7 +353,8 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(deadReportFound, "Dead delivery report should be saved when both identifiers are empty");
             Assert.Equal("INVALID_NOTIFICATION_IDENTIFIER", deadReport!.Reason);

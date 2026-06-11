@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class ResourceLimitRepositoryTests : IAsyncLifetime
+public sealed class ResourceLimitRepositoryTests : IAsyncLifetime
 {
     public ValueTask InitializeAsync()
     {
@@ -20,8 +20,6 @@ public class ResourceLimitRepositoryTests : IAsyncLifetime
                               SET emaillimittimeout = NULL
                               WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
         await PostgreUtil.RunSql(cleanupSql);
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]

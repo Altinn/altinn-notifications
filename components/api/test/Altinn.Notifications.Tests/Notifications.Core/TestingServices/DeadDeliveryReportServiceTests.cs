@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,7 +31,7 @@ public class DeadDeliveryReportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _sut.InsertAsync(deadDeliveryReport!, CancellationToken.None));
+            () => _sut.InsertAsync(deadDeliveryReport!, TestContext.Current.CancellationToken));
 
         Assert.Equal("report", exception.ParamName);
 
@@ -59,7 +59,7 @@ public class DeadDeliveryReportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
+            () => _sut.InsertAsync(deadDeliveryReport, TestContext.Current.CancellationToken));
 
         Assert.Equal("report.DeliveryReport cannot be null or empty (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
@@ -89,7 +89,7 @@ public class DeadDeliveryReportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
+            () => _sut.InsertAsync(deadDeliveryReport, TestContext.Current.CancellationToken));
 
         Assert.Equal("report.AttemptCount must be greater than zero (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
@@ -117,7 +117,7 @@ public class DeadDeliveryReportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
+            () => _sut.InsertAsync(deadDeliveryReport, TestContext.Current.CancellationToken));
 
         Assert.Equal("report.LastAttempt must be greater than or equal to FirstSeen (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
@@ -143,17 +143,17 @@ public class DeadDeliveryReportServiceTests
         };
         
         _repositoryMock
-            .Setup(x => x.InsertAsync(It.IsAny<DeadDeliveryReport>(), CancellationToken.None))
+            .Setup(x => x.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(1L));
 
         // Act
-        await _sut.InsertAsync(deadDeliveryReport, CancellationToken.None);
+        await _sut.InsertAsync(deadDeliveryReport, TestContext.Current.CancellationToken);
 
         // Assert
         _repositoryMock.Verify(
             x => x.InsertAsync(
                 It.Is<DeadDeliveryReport>(report => report.DeliveryReport == "{}" && report.Channel == DeliveryReportChannel.AzureCommunicationServices),
-                CancellationToken.None),
+                TestContext.Current.CancellationToken),
             Times.Once);
     }
 }
