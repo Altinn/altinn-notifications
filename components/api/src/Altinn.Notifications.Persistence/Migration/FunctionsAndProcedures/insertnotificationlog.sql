@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION notifications.insert_notification_log(
-    _shipmentid uuid
+    _orderId uuid
 )
 RETURNS bigint
 LANGUAGE plpgsql
@@ -50,7 +50,7 @@ BEGIN
             email.resulttime AS sent_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
-        WHERE o.alternateid = _shipmentid
+        WHERE o.alternateid = _orderId
 
         UNION ALL
 
@@ -68,7 +68,7 @@ BEGIN
             sms.resulttime AS sent_timestamp
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
-        WHERE o.alternateid = _shipmentid
+        WHERE o.alternateid = _orderId
     ) src;
 
     GET DIAGNOSTICS _row_count = ROW_COUNT;
@@ -79,5 +79,5 @@ $$;
 COMMENT ON FUNCTION notifications.insert_notification_log IS
 'Inserts notification log entries derived from existing email and SMS notifications for a given shipment.
 Queries emailnotifications and smsnotifications joined with orders to derive all log fields.
-Required parameters: _shipmentid
+Required parameters: _orderId - the alternate ID of the order for which to insert log entries.
 Returns: The number of inserted rows';

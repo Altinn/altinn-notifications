@@ -12,30 +12,30 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
 
     private const string _insertNotificationLogSql = @"
         SELECT notifications.insert_notification_log(
-            _shipmentid := @shipmentId
+            _orderid := @orderId
         )";
 
     /// <inheritdoc/>
-    public async Task<int> InsertAsync(Guid notificationId)
+    public async Task<int> InsertAsync(Guid orderId)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
-        return await ExecuteInsertAsync(notificationId, connection, transaction: null);
+        return await ExecuteInsertAsync(orderId, connection, transaction: null);
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertAsync(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    public async Task<int> InsertAsync(Guid orderId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        return await ExecuteInsertAsync(notificationId, connection, transaction);
+        return await ExecuteInsertAsync(orderId, connection, transaction);
     }
 
     private static async Task<int> ExecuteInsertAsync(
-        Guid notificationId,
+        Guid orderId,
         NpgsqlConnection connection,
         NpgsqlTransaction? transaction)
     {
         await using var command = new NpgsqlCommand(_insertNotificationLogSql, connection, transaction);
 
-        command.Parameters.AddWithValue("@shipmentId", notificationId);
+        command.Parameters.AddWithValue("@orderId", orderId);
         var result = await command.ExecuteScalarAsync();
 
         return result is null
