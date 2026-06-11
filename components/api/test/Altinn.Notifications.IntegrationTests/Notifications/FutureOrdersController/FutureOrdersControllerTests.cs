@@ -234,7 +234,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_SkdTokenWithCorrectScope_OverridesUseStaleContectInfo_ReturnsCreatedWithOrderDetails()
+    public async Task Post_SkdTokenWithCorrectScope_OverridesUseStaleContactInfoAndReturnsCreatedWithOrderDetails()
     {
         // Arrange
         var requestExt = CreateOrderChainRequestForPerson();
@@ -266,6 +266,46 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     }
                 }
             })
+            .ReturnsAsync(expectedResponse);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("skd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        orderRequestServiceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_SkdTokenWithCorrectScope_ReturnsCreatedWithOrderDetails_NoEffectOnStaleContactInfo()
+    {
+        /* Test purely for coverage. It's not possible to verify that code has no effect on fields that don't exists. */
+
+        // Arrange
+        var requestExt = CreateOrderChainRequestForOrganization();
+        var expectedResponse = new NotificationOrderChainResponse
+        {
+            OrderChainId = Guid.NewGuid(),
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = "notification-ref"
+            }
+        };
+
+        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        orderRequestServiceMock
+            .Setup(s => s.RegisterNotificationOrderChain(
+                It.Is<NotificationOrderChainRequest>(e =>
+                    e.IdempotencyId == requestExt.IdempotencyId &&
+                    e.RequestedSendTime == requestExt.RequestedSendTime),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResponse);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
@@ -1084,6 +1124,34 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     }
                 }
             ]
+        };
+    }
+
+    /// <summary>
+    /// Creates a valid notification order chain request for testing.
+    /// </summary>
+    /// <returns>A properly configured <see cref="NotificationOrderChainRequestExt"/> instance.</returns>
+    private static NotificationOrderChainRequestExt CreateOrderChainRequestForOrganization()
+    {
+        return new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "test-id",
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "555555555",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    }
+                }
+            }
         };
     }
 
