@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -1729,6 +1729,7 @@ public class OrderProcessingServiceTests
                 resourceId: "urn:altinn:resource:app_ttd_test",
                 conditionEndpoint: null,
                 ignoreReservation: false,
+                useStaleContactInformation: false,
                 sendersReference: $"{batchPrefix}-ref-{i:D3}",
                 requestedSendTime: DateTime.UtcNow.AddMinutes(-5),
                 recipients: [new Recipient([], nationalIdentityNumber: $"1234567890{i % 10}")],
