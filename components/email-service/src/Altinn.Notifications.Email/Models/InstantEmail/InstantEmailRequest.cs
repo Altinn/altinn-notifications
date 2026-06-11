@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
@@ -52,4 +53,37 @@ public record InstantEmailRequest
     [Required]
     [JsonPropertyName("notificationId")]
     public required Guid NotificationId { get; init; }
+
+    /// <summary>
+    /// The optional attachments to include with the email.
+    /// </summary>
+    [JsonPropertyName("attachments")]
+    public ImmutableList<InstantEmailAttachmentRequest>? Attachments { get; init; }
+}
+
+/// <summary>
+/// Represents an attachment in an <see cref="InstantEmailRequest"/>.
+/// </summary>
+public record InstantEmailAttachmentRequest
+{
+    /// <summary>
+    /// The file name of the attachment.
+    /// </summary>
+    [Required]
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// The MIME type of the attachment.
+    /// </summary>
+    [Required]
+    [JsonPropertyName("contentType")]
+    public required string ContentType { get; init; }
+
+    /// <summary>
+    /// The base64-encoded content of the attachment.
+    /// </summary>
+    [Required]
+    [JsonPropertyName("base64Content")]
+    public required string Base64Content { get; init; }
 }
