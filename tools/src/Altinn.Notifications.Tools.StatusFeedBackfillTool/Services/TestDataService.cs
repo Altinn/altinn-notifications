@@ -118,7 +118,7 @@ public class TestDataService(
             await _orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.SendConditionNotMet);
             
             // Manually create status feed entry using the order repository method
-            await _orderRepository.InsertStatusFeedForOrder(orderId);
+            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
         }
     }
 
@@ -162,7 +162,7 @@ public class TestDataService(
             await _emailRepository.UpdateSendStatus(emailId, emailStatus);
             
             // Manually create status feed entry using the order repository method
-            await _orderRepository.InsertStatusFeedForOrder(orderId);
+            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
         }
     }
 

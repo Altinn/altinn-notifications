@@ -266,7 +266,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
         // Assert
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -310,7 +310,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
         // Assert
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -340,7 +340,7 @@ public class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await repo.InsertStatusFeedForOrder(nonExistentOrderId));
+            async () => await repo.InsertStatusFeedAndNotificationLogForOrder(nonExistentOrderId));
 
         Assert.Contains("Order with ID", exception.Message);
         Assert.Contains("not found", exception.Message);

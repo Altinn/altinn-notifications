@@ -174,7 +174,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         await orderRepo.SetProcessingStatus(orderId, OrderProcessingStatus.SendConditionNotMet);
         
         // Repository method automatically creates statusfeed for final states
-        await orderRepo.InsertStatusFeedForOrder(orderId);
+        await orderRepo.InsertStatusFeedAndNotificationLogForOrder(orderId);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings

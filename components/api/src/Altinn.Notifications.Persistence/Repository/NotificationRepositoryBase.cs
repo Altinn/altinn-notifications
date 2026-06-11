@@ -178,7 +178,7 @@ public abstract class NotificationRepositoryBase
             catch (Exception ex)
             {
                 var maskedAlternateId = string.Concat(alternateId.ToString().AsSpan(0, 8), "****");
-                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", maskedAlternateId);
+                _logger.LogWarning(ex, "Failed to insert status feed and notification log for completed order {AlternateId}.", maskedAlternateId);
             }
         }
         else

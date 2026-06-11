@@ -28,6 +28,18 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
         return await ExecuteInsertAsync(orderId, connection, transaction);
     }
 
+    /// <summary>
+    /// Inserts a notification log entry for the specified order.
+    /// </summary>
+    /// <param name="orderId">The ID of the order for which to insert the notification log entry.</param>
+    /// <param name="connection">The database connection to use.</param>
+    /// <param name="transaction">The database transaction to use.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    public static async Task InsertNotificationLogEntry(Guid orderId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        await ExecuteInsertAsync(orderId, connection, transaction);
+    }
+
     private static async Task<int> ExecuteInsertAsync(
         Guid orderId,
         NpgsqlConnection connection,
