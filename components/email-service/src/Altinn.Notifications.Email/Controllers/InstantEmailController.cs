@@ -78,11 +78,12 @@ public class InstantEmailController : ControllerBase
     private static Core.Sending.Email MapToEmail(InstantEmailRequest request)
     {
         return new Core.Sending.Email(
-            notificationId: request.NotificationId,
-            subject: request.Subject,
-            body: request.Body,
-            fromAddress: request.Sender,
-            toAddress: request.Recipient,
-            contentType: request.ContentType);
+            Attachments: [],
+            Body: request.Body,
+            Subject: request.Subject,
+            FromAddress: request.Sender,
+            ToAddress: request.Recipient,
+            ContentType: request.ContentType,
+            NotificationId: request.NotificationId);
     }
 }

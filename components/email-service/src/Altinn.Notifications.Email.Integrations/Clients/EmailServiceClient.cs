@@ -16,8 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Altinn.Notifications.Email.Integrations.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEmailServiceClient"/> that will use Azure Communication
-/// Services to produce an email.
+/// Represents an implementation of <see cref="IEmailServiceClient"/> that will use Azure Communication Services to produce an email.
 /// </summary>
 [ExcludeFromCodeCoverage]
 public class EmailServiceClient : IEmailServiceClient
@@ -29,7 +28,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
     /// </summary>
-    /// <param name="communicationServicesSettings">Settings for integration against Communication Services.</param>
+    /// <param name="communicationServicesSettings">Settings for integration with Communication Services.</param>
     /// <param name="emailServiceAdminSettings">Settings for email service administration and error handling.</param>
     /// <param name="logger">A logger</param>
     public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
@@ -51,17 +50,25 @@ public class EmailServiceClient : IEmailServiceClient
         EmailContent emailContent = new(email.Subject);
         switch (email.ContentType)
         {
-            case EmailContentType.Plain:
-                emailContent.PlainText = email.Body;
-                break;
             case EmailContentType.Html:
                 emailContent.Html = email.Body;
                 break;
+
+            case EmailContentType.Plain:
+                emailContent.PlainText = email.Body;
+                break;
+
             default:
                 break;
         }
 
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
+
+        foreach (var attachment in email.Attachments)
+        {
+            emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(attachment.Name, attachment.ContentType, BinaryData.FromBytes(Convert.FromBase64String(attachment.Base64Content))));
+        }
+
         try
         {
             EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 
 using Altinn.Notifications.Email.Core.Dependencies;
@@ -21,7 +22,7 @@ public class SendingServiceTests
         // Arrange
         Guid id = Guid.NewGuid();
         Notifications.Email.Core.Sending.Email email =
-        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        new(NotificationId: id, Attachments: [], Body: "body", ContentType: EmailContentType.Plain, FromAddress: "fromAddress", Subject: "test", ToAddress: "toAddress");
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
@@ -53,12 +54,47 @@ public class SendingServiceTests
     }
 
     [Fact]
+    public async Task SendAsync_WithAttachments_PassesEmailWithAttachmentsToClient()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        var attachments = ImmutableList.Create(new EmailAttachment("file.pdf", "application/pdf", "dGVzdA=="));
+
+        Notifications.Email.Core.Sending.Email email =
+        new(NotificationId: id, Attachments: attachments, Body: "body", ContentType: EmailContentType.Plain, FromAddress: "fromAddress", Subject: "test", ToAddress: "toAddress");
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendEmail(It.Is<Notifications.Email.Core.Sending.Email>(e => e.Attachments == attachments)))
+            .ReturnsAsync("operation-id");
+
+        Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
+        sendingAcceptedPublisherMock
+            .Setup(p => p.DispatchAsync(id, "operation-id"))
+            .Returns(Task.CompletedTask);
+
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
+
+        // Act
+        await sendingService.SendAsync(email);
+
+        // Assert
+        clientMock.Verify(c => c.SendEmail(It.Is<Notifications.Email.Core.Sending.Email>(e => e.Attachments == attachments)), Times.Once);
+        sendingAcceptedPublisherMock.Verify(p => p.DispatchAsync(id, "operation-id"), Times.Once);
+
+        statusDispatcherMock.VerifyNoOtherCalls();
+        emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task SendAsync_OperationIdentifierGenerated_DelegatedToSendingAcceptedPublisher()
     {
         // Arrange
         Guid id = Guid.NewGuid();
         Notifications.Email.Core.Sending.Email email =
-        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        new(NotificationId: id, Attachments: [], Body: "body", ContentType: EmailContentType.Plain, FromAddress: "fromAddress", Subject: "test", ToAddress: "toAddress");
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
@@ -91,7 +127,7 @@ public class SendingServiceTests
         // Arrange
         Guid id = Guid.NewGuid();
         Notifications.Email.Core.Sending.Email email =
-        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        new(NotificationId: id, Attachments: [], Body: "body", ContentType: EmailContentType.Plain, FromAddress: "fromAddress", Subject: "test", ToAddress: "toAddress");
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
@@ -150,7 +186,7 @@ public class SendingServiceTests
         // Arrange
         Guid id = Guid.NewGuid();
         Notifications.Email.Core.Sending.Email email =
-        new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
+        new(Attachments: [], Body: "body", ContentType: EmailContentType.Plain, FromAddress: "fromAddress", NotificationId: id, Subject: "test", ToAddress: "toAddress");
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
@@ -184,6 +220,7 @@ public class SendingServiceTests
     private static bool VerifyRateLimitData(string json, DateTime testStart, DateTime testEnd, int delaySeconds)
     {
         var data = JsonSerializer.Deserialize<ResourceLimitExceeded>(json, _caseInsensitiveOptions);
+
         return data != null &&
                data.Resource == "azure-communication-services-email" &&
                data.ResetTime >= testStart.AddSeconds(delaySeconds) &&

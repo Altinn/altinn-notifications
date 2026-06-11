@@ -33,12 +33,13 @@ public static class SendEmailCommandHandler
             command.NotificationId);
 
         var email = new Core.Sending.Email(
-            command.NotificationId,
-            command.Subject,
-            command.Body,
-            command.FromAddress,
-            command.ToAddress,
-            contentType);
+            Attachments: [],
+            Body: command.Body,
+            ContentType: contentType,
+            Subject: command.Subject,
+            ToAddress: command.ToAddress,
+            FromAddress: command.FromAddress,
+            NotificationId: command.NotificationId);
 
         try
         {
