@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
+public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
@@ -116,8 +116,6 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     {
         string sql = $"delete from notifications.orders where sendersreference like '{_sendersRefBase}%'";
         await PostgreUtil.RunSql(sql);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

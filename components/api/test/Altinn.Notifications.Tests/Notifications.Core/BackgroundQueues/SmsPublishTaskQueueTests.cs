@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -73,7 +73,7 @@ public class SmsPublishTaskQueueTests
 
         // Since a signal is already in the channel, WaitAsync should complete quickly
         var stopwatch = Stopwatch.StartNew();
-        await queue.WaitAsync(SendingTimePolicy.Anytime, CancellationToken.None);
+        await queue.WaitAsync(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
         stopwatch.Stop();
 
         Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(100));
@@ -91,7 +91,7 @@ public class SmsPublishTaskQueueTests
         Assert.True(queue.TryEnqueue(SendingTimePolicy.Daytime));
 
         // Drain (avoid affecting other tests)
-        await queue.WaitAsync(SendingTimePolicy.Daytime, CancellationToken.None);
+        await queue.WaitAsync(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class SmsPublishTaskQueueTests
         // Act / Assert
         // First enqueue + wait consumes the signal
         Assert.True(queue.TryEnqueue(SendingTimePolicy.Daytime));
-        await queue.WaitAsync(SendingTimePolicy.Daytime, CancellationToken.None);
+        await queue.WaitAsync(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
 
         // Second wait should block; use cancellation to assert blocking
         using var cancellationTokenSource = new CancellationTokenSource(150);
@@ -141,7 +141,7 @@ public class SmsPublishTaskQueueTests
         // Act / Assert
         // Enqueue and consume (still marked in-flight until MarkCompleted)
         Assert.True(queue.TryEnqueue(SendingTimePolicy.Anytime));
-        await queue.WaitAsync(SendingTimePolicy.Anytime, CancellationToken.None);
+        await queue.WaitAsync(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Still in-flight because MarkCompleted not called
         Assert.False(queue.TryEnqueue(SendingTimePolicy.Anytime));
@@ -151,6 +151,6 @@ public class SmsPublishTaskQueueTests
         Assert.True(queue.TryEnqueue(SendingTimePolicy.Anytime));
 
         // Clean up by consuming
-        await queue.WaitAsync(SendingTimePolicy.Anytime, CancellationToken.None);
+        await queue.WaitAsync(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
     }
 }

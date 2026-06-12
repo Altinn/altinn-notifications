@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
+public sealed class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
@@ -150,8 +150,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +32,7 @@ public class NotificationDeliveryManifestServiceTests
         // Arrange
         string orderCreatorName = "TEST-ORG";
         Guid orderAlternateId = Guid.NewGuid();
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         var smsDeliveryManifest = new SmsDeliveryManifest
         {
@@ -99,7 +99,7 @@ public class NotificationDeliveryManifestServiceTests
         // Arrange
         string orderCreatorName = "TEST-ORG";
         Guid orderAlternateId = Guid.NewGuid();
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken)).ReturnsAsync((INotificationDeliveryManifest?)null);
 
@@ -121,7 +121,7 @@ public class NotificationDeliveryManifestServiceTests
         // Arrange
         string orderCreatorName = "TEST-ORG";
         Guid orderAlternateId = Guid.NewGuid();
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         var smsDeliveryManifest = new SmsDeliveryManifest
         {
@@ -170,7 +170,7 @@ public class NotificationDeliveryManifestServiceTests
         // Arrange
         var invalidAlternateId = Guid.Empty;
         string orderCreatorName = "TEST-ORG";
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(
                 invalidAlternateId,
@@ -199,7 +199,7 @@ public class NotificationDeliveryManifestServiceTests
         // Arrange
         string orderCreatorName = "TEST-ORG";
         Guid orderAlternateId = Guid.NewGuid();
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         var expectedException = new InvalidOperationException("Test repository exception");
 
         _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(
@@ -222,7 +222,7 @@ public class NotificationDeliveryManifestServiceTests
     {
         // Arrange
         Guid orderAlternateId = Guid.NewGuid();
-        CancellationToken cancellationToken = CancellationToken.None;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(
                 orderAlternateId,

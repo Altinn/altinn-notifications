@@ -384,7 +384,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -413,7 +413,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         repoMock.Verify(r => r.UpdateSendStatus(firstEmail.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
@@ -442,7 +442,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         repoMock.Verify(r => r.UpdateSendStatus(firstEmail.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
@@ -462,7 +462,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -488,7 +488,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None);
+        await service.SendNotifications(TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
@@ -557,7 +557,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendNotifications(TestContext.Current.CancellationToken));
 
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
     }

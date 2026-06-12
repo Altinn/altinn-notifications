@@ -148,7 +148,7 @@ public class SmsSendQueueServiceDlqCountTests
                 DlqEnqueuedTime = DateTime.UtcNow
             };
             string json = JsonSerializer.Serialize(new List<DlqSmsItem> { item });
-            await File.WriteAllTextAsync(pendingPath, json);
+            await File.WriteAllTextAsync(pendingPath, json, TestContext.Current.CancellationToken);
 
             var mockRepo = new Mock<ISmsNotificationRepository>();
             mockRepo
@@ -241,7 +241,7 @@ public class SmsSendQueueServiceDlqCountTests
                 DlqMessageId = dlqMsgId,
                 DlqEnqueuedTime = DateTime.UtcNow
             };
-            await File.WriteAllTextAsync(expiredPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }));
+            await File.WriteAllTextAsync(expiredPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }), TestContext.Current.CancellationToken);
 
             var service = new SmsSendQueueService(
                 Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
@@ -350,7 +350,7 @@ public class SmsSendQueueServiceDlqCountTests
                 DlqMessageId = dlqMsgId,
                 DlqEnqueuedTime = DateTime.UtcNow
             };
-            await File.WriteAllTextAsync(pendingPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }));
+            await File.WriteAllTextAsync(pendingPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }), TestContext.Current.CancellationToken);
 
             var service = new SmsSendQueueService(
                 Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
@@ -461,7 +461,7 @@ public class SmsSendQueueServiceDlqCountTests
                 DlqMessageId = dlqMsgId,
                 DlqEnqueuedTime = DateTime.UtcNow
             };
-            await File.WriteAllTextAsync(pendingPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }));
+            await File.WriteAllTextAsync(pendingPath, JsonSerializer.Serialize(new List<DlqSmsItem> { item }), TestContext.Current.CancellationToken);
 
             var service = new SmsSendQueueService(
                 Options.Create(new AsbSettings { ConnectionString = string.Empty, SmsSendQueueName = "test.queue" }),
@@ -507,7 +507,7 @@ public class SmsSendQueueServiceDlqCountTests
         string expiredPath = Path.Combine(Path.GetTempPath(), $"dlq-expired-{Guid.NewGuid()}.json");
         try
         {
-            await File.WriteAllTextAsync(expiredPath, "null");
+            await File.WriteAllTextAsync(expiredPath, "null", TestContext.Current.CancellationToken);
 
             var mockClient = new Mock<ServiceBusClient>();
             var mockReceiver = new Mock<ServiceBusReceiver>();
