@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Npgsql;
 using NpgsqlTypes;
 
