@@ -22,8 +22,11 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>
     public NotificationChannel NotificationChannel { get; internal set; }
 
-    /// <inheritdoc/>>    
+    /// <inheritdoc/>>
     public bool? IgnoreReservation { get; internal set; }
+
+    /// <inheritdoc/>>
+    public bool UseStaleContactInformation { get; internal set; }
 
     /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
@@ -67,6 +70,7 @@ public class NotificationOrder : IBaseNotificationOrder
         string? resourceId,
         Uri? conditionEndpoint,
         bool? ignoreReservation,
+        bool useStaleContactInformation,
         string? sendersReference,
         DateTime requestedSendTime,
         List<Recipient> recipients,
@@ -86,6 +90,7 @@ public class NotificationOrder : IBaseNotificationOrder
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;
+        UseStaleContactInformation = useStaleContactInformation;
         ConditionEndpoint = conditionEndpoint;
         SendingTimePolicy = sendingTimePolicy;
         NotificationChannel = notificationChannel;

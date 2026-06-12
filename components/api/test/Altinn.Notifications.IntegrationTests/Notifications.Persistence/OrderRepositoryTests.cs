@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class OrderRepositoryTests : IAsyncLifetime
+public sealed class OrderRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _ordersChainIdsToDelete;
@@ -25,9 +25,9 @@ public class OrderRepositoryTests : IAsyncLifetime
         _ordersChainIdsToDelete = [];
     }
 
-    public async ValueTask InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
@@ -47,8 +47,6 @@ public class OrderRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]

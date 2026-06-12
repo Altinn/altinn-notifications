@@ -68,6 +68,7 @@ public class NotificationOrderTests
             { "requestedSendTime", "2023-02-14T08:15:00Z" },
             { "notificationChannel", "Email" },
             { "ignoreReservation", false },
+            { "useStaleContactInformation", false },
             {
                 "creator", new JsonObject()
                 {

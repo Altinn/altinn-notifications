@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
+public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 {
     private const int _notificationExpiryHours = 48;
 
@@ -39,8 +39,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdentifiers)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()
@@ -60,7 +58,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(nonExistentOrderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(nonExistentOrderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(deliveryManifest);
@@ -106,7 +104,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, wrongCreator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, wrongCreator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(deliveryManifest);
@@ -208,7 +206,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         NotificationDeliveryManifestRepository deliveryManifestRepository =
             (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)]).First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
-        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -285,7 +283,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -374,7 +372,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -469,7 +467,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
-        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -557,7 +555,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -669,7 +667,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);

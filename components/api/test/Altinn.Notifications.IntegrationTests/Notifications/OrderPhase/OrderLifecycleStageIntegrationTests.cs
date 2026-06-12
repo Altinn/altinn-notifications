@@ -19,8 +19,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.OrderLifecycleStag
 /// The authorization is deferred to <see cref="Altinn.Notifications.Core.Enums.OrderLifecycleStage.Processing"/> when the order is
 /// picked up by the consumer for delivery.
 /// </summary>
-public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
+public sealed class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory factory) : IClassFixture<SpyContactPointServiceFactory>, IAsyncLifetime
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private const string _basePath = "/notifications/api/v1/future/orders";
     private readonly SpyContactPointServiceFactory _factory = factory;
     private readonly List<Guid> _orderIdsToDelete = [];
@@ -225,7 +227,6 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         finally
         {
             _client?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 
@@ -237,7 +238,7 @@ public class OrderLifecycleStageIntegrationTests(SpyContactPointServiceFactory f
         if (response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, _jsonOptions);
             if (result?.OrderChainReceipt is not null)
             {
                 _orderIdsToDelete.Add(result.OrderChainReceipt.ShipmentId);

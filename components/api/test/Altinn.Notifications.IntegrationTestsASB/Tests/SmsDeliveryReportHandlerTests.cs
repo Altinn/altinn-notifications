@@ -12,8 +12,11 @@ using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
@@ -56,7 +59,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                     return result == SmsNotificationResultType.Delivered.ToString();
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(statusUpdated, "Notification status should be updated to 'Delivered'");
 
             // Assert - Verify gatewayReference is preserved
@@ -105,7 +110,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                     return deadReport is not null;
                 },
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved after retries are exhausted");
             Assert.Equal("RETRY_THRESHOLD_EXCEEDED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
@@ -178,7 +185,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                     return deadReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(deadReportFound, "Dead delivery report should be saved for expired notifications");
             Assert.Equal("NOTIFICATION_EXPIRED", deadReport!.Reason);
             Assert.Equal(DeliveryReportChannel.LinkMobility, deadReport.Channel);
@@ -363,7 +372,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                     return persistedReport is not null;
                 },
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(reportPersisted, "The delivery_report column should be populated after the handler runs");
             Assert.NotNull(persistedReport);

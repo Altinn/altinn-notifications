@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
@@ -57,7 +57,7 @@ public class StatusFeedServiceTests
         long seq = 1;
 
         // Act
-        var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, null, _creatorName, TestContext.Current.CancellationToken);
         
         // Assert
         statusFeedRepository.Verify(
@@ -95,7 +95,7 @@ public class StatusFeedServiceTests
         int expected = CalculateExpectedPageSize(pageSize);
 
         // Act
-        var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -149,7 +149,7 @@ public class StatusFeedServiceTests
         var sut = new StatusFeedService(mockRepository.Object, _options);
         
         // Act
-        var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, TestContext.Current.CancellationToken);
         
         // Assert
         Assert.NotNull(result);

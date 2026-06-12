@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
-    public class MetricsServiceTests : IAsyncLifetime
+    public sealed class MetricsServiceTests : IAsyncLifetime
     {
         private readonly List<Guid> _orderIdsToDelete;
 
@@ -17,15 +17,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async ValueTask InitializeAsync()
+        public ValueTask InitializeAsync()
         {
-            await ValueTask.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()
         {
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
-            GC.SuppressFinalize(this);
         }
 
         [Fact]
