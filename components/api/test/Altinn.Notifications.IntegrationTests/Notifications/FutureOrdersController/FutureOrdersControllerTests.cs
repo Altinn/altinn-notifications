@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -9,6 +9,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
@@ -229,6 +230,95 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
         Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
         Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+        orderRequestServiceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_SkdTokenWithCorrectScope_OverridesUseStaleContactInfoAndReturnsCreatedWithOrderDetails()
+    {
+        // Arrange
+        var requestExt = CreateOrderChainRequestForPerson();
+        var expectedResponse = new NotificationOrderChainResponse
+        {
+            OrderChainId = Guid.NewGuid(),
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = "notification-ref"
+            }
+        };
+
+        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        orderRequestServiceMock
+            .Setup(s => s.RegisterNotificationOrderChain(
+                It.Is<NotificationOrderChainRequest>(e =>
+                    e.IdempotencyId == requestExt.IdempotencyId &&
+                    e.RequestedSendTime == requestExt.RequestedSendTime),
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, CancellationToken>((req, ct) =>
+            {
+                Assert.True(req.Recipient.RecipientPerson?.UseStaleContactInformation);
+                if (req.Reminders != null)
+                {
+                    foreach (var reminder in req.Reminders)
+                    {
+                        Assert.True(reminder.Recipient.RecipientPerson?.UseStaleContactInformation);
+                    }
+                }
+            })
+            .ReturnsAsync(expectedResponse);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("skd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        orderRequestServiceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_SkdTokenWithCorrectScope_ReturnsCreatedWithOrderDetails_NoEffectOnStaleContactInfo()
+    {
+        /* Test purely for coverage. It's not possible to verify that code has no effect on fields that don't exists. */
+
+        // Arrange
+        var requestExt = CreateOrderChainRequestForOrganization();
+        var expectedResponse = new NotificationOrderChainResponse
+        {
+            OrderChainId = Guid.NewGuid(),
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = "notification-ref"
+            }
+        };
+
+        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        orderRequestServiceMock
+            .Setup(s => s.RegisterNotificationOrderChain(
+                It.Is<NotificationOrderChainRequest>(e =>
+                    e.IdempotencyId == requestExt.IdempotencyId &&
+                    e.RequestedSendTime == requestExt.RequestedSendTime),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("skd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         orderRequestServiceMock.VerifyAll();
     }
 
@@ -932,8 +1022,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
         var validatorMock = SetupValidator();
-        var cancellationToken = CancellationToken.None;
         var orderServiceMock = new Mock<IOrderRequestService>();
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
             .ReturnsAsync((NotificationOrderChainResponse?)null)
@@ -975,6 +1065,85 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                 {
                     EmailAddress = "test@example.com",
                     Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    }
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates a valid notification order chain request for testing.
+    /// </summary>
+    /// <returns>A properly configured <see cref="NotificationOrderChainRequestExt"/> instance.</returns>
+    private static NotificationOrderChainRequestExt CreateOrderChainRequestForPerson()
+    {
+        return new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "test-id",
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientPerson = new RecipientPersonExt
+                {
+                    NationalIdentityNumber = "55555555555",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain
+                    }
+                }
+            },
+            Reminders =
+            [
+                new NotificationReminderExt
+                {
+                    DelayDays = 3,
+                    SendersReference = "reminder-ref-1",
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientPerson = new RecipientPersonExt
+                        {
+                            NationalIdentityNumber = "55555555555",
+                            ChannelSchema = NotificationChannelExt.Email,
+                            EmailSettings = new EmailSendingOptionsExt
+                            {
+                                Body = "Reminder body",
+                                Subject = "Reminder subject",
+                                SenderEmailAddress = "sender@example.com",
+                                ContentType = EmailContentTypeExt.Plain
+                            }
+                        }
+                    }
+                }
+            ]
+        };
+    }
+
+    /// <summary>
+    /// Creates a valid notification order chain request for testing.
+    /// </summary>
+    /// <returns>A properly configured <see cref="NotificationOrderChainRequestExt"/> instance.</returns>
+    private static NotificationOrderChainRequestExt CreateOrderChainRequestForOrganization()
+    {
+        return new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "test-id",
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "555555555",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
                     {
                         Body = "Test body",
                         Subject = "Test subject",

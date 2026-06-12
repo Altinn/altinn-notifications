@@ -40,7 +40,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync(email, CancellationToken.None);
+            var result = await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
             Assert.Null(result);
         }
@@ -62,7 +62,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(email, CancellationToken.None);
+            await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
@@ -118,8 +118,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(firstEmail, CancellationToken.None);
-            await publisher.PublishAsync(secondEmail, CancellationToken.None);
+            await publisher.PublishAsync(firstEmail, TestContext.Current.CancellationToken);
+            await publisher.PublishAsync(secondEmail, TestContext.Current.CancellationToken);
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
@@ -175,7 +175,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(email, CancellationToken.None);
+            await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
@@ -215,7 +215,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync(emails, CancellationToken.None);
+            var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
             Assert.Empty(result);
         }
@@ -237,7 +237,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         {
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(emails, CancellationToken.None);
+            await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
@@ -285,7 +285,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync([], CancellationToken.None);
+            var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
             Assert.Empty(result);
 

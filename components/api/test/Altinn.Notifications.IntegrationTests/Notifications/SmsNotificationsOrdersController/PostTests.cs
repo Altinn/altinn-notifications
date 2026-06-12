@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsOrdersController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IAsyncLifetime
+public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/sms";
 
@@ -125,8 +125,6 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsN
 
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-
-        GC.SuppressFinalize(this);
     }
 
     private HttpClient GetTestClient()

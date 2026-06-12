@@ -53,6 +53,16 @@ public class RecipientPerson
     public bool IgnoreReservation { get; set; } = false;
 
     /// <summary>
+    /// Gets or sets a value indicating whether to use potentially stale contact information from the Common Contact Register (KRR).
+    /// </summary>
+    /// <remarks>
+    /// The cut-off for stale contact information is 18 months. A person with older contact information is treated as having no
+    /// contact information.
+    /// Defaults to <c>false</c>.
+    /// </remarks>
+    public bool UseStaleContactInformation { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
     /// </summary>
     /// <remarks>

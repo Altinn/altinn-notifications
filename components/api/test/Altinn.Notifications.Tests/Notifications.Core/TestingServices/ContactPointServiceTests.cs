@@ -30,7 +30,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ThrowsAsync(new TaskCanceledException("Simulated timeout"));
 
             var authorizationServiceMock = new Mock<IAuthorizationService>();
@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-                async () => await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration));
+                async () => await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false));
 
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetUserContactPoints", exception.Operation);
@@ -49,7 +49,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.True(exception.IsTransient is true);
 
             profileClientMock.Verify(
-                e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))),
+                e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)),
                 Times.Once);
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -70,7 +70,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -90,7 +90,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -105,7 +105,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -125,7 +125,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -145,7 +145,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -160,7 +160,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -224,7 +224,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipients, rawResourceIdWithPrefixAndWhitespace, OrderLifecycleStage.Processing);
+            await service.AddEmailContactPoints(recipients, rawResourceIdWithPrefixAndWhitespace, OrderLifecycleStage.Processing, false);
 
             // Assert
             var recipient = Assert.Single(recipients);
@@ -258,7 +258,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -278,7 +278,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -296,7 +296,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -316,7 +316,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -335,7 +335,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -349,7 +349,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -368,7 +368,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -387,7 +387,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -401,7 +401,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -422,7 +422,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -442,7 +442,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -456,7 +456,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -476,7 +476,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -496,7 +496,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -510,7 +510,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -529,7 +529,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -548,7 +548,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -562,7 +562,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -582,7 +582,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)))
                 .ReturnsAsync(
                 [
                     new()
@@ -601,7 +601,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -615,7 +615,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId)), It.Is<bool>(b => b == false)), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
@@ -751,7 +751,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing);
+            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -933,7 +933,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing);
+            await service.AddEmailContactPoints(recipientsToEnrich, resourceIdentifier, OrderLifecycleStage.Processing, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1031,7 +1031,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1107,7 +1107,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1177,7 +1177,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1249,7 +1249,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1316,7 +1316,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1386,7 +1386,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1454,7 +1454,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClient: profileClientMock.Object, authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1506,7 +1506,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1522,7 +1522,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
@@ -1563,7 +1563,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1574,7 +1574,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
@@ -1615,7 +1615,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1630,7 +1630,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
@@ -1670,7 +1670,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1704,7 +1704,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-                async () => await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration));
+                async () => await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false));
 
             Assert.Equal("ProfileClient", exception.DependencyName);
             Assert.Equal("GetExternalIdentityContactPoints", exception.Operation);
@@ -1752,7 +1752,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1772,7 +1772,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
@@ -1814,7 +1814,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1825,7 +1825,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             Assert.Empty(recipient.AddressInfo.OfType<EmailAddressPoint>());
 
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()), Times.Never);
             profileClientMock.Verify(e => e.GetExternalIdentityContactPoints(It.Is<List<string>>(e => e.Contains(externalIdentity))), Times.Once);
 
@@ -1866,7 +1866,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1914,7 +1914,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -1962,7 +1962,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2015,7 +2015,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddSmsContactPoints(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2069,7 +2069,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -2129,7 +2129,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration);
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null, OrderLifecycleStage.Registration, false);
 
             // Assert
             Assert.Equal(4, recipientsToEnrich.Count);

@@ -43,7 +43,7 @@ public class PastDueOrderPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Services.GetRequiredService<IPastDueOrderPublisher>();
 
-            var result = await publisher.PublishAsync(orders, CancellationToken.None);
+            var result = await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
             Assert.Empty(result);
 
@@ -71,7 +71,7 @@ public class PastDueOrderPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Services.GetRequiredService<IPastDueOrderPublisher>();
 
-            await publisher.PublishAsync([order], CancellationToken.None);
+            await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
@@ -110,7 +110,7 @@ public class PastDueOrderPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Services.GetRequiredService<IPastDueOrderPublisher>();
 
-            await publisher.PublishAsync(orders, CancellationToken.None);
+            await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, queueName, TimeSpan.FromSeconds(10));
@@ -147,7 +147,7 @@ public class PastDueOrderPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Services.GetRequiredService<IPastDueOrderPublisher>();
 
-            var result = await publisher.PublishAsync([], CancellationToken.None);
+            var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
             Assert.Empty(result);
 

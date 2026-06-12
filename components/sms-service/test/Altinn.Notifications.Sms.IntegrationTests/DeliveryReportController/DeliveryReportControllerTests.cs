@@ -4,6 +4,7 @@ using System.Text;
 
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Status;
+
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,7 +36,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -51,7 +52,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"invalid")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -67,7 +68,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"invalidusername:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -83,7 +84,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_username}:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -103,7 +104,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_username}:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

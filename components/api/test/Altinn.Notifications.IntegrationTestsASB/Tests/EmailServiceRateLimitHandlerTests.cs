@@ -58,7 +58,8 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             var handlerCalled = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(mockService.Invocations.Count > 0),
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(handlerCalled, "IAltinnServiceUpdateService.HandleServiceUpdate should have been called");
 
@@ -113,7 +114,7 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
                 deadLetterWaitTimeout);
             Assert.NotNull(deadLetterMessage);
 
-            await WaitForUtils.WaitForAsync(() => Task.FromResult(attemptCount >= expectedAttempts), maxAttempts: 10, delayMs: 200);
+            await WaitForUtils.WaitForAsync(() => Task.FromResult(attemptCount >= expectedAttempts), maxAttempts: 10, delayMs: 200, cancellationToken: TestContext.Current.CancellationToken);
 
             Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
             Assert.Equal(expectedAttempts, attemptCount);

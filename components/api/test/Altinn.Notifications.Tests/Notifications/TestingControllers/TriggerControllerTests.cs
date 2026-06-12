@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,14 +49,14 @@ public class TriggerControllerTests
     {
         // Arrange
         _statusFeedServiceMock
-            .Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None))
+            .Setup(x => x.DeleteOldStatusFeedRecords(It.IsAny<CancellationToken>()))
             .ReturnsAsync(42);
 
         // Act
-        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
+        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
 
         // Assert
-        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(CancellationToken.None), Times.Once);
+        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(It.IsAny<CancellationToken>()), Times.Once);
         Assert.IsType<OkResult>(result);
     }
 
