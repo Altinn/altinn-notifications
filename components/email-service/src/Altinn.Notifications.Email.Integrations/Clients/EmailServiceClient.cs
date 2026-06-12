@@ -67,12 +67,12 @@ public class EmailServiceClient : IEmailServiceClient
 
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
 
-        long totalBytes = 0;
-        foreach (var attachment in email.Attachments)
+        byte[][] attachmentBytes = await Task.WhenAll(email.Attachments.Select(ResolveAttachmentBytesAsync));
+
+        long totalBytes = attachmentBytes.Sum(b => (long)b.Length);
+        for (int i = 0; i < email.Attachments.Count; i++)
         {
-            byte[] bytes = await ResolveAttachmentBytesAsync(attachment);
-            totalBytes += bytes.Length;
-            emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(attachment.Name, attachment.ContentType, BinaryData.FromBytes(bytes)));
+            emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(email.Attachments[i].Name, email.Attachments[i].ContentType, BinaryData.FromBytes(attachmentBytes[i])));
         }
 
         long totalAttachmentSizeKb = (long)Math.Ceiling(totalBytes / 1024.0);
