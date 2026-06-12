@@ -81,9 +81,14 @@ public record InstantEmailAttachmentRequest
     public required string ContentType { get; init; }
 
     /// <summary>
-    /// The base64-encoded content of the attachment.
+    /// The base64-encoded content of the attachment. Mutually exclusive with <see cref="SasUrl"/>.
     /// </summary>
-    [Required]
     [JsonPropertyName("base64Content")]
-    public required string Base64Content { get; init; }
+    public string? Base64Content { get; init; }
+
+    /// <summary>
+    /// A SAS URL pointing to the attachment in blob storage. Mutually exclusive with <see cref="Base64Content"/>.
+    /// </summary>
+    [JsonPropertyName("sasUrl")]
+    public string? SasUrl { get; init; }
 }

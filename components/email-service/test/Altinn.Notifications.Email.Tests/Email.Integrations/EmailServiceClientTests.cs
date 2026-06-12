@@ -31,7 +31,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 IntermittentErrorDelay = 60
             };
             var loggerMock = new Mock<ILogger<EmailServiceClient>>();
-            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, loggerMock.Object);
+            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, new HttpClient(), loggerMock.Object);
 
             // Act
             var result = client.GetDelayFromString(input);
@@ -56,7 +56,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 IntermittentErrorDelay = configuredDelay
             };
             var loggerMock = new Mock<ILogger<EmailServiceClient>>();
-            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, loggerMock.Object);
+            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, new HttpClient(), loggerMock.Object);
 
             // Act
             var result = client.GetUnknownErrorDelay();

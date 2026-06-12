@@ -79,7 +79,7 @@ public class InstantEmailController : ControllerBase
     /// <returns>An <see cref="Core.Sending.Email"/> object populated with values from the request.</returns>
     private static Core.Sending.Email MapToEmail(InstantEmailRequest request)
     {
-        var attachments = request.Attachments?.Select(a => new EmailAttachment(a.Name, a.ContentType, a.Base64Content)).ToImmutableList() ?? [];
+        var attachments = request.Attachments?.Select(a => new EmailAttachment(a.Name, a.ContentType, Base64Content: a.Base64Content, SasUrl: a.SasUrl)).ToImmutableList() ?? [];
 
         return new Core.Sending.Email(
             Attachments: attachments,

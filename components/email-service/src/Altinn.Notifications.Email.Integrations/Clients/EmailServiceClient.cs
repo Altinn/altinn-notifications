@@ -22,6 +22,7 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
+    private readonly HttpClient _httpClient;
     private readonly ILogger<EmailServiceClient> _logger;
     private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
 
@@ -30,10 +31,12 @@ public class EmailServiceClient : IEmailServiceClient
     /// </summary>
     /// <param name="communicationServicesSettings">Settings for integration with Communication Services.</param>
     /// <param name="emailServiceAdminSettings">Settings for email service administration and error handling.</param>
+    /// <param name="httpClient">An HTTP client for downloading attachments from blob storage.</param>
     /// <param name="logger">A logger</param>
-    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
+    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, HttpClient httpClient, ILogger<EmailServiceClient> logger)
     {
         _logger = logger;
+        _httpClient = httpClient;
         var emailClientOptions = new EmailClientOptions();
         _emailServiceAdminSettings = emailServiceAdminSettings;
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
@@ -64,13 +67,15 @@ public class EmailServiceClient : IEmailServiceClient
 
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
 
+        long totalBytes = 0;
         foreach (var attachment in email.Attachments)
         {
-            emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(attachment.Name, attachment.ContentType, BinaryData.FromBytes(Convert.FromBase64String(attachment.Base64Content))));
+            byte[] bytes = await ResolveAttachmentBytesAsync(attachment);
+            totalBytes += bytes.Length;
+            emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(attachment.Name, attachment.ContentType, BinaryData.FromBytes(bytes)));
         }
 
-        long totalAttachmentSizeKb = (long)Math.Ceiling(
-            email.Attachments.Sum(a => Convert.FromBase64String(a.Base64Content).Length) / 1024.0);
+        long totalAttachmentSizeKb = (long)Math.Ceiling(totalBytes / 1024.0);
 
         _logger.LogWarning(
             "// EmailServiceClient // SendEmail // NotificationId {NotificationId} // AttachmentCount {AttachmentCount} // TotalAttachmentSizeKb {TotalAttachmentSizeKb}",
@@ -211,5 +216,20 @@ public class EmailServiceClient : IEmailServiceClient
                 .Value;
 
         return string.IsNullOrEmpty(secondsString) ? GetUnknownErrorDelay() : int.Parse(secondsString);
+    }
+
+    private async Task<byte[]> ResolveAttachmentBytesAsync(Core.Sending.EmailAttachment attachment)
+    {
+        if (!string.IsNullOrWhiteSpace(attachment.SasUrl))
+        {
+            return await _httpClient.GetByteArrayAsync(attachment.SasUrl);
+        }
+
+        if (!string.IsNullOrWhiteSpace(attachment.Base64Content))
+        {
+            return Convert.FromBase64String(attachment.Base64Content);
+        }
+
+        throw new InvalidOperationException($"Attachment '{attachment.Name}' has neither a SasUrl nor Base64Content.");
     }
 }

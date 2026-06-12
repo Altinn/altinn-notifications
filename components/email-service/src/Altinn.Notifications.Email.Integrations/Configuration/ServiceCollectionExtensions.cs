@@ -35,6 +35,8 @@ public static class ServiceCollectionExtensions
         }
 
         services
+            .AddHttpClient<EmailServiceClient>()
+            .Services
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
