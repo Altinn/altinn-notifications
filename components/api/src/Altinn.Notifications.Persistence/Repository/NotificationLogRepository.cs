@@ -12,7 +12,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
 
     private const string _insertNotificationLogSql = @"
         SELECT notifications.insert_notification_log(
-            _orderid := @orderId
+            _shipmentId := @shipmentId
         )";
 
     /// <inheritdoc/>
@@ -47,7 +47,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
     {
         await using var command = new NpgsqlCommand(_insertNotificationLogSql, connection, transaction);
 
-        command.Parameters.AddWithValue("@orderId", orderId);
+        command.Parameters.AddWithValue("@shipmentId", orderId);
         var result = await command.ExecuteScalarAsync();
 
         return result is null
