@@ -241,7 +241,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedButNoNotificationLogEntries()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -268,9 +268,14 @@ public class OrderRepositoryTests : IAsyncLifetime
         // Act
         await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
-        // Assert
+        // Assert - status feed entry is inserted
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        // Assert - no notification log entries, since SendConditionNotMet orders have no
+        // email or SMS notifications in the database for the function's join to match on
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
 
         // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
         string jsonSql = $@"select sf.orderstatus

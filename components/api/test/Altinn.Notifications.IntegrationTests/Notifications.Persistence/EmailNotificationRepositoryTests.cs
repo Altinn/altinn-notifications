@@ -245,7 +245,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_GivenEmptyToAddress_ShouldSaveTheStatusFeedEntry()
+    public async Task UpdateSendStatus_GivenEmptyToAddress_ShouldSaveStatusFeedAndNotificationLogEntries()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(toAddress: string.Empty);
@@ -255,12 +255,14 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
          .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        // Act 
+        // Act
         await sut.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Delivered);
 
         // Assert
-        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        Assert.Equal(1, count);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
     }
 
     [Fact]
@@ -435,7 +437,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailed_CompleteOrder_AndInsertToFeed()
+    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailed_CompleteOrder_InsertToFeed_AndInsertNotificationLog()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -459,12 +461,14 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         var result = await SelectEmailNotificationStatus(emailNotification.Id);
-        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
         var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
 
         Assert.NotNull(result);
         Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
-        Assert.Equal(1, count);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }
 
@@ -557,7 +561,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedEntrySuccessfully()
+    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedAndNotificationLogEntries()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -571,7 +575,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        // Act - should not throw and should insert status feed
+        // Act - should not throw and should insert status feed and notification log
         // Note: alternateId is the notification ID, not the order ID
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
         var task = (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
@@ -581,6 +585,10 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         // Assert - verify status feed entry was inserted
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        // Assert - verify notification log entry was inserted for the completed order
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(1, notificationLogCount);
     }
 
     [Fact]

@@ -546,4 +546,11 @@ public static class PostgreUtil
         string deleteSql = @"DELETE FROM notifications.orderschain WHERE orderid = ANY(@orderChainIds)";
         await RunSql(deleteSql, new NpgsqlParameter("orderChainIds", orderChainIds.ToArray()));
     }
+
+    public static async Task<int> SelectNotificationLogEntryCount(Guid shipmentId)
+    {
+        string sql = $@"SELECT COUNT(*) FROM notifications.notificationlog
+                        WHERE shipmentid = '{shipmentId}'";
+        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
+    }
 }

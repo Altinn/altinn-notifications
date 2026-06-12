@@ -161,7 +161,7 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
     /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
-    /// <param name="alternateId">The unique identifier for the order, used to retrieve its status.</param>
+    /// <param name="alternateId">The alternate ID of the email or SMS notification, used to resolve the parent order.</param>
     protected async Task InsertOrderStatusCompletedOrder(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateId)
     {
         var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
@@ -171,7 +171,7 @@ public abstract class NotificationRepositoryBase
             {
                 await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
                 await _notificationLogRepository.InsertAsync(
-                    alternateId,
+                    orderStatus.ShipmentId,
                     connection,
                     transaction);
             }
