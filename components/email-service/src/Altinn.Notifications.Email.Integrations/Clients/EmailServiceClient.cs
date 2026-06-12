@@ -72,7 +72,7 @@ public class EmailServiceClient : IEmailServiceClient
         long totalAttachmentSizeKb = email.Attachments
             .Sum(a => (long)Math.Ceiling(Convert.FromBase64String(a.Base64Content).Length / 1024.0));
 
-        _logger.LogInformation(
+        _logger.LogWarning(
             "// EmailServiceClient // SendEmail // NotificationId {NotificationId} // AttachmentCount {AttachmentCount} // TotalAttachmentSizeKb {TotalAttachmentSizeKb}",
             email.NotificationId,
             email.Attachments.Count,
