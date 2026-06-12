@@ -37,6 +37,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             foreach (Guid orderId in _orderIdsToDelete)
             {
                 await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+                await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             }
 
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);

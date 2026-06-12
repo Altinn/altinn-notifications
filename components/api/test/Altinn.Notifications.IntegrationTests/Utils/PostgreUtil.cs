@@ -553,4 +553,10 @@ public static class PostgreUtil
                         WHERE shipmentid = '{shipmentId}'";
         return await PostgreUtil.RunSqlReturnOutput<int>(sql);
     }
+
+    public static async Task DeleteNotificationLogFromDb(Guid orderId)
+    {
+        string sql = @"DELETE FROM notifications.notificationlog WHERE shipmentid = @orderId";
+        await RunSql(sql, new NpgsqlParameter("orderId", orderId));
+    }
 }

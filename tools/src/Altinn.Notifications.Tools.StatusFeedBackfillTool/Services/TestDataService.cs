@@ -80,6 +80,19 @@ public class TestDataService(
 
         await using (var command = connection.CreateCommand())
         {
+            command.CommandText = @"
+                DELETE FROM notifications.notificationlog
+                WHERE shipmentid IN (
+                    SELECT alternateid FROM notifications.orders
+                    WHERE sendersreference LIKE @prefix
+                )";
+            command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
+            var deletedNotificationLog = await command.ExecuteNonQueryAsync();
+            Console.WriteLine($"Deleted {deletedNotificationLog} notification log entries");
+        }
+
+        await using (var command = connection.CreateCommand())
+        {
             command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
             var deletedOrders = await command.ExecuteNonQueryAsync();

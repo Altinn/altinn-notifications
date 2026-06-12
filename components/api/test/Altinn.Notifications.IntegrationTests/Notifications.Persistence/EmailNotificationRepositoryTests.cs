@@ -41,8 +41,9 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         foreach (Guid orderId in _orderIdsToDelete)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
         }
-        
+
         await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
 
         GC.SuppressFinalize(this);

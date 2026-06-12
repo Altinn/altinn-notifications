@@ -26,6 +26,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         foreach (var orderId in _orderIdsToCleanup)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
 
