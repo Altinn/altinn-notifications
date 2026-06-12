@@ -69,8 +69,8 @@ public class EmailServiceClient : IEmailServiceClient
             emailMessage.Attachments.Add(new Azure.Communication.Email.EmailAttachment(attachment.Name, attachment.ContentType, BinaryData.FromBytes(Convert.FromBase64String(attachment.Base64Content))));
         }
 
-        long totalAttachmentSizeKb = email.Attachments
-            .Sum(a => (long)Math.Ceiling(Convert.FromBase64String(a.Base64Content).Length / 1024.0));
+        long totalAttachmentSizeKb = (long)Math.Ceiling(
+            email.Attachments.Sum(a => Convert.FromBase64String(a.Base64Content).Length) / 1024.0);
 
         _logger.LogWarning(
             "// EmailServiceClient // SendEmail // NotificationId {NotificationId} // AttachmentCount {AttachmentCount} // TotalAttachmentSizeKb {TotalAttachmentSizeKb}",
