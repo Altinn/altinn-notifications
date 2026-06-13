@@ -80,6 +80,19 @@ public class TestDataService(
 
         await using (var command = connection.CreateCommand())
         {
+            command.CommandText = @"
+                DELETE FROM notifications.notificationlog
+                WHERE shipmentid IN (
+                    SELECT alternateid FROM notifications.orders
+                    WHERE sendersreference LIKE @prefix
+                )";
+            command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
+            var deletedNotificationLog = await command.ExecuteNonQueryAsync();
+            Console.WriteLine($"Deleted {deletedNotificationLog} notification log entries");
+        }
+
+        await using (var command = connection.CreateCommand())
+        {
             command.CommandText = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix";
             command.Parameters.AddWithValue("prefix", _testDataPrefix + "%");
             var deletedOrders = await command.ExecuteNonQueryAsync();
@@ -118,7 +131,7 @@ public class TestDataService(
             await _orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.SendConditionNotMet);
             
             // Manually create status feed entry using the order repository method
-            await _orderRepository.InsertStatusFeedForOrder(orderId);
+            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
         }
     }
 
@@ -162,7 +175,7 @@ public class TestDataService(
             await _emailRepository.UpdateSendStatus(emailId, emailStatus);
             
             // Manually create status feed entry using the order repository method
-            await _orderRepository.InsertStatusFeedForOrder(orderId);
+            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
         }
     }
 

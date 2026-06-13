@@ -102,7 +102,7 @@ public class StatusFeedBackfillService(
                 else
                 {
                     // Actually insert the status feed entry
-                    await _orderRepository.InsertStatusFeedForOrder(orderId);
+                    await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
                     totalInserted++;
                 }
                 totalProcessed++;

@@ -37,6 +37,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             foreach (Guid orderId in _orderIdsToDelete)
             {
                 await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+                await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             }
 
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
@@ -239,7 +240,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedButNoNotificationLogEntries()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -264,11 +265,16 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
-        // Assert
+        // Assert - status feed entry is inserted
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        // Assert - no notification log entries, since SendConditionNotMet orders have no
+        // email or SMS notifications in the database for the function's join to match on
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
 
         // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
         string jsonSql = $@"select sf.orderstatus
@@ -308,7 +314,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
         // Assert
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -338,7 +344,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await repo.InsertStatusFeedForOrder(nonExistentOrderId));
+            async () => await repo.InsertStatusFeedAndNotificationLogForOrder(nonExistentOrderId));
 
         Assert.Contains("Order with ID", exception.Message);
         Assert.Contains("not found", exception.Message);
@@ -522,6 +528,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string emailTextSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{orderId}'";
         int emailTextCount = await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql);
         Assert.Equal(1, emailTextCount);
+
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid = '{orderId}' AND oc.orderid = '{orderChainId}'";
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
+        Assert.Equal(1, chainLinkCount);
     }
 
     [Fact]
@@ -692,6 +702,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string mainSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
         string firstReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
         string secondReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int mainSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(mainSmsTextSql);
@@ -700,6 +711,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainSmsCount);
         Assert.Equal(1, firstReminderSmsCount);
@@ -708,6 +720,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
     }
 
     [Fact]
@@ -924,16 +937,19 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
         string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}' and type = 'Reminder'";
         string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}' and type = 'Reminder'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainOrderCount);
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
 
         // Verify email and SMS templates were persisted correctly
         string mainSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
@@ -1172,16 +1188,19 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
         string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}' and type = 'Reminder'";
         string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}' and type = 'Reminder'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainOrderCount);
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
 
         // Verify email and SMS templates were persisted correctly
         string mainSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
