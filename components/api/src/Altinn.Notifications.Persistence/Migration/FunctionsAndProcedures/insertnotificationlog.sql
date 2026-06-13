@@ -39,12 +39,12 @@ BEGIN
         src.sent_timestamp
     FROM (
         SELECT
-            NULL::bigint AS orderchainid,
+            c._id AS orderchainid,
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
-            NULL::uuid AS dialogid,
-            NULL::text AS transmissionid,
+            c.dialogid AS dialogid,
+            c.transmissionid AS transmissionid,
             email.operationid AS operationid,
             NULL::text AS gatewayreference,
             COALESCE(email.recipientorgno, email.recipientnin) AS recipient,
@@ -54,17 +54,18 @@ BEGIN
             email.resulttime AS sent_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
+        INNER JOIN notifications.orderschain c ON c._id = o._orderschainid
         WHERE o.alternateid = _shipmentId
 
         UNION ALL
 
         SELECT
-            NULL::bigint AS orderchainid,
+            c._id AS orderchainid,
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
-            NULL::uuid AS dialogid,
-            NULL::text AS transmissionid,
+            c.dialogid AS dialogid,
+            c.transmissionid AS transmissionid,
             NULL::text AS operationid,
             sms.gatewayreference AS gatewayreference,
             COALESCE(sms.recipientorgno, sms.recipientnin) AS recipient,
@@ -74,6 +75,7 @@ BEGIN
             sms.resulttime AS sent_timestamp
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
+        INNER JOIN notifications.orderschain c ON c._id = o._orderschainid
         WHERE o.alternateid = _shipmentId
     ) src;
 
