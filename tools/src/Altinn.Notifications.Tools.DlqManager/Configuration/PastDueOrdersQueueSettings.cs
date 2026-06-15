@@ -45,4 +45,10 @@ public class PastDueOrdersQueueSettings
     /// DLQ messages should be purged only — no further action is appropriate.
     /// </summary>
     public string OtherStatusListFilePath { get; set; } = "orders-pastdue-dlq-other-status.json";
+
+    /// <summary>
+    /// Output file for the order IDs export. Contains all distinct order IDs found on the DLQ,
+    /// formatted as <c>'uuid1','uuid2',...</c> for direct use in a pgAdmin <c>IN (...)</c> clause.
+    /// </summary>
+    public string OrderIdsFilePath { get; set; } = "orders-pastdue-dlq-orderids.txt";
 }

@@ -65,9 +65,10 @@ public sealed class PastDueOrdersQueueService(
             Console.WriteLine("  6. Purge has-notifications list — purge DLQ only (notifications already exist)");
             Console.WriteLine("  7. Purge other-status list — purge DLQ only");
             Console.WriteLine("  8. Query DB state for a list file");
+            Console.WriteLine("  9. Export order IDs to file (pgAdmin format)");
             Console.WriteLine("  0. Back");
             Console.WriteLine();
-            Console.Write("Enter choice (0-8): ");
+            Console.Write("Enter choice (0-9): ");
 
             var choice = Console.ReadLine()?.Trim();
             if (choice is null) return;
@@ -82,9 +83,10 @@ public sealed class PastDueOrdersQueueService(
                 case "6": await PurgeListAsync(_queueSettings.HasNotificationsListFilePath,  "has-notifications");   break;
                 case "7": await PurgeListAsync(_queueSettings.OtherStatusListFilePath,       "other-status");        break;
                 case "8": await QueryDbStateAsync();                            break;
+                case "9": await ExportOrderIdsAsync();                          break;
                 case "0": return;
                 default:
-                    Console.WriteLine("Invalid choice. Please enter 0-8.");
+                    Console.WriteLine("Invalid choice. Please enter 0-9.");
                     break;
             }
         }
@@ -361,6 +363,49 @@ public sealed class PastDueOrdersQueueService(
             Console.WriteLine(
                 $"  {item.OrderId,-38} {status ?? _notFound,-22} {count,6}  {FormatUtc(expiryTime)}");
         }
+    }
+
+    // ── Operation 9: Export order IDs ────────────────────────────────────────
+
+    private async Task ExportOrderIdsAsync()
+    {
+        Console.WriteLine();
+        Console.WriteLine($"Exporting order IDs from DLQ for {_asbSettings.PastDueOrdersQueueName}...");
+
+        await using var receiver = _sbClient.CreateReceiver(
+            _asbSettings.PastDueOrdersQueueName,
+            new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+
+        var orderIds = new List<Guid>();
+        long fromSeq = 0;
+
+        while (true)
+        {
+            var page = await receiver.PeekMessagesAsync(maxMessages: 100, fromSequenceNumber: fromSeq);
+            if (page.Count == 0)
+                break;
+
+            foreach (var msg in page)
+            {
+                var cmd = TryDeserializeCommand(msg);
+                if (cmd?.Order is not null)
+                    orderIds.Add(cmd.Order.Id);
+                else
+                    Console.WriteLine($"  [WARN] Could not deserialize message {msg.MessageId} — skipped.");
+            }
+
+            fromSeq = page[^1].SequenceNumber + 1;
+        }
+
+        var distinct = orderIds.Distinct().ToList();
+
+        Console.WriteLine($"Found {distinct.Count} distinct order ID(s).");
+
+        // Format: 'uuid1','uuid2',... — paste directly into a pgAdmin IN (...) clause.
+        var formatted = string.Join(",", distinct.Select(id => $"'{id}'"));
+        await File.WriteAllTextAsync(_queueSettings.OrderIdsFilePath, formatted, Encoding.UTF8);
+
+        Console.WriteLine($"Saved: {_queueSettings.OrderIdsFilePath}");
     }
 
     // ── Resubmit helper ───────────────────────────────────────────────────────
