@@ -1,5 +1,6 @@
-# Generated DLQ list files may contain sensitive data (phone numbers, message bodies)
+# Generated DLQ list files may contain sensitive data (phone numbers, message bodies, order details)
 sms-send-dlq-*.json
+orders-pastdue-dlq-*.json
 
 # Build artefacts
 bin/

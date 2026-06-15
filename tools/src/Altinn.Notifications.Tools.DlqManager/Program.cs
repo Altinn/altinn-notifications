@@ -27,6 +27,9 @@ builder.Services.Configure<AsbSettings>(
 builder.Services.Configure<SmsSendQueueSettings>(
     builder.Configuration.GetSection("SmsSendQueueSettings"));
 
+builder.Services.Configure<PastDueOrdersQueueSettings>(
+    builder.Configuration.GetSection("PastDueOrdersQueueSettings"));
+
 // ── Database ─────────────────────────────────────────────────────────────────
 
 builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
@@ -44,6 +47,7 @@ builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
 // ── Repositories ─────────────────────────────────────────────────────────────
 
 builder.Services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
+builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 
 // ── Azure Service Bus ────────────────────────────────────────────────────────
 
@@ -68,6 +72,15 @@ builder.Services.AddSingleton<ISmsSendQueueService>(sp =>
     var repository = sp.GetRequiredService<ISmsNotificationRepository>();
     var sbClient = sp.GetRequiredService<ServiceBusClient>();
     return new SmsSendQueueService(asbSettings, queueSettings, repository, sbClient);
+});
+
+builder.Services.AddSingleton<IPastDueOrdersQueueService>(sp =>
+{
+    var asbSettings = sp.GetRequiredService<IOptions<AsbSettings>>();
+    var queueSettings = sp.GetRequiredService<IOptions<PastDueOrdersQueueSettings>>();
+    var repository = sp.GetRequiredService<IOrderRepository>();
+    var sbClient = sp.GetRequiredService<ServiceBusClient>();
+    return new PastDueOrdersQueueService(asbSettings, queueSettings, repository, sbClient);
 });
 
 // ── Run ───────────────────────────────────────────────────────────────────────

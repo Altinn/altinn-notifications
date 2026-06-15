@@ -13,15 +13,15 @@ public class ConsoleMenuService(IServiceProvider serviceProvider)
 
     private static readonly IReadOnlyList<string> _queueLabels =
     [
-        "altinn.notifications.sms.send",            // 1 — implemented
-        "altinn.notifications.sms.deliveryreports",  // 2
-        "altinn.notifications.sms.send.result",      // 3
-        "altinn.notifications.email.send",            // 4
-        "altinn.notifications.email.deliveryreports", // 5
-        "altinn.notifications.email.send.result",     // 6
-        "altinn.notifications.email.send.ratelimit",  // 7
+        "altinn.notifications.sms.send",                // 1 — implemented
+        "altinn.notifications.sms.deliveryreports",     // 2
+        "altinn.notifications.sms.send.result",         // 3
+        "altinn.notifications.email.send",              // 4
+        "altinn.notifications.email.deliveryreports",   // 5
+        "altinn.notifications.email.send.result",       // 6
+        "altinn.notifications.email.send.ratelimit",    // 7
         "altinn.notifications.email.check.send.status", // 8
-        "altinn.notifications.orders.pastdue"         // 9
+        "altinn.notifications.orders.pastdue"           // 9 - implemented
     ];
 
     public async Task<int> RunMenuAsync()
@@ -35,7 +35,8 @@ public class ConsoleMenuService(IServiceProvider serviceProvider)
 
             for (int i = 0; i < _queueLabels.Count; i++)
             {
-                string suffix = i == 0 ? string.Empty : "  (not yet implemented)";
+                // Indices 0 (sms.send) and 8 (orders.pastdue) are implemented.
+                string suffix = i is 0 or 8 ? string.Empty : "  (not yet implemented)";
                 Console.WriteLine($"  {i + 1}. {_queueLabels[i]}{suffix}");
             }
 
@@ -63,6 +64,11 @@ public class ConsoleMenuService(IServiceProvider serviceProvider)
                 case 1:
                     var smsSendService = _sp.GetRequiredService<ISmsSendQueueService>();
                     await smsSendService.RunMenuAsync();
+                    break;
+
+                case 9:
+                    var pastDueService = _sp.GetRequiredService<IPastDueOrdersQueueService>();
+                    await pastDueService.RunMenuAsync();
                     break;
 
                 default:

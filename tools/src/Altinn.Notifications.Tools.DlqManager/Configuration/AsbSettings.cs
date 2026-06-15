@@ -15,4 +15,9 @@ public class AsbSettings
     /// Name of the SMS send queue. Default matches the value in appsettings.json.
     /// </summary>
     public string SmsSendQueueName { get; set; } = "altinn.notifications.sms.send";
+
+    /// <summary>
+    /// Name of the past due orders queue. Default matches the value in appsettings.json.
+    /// </summary>
+    public string PastDueOrdersQueueName { get; set; } = "altinn.notifications.orders.pastdue";
 }
