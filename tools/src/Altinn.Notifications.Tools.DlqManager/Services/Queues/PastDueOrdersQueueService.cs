@@ -401,8 +401,8 @@ public sealed class PastDueOrdersQueueService(
 
         Console.WriteLine($"Found {distinct.Count} distinct order ID(s).");
 
-        // Format: 'uuid1','uuid2',... — paste directly into a pgAdmin IN (...) clause.
-        var formatted = string.Join(",", distinct.Select(id => $"'{id}'"));
+        // Format: one 'uuid' per line, comma-separated — paste directly into a pgAdmin IN (...) clause.
+        var formatted = string.Join($",{Environment.NewLine}", distinct.Select(id => $"'{id}'"));
         await File.WriteAllTextAsync(_queueSettings.OrderIdsFilePath, formatted, Encoding.UTF8);
 
         Console.WriteLine($"Saved: {_queueSettings.OrderIdsFilePath}");
