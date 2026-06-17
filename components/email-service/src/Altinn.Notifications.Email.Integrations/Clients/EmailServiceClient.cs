@@ -222,7 +222,22 @@ public class EmailServiceClient : IEmailServiceClient
     {
         if (!string.IsNullOrWhiteSpace(attachment.SasUrl))
         {
-            return await _httpClient.GetByteArrayAsync(attachment.SasUrl);
+            HttpResponseMessage response = await _httpClient.GetAsync(attachment.SasUrl);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "// EmailServiceClient // ResolveAttachmentBytesAsync // Failed to download attachment '{AttachmentName}' via SAS URL. Status: {StatusCode}",
+                    attachment.Name,
+                    (int)response.StatusCode);
+
+                throw new InvalidOperationException(
+                    $"Failed to download attachment '{attachment.Name}' via SAS URL. " +
+                    $"Status: {(int)response.StatusCode} {response.StatusCode}. " +
+                    $"The SAS URL may be expired or invalid.");
+            }
+
+            return await response.Content.ReadAsByteArrayAsync();
         }
 
         if (!string.IsNullOrWhiteSpace(attachment.Base64Content))
