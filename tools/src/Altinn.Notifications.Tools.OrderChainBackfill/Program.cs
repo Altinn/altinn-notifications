@@ -11,15 +11,8 @@ var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>(optional: true)
     .Build();
 
-var connectionString = config["PostgreSQLSettings:ConnectionString"]
+var credentials = config["PostgreSQLSettings:ConnectionString"]
     ?? throw new InvalidOperationException("PostgreSQLSettings:ConnectionString is required");
-var dbPwd = config["PostgreSQLSettings:NotificationsDbPwd"]
-    ?? throw new InvalidOperationException("PostgreSQLSettings:NotificationsDbPwd is required");
-
-if (!connectionString.Contains("{0}"))
-    throw new InvalidOperationException("ConnectionString must contain a {0} placeholder for the password");
-
-var credentials = string.Format(connectionString, dbPwd);
 
 var batchSize = int.Parse(config["BackfillSettings:BatchSize"] ?? "1000");
 var maxIterations = int.Parse(config["BackfillSettings:MaxIterations"] ?? "0");
