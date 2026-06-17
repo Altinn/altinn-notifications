@@ -1822,8 +1822,8 @@ BEGIN
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
-            c.dialogid AS dialogid,
-            c.transmissionid AS transmissionid,
+            (c.orderchain->'dialogportenAssociation'->>'dialogId')::uuid AS dialogid,
+            c.orderchain->'dialogportenAssociation'->>'transmissionId' AS transmissionid,
             email.operationid AS operationid,
             NULL::text AS gatewayreference,
             COALESCE(email.recipientorgno, email.recipientnin) AS recipient,
@@ -1833,7 +1833,7 @@ BEGIN
             email.resulttime AS sent_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
-        INNER JOIN notifications.orderschain c ON c._id = o._orderschainid
+        LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentId
 
         UNION ALL
@@ -1843,8 +1843,8 @@ BEGIN
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
-            c.dialogid AS dialogid,
-            c.transmissionid AS transmissionid,
+            (c.orderchain->'dialogportenAssociation'->>'dialogId')::uuid AS dialogid,
+            c.orderchain->'dialogportenAssociation'->>'transmissionId' AS transmissionid,
             NULL::text AS operationid,
             sms.gatewayreference AS gatewayreference,
             COALESCE(sms.recipientorgno, sms.recipientnin) AS recipient,
@@ -1854,7 +1854,7 @@ BEGIN
             sms.resulttime AS sent_timestamp
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
-        INNER JOIN notifications.orderschain c ON c._id = o._orderschainid
+        LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentId
     ) src;
 
