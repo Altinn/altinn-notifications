@@ -58,7 +58,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(1, rowsInserted);
 
         // Assert — persisted properties
-        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(orderId);
+        NotificationLogEntry? entry = (await repo.GetNotificationLogEntries(orderId.ToString(), NotificationLogIdType.ShipmentId, TestContext.Current.CancellationToken)).FirstOrDefault();
         Assert.NotNull(entry);
 
         Assert.Equal(orderId, entry.ShipmentId);
@@ -108,7 +108,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(1, rowsInserted);
 
         // Assert — persisted properties
-        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(orderId);
+        NotificationLogEntry? entry = (await repo.GetNotificationLogEntries(orderId.ToString(), NotificationLogIdType.ShipmentId, TestContext.Current.CancellationToken)).FirstOrDefault();
         Assert.NotNull(entry);
 
         Assert.Equal(orderId, entry.ShipmentId);
@@ -145,7 +145,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(1, rowsInserted);
 
         // Assert — fields sourced from orderschain must all be null for a standalone order
-        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(order.Id);
+        NotificationLogEntry? entry = (await repo.GetNotificationLogEntries(order.Id.ToString(), NotificationLogIdType.ShipmentId, TestContext.Current.CancellationToken)).FirstOrDefault();
         Assert.NotNull(entry);
 
         Assert.Equal(order.Id, entry.ShipmentId);

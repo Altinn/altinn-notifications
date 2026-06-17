@@ -36,6 +36,10 @@
 /// <param name="Destination">The email address or mobile number the notification was sent to.</param>
 /// <param name="Resource">The Altinn resource identifier linked to this notification.</param>
 /// <param name="Status">The delivery result status at the time the log entry was created.</param>
+/// <param name="CreatedTimestamp">The UTC timestamp when the log entry was created.</param>
+/// <param name="SentTimestamp">
+/// The UTC timestamp when the notification was sent, or <see langword="null"/> if not yet sent.
+/// </param>
 public record NotificationLogEntry(
     long? OrderChainId,
     Guid ShipmentId,
@@ -48,4 +52,6 @@ public record NotificationLogEntry(
     string Type,
     string? Destination,
     string? Resource,
-    string? Status);
+    string? Status,
+    DateTime CreatedTimestamp,
+    DateTime? SentTimestamp);

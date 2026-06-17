@@ -711,7 +711,7 @@ public static class PostgreUtil
     /// then inserts a delivered SMS notification. Intended for NotificationLogRepository tests.
     /// </summary>
     /// <returns>The order alternate ID (shipment ID) and the bigint chain DB ID.</returns>
-    public static async Task<(Guid OrderId, long ChainDbId, Guid orderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
+    public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
@@ -845,54 +845,5 @@ public static class PostgreUtil
         }
 
         return (orderId, chainDbId, orderChainId);
-    }
-
-    /// <summary>
-    /// Reads a single notificationlog entry for the given shipment ID.
-    /// Returns null if no row exists.
-    /// </summary>
-    public static async Task<NotificationLogEntry?> GetNotificationLogEntry(Guid shipmentId)
-    {
-        const string sql = """
-            SELECT
-                orderchainid,
-                shipmentid,
-                creatorname,
-                dialogid,
-                transmissionid,
-                operationid,
-                gatewayreference,
-                recipient,
-                type,
-                destination,
-                resource,
-                status
-            FROM notifications.notificationlog
-            WHERE shipmentid = @shipmentId
-            LIMIT 1
-            """;
-
-        await using NpgsqlCommand cmd = DataSource.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("@shipmentId", shipmentId);
-
-        await using NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
-        {
-            return null;
-        }
-
-        return new NotificationLogEntry(
-            OrderChainId: await reader.IsDBNullAsync(0) ? null : await reader.GetFieldValueAsync<long>(0),
-            ShipmentId: await reader.GetFieldValueAsync<Guid>(1),
-            CreatorName: await reader.IsDBNullAsync(2) ? null : await reader.GetFieldValueAsync<string>(2),
-            DialogId: await reader.IsDBNullAsync(3) ? null : await reader.GetFieldValueAsync<Guid>(3),
-            TransmissionId: await reader.IsDBNullAsync(4) ? null : await reader.GetFieldValueAsync<string>(4),
-            OperationId: await reader.IsDBNullAsync(5) ? null : await reader.GetFieldValueAsync<string>(5),
-            GatewayReference: await reader.IsDBNullAsync(6) ? null : await reader.GetFieldValueAsync<string>(6),
-            Recipient: await reader.IsDBNullAsync(7) ? null : await reader.GetFieldValueAsync<string>(7),
-            Type: await reader.GetFieldValueAsync<string>(8),
-            Destination: await reader.IsDBNullAsync(9) ? null : await reader.GetFieldValueAsync<string>(9),
-            Resource: await reader.IsDBNullAsync(10) ? null : await reader.GetFieldValueAsync<string>(10),
-            Status: await reader.IsDBNullAsync(11) ? null : await reader.GetFieldValueAsync<string>(11));
     }
 }
