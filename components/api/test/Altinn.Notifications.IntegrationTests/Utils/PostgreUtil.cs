@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Orders;
@@ -388,6 +390,22 @@ public static class PostgreUtil
         return result;
     }
 
+    public static async Task<T> RunSqlReturnOutput<T>(string query, params NpgsqlParameter[] parameters)
+    {
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
+
+        if (parameters.Length > 0)
+        {
+            pgcom.Parameters.AddRange(parameters);
+        }
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        T result = reader.GetValue<T>(0);
+        return result;
+    }
+
     public static async Task<string?> GetStatusFeedOrderStatusJson(Guid orderId)
     {
         var sql = @"SELECT s.orderstatus::text 
@@ -550,9 +568,9 @@ public static class PostgreUtil
 
     public static async Task<int> SelectNotificationLogEntryCount(Guid shipmentId)
     {
-        string sql = $@"SELECT COUNT(*) FROM notifications.notificationlog
-                        WHERE shipmentid = '{shipmentId}'";
-        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        const string sql = @"SELECT COUNT(*) FROM notifications.notificationlog
+                             WHERE shipmentid = @shipmentId";
+        return await PostgreUtil.RunSqlReturnOutput<int>(sql, new NpgsqlParameter("shipmentId", shipmentId));
     }
 
     public static async Task DeleteNotificationLogFromDb(Guid orderId)
@@ -710,7 +728,14 @@ public static class PostgreUtil
     /// Inserts an orderschain row with Dialogporten identifiers and an SMS order linked to it,
     /// then inserts a delivered SMS notification. Intended for NotificationLogRepository tests.
     /// </summary>
-    /// <returns>The order alternate ID (shipment ID) and the bigint chain DB ID.</returns>
+    /// <returns>
+    /// A tuple containing:
+    /// <list type="bullet">
+    /// <item><description><c>OrderId</c>: The alternate ID of the SMS order (shipment ID).</description></item>
+    /// <item><description><c>ChainDbId</c>: The bigint primary key of the inserted order chain row.</description></item>
+    /// <item><description><c>OrderChainId</c>: The alternate ID (UUID) of the inserted order chain.</description></item>
+    /// </list>
+    /// </returns>
     public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
         Guid dialogId,
         string transmissionId,

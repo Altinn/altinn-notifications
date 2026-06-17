@@ -4,15 +4,15 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-using OpenTelemetry;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 {
-    private readonly List<Guid> _orderIdsToCleanup = new();
-    private readonly List<Guid> _orderChainIdsToCleanup = new();
+    private readonly List<Guid> _orderIdsToCleanup = [];
+    private readonly List<Guid> _orderChainIdsToCleanup = [];
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
@@ -23,6 +23,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
+
+        await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToCleanup);
     }
 
     [Fact]

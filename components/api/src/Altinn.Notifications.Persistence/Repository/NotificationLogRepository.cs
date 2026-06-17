@@ -9,7 +9,9 @@ using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
 
-/// <inheritdoc/>
+/// <summary>
+/// Repository for inserting and querying notification log entries.
+/// </summary>
 [ExcludeFromCodeCoverage]
 public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransactionalNotificationLogRepository
 {
