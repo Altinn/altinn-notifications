@@ -3,6 +3,7 @@
     <Project Path="src/Altinn.Notifications.Tools.DlqManager/Altinn.Notifications.Tools.DlqManager.csproj" />
     <Project Path="src/Altinn.Notifications.Tools.RetryDeadDeliveryReports/Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
     <Project Path="src/Altinn.Notifications.Tools.StatusFeedBackfillTool/Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
+    <Project Path="src/Altinn.Notifications.Tools.OrderChainBackfill/Altinn.Notifications.Tools.OrderChainBackfill.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj" />
