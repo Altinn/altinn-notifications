@@ -565,8 +565,8 @@ public static class PostgreUtil
     /// Inserts an orderschain row with Dialogporten identifiers and an email order linked to it,
     /// then inserts a delivered email notification. Intended for NotificationLogRepository tests.
     /// </summary>
-    /// <returns>The order alternate ID (shipment ID) and the bigint chain DB ID.</returns>
-    public static async Task<(Guid OrderId, long ChainDbId)> PopulateDBWithChainedOrderAndEmailNotification(
+    /// <returns>The order alternate ID (shipment ID), the bigint chain DB ID, and the order chain ID.</returns>
+    public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndEmailNotification(
         Guid dialogId,
         string transmissionId,
         string toAddress = "log-test@example.com",
@@ -703,7 +703,7 @@ public static class PostgreUtil
             await cmd.ExecuteNonQueryAsync();
         }
 
-        return (orderId, chainDbId);
+        return (orderId, chainDbId, orderChainId);
     }
 
     /// <summary>
@@ -711,7 +711,7 @@ public static class PostgreUtil
     /// then inserts a delivered SMS notification. Intended for NotificationLogRepository tests.
     /// </summary>
     /// <returns>The order alternate ID (shipment ID) and the bigint chain DB ID.</returns>
-    public static async Task<(Guid OrderId, long ChainDbId)> PopulateDBWithChainedOrderAndSmsNotification(
+    public static async Task<(Guid OrderId, long ChainDbId, Guid orderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
@@ -844,7 +844,7 @@ public static class PostgreUtil
             await cmd.ExecuteNonQueryAsync();
         }
 
-        return (orderId, chainDbId);
+        return (orderId, chainDbId, orderChainId);
     }
 
     /// <summary>

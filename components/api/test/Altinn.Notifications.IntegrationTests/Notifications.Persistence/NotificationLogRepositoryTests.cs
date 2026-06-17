@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-
+using OpenTelemetry;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -12,6 +12,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToCleanup = new();
+    private readonly List<Guid> _orderChainIdsToCleanup = new();
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
@@ -35,7 +36,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
-        (Guid orderId, long chainDbId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
+        (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
             dialogId: dialogId,
             transmissionId: transmissionId,
             toAddress: toAddress,
@@ -44,6 +45,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             resourceId: resourceId);
 
         _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
 
         INotificationLogRepository repo = ServiceUtil
             .GetServices([typeof(INotificationLogRepository)])
@@ -85,7 +87,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
-        (Guid orderId, long chainDbId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
+        (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
             dialogId: dialogId,
             transmissionId: transmissionId,
             mobileNumber: mobileNumber,
@@ -94,6 +96,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             resourceId: resourceId);
 
         _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
 
         INotificationLogRepository repo = ServiceUtil
             .GetServices([typeof(INotificationLogRepository)])
@@ -128,7 +131,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     public async Task InsertAsync_WithStandaloneOrder_ChainDerivedFieldsAreNull()
     {
         // Arrange — standalone order has no orderschain row, so _orderchainid is NULL.
-        (NotificationOrder order, EmailNotification emailNotification) =
+        (NotificationOrder order, EmailNotification _) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true);
 
         _orderIdsToCleanup.Add(order.Id);
