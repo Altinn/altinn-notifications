@@ -8,12 +8,12 @@ import { getFromSecretSource } from "../secret-reader.js";
 // Storage to hold the cached token and its expiration time
 let authenticationStorage = {
     expiresAt: 0,
-    cachedToken: null
+    cachedToken: null,
 };
 
 /*
  * Generate enterprise token for test environment.
- * 
+ *
  * @param {Object} queryParams - The query parameters to be included in the token generation request.
  * @returns {Promise<string>} The generated enterprise token.
  */
@@ -37,12 +37,19 @@ async function generateToken(endpoint) {
     const skewSeconds = 30;
 
     // Return cached token if it exists and is not expired
-    if (authenticationStorage.cachedToken && (authenticationStorage.expiresAt - skewSeconds) > currentTime) {
+    if (
+        authenticationStorage.cachedToken &&
+        authenticationStorage.expiresAt - skewSeconds > currentTime
+    ) {
         return authenticationStorage.cachedToken;
     }
 
-    const tokenGeneratorUserName = await getFromSecretSource('tokenGeneratorUserName');
-    const tokenGeneratorUserPwd = await getFromSecretSource('tokenGeneratorUserPwd');
+    const tokenGeneratorUserName = await getFromSecretSource(
+        "tokenGeneratorUserName"
+    );
+    const tokenGeneratorUserPwd = await getFromSecretSource(
+        "tokenGeneratorUserPwd"
+    );
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
     const encodedCredentials = encoding.b64encode(credentials);
 
@@ -55,7 +62,9 @@ async function generateToken(endpoint) {
     }
 
     authenticationStorage.cachedToken = response.body;
-    authenticationStorage.expiresAt = getTokenExpiration(authenticationStorage.cachedToken);
+    authenticationStorage.expiresAt = getTokenExpiration(
+        authenticationStorage.cachedToken
+    );
 
     return authenticationStorage.cachedToken;
 }
@@ -63,24 +72,26 @@ async function generateToken(endpoint) {
 /**
  * Decodes a JWT token payload and extracts the expiration time (exp).
  * Uses base64url -> text decoding; supports optional "Bearer " prefix.
- * 
+ *
  * @param {string} token - The JWT token to decode
  * @returns {number} The expiration timestamp in seconds since epoch
  */
 function getTokenExpiration(token) {
     // Remove 'Bearer ' prefix if present
-    const tokenValue = token.trim().replace(/^Bearer\s+/i, '');
+    const tokenValue = token.trim().replace(/^Bearer\s+/i, "");
 
-    const parts = tokenValue.split('.');
+    const parts = tokenValue.split(".");
     if (parts.length !== 3) {
         throw new Error("Invalid JWT token format");
     }
 
-    const payloadJson = encoding.b64decode(parts[1], 'rawurl', 's');
+    const payloadJson = encoding.b64decode(parts[1], "rawurl", "s");
     const payload = JSON.parse(payloadJson);
     const exp = Number(payload.exp);
     if (!Number.isFinite(exp)) {
-        throw new TypeError("Token does not contain numeric expiration (exp) claim");
+        throw new TypeError(
+            "Token does not contain numeric expiration (exp) claim"
+        );
     }
 
     return exp;

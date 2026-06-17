@@ -65,126 +65,158 @@ export const invalidOrderDuration = new Trend("invalid_order_duration");
 export const duplicateOrderDuration = new Trend("duplicate_order_duration");
 
 // Trend to track the response time (duration) for orders missing a resource (expected to return a 201 Created status)
-export const missingResourceOrderDuration = new Trend("missing_resource_order_duration");
+export const missingResourceOrderDuration = new Trend(
+    "missing_resource_order_duration"
+);
 
 /**
  * Builds the shared k6 options object used by all scripts, with possibility to
  * extend thresholds (e.g., organization script adds missing_resource_order_duration).
- * 
+ *
  * @param {Object} [extraThresholds={}] - Additional threshold definitions
  * @returns {Object} k6 options
  */
 export function buildOptions(extraThresholds = {}) {
     const base = {
-        scenarios: performanceTestScenario === 'userDefined' ?
-            {
-                userDefined: {
-                    executor: 'constant-vus',
-                    tags: { scenario: 'custom' },
-                    duration: __ENV.duration || '30s',
-                    vus: Number.parseInt(__ENV.vus || '10', 10)
-                }
-            }
-            :
-            {
-                smoke: {
-                    rate: 10,
-                    maxVUs: 100,
-                    timeUnit: '1s',
-                    duration: '30s',
-                    preAllocatedVUs: 5,
-                    gracefulStop: '10s',
-                    executor: 'constant-arrival-rate'
-                },
-                capacity_probe: {
-                    maxVUs: 1000,
-                    startRate: 25,
-                    timeUnit: '1s',
-                    startTime: '45s',
-                    gracefulStop: '30s',
-                    preAllocatedVUs: 120,
-                    executor: 'ramping-arrival-rate',
-                    stages: [
-                        { target: 25, duration: '2m' },
-                        { target: 50, duration: '2m' },
-                        { target: 75, duration: '3m' },
-                        { target: 100, duration: '1m' }
-                    ]
-                },
-                realistic_sla_compliance: {
-                    maxVUs: 1000,
-                    startRate: 50,
-                    timeUnit: '1s',
-                    startTime: '9m20s',
-                    gracefulStop: '30s',
-                    preAllocatedVUs: 250,
-                    executor: 'ramping-arrival-rate',
-                    stages: [
-                        { target: 50, duration: '4m' },
-                        { target: 100, duration: '6m' },
-                        { target: 75, duration: '2m' }
-                    ]
-                },
-                steady_state_load: {
-                    rate: 100,
-                    maxVUs: 600,
-                    timeUnit: '1s',
-                    duration: '15m',
-                    startTime: '22m',
-                    gracefulStop: '30s',
-                    preAllocatedVUs: 250,
-                    executor: 'constant-arrival-rate'
-                },
-                sudden_spike_resilience: {
-                    maxVUs: 700,
-                    timeUnit: '1s',
-                    startTime: '37m5s',
-                    gracefulStop: '30s',
-                    preAllocatedVUs: 350,
-                    executor: 'ramping-arrival-rate',
-                    stages: [
-                        { target: 50, duration: '10s' },
-                        { target: 150, duration: '20s' },
-                        { target: 300, duration: '2m' },
-                        { target: 0, duration: '40s' }
-                    ]
-                },
-                soak_long_term_stability: {
-                    rate: 120,
-                    maxVUs: 200,
-                    timeUnit: '1s',
-                    duration: '30m',
-                    gracefulStop: '2m',
-                    startTime: '40m45s',
-                    preAllocatedVUs: 120,
-                    executor: 'constant-arrival-rate'
-                }
-            },
-        summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
+        scenarios:
+            performanceTestScenario === "userDefined"
+                ? {
+                      userDefined: {
+                          executor: "constant-vus",
+                          tags: { scenario: "custom" },
+                          duration: __ENV.duration || "30s",
+                          vus: Number.parseInt(__ENV.vus || "10", 10),
+                      },
+                  }
+                : {
+                      smoke: {
+                          rate: 10,
+                          maxVUs: 100,
+                          timeUnit: "1s",
+                          duration: "30s",
+                          preAllocatedVUs: 5,
+                          gracefulStop: "10s",
+                          executor: "constant-arrival-rate",
+                      },
+                      capacity_probe: {
+                          maxVUs: 1000,
+                          startRate: 25,
+                          timeUnit: "1s",
+                          startTime: "45s",
+                          gracefulStop: "30s",
+                          preAllocatedVUs: 120,
+                          executor: "ramping-arrival-rate",
+                          stages: [
+                              { target: 25, duration: "2m" },
+                              { target: 50, duration: "2m" },
+                              { target: 75, duration: "3m" },
+                              { target: 100, duration: "1m" },
+                          ],
+                      },
+                      realistic_sla_compliance: {
+                          maxVUs: 1000,
+                          startRate: 50,
+                          timeUnit: "1s",
+                          startTime: "9m20s",
+                          gracefulStop: "30s",
+                          preAllocatedVUs: 250,
+                          executor: "ramping-arrival-rate",
+                          stages: [
+                              { target: 50, duration: "4m" },
+                              { target: 100, duration: "6m" },
+                              { target: 75, duration: "2m" },
+                          ],
+                      },
+                      steady_state_load: {
+                          rate: 100,
+                          maxVUs: 600,
+                          timeUnit: "1s",
+                          duration: "15m",
+                          startTime: "22m",
+                          gracefulStop: "30s",
+                          preAllocatedVUs: 250,
+                          executor: "constant-arrival-rate",
+                      },
+                      sudden_spike_resilience: {
+                          maxVUs: 700,
+                          timeUnit: "1s",
+                          startTime: "37m5s",
+                          gracefulStop: "30s",
+                          preAllocatedVUs: 350,
+                          executor: "ramping-arrival-rate",
+                          stages: [
+                              { target: 50, duration: "10s" },
+                              { target: 150, duration: "20s" },
+                              { target: 300, duration: "2m" },
+                              { target: 0, duration: "40s" },
+                          ],
+                      },
+                      soak_long_term_stability: {
+                          rate: 120,
+                          maxVUs: 200,
+                          timeUnit: "1s",
+                          duration: "30m",
+                          gracefulStop: "2m",
+                          startTime: "40m45s",
+                          preAllocatedVUs: 120,
+                          executor: "constant-arrival-rate",
+                      },
+                  },
+        summaryTrendStats: [
+            "avg",
+            "min",
+            "med",
+            "max",
+            "p(90)",
+            "p(95)",
+            "p(99)",
+            "count",
+        ],
         thresholds: {
-            'checks': ['rate>0.99'],
-            'success_rate': ['rate>0.70'],
-            'server_error_rate': ['rate<0.01'],
-            'high_latency_rate': ['rate<0.10'],
-            'order_valid_success_rate': ['rate>0.995'],
-            'http_req_duration': ['p(95)<2200', 'p(99)<4000'],
-            'dropped_iterations{scenario:smoke}': ['count==0'],
-            'valid_order_duration': ['p(95)<1800', 'p(99)<2500'],
-            'invalid_order_duration': ['p(95)<800', 'p(99)<1200'],
-            'duplicate_order_duration': ['p(95)<1000', 'p(99)<1500'],
-            'dropped_iterations{scenario:capacity_probe}': ['count<20'],
-            'dropped_iterations{scenario:steady_state_load}': ['count==0'],
-            'http_req_duration{scenario:smoke}': ['p(95)<1200', 'p(99)<1800'],
-            'dropped_iterations{scenario:sudden_spike_resilience}': ['count<50'],
-            'dropped_iterations{scenario:realistic_sla_compliance}': ['count<5'],
-            'dropped_iterations{scenario:soak_long_term_stability}': ['count<10'],
-            'http_req_duration{scenario:capacity_probe}': ['p(95)<2500', 'p(99)<4000'],
-            'http_req_duration{scenario:steady_state_load}': ['p(95)<2000', 'p(99)<3000'],
-            'http_req_duration{scenario:sudden_spike_resilience}': ['p(95)<3500', 'p(99)<5000'],
-            'http_req_duration{scenario:soak_long_term_stability}': ['p(95)<2400', 'p(99)<3500'],
-            'http_req_duration{scenario:realistic_sla_compliance}': ['p(95)<2200', 'p(99)<3200'],
-            ...extraThresholds
-        }
+            checks: ["rate>0.99"],
+            success_rate: ["rate>0.70"],
+            server_error_rate: ["rate<0.01"],
+            high_latency_rate: ["rate<0.10"],
+            order_valid_success_rate: ["rate>0.995"],
+            http_req_duration: ["p(95)<2200", "p(99)<4000"],
+            "dropped_iterations{scenario:smoke}": ["count==0"],
+            valid_order_duration: ["p(95)<1800", "p(99)<2500"],
+            invalid_order_duration: ["p(95)<800", "p(99)<1200"],
+            duplicate_order_duration: ["p(95)<1000", "p(99)<1500"],
+            "dropped_iterations{scenario:capacity_probe}": ["count<20"],
+            "dropped_iterations{scenario:steady_state_load}": ["count==0"],
+            "http_req_duration{scenario:smoke}": ["p(95)<1200", "p(99)<1800"],
+            "dropped_iterations{scenario:sudden_spike_resilience}": [
+                "count<50",
+            ],
+            "dropped_iterations{scenario:realistic_sla_compliance}": [
+                "count<5",
+            ],
+            "dropped_iterations{scenario:soak_long_term_stability}": [
+                "count<10",
+            ],
+            "http_req_duration{scenario:capacity_probe}": [
+                "p(95)<2500",
+                "p(99)<4000",
+            ],
+            "http_req_duration{scenario:steady_state_load}": [
+                "p(95)<2000",
+                "p(99)<3000",
+            ],
+            "http_req_duration{scenario:sudden_spike_resilience}": [
+                "p(95)<3500",
+                "p(99)<5000",
+            ],
+            "http_req_duration{scenario:soak_long_term_stability}": [
+                "p(95)<2400",
+                "p(99)<3500",
+            ],
+            "http_req_duration{scenario:realistic_sla_compliance}": [
+                "p(95)<2200",
+                "p(99)<3200",
+            ],
+            ...extraThresholds,
+        },
     };
     return base;
 }
@@ -196,7 +228,7 @@ export function buildOptions(extraThresholds = {}) {
  * @returns {string} The formatted future date as an ISO UTC string
  */
 export function getFutureDate(daysToAdd = 0) {
-    if (typeof daysToAdd !== 'number' || Number.isNaN(daysToAdd)) {
+    if (typeof daysToAdd !== "number" || Number.isNaN(daysToAdd)) {
         daysToAdd = 0;
     }
     const futureDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
@@ -205,7 +237,7 @@ export function getFutureDate(daysToAdd = 0) {
 
 /**
  * Categorizes HTTP responses by status code and updates performance metrics for test reporting.
- * 
+ *
  * @param {Object} httpResponse - The HTTP response object from k6
  * @param {number} httpResponse.status - The HTTP status code
  */
@@ -255,7 +287,10 @@ export function collectHttpResponseMetrics(httpResponse) {
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
  * @returns {Promise<Object>} The HTTP response from the Notification API.
  */
-export async function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
+export async function sendNotificationOrderChain(
+    orderRequest,
+    label = "post_valid_order"
+) {
     const requestBody = JSON.stringify(orderRequest);
     const token = await setupToken.getAltinnTokenForOrg(scopes);
     return ordersApi.postNotificationOrderV2(requestBody, token, label);
@@ -270,11 +305,19 @@ export async function sendNotificationOrderChain(orderRequest, label = 'post_val
  * @param {Trend} durationMetric - Trend metric to record duration
  * @returns {Promise<Object|undefined>} { orderType, httpResponse, orderChainPayload }
  */
-export async function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
+export async function processOrderChainPayload(
+    orderType,
+    orderChainPayload,
+    label,
+    durationMetric
+) {
     if (!orderType || !orderChainPayload) {
         return undefined;
     }
-    const httpResponse = await sendNotificationOrderChain(orderChainPayload, label);
+    const httpResponse = await sendNotificationOrderChain(
+        orderChainPayload,
+        label
+    );
     collectHttpResponseMetrics(httpResponse);
     if (durationMetric) {
         durationMetric.add(httpResponse.timings.duration);
@@ -293,21 +336,30 @@ export function runValidators(processingResults, validators) {
         return;
     }
 
-    for (const { orderType, httpResponse, orderChainPayload } of processingResults) {
+    for (const {
+        orderType,
+        httpResponse,
+        orderChainPayload,
+    } of processingResults) {
         if (!orderType || !httpResponse || !orderChainPayload) {
             continue;
         }
 
         if (httpResponse.status === 401 || httpResponse.status === 403) {
-            stopIterationOnFail("Critical authentication/authorization error encountered", false);
+            stopIterationOnFail(
+                "Critical authentication/authorization error encountered",
+                false
+            );
             break;
         }
 
         let parsed;
         try {
-            parsed = (typeof httpResponse.body === 'string' && httpResponse.body.length > 0)
-                ? JSON.parse(httpResponse.body)
-                : {};
+            parsed =
+                typeof httpResponse.body === "string" &&
+                httpResponse.body.length > 0
+                    ? JSON.parse(httpResponse.body)
+                    : {};
         } catch {
             parsed = {};
         }
@@ -325,7 +377,7 @@ export function runValidators(processingResults, validators) {
 export function handleSummary(testResults) {
     return {
         "summary.json": JSON.stringify(testResults),
-        stdout: textSummary(testResults, { indent: "  ", enableColors: true })
+        stdout: textSummary(testResults, { indent: "  ", enableColors: true }),
     };
 }
 
@@ -338,26 +390,50 @@ export function handleSummary(testResults) {
  * @param {number} expectedStatus - Status code expected
  * @returns {void}
  */
-export function validateStandardNotificationShape(response, responseBody, orderChainPayload, expectedStatus) {
+export function validateStandardNotificationShape(
+    response,
+    responseBody,
+    orderChainPayload,
+    expectedStatus
+) {
     if (!response || response.status === 0) {
         check(response, {
-            [`Status is ${expectedStatus} (skipped due to network failure)`]: () => false
+            [`Status is ${expectedStatus} (skipped due to network failure)`]:
+                () => false,
         });
         return;
     }
 
-    const safeBody = (responseBody && typeof responseBody === 'object') ? responseBody : {};
-    const notificationObj = (safeBody.notification && typeof safeBody.notification === 'object') ? safeBody.notification : {};
-    const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
-    const expectedReminderCount = Array.isArray(orderChainPayload?.reminders) ? orderChainPayload.reminders.length : 0;
+    const safeBody =
+        responseBody && typeof responseBody === "object" ? responseBody : {};
+    const notificationObj =
+        safeBody.notification && typeof safeBody.notification === "object"
+            ? safeBody.notification
+            : {};
+    const reminderArray = Array.isArray(notificationObj.reminders)
+        ? notificationObj.reminders
+        : [];
+    const expectedReminderCount = Array.isArray(orderChainPayload?.reminders)
+        ? orderChainPayload.reminders.length
+        : 0;
 
     check(response, {
-        [`Status is ${expectedStatus}`]: e => e?.status === expectedStatus,
-        "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
-        "Response contains notification order ID": () => typeof safeBody.notificationOrderId === 'string' && safeBody.notificationOrderId.length > 0,
-        "Response includes reminders": () => Array.isArray(notificationObj.reminders),
-        "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
-        "All reminders have shipment IDs": () => reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
+        [`Status is ${expectedStatus}`]: (e) => e?.status === expectedStatus,
+        "Response contains shipment ID": () =>
+            typeof notificationObj.shipmentId === "string" &&
+            notificationObj.shipmentId.length > 0,
+        "Response contains notification order ID": () =>
+            typeof safeBody.notificationOrderId === "string" &&
+            safeBody.notificationOrderId.length > 0,
+        "Response includes reminders": () =>
+            Array.isArray(notificationObj.reminders),
+        "Reminder count matches request": () =>
+            reminderArray.length === expectedReminderCount,
+        "All reminders have shipment IDs": () =>
+            reminderArray.every(
+                (e) =>
+                    typeof e.shipmentId === "string" && e.shipmentId.length > 0
+            ),
     });
 }
 
@@ -373,13 +449,16 @@ export function validateStandardNotificationShape(response, responseBody, orderC
  * @param {function(Object,string):void} [options.mutate] - Custom mutation callback (payload, uniqueId)
  * @returns {{orderChainPayload:Object, uniqueIdentifier:string}}
  */
-export function prepareBaseOrderChain(orderChainJsonPayload, {
-    futureDays = 7,
-    addDialogAssociation = false,
-    orderSenderPrefix = 'k6-order',
-    reminderSenderPrefix = 'k6-reminder-order',
-    mutate
-} = {}) {
+export function prepareBaseOrderChain(
+    orderChainJsonPayload,
+    {
+        futureDays = 7,
+        addDialogAssociation = false,
+        orderSenderPrefix = "k6-order",
+        reminderSenderPrefix = "k6-reminder-order",
+        mutate,
+    } = {}
+) {
     const uniqueIdentifier = uuidv4().substring(0, 8);
     const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
 
@@ -389,18 +468,20 @@ export function prepareBaseOrderChain(orderChainJsonPayload, {
     if (addDialogAssociation) {
         orderChainPayload.dialogportenAssociation = {
             dialogId: uniqueIdentifier,
-            transmissionId: uniqueIdentifier
+            transmissionId: uniqueIdentifier,
         };
     }
 
     if (Array.isArray(orderChainPayload.reminders)) {
-        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => ({
-            ...reminder,
-            sendersReference: `${reminderSenderPrefix}-${uniqueIdentifier}`
-        }));
+        orderChainPayload.reminders = orderChainPayload.reminders.map(
+            (reminder) => ({
+                ...reminder,
+                sendersReference: `${reminderSenderPrefix}-${uniqueIdentifier}`,
+            })
+        );
     }
 
-    if (typeof mutate === 'function') {
+    if (typeof mutate === "function") {
         mutate(orderChainPayload, uniqueIdentifier);
     }
 
@@ -418,11 +499,11 @@ export function prepareBaseOrderChain(orderChainJsonPayload, {
  * @param {function(Object):Object} [transforms.missingResourceTransform] - Produces missingResource variant (org script)
  * @returns {Array<{orderType:string, orderChainPayload:Object}>}
  */
-export function generateOrderChainPayloads(orderTypes, basePayload, {
-    uniqueFactory,
-    invalidTransform,
-    missingResourceTransform
-}) {
+export function generateOrderChainPayloads(
+    orderTypes,
+    basePayload,
+    { uniqueFactory, invalidTransform, missingResourceTransform }
+) {
     const variants = [];
     for (const orderType of orderTypes) {
         const unique = uniqueFactory(basePayload);
@@ -433,12 +514,18 @@ export function generateOrderChainPayloads(orderTypes, basePayload, {
                 break;
             case "invalid":
                 if (invalidTransform) {
-                    variants.push({ orderType, orderChainPayload: invalidTransform(unique) });
+                    variants.push({
+                        orderType,
+                        orderChainPayload: invalidTransform(unique),
+                    });
                 }
                 break;
             case "missingResource":
                 if (missingResourceTransform) {
-                    variants.push({ orderType, orderChainPayload: missingResourceTransform(unique) });
+                    variants.push({
+                        orderType,
+                        orderChainPayload: missingResourceTransform(unique),
+                    });
                 }
                 break;
         }
@@ -457,27 +544,49 @@ export function generateOrderChainPayloads(orderTypes, basePayload, {
  * @param {Object<string,Trend>} config.durationMetrics - orderType -> Trend
  * @returns {Promise<Array<Object>>} processingResults
  */
-export async function processVariants(variants, {
-    labelMap,
-    durationMetrics
-}) {
+export async function processVariants(variants, { labelMap, durationMetrics }) {
     const results = [];
     for (const { orderType, orderChainPayload } of variants) {
         let result;
         switch (orderType) {
             case "valid":
-                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+                result = await processOrderChainPayload(
+                    orderType,
+                    orderChainPayload,
+                    labelMap.valid,
+                    durationMetrics.valid
+                );
                 break;
             case "invalid":
-                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+                result = await processOrderChainPayload(
+                    orderType,
+                    orderChainPayload,
+                    labelMap.invalid,
+                    durationMetrics.invalid
+                );
                 break;
             case "duplicate":
                 // Send initial valid for idempotency before expecting 200
-                await processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
-                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+                await processOrderChainPayload(
+                    "valid",
+                    orderChainPayload,
+                    labelMap.valid,
+                    durationMetrics.valid
+                );
+                result = await processOrderChainPayload(
+                    orderType,
+                    orderChainPayload,
+                    labelMap.duplicate,
+                    durationMetrics.duplicate
+                );
                 break;
             case "missingResource":
-                result = await processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+                result = await processOrderChainPayload(
+                    orderType,
+                    orderChainPayload,
+                    labelMap.missingResource,
+                    durationMetrics.missingResource
+                );
                 break;
             default:
                 break;
@@ -496,7 +605,9 @@ export async function processVariants(variants, {
  * @param {boolean} [options.includeMissingResource=false]
  * @returns {Object<string,function>}
  */
-export function buildStandardValidators({ includeMissingResource = false } = {}) {
+export function buildStandardValidators({
+    includeMissingResource = false,
+} = {}) {
     const base = {
         valid: (response, body, payload) => {
             orderKindRateValid.add(response.status === 201);
@@ -508,7 +619,9 @@ export function buildStandardValidators({ includeMissingResource = false } = {})
         },
         invalid: (response) => {
             highLatencyRate.add(response.timings.duration > 2000);
-            check(response, { "Status is 400 Bad Request": r => r.status === 400 });
+            check(response, {
+                "Status is 400 Bad Request": (r) => r.status === 400,
+            });
             if (response.status === 400) {
                 http400Validation.add(1);
             }
@@ -519,7 +632,7 @@ export function buildStandardValidators({ includeMissingResource = false } = {})
             if (response.status === 200) {
                 http200Duplicate.add(1);
             }
-        }
+        },
     };
 
     if (includeMissingResource) {

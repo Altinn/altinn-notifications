@@ -39,13 +39,20 @@ import {
     buildStandardValidators,
     generateOrderChainPayloads,
 } from "./order-with-reminders-functions.js";
-import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
+import {
+    post_valid_order,
+    post_invalid_order,
+    post_duplicate_order,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
 
 // Define the order types to be tested based on environment variables or defaults
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order];
 
 // Test order chain loaded from a JSON file.
-const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-mobile-number.json"));
+const orderChainJsonPayload = JSON.parse(
+    open("../data/orders/order-with-reminders-for-mobile-number.json")
+);
 
 // Export shared options
 export const options = buildOptions();
@@ -55,7 +62,7 @@ setEmptyThresholds(labels, options);
 
 /**
  * Prepares test data by creating a notification order chain with unique identifiers.
- * 
+ *
  * @returns {Object} Test context containing the order chain payload
  */
 export function setup() {
@@ -65,15 +72,16 @@ export function setup() {
                 payload.recipient.recipientSms.phoneNumber = getSmsRecipient();
             }
             if (Array.isArray(payload.reminders)) {
-                payload.reminders = payload.reminders.map(r => {
+                payload.reminders = payload.reminders.map((r) => {
                     if (r?.recipient?.recipientSms) {
-                        r.recipient.recipientSms.phoneNumber = getSmsRecipient();
+                        r.recipient.recipientSms.phoneNumber =
+                            getSmsRecipient();
                     }
                     return r;
                 });
             }
         },
-        reminderSenderPrefix: 'k6-reminder'
+        reminderSenderPrefix: "k6-reminder",
     });
 
     return { orderChainPayload };
@@ -88,7 +96,7 @@ export function setup() {
 function createUniqueOrderChainPayload(baseOrderChainPayload) {
     return {
         ...baseOrderChainPayload,
-        idempotencyId: uuidv4()
+        idempotencyId: uuidv4(),
     };
 }
 
@@ -108,15 +116,15 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
         ...orderChainPayload,
         recipient: {
             ...orderChainPayload.recipient,
-            recipientSms: undefined
+            recipientSms: undefined,
         },
-        reminders: orderChainPayload.reminders.map(reminder => ({
+        reminders: orderChainPayload.reminders.map((reminder) => ({
             ...reminder,
             recipient: {
                 ...reminder.recipient,
-                recipientSms: undefined
-            }
-        }))
+                recipientSms: undefined,
+            },
+        })),
     };
 }
 
@@ -126,22 +134,26 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
  * @param {Object} data - From setup
  */
 export default async function runTests(data) {
-    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
-        uniqueFactory: createUniqueOrderChainPayload,
-        invalidTransform: stripRecipientSmsFromOrderChainPayload
-    });
+    const variants = generateOrderChainPayloads(
+        orderTypes,
+        data.orderChainPayload,
+        {
+            uniqueFactory: createUniqueOrderChainPayload,
+            invalidTransform: stripRecipientSmsFromOrderChainPayload,
+        }
+    );
 
     const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,
-            duplicate: post_duplicate_order
+            duplicate: post_duplicate_order,
         },
         durationMetrics: {
             valid: validOrderDuration,
             invalid: invalidOrderDuration,
-            duplicate: duplicateOrderDuration
-        }
+            duplicate: duplicateOrderDuration,
+        },
     });
 
     const validators = buildStandardValidators();

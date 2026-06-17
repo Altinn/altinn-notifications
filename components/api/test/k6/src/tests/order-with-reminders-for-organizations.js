@@ -34,19 +34,32 @@ import {
     duplicateOrderDuration,
     buildStandardValidators,
     generateOrderChainPayloads,
-    missingResourceOrderDuration
+    missingResourceOrderDuration,
 } from "./order-with-reminders-functions.js";
-import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
+import {
+    post_valid_order,
+    post_invalid_order,
+    post_duplicate_order,
+    post_order_without_resource_id,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
 
 // Define the order types to be tested based on environment variables or defaults
-const labels = [post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id];
+const labels = [
+    post_valid_order,
+    post_invalid_order,
+    post_duplicate_order,
+    post_order_without_resource_id,
+];
 
 // Test order chain loaded from a JSON file.
-const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
+const orderChainJsonPayload = JSON.parse(
+    open("../data/orders/order-with-reminders-for-organizations.json")
+);
 
 // Export shared options (extend thresholds with missing_resource_order_duration)
 export const options = buildOptions({
-    'missing_resource_order_duration': ['p(95)<2000', 'p(99)<3000']
+    missing_resource_order_duration: ["p(95)<2000", "p(99)<3000"],
 });
 
 // Set empty thresholds for label-specific metrics
@@ -54,7 +67,7 @@ setEmptyThresholds(labels, options);
 
 /**
  * Prepares test data by creating a notification order chain with unique identifiers.
- * 
+ *
  * @returns {Object} Test context
  */
 export function setup() {
@@ -65,18 +78,18 @@ export function setup() {
                 payload.recipient.recipientOrganization.resourceId = resourceId;
             }
             if (Array.isArray(payload.reminders)) {
-                payload.reminders = payload.reminders.map(r => ({
+                payload.reminders = payload.reminders.map((r) => ({
                     ...r,
                     recipient: {
                         ...r.recipient,
                         recipientOrganization: {
                             ...r.recipient.recipientOrganization,
-                            resourceId
-                        }
-                    }
+                            resourceId,
+                        },
+                    },
                 }));
             }
-        }
+        },
     });
 
     return { orderChainPayload };
@@ -84,14 +97,17 @@ export function setup() {
 
 /**
  * Updates the organization number in a recipient object.
- * 
+ *
  * @param {Object} recipient - The recipient object to update
  * @param {string} orgNumber - The organization number to set
  * @returns {Object} New recipient object with updated organization number
  */
 function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
     if (!recipient?.recipientOrganization) {
-        stopIterationOnFail("Recipient is missing required recipientOrganization property", false);
+        stopIterationOnFail(
+            "Recipient is missing required recipientOrganization property",
+            false
+        );
         return recipient;
     }
 
@@ -99,14 +115,14 @@ function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
         ...recipient,
         recipientOrganization: {
             ...recipient.recipientOrganization,
-            orgNumber
-        }
+            orgNumber,
+        },
     };
 }
 
 /**
  * Removes the resourceId from a recipient object.
- * 
+ *
  * @param {Object|null|undefined} recipient - The recipient object to process
  * @returns {Object} A new recipient object with resourceId removed
  */
@@ -115,16 +131,17 @@ function stripResourceIdentifierFromRecipient(recipient) {
         return recipient;
     }
 
-    const { resourceId, ...remainingOrgProperties } = recipient.recipientOrganization;
+    const { resourceId, ...remainingOrgProperties } =
+        recipient.recipientOrganization;
     return {
         ...recipient,
-        recipientOrganization: remainingOrgProperties
+        recipientOrganization: remainingOrgProperties,
     };
 }
 
 /**
  * Creates a modified copy of an order chain request without resource identifiers.
- * 
+ *
  * @param {Object} baseOrder - The original order chain payload
  * @returns {Object} A new order chain object with all resourceId properties removed
  */
@@ -136,11 +153,13 @@ function removeResourceIdFromOrderChainPayload(baseOrder) {
         ...baseOrder,
         recipient: stripResourceIdentifierFromRecipient(baseOrder.recipient),
         reminders: Array.isArray(baseOrder.reminders)
-            ? baseOrder.reminders.map(reminder => ({
-                ...reminder,
-                recipient: stripResourceIdentifierFromRecipient(reminder.recipient)
-            }))
-            : baseOrder.reminders
+            ? baseOrder.reminders.map((reminder) => ({
+                  ...reminder,
+                  recipient: stripResourceIdentifierFromRecipient(
+                      reminder.recipient
+                  ),
+              }))
+            : baseOrder.reminders,
     };
 }
 
@@ -160,14 +179,14 @@ function createUniqueOrderChainPayload(baseOrderChainPayload) {
             orgNumber
         ),
         reminders: Array.isArray(baseOrderChainPayload.reminders)
-            ? baseOrderChainPayload.reminders.map(reminder => ({
-                ...reminder,
-                recipient: updateRecipientWithOrganizationNumber(
-                    reminder.recipient,
-                    orgNumber
-                )
-            }))
-            : []
+            ? baseOrderChainPayload.reminders.map((reminder) => ({
+                  ...reminder,
+                  recipient: updateRecipientWithOrganizationNumber(
+                      reminder.recipient,
+                      orgNumber
+                  ),
+              }))
+            : [],
     };
 }
 
@@ -183,28 +202,32 @@ function stripRecipientOrganizationFromOrderChainPayload(orderChainPayload) {
     if (!orderChainPayload) {
         return orderChainPayload;
     }
-    const invalidRecipient = orderChainPayload.recipient ? {
-        ...orderChainPayload.recipient,
-        recipientOrganization: undefined
-    } : undefined;
+    const invalidRecipient = orderChainPayload.recipient
+        ? {
+              ...orderChainPayload.recipient,
+              recipientOrganization: undefined,
+          }
+        : undefined;
 
     const invalidReminders = Array.isArray(orderChainPayload.reminders)
-        ? orderChainPayload.reminders.map(reminder => {
-            if (!reminder) return reminder;
-            return {
-                ...reminder,
-                recipient: reminder.recipient ? {
-                    ...reminder.recipient,
-                    recipientOrganization: undefined
-                } : undefined
-            };
-        })
+        ? orderChainPayload.reminders.map((reminder) => {
+              if (!reminder) return reminder;
+              return {
+                  ...reminder,
+                  recipient: reminder.recipient
+                      ? {
+                            ...reminder.recipient,
+                            recipientOrganization: undefined,
+                        }
+                      : undefined,
+              };
+          })
         : orderChainPayload.reminders;
 
     return {
         ...orderChainPayload,
         recipient: invalidRecipient,
-        reminders: invalidReminders
+        reminders: invalidReminders,
     };
 }
 
@@ -214,28 +237,34 @@ function stripRecipientOrganizationFromOrderChainPayload(orderChainPayload) {
  * @param {Object} data - Setup context
  */
 export default async function runTests(data) {
-    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
-        uniqueFactory: createUniqueOrderChainPayload,
-        invalidTransform: stripRecipientOrganizationFromOrderChainPayload,
-        missingResourceTransform: removeResourceIdFromOrderChainPayload
-    });
+    const variants = generateOrderChainPayloads(
+        orderTypes,
+        data.orderChainPayload,
+        {
+            uniqueFactory: createUniqueOrderChainPayload,
+            invalidTransform: stripRecipientOrganizationFromOrderChainPayload,
+            missingResourceTransform: removeResourceIdFromOrderChainPayload,
+        }
+    );
 
     const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,
             duplicate: post_duplicate_order,
-            missingResource: post_order_without_resource_id
+            missingResource: post_order_without_resource_id,
         },
         durationMetrics: {
             valid: validOrderDuration,
             invalid: invalidOrderDuration,
             duplicate: duplicateOrderDuration,
-            missingResource: missingResourceOrderDuration
-        }
+            missingResource: missingResourceOrderDuration,
+        },
     });
 
-    const validators = buildStandardValidators({ includeMissingResource: true });
+    const validators = buildStandardValidators({
+        includeMissingResource: true,
+    });
     runValidators(processingResults, validators);
 }
 
