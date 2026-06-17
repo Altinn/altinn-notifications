@@ -47,10 +47,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        INotificationLogRepository repo = ServiceUtil
-            .GetServices([typeof(INotificationLogRepository)])
-            .OfType<NotificationLogRepository>()
-            .First();
+        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
+           .GetServices([typeof(INotificationLogRepository)])
+           .First(i => i.GetType() == typeof(NotificationLogRepository));
 
         // Act
         int rowsInserted = await repo.InsertAsync(orderId);
@@ -98,10 +97,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        INotificationLogRepository repo = ServiceUtil
+        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
             .GetServices([typeof(INotificationLogRepository)])
-            .OfType<NotificationLogRepository>()
-            .First();
+            .First(i => i.GetType() == typeof(NotificationLogRepository));
 
         // Act
         int rowsInserted = await repo.InsertAsync(orderId);
@@ -136,10 +134,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 
         _orderIdsToCleanup.Add(order.Id);
 
-        INotificationLogRepository repo = ServiceUtil
+        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
             .GetServices([typeof(INotificationLogRepository)])
-            .OfType<NotificationLogRepository>()
-            .First();
+            .First(i => i.GetType() == typeof(NotificationLogRepository));
 
         // Act
         int rowsInserted = await repo.InsertAsync(order.Id);
