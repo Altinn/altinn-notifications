@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Orders;
@@ -388,6 +390,22 @@ public static class PostgreUtil
         return result;
     }
 
+    public static async Task<T> RunSqlReturnOutput<T>(string query, params NpgsqlParameter[] parameters)
+    {
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
+
+        if (parameters.Length > 0)
+        {
+            pgcom.Parameters.AddRange(parameters);
+        }
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        T result = reader.GetValue<T>(0);
+        return result;
+    }
+
     public static async Task<string?> GetStatusFeedOrderStatusJson(Guid orderId)
     {
         var sql = @"SELECT s.orderstatus::text 
@@ -550,9 +568,9 @@ public static class PostgreUtil
 
     public static async Task<int> SelectNotificationLogEntryCount(Guid shipmentId)
     {
-        string sql = $@"SELECT COUNT(*) FROM notifications.notificationlog
-                        WHERE shipmentid = '{shipmentId}'";
-        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        const string sql = @"SELECT COUNT(*) FROM notifications.notificationlog
+                             WHERE shipmentid = @shipmentId";
+        return await PostgreUtil.RunSqlReturnOutput<int>(sql, new NpgsqlParameter("shipmentId", shipmentId));
     }
 
     public static async Task DeleteNotificationLogFromDb(Guid orderId)
@@ -710,8 +728,15 @@ public static class PostgreUtil
     /// Inserts an orderschain row with Dialogporten identifiers and an SMS order linked to it,
     /// then inserts a delivered SMS notification. Intended for NotificationLogRepository tests.
     /// </summary>
-    /// <returns>The order alternate ID (shipment ID) and the bigint chain DB ID.</returns>
-    public static async Task<(Guid OrderId, long ChainDbId, Guid orderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
+    /// <returns>
+    /// A tuple containing:
+    /// <list type="bullet">
+    /// <item><description><c>OrderId</c>: The alternate ID of the SMS order (shipment ID).</description></item>
+    /// <item><description><c>ChainDbId</c>: The bigint primary key of the inserted order chain row.</description></item>
+    /// <item><description><c>OrderChainId</c>: The alternate ID (UUID) of the inserted order chain.</description></item>
+    /// </list>
+    /// </returns>
+    public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
@@ -882,17 +907,17 @@ public static class PostgreUtil
         }
 
         return new NotificationLogEntry(
-            OrderChainId: await reader.IsDBNullAsync(0) ? null : await reader.GetFieldValueAsync<long>(0),
-            ShipmentId: await reader.GetFieldValueAsync<Guid>(1),
-            CreatorName: await reader.IsDBNullAsync(2) ? null : await reader.GetFieldValueAsync<string>(2),
-            DialogId: await reader.IsDBNullAsync(3) ? null : await reader.GetFieldValueAsync<Guid>(3),
-            TransmissionId: await reader.IsDBNullAsync(4) ? null : await reader.GetFieldValueAsync<string>(4),
-            OperationId: await reader.IsDBNullAsync(5) ? null : await reader.GetFieldValueAsync<string>(5),
-            GatewayReference: await reader.IsDBNullAsync(6) ? null : await reader.GetFieldValueAsync<string>(6),
-            Recipient: await reader.IsDBNullAsync(7) ? null : await reader.GetFieldValueAsync<string>(7),
-            Type: await reader.GetFieldValueAsync<string>(8),
-            Destination: await reader.IsDBNullAsync(9) ? null : await reader.GetFieldValueAsync<string>(9),
-            Resource: await reader.IsDBNullAsync(10) ? null : await reader.GetFieldValueAsync<string>(10),
-            Status: await reader.IsDBNullAsync(11) ? null : await reader.GetFieldValueAsync<string>(11));
+            OrderChainId: await reader.IsDBNullAsync(reader.GetOrdinal("orderchainid")) ? null : await reader.GetFieldValueAsync<long>("orderchainid"),
+            ShipmentId: await reader.GetFieldValueAsync<Guid>("shipmentid"),
+            CreatorName: await reader.IsDBNullAsync(reader.GetOrdinal("creatorname")) ? null : await reader.GetFieldValueAsync<string>("creatorname"),
+            DialogId: await reader.IsDBNullAsync(reader.GetOrdinal("dialogid")) ? null : await reader.GetFieldValueAsync<Guid>("dialogid"),
+            TransmissionId: await reader.IsDBNullAsync(reader.GetOrdinal("transmissionid")) ? null : await reader.GetFieldValueAsync<string>("transmissionid"),
+            OperationId: await reader.IsDBNullAsync(reader.GetOrdinal("operationid")) ? null : await reader.GetFieldValueAsync<string>("operationid"),
+            GatewayReference: await reader.IsDBNullAsync(reader.GetOrdinal("gatewayreference")) ? null : await reader.GetFieldValueAsync<string>("gatewayreference"),
+            Recipient: await reader.IsDBNullAsync(reader.GetOrdinal("recipient")) ? null : await reader.GetFieldValueAsync<string>("recipient"),
+            Type: await reader.GetFieldValueAsync<string>("type"),
+            Destination: await reader.IsDBNullAsync(reader.GetOrdinal("destination")) ? null : await reader.GetFieldValueAsync<string>("destination"),
+            Resource: await reader.IsDBNullAsync(reader.GetOrdinal("resource")) ? null : await reader.GetFieldValueAsync<string>("resource"),
+            Status: await reader.IsDBNullAsync(reader.GetOrdinal("status")) ? null : await reader.GetFieldValueAsync<string>("status"));
     }
 }
