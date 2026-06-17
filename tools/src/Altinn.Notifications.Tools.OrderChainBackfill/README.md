@@ -24,7 +24,15 @@ CREATE TABLE notifications.orderchain_backfill_lookup (
 );
 ```
 
-The composite primary key index on `(orderchainid, orderid)` covers both the batch range filter in phase 2 and duplicate protection on re-runs. Run this before starting the tool.
+The composite primary key index on `(orderchainid, orderid)` covers both the batch range filter in phase 2 and duplicate protection on re-runs.
+
+Then grant the application user access to the table:
+
+```sql
+GRANT INSERT, SELECT ON notifications.orderchain_backfill_lookup TO platform_notifications;
+```
+
+Run both before starting the tool.
 
 ### 2. Set the database connection string via user secrets
 
