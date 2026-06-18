@@ -36,8 +36,8 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Act
         var result = await sut.GetDashboardNotificationsByNinAsync(
             _recipientNin,
-            new DateTimeOffset(2023, 06, 01, 0, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2023, 07, 01, 0, 0, 0, TimeSpan.Zero),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
             CancellationToken.None);
 
         // Assert
@@ -57,8 +57,8 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Act — query with a different NIN
         var result = await sut.GetDashboardNotificationsByNinAsync(
             "00000000000",
-            new DateTimeOffset(2023, 06, 01, 0, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2023, 07, 01, 0, 0, 0, TimeSpan.Zero),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
             CancellationToken.None);
 
         // Assert
@@ -76,8 +76,8 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Act — date window after the requestedsendtime
         var result = await sut.GetDashboardNotificationsByNinAsync(
             _recipientNin,
-            new DateTimeOffset(2024, 01, 01, 0, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2024, 02, 01, 0, 0, 0, TimeSpan.Zero),
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
             CancellationToken.None);
 
         // Assert
@@ -114,8 +114,8 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Act
         var result = await sut.GetDashboardNotificationsByNinAsync(
             _recipientNin,
-            new DateTimeOffset(2023, 06, 01, 0, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2023, 07, 01, 0, 0, 0, TimeSpan.Zero),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
             CancellationToken.None);
 
         // Assert
