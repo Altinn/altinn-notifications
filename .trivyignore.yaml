@@ -1,4 +1,4 @@
 vulnerabilities:
   - id: CVE-2026-45447 # libcrypto3/libssl3
     statement: The vulnerable code has no reachable execution path in our application
-    expired_at: 2026-06-18 # revisit in 1 week
+    expired_at: 2026-06-25 # revisit in 1 week
