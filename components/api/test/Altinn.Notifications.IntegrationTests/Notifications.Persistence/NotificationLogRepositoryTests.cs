@@ -72,7 +72,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(resourceId, entry.Resource);
         Assert.Equal("Notification", entry.Type);
         Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(operationId, entry.OperationId);  // set via updateemailnotification_v3
+        Assert.Equal(operationId, entry.OperationId);
         Assert.Null(entry.Recipient);
         Assert.Null(entry.GatewayReference);
     }
@@ -123,8 +123,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal("Notification", entry.Type);
         Assert.Equal("Delivered", entry.Status);
         Assert.Null(entry.Recipient);
-        Assert.Equal(gatewayReference, entry.GatewayReference);  // SMS path — gateway reference is set
-        Assert.Null(entry.OperationId);                          // SMS path — operation ID is null
+        Assert.Equal(gatewayReference, entry.GatewayReference);
+        Assert.Null(entry.OperationId);
     }
 
     [Fact]

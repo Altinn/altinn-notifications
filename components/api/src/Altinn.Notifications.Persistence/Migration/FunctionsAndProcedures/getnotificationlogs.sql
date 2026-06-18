@@ -7,7 +7,7 @@ RETURNS TABLE (
     orderchainid     int8,
     shipmentid       uuid,
     creatorname      text,
-    dialogid         uuid,
+    dialogid         text,
     transmissionid   text,
     operationid      text,
     gatewayreference text,
@@ -63,7 +63,7 @@ BEGIN
             nl.created_timestamp,
             nl.sent_timestamp
         FROM notifications.notificationlog nl
-        WHERE nl.dialogid = _id::uuid;
+        WHERE nl.dialogid = _id;
 
     ELSIF _id_type = 'transmissionid' THEN
         RETURN QUERY
@@ -95,6 +95,6 @@ $$;
 COMMENT ON FUNCTION notifications.get_notification_logs(text, text) IS
 'Returns notification log entries for a given ID. The _id_type parameter controls which column is matched:
   - ''shipmentid''     : matches notificationlog.shipmentid (uuid)
-  - ''dialogid''       : matches notificationlog.dialogid (uuid)
+  - ''dialogid''       : matches notificationlog.dialogid (text)
   - ''transmissionid'' : matches notificationlog.transmissionid (text)
 Returns all columns of notificationlog. Raises an exception for unknown _id_type values.';
