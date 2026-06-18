@@ -1800,6 +1800,7 @@ BEGIN
         destination,
         resource,
         status,
+        created_timestamp,
         sent_timestamp
     )
     SELECT
@@ -1815,6 +1816,7 @@ BEGIN
         src.destination,
         src.resource,
         src.status,
+        src.created_timestamp,
         src.sent_timestamp
     FROM (
         SELECT
@@ -1830,6 +1832,7 @@ BEGIN
             o.type AS type,
             email.toaddress AS destination,
             email.result::text AS status,
+            o.created AS created_timestamp,
             email.resulttime AS sent_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
@@ -1851,6 +1854,7 @@ BEGIN
             o.type AS type,
             sms.mobilenumber AS destination,
             sms.result::text AS status,
+            o.created AS created_timestamp,
             sms.resulttime AS sent_timestamp
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
