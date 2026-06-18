@@ -1,7 +1,7 @@
 namespace Altinn.Notifications.Models.Dashboard;
 
 /// <summary>
-/// Combined model used for validating a notifications-by-NIN lookup.
+/// Request model for fetching notifications by national identity number.
 /// </summary>
 public class NotificationsByNinRequestExt
 {

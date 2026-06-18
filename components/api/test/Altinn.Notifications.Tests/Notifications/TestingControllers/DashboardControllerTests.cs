@@ -35,7 +35,7 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_NinNullEmptyOrWhitespace_ReturnsValidationProblem(string? nin)
     {
         // Act
-        var result = await _controller.GetNotificationsByNin(nin!, new NotificationsByNinFiltersExt(), CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(nin!, null, null, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -49,7 +49,7 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_NinWrongLength_ReturnsValidationProblem(string nin)
     {
         // Act
-        var result = await _controller.GetNotificationsByNin(nin, new NotificationsByNinFiltersExt(), CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin(nin, null, null, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -64,7 +64,7 @@ public class DashboardControllerTests
         var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = instant, To = instant }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", instant, instant, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -80,7 +80,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from, To = to }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", from, to, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -102,7 +102,7 @@ public class DashboardControllerTests
             .ReturnsAsync(serviceResult);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", from, null, CancellationToken.None);
 
         // Assert
         Assert.IsType<OkObjectResult>(result.Result);
@@ -123,7 +123,7 @@ public class DashboardControllerTests
             .ReturnsAsync(serviceResult);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from, To = to }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", from, to, CancellationToken.None);
 
         // Assert
         Assert.IsType<OkObjectResult>(result.Result);
@@ -133,20 +133,21 @@ public class DashboardControllerTests
     }
 
     [Fact]
-    public async Task GetNotificationsByNin_NinNotFound_Returns404()
+    public async Task GetNotificationsByNin_NoNotificationsFound_Returns200WithEmptyList()
     {
         // Arrange
-        Result<List<DashboardNotification>, ServiceError> serviceResult = new ServiceError(404);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(serviceResult);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt(), CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", null, null, CancellationToken.None);
 
         // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(404, objectResult.StatusCode);
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public class DashboardControllerTests
         var to = DateTime.UtcNow.AddDays(1);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { To = to }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", null, to, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -171,7 +172,7 @@ public class DashboardControllerTests
         var from = DateTime.UtcNow.AddDays(1);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", from, null, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -186,7 +187,7 @@ public class DashboardControllerTests
         var from = DateTime.UtcNow.AddYears(-10).AddDays(-1);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", from, null, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -201,7 +202,7 @@ public class DashboardControllerTests
         var to = DateTime.UtcNow.AddDays(-8);
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { To = to }, CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", null, to, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
@@ -218,7 +219,7 @@ public class DashboardControllerTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act
-        var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt(), CancellationToken.None);
+        var result = await _controller.GetNotificationsByNin("16069412345", null, null, CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);

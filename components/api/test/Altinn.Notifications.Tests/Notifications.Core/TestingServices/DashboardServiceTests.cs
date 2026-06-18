@@ -83,8 +83,8 @@ public class DashboardServiceTests
             x => x.GetDashboardNotificationsByNinAsync(_recipientNin, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.True(result.IsError);
-        Assert.Equal(404, result.Error!.ErrorCode);
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]
