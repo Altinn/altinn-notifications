@@ -57,7 +57,7 @@ public class DashboardServiceTests
         Assert.True(result.IsSuccess);
         var entry = Assert.Single(result.Value!);
         Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
-        Assert.Equal(_recipientNin, Assert.Single(entry.Recipients).NationalIdentityNumber);
+        Assert.Equal(_recipientNin, Assert.Single(entry.DeliveryAttempts).NationalIdentityNumber);
     }
 
     [Fact]
