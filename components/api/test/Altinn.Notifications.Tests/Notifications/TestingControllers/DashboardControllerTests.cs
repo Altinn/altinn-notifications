@@ -61,7 +61,7 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_FromEqualToTo_ReturnsValidationProblem()
     {
         // Arrange
-        var instant = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
+        var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
         var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = instant, To = instant }, CancellationToken.None);
@@ -76,8 +76,8 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_FromAfterTo_ReturnsValidationProblem()
     {
         // Arrange
-        var from = new DateTimeOffset(2026, 05, 10, 0, 0, 0, TimeSpan.Zero);
-        var to = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
+        var from = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
         var result = await _controller.GetNotificationsByNin("16069412345", new NotificationsByNinFiltersExt { From = from, To = to }, CancellationToken.None);
@@ -92,7 +92,7 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_OnlyFromProvided_PassesValidationAndCallsService()
     {
         // Arrange — only one side of the range provided, so the from >= to check must not trigger
-        var from = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
             new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
@@ -112,8 +112,8 @@ public class DashboardControllerTests
     public async Task GetNotificationsByNin_ValidInput_CallsServiceAndReturnsOk()
     {
         // Arrange
-        var from = new DateTimeOffset(2026, 05, 01, 0, 0, 0, TimeSpan.Zero);
-        var to = new DateTimeOffset(2026, 05, 10, 0, 0, 0, TimeSpan.Zero);
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
             new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
@@ -138,7 +138,7 @@ public class DashboardControllerTests
         // Arrange
         Result<List<DashboardNotification>, ServiceError> serviceResult = new ServiceError(404);
         _dashboardServiceMock
-            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(serviceResult);
 
         // Act
@@ -214,7 +214,7 @@ public class DashboardControllerTests
     {
         // Arrange
         _dashboardServiceMock
-            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetNotificationsByNinAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         // Act
