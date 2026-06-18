@@ -31,6 +31,5 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog TO plat
 GRANT USAGE, SELECT ON SEQUENCE notifications.notificationlog_id_seq TO platform_notifications;
 
 CREATE INDEX IF NOT EXISTS idx_notificationlog_shipmentid ON notifications.notificationlog (shipmentid);
-CREATE INDEX IF NOT EXISTS idx_notificationlog_orderchainid ON notifications.notificationlog (orderchainid);
-CREATE INDEX IF NOT EXISTS idx_notificationlog_recipient ON notifications.notificationlog (recipient);
-CREATE INDEX IF NOT EXISTS idx_notificationlog_sent_timestamp ON notifications.notificationlog (sent_timestamp);
+CREATE INDEX IF NOT EXISTS idx_notificationlog_dialogid ON notifications.notificationlog (dialogid);
+CREATE INDEX IF NOT EXISTS idx_notificationlog_transmissionid ON notifications.notificationlog (transmissionid);
