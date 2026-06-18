@@ -32,8 +32,8 @@ export const post_order_without_resource_id = "post_order_without_resource_id";
  * @param {object} options - Options object containing thresholds configuration
  */
 export function setEmptyThresholds(labels, options) {
-  for (const label of labels) {
-    options.thresholds[`http_reqs{name:${label}}`] = [];
-    options.thresholds[`http_req_duration{name:${label}}`] = [];
-  }
+    for (const label of labels) {
+        options.thresholds[`http_reqs{name:${label}}`] = [];
+        options.thresholds[`http_req_duration{name:${label}}`] = [];
+    }
 }

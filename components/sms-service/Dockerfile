@@ -1,5 +1,5 @@
 #Use the official .NET SDK image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/sdk:10.0.300-alpine3.23@sha256:5c559aa5d99337e400d39ab4fa1f6979d126c29b20939d53658ed38300571e74 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.301-alpine3.23@sha256:fac7cce841f78faa4bca416fb4c636d1a129c09abd9b50e9b45664b95fd008a0 AS build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN dotnet publish -c Release -o out \
 
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.8-alpine3.23@sha256:1b3a34768687d583ebdf16ca8dd9a21ec93de9cdf81bb424e3c1a706e2a453d7 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:72ba73e4bec80e6791a022454b2dda2d6f6f77bdf48d89afb35186deebf73eb9 AS final
 EXPOSE 5092
 WORKDIR /app
 COPY --from=build /app/out ./
