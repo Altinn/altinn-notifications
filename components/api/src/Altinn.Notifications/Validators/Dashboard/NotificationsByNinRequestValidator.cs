@@ -16,7 +16,7 @@ internal sealed class NotificationsByNinRequestValidator : AbstractValidator<Not
     {
         RuleFor(x => x.Nin)
             .NotEmpty().WithMessage("'nin' is required and cannot be empty")
-            .MustBeValidNationalIdentityNumber().When(x => !string.IsNullOrEmpty(x.Nin));
+            .MustBeValidNationalIdentityNumber();
 
         RuleFor(x => x.From)
             .Must(from => from!.Value.Kind != DateTimeKind.Unspecified).When(x => x.From.HasValue).WithMessage("The 'from' value must have specified a time zone.")
