@@ -917,7 +917,9 @@ public static class PostgreUtil
                 type,
                 destination,
                 resource,
-                status
+                status,
+                created_timestamp,
+                sent_timestamp
             FROM notifications.notificationlog
             WHERE shipmentid = @shipmentId
             LIMIT 1
