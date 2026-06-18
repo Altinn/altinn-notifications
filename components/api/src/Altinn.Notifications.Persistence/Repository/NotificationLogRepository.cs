@@ -102,7 +102,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
                     await reader.NullcheckAndGetValueAsync<long?>("orderchainid", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<Guid>("shipmentid", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<string?>("creatorname", cancellationToken),
-                    await reader.NullcheckAndGetValueAsync<Guid?>("dialogid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("dialogid", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<string?>("transmissionid", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<string?>("operationid", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<string?>("gatewayreference", cancellationToken),
