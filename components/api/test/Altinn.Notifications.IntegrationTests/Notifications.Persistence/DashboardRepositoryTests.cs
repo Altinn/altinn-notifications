@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class DashboardRepositoryTests : IAsyncLifetime
+public sealed class DashboardRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete = [];
     private readonly string _recipientNin = Random.Shared.NextInt64(10_000_000_000, 99_999_999_999).ToString();
@@ -22,16 +22,14 @@ public class DashboardRepositoryTests : IAsyncLifetime
         {
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]
     public async Task GetDashboardNotificationsByNinAsync_ReturnsEmailAndSmsForRecipientWithinRange()
     {
         // Arrange
-        var emailOrder = await SeedOrderWithEmailNotification(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc));
-        var smsOrder = await SeedOrderWithSmsNotification(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 09, 00, 00, DateTimeKind.Utc));
+        await SeedOrderWithEmailNotification(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc));
+        await SeedOrderWithSmsNotification(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 09, 00, 00, DateTimeKind.Utc));
 
         DashboardRepository sut = GetRepository();
 
@@ -44,8 +42,8 @@ public class DashboardRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, n => n.Recipients.Any(r => r.Channel == "email" && r.NationalIdentityNumber == _recipientNin));
-        Assert.Contains(result, n => n.Recipients.Any(r => r.Channel == "sms" && r.NationalIdentityNumber == _recipientNin));
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "email" && r.NationalIdentityNumber == _recipientNin));
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "sms" && r.NationalIdentityNumber == _recipientNin));
     }
 
     [Fact]
@@ -100,7 +98,7 @@ public class DashboardRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Single(result);
-        Assert.All(result, n => Assert.All(n.Recipients, r => Assert.Equal("email", r.Channel)));
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
     }
 
     [Fact]
@@ -122,9 +120,9 @@ public class DashboardRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Single(result);
-        Assert.Equal(2, result[0].Recipients.Count);
-        Assert.Contains(result[0].Recipients, r => r.Channel == "email");
-        Assert.Contains(result[0].Recipients, r => r.Channel == "sms");
+        Assert.Equal(2, result[0].DeliveryAttempts.Count);
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "email");
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "sms");
     }
 
     private static DashboardRepository GetRepository() =>

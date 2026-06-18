@@ -38,7 +38,7 @@ public record DashboardNotification
     /// <summary>
     /// The delivery attempts for this notification, one per channel.
     /// </summary>
-    public List<DashboardRecipient> Recipients { get; init; }
+    public List<DashboardDeliveryAttempt> DeliveryAttempts { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardNotification"/> record.
@@ -50,7 +50,7 @@ public record DashboardNotification
         string? sendersReference,
         DateTime requestedSendTime,
         string? notificationChannel,
-        List<DashboardRecipient> recipients)
+        List<DashboardDeliveryAttempt> deliveryAttempts)
     {
         ShipmentId = shipmentId;
         CreatorName = creatorName;
@@ -58,6 +58,6 @@ public record DashboardNotification
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         NotificationChannel = notificationChannel;
-        Recipients = recipients;
+        DeliveryAttempts = deliveryAttempts;
     }
 }

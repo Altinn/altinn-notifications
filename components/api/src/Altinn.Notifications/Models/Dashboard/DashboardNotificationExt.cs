@@ -46,6 +46,6 @@ public record DashboardNotificationExt
     /// <summary>
     /// The delivery attempts for this notification, one per channel.
     /// </summary>
-    [JsonPropertyName("recipients")]
-    public List<DashboardRecipientExt> Recipients { get; init; } = [];
+    [JsonPropertyName("deliveryAttempts")]
+    public List<DashboardDeliveryAttemptExt> DeliveryAttempts { get; init; } = [];
 }

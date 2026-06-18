@@ -29,14 +29,14 @@ namespace Altinn.Notifications.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
-    private readonly IValidator<GetNotificationsByNinRequestExt> _validator;
+    private readonly IValidator<NotificationsByNinRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
     /// </summary>
     /// <param name="dashboardService">The dashboard service.</param>
     /// <param name="validator">The validator for NIN lookup requests.</param>
-    public DashboardController(IDashboardService dashboardService, IValidator<GetNotificationsByNinRequestExt> validator)
+    public DashboardController(IDashboardService dashboardService, IValidator<NotificationsByNinRequestExt> validator)
     {
         _dashboardService = dashboardService;
         _validator = validator;
@@ -45,19 +45,22 @@ public class DashboardController : ControllerBase
     /// <summary>
     /// Retrieves all notifications for a recipient identified by their national identity number.
     /// </summary>
-    /// <param name="request">The request containing the NIN and optional date range.</param>
+    /// <param name="nin">The national identity number of the recipient.</param>
+    /// <param name="filters">Optional date range filters.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of notifications matching the search criteria.</returns>
-    [HttpGet("notifications/nin")]
+    [HttpGet("recipients/{nin}/notifications")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
     [SwaggerResponse(400, "Invalid request parameters")]
     [SwaggerResponse(404, "No notifications found for the provided NIN.")]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByNin(
-        [FromQuery] GetNotificationsByNinRequestExt request,
+        [FromRoute] string nin,
+        [FromQuery] NotificationsByNinFiltersExt filters,
         CancellationToken cancellationToken = default)
     {
+        var request = new NotificationsByNinRequestExt { Nin = nin, From = filters.From, To = filters.To };
         var validationResult = _validator.Validate(request);
         if (!validationResult.IsValid)
         {
@@ -68,7 +71,7 @@ public class DashboardController : ControllerBase
         try
         {
             Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByNinAsync(request.Nin, request.From, request.To, cancellationToken);
+                await _dashboardService.GetNotificationsByNinAsync(nin, filters.From, filters.To, cancellationToken);
 
             return result.Match(
                 notifications => Ok(notifications.MapToDashboardNotificationExtList()),

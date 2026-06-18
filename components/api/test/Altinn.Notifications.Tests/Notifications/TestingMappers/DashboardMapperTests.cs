@@ -25,11 +25,11 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_EmailRecipient_MapsEmailAddressAndNullMobile()
     {
-        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "test@example.com", null, null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
-        var recipient = Assert.Single(Assert.Single(result).Recipients);
+        var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
         Assert.Equal("test@example.com", recipient.EmailAddress);
         Assert.Null(recipient.MobileNumber);
     }
@@ -37,11 +37,11 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_SmsRecipient_MapsMobileNumberAndNullEmail()
     {
-        var notification = BuildNotification([new DashboardRecipient(_nin, null, "sms", null, "+4712345678", null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "sms", null, "+4712345678", null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
-        var recipient = Assert.Single(Assert.Single(result).Recipients);
+        var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
         Assert.Equal("+4712345678", recipient.MobileNumber);
         Assert.Null(recipient.EmailAddress);
     }
@@ -49,11 +49,11 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_RecipientNinIsMapped()
     {
-        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "test@example.com", null, null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
-        var recipient = Assert.Single(Assert.Single(result).Recipients);
+        var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
         Assert.Equal(_nin, recipient.NationalIdentityNumber);
     }
 
@@ -71,7 +71,7 @@ public class DashboardMapperTests
                 "ref-123",
                 sendTime,
                 "EmailPreferred",
-                [new DashboardRecipient(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]),
+                [new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]),
         };
 
         var result = notifications.MapToDashboardNotificationExtList();
@@ -89,32 +89,32 @@ public class DashboardMapperTests
     public void MapToDashboardNotificationExtList_RecipientResultFieldsMapped()
     {
         var resultTime = new DateTime(2026, 5, 1, 12, 5, 0, DateTimeKind.Utc);
-        var notification = BuildNotification([new DashboardRecipient(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
-        var recipient = Assert.Single(Assert.Single(result).Recipients);
+        var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
         Assert.Equal("Succeeded", recipient.Result);
         Assert.Equal(resultTime, recipient.ResultTime);
     }
 
     [Fact]
-    public void MapToDashboardNotificationExtList_MultipleRecipients_AllMapped()
+    public void MapToDashboardNotificationExtList_MultipleDeliveryAttempts_AllMapped()
     {
         var notification = BuildNotification([
-            new DashboardRecipient(_nin, null, "email", "a@b.com", null, null, null),
-            new DashboardRecipient(_nin, null, "sms", null, "+4700000001", null, null),
+            new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, null, null),
+            new DashboardDeliveryAttempt(_nin, null, "sms", null, "+4700000001", null, null),
         ]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
-        var recipients = Assert.Single(result).Recipients;
+        var recipients = Assert.Single(result).DeliveryAttempts;
         Assert.Equal(2, recipients.Count);
         Assert.Equal("a@b.com", recipients[0].EmailAddress);
         Assert.Equal("+4700000001", recipients[1].MobileNumber);
     }
 
-    private static List<DashboardNotification> BuildNotification(List<DashboardRecipient> recipients)
+    private static List<DashboardNotification> BuildNotification(List<DashboardDeliveryAttempt> recipients)
     {
         return
         [

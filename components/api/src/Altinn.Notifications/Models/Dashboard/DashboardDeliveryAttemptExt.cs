@@ -5,18 +5,20 @@ namespace Altinn.Notifications.Models.Dashboard;
 /// <summary>
 /// Represents a single delivery attempt for a dashboard notification, tied to a specific channel.
 /// </summary>
-public record DashboardRecipientExt
+public record DashboardDeliveryAttemptExt
 {
     /// <summary>
     /// The national identity number of the recipient.
     /// </summary>
     [JsonPropertyName("nationalIdentityNumber")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? NationalIdentityNumber { get; init; }
 
     /// <summary>
     /// The organisation number of the recipient.
     /// </summary>
     [JsonPropertyName("organizationNumber")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OrganizationNumber { get; init; }
 
     /// <summary>

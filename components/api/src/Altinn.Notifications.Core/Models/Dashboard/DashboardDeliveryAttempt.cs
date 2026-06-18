@@ -3,7 +3,7 @@ namespace Altinn.Notifications.Core.Models.Dashboard;
 /// <summary>
 /// Represents a single delivery attempt for a dashboard notification, tied to a specific channel.
 /// </summary>
-public record DashboardRecipient
+public record DashboardDeliveryAttempt
 {
     /// <summary>
     /// The national identity number of the recipient.
@@ -41,9 +41,9 @@ public record DashboardRecipient
     public DateTime? ResultTime { get; init; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DashboardRecipient"/> record.
+    /// Initializes a new instance of the <see cref="DashboardDeliveryAttempt"/> record.
     /// </summary>
-    public DashboardRecipient(
+    public DashboardDeliveryAttempt(
         string? nationalIdentityNumber,
         string? organizationNumber,
         string channel,

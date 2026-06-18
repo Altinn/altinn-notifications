@@ -1,0 +1,32 @@
+using Altinn.Notifications.Models.Dashboard;
+using Altinn.Notifications.Validators.Rules;
+using FluentValidation;
+
+namespace Altinn.Notifications.Validators.Dashboard;
+
+/// <summary>
+/// Validator for <see cref="NotificationsByNinRequestExt"/>.
+/// </summary>
+internal sealed class NotificationsByNinRequestValidator : AbstractValidator<NotificationsByNinRequestExt>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationsByNinRequestValidator"/> class.
+    /// </summary>
+    public NotificationsByNinRequestValidator()
+    {
+        RuleFor(x => x.Nin)
+            .NotEmpty().WithMessage("'nin' is required and cannot be empty")
+            .MustBeValidNationalIdentityNumber().When(x => !string.IsNullOrEmpty(x.Nin));
+
+        RuleFor(x => x.From)
+            .Must(from => from!.Value.Kind != DateTimeKind.Unspecified).When(x => x.From.HasValue).WithMessage("The 'from' value must have specified a time zone.")
+            .Must((request, from) => from < request.To).When(x => x.From.HasValue && x.To.HasValue).WithMessage("'from' must be earlier than 'to'.")
+            .Must(from => from <= DateTime.UtcNow).When(x => x.From.HasValue).WithMessage("'from' must not be in the future.")
+            .Must(from => from >= DateTime.UtcNow.AddYears(-10)).When(x => x.From.HasValue).WithMessage("'from' must not be earlier than 10 years ago.");
+
+        RuleFor(x => x.To)
+            .Must(to => to!.Value.Kind != DateTimeKind.Unspecified).When(x => x.To.HasValue).WithMessage("The 'to' value must have specified a time zone.")
+            .Must(to => to <= DateTime.UtcNow).When(x => x.To.HasValue).WithMessage("'to' must not be in the future.")
+            .Must(to => to > DateTime.UtcNow.AddDays(-7)).When(x => x.To.HasValue && !x.From.HasValue).WithMessage("'to' must be later than the default 'from' (7 days ago).");
+    }
+}

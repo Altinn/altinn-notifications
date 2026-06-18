@@ -30,21 +30,21 @@ public class DashboardServiceTests
                 null,
                 DateTime.UtcNow,
                 "EmailPreferred",
-                [new DashboardRecipient(_recipientNin, null, "email", null, null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)]),
         };
 
         Mock<IDashboardRepository> repository = new();
         repository
             .Setup(x => x.GetDashboardNotificationsByNinAsync(
                 It.IsAny<string>(),
-                It.IsAny<DateTimeOffset?>(),
-                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var sut = new DashboardService(repository.Object);
-        DateTimeOffset from = DateTimeOffset.UtcNow.AddDays(-3);
-        DateTimeOffset to = DateTimeOffset.UtcNow;
+        DateTime from = DateTime.UtcNow.AddDays(-3);
+        DateTime to = DateTime.UtcNow;
 
         // Act
         var result = await sut.GetNotificationsByNinAsync(_recipientNin, from, to, CancellationToken.None);
@@ -68,8 +68,8 @@ public class DashboardServiceTests
         repository
             .Setup(x => x.GetDashboardNotificationsByNinAsync(
                 It.IsAny<string>(),
-                It.IsAny<DateTimeOffset?>(),
-                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -95,8 +95,8 @@ public class DashboardServiceTests
         repository
             .Setup(x => x.GetDashboardNotificationsByNinAsync(
                 It.IsAny<string>(),
-                It.IsAny<DateTimeOffset?>(),
-                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -110,8 +110,8 @@ public class DashboardServiceTests
         repository.Verify(
             x => x.GetDashboardNotificationsByNinAsync(
                 _recipientNin,
-                It.IsAny<DateTimeOffset?>(),
-                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
                 cts.Token),
             Times.Once);
     }

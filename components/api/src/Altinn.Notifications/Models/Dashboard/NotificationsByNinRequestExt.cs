@@ -1,9 +1,9 @@
 namespace Altinn.Notifications.Models.Dashboard;
 
 /// <summary>
-/// Request model for fetching notifications by national identity number.
+/// Combined model used for validating a notifications-by-NIN lookup.
 /// </summary>
-public class GetNotificationsByNinRequestExt
+public class NotificationsByNinRequestExt
 {
     /// <summary>
     /// The national identity number of the recipient.
@@ -13,10 +13,10 @@ public class GetNotificationsByNinRequestExt
     /// <summary>
     /// Start of the date range (inclusive). Defaults to 7 days ago if not provided.
     /// </summary>
-    public DateTimeOffset? From { get; set; }
+    public DateTime? From { get; set; }
 
     /// <summary>
     /// End of the date range (exclusive). Defaults to now if not provided.
     /// </summary>
-    public DateTimeOffset? To { get; set; }
+    public DateTime? To { get; set; }
 }

@@ -17,5 +17,5 @@ public interface IDashboardService
     /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria, or a <see cref="ServiceError"/> if no notifications are found.</returns>
-    Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByNinAsync(string recipientNin, DateTimeOffset? dateTimeFrom, DateTimeOffset? dateTimeTo, CancellationToken cancellationToken);
+    Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
 }
