@@ -57,7 +57,6 @@ public class DashboardRepository : IDashboardRepository
 
                 var recipient = new DashboardDeliveryAttempt(
                     nationalIdentityNumber: reader.GetValue<string>("recipientnin"),
-                    organizationNumber: null,
                     channel: channel,
                     emailAddress: channel == "email" ? address : null,
                     mobileNumber: channel == "sms" ? address : null,

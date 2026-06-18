@@ -30,7 +30,7 @@ public class DashboardServiceTests
                 null,
                 DateTime.UtcNow,
                 "EmailPreferred",
-                [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(_recipientNin, "email", null, null, "Succeeded", null)]),
         };
 
         Mock<IDashboardRepository> repository = new();
