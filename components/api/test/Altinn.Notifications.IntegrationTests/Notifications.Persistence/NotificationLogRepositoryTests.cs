@@ -34,9 +34,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         var dialogId = Guid.NewGuid();
         const string transmissionId = "test-transmission-abc123";
         const string toAddress = "log-test@example.com";
-        const string operationId = "op-id-test-abc123";
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
+        string operationId = Guid.NewGuid().ToString();
 
         (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
             dialogId: dialogId,
@@ -84,9 +84,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         var dialogId = Guid.NewGuid();
         const string transmissionId = "test-transmission-sms-456";
         const string mobileNumber = "+4799999999";
-        const string gatewayReference = "gw-ref-test-123";
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
+        string gatewayReference = Guid.NewGuid().ToString();
 
         (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
             dialogId: dialogId,

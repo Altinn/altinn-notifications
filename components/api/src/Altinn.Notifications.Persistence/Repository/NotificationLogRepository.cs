@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Persistence.Extensions;
 
 using Npgsql;
 using NpgsqlTypes;
@@ -86,7 +87,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
     /// <inheritdoc/>
     public async Task<IEnumerable<NotificationLogEntry>> GetNotificationLogEntries(string id, NotificationLogIdType type, CancellationToken cancellationToken)
     {
-        List<NotificationLogEntry> notificationLogEntries = new();
+        List<NotificationLogEntry> notificationLogEntries = [];
         ArgumentNullException.ThrowIfNull(id);
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getNotificationLogEntriesSql);
@@ -98,20 +99,20 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
             while (await reader.ReadAsync(cancellationToken))
             {
                 notificationLogEntries.Add(new NotificationLogEntry(
-                    await reader.GetFieldValueAsync<long?>("orderchainid", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<Guid>("shipmentid", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("creatorname", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<Guid?>("dialogid", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("transmissionid", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("operationid", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("gatewayreference", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("recipient", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string>("type", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("destination", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("resource", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<string?>("status", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<DateTime>("created_timestamp", cancellationToken: cancellationToken),
-                    await reader.GetFieldValueAsync<DateTime?>("sent_timestamp", cancellationToken: cancellationToken)));
+                    await reader.NullcheckAndGetValueAsync<long?>("orderchainid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<Guid>("shipmentid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("creatorname", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<Guid?>("dialogid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("transmissionid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("operationid", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("gatewayreference", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("recipient", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("type", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("destination", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("resource", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<string?>("status", cancellationToken),
+                    await reader.GetFieldValueAsync<DateTime>("created_timestamp", cancellationToken),
+                    await reader.NullcheckAndGetValueAsync<DateTime?>("sent_timestamp", cancellationToken)));
             }
         }
 
