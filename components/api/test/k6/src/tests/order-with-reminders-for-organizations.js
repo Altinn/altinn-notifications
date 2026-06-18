@@ -211,7 +211,9 @@ function stripRecipientOrganizationFromOrderChainPayload(orderChainPayload) {
 
     const invalidReminders = Array.isArray(orderChainPayload.reminders)
         ? orderChainPayload.reminders.map((reminder) => {
-              if (!reminder) return reminder;
+              if (!reminder) {
+                  return reminder;
+              }
               return {
                   ...reminder,
                   recipient: reminder.recipient
