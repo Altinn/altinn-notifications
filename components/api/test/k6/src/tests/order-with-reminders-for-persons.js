@@ -33,15 +33,22 @@ import {
     prepareBaseOrderChain,
     duplicateOrderDuration,
     buildStandardValidators,
-    generateOrderChainPayloads
+    generateOrderChainPayloads,
 } from "./order-with-reminders-functions.js";
-import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
+import {
+    post_valid_order,
+    post_invalid_order,
+    post_duplicate_order,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
 
 // Define the order types to be tested based on environment variables or defaults
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order];
 
 // Test order chain loaded from a JSON file.
-const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-persons.json"));
+const orderChainJsonPayload = JSON.parse(
+    open("../data/orders/order-with-reminders-for-persons.json")
+);
 
 // Export shared options
 export const options = buildOptions();
@@ -51,12 +58,12 @@ setEmptyThresholds(labels, options);
 
 /**
  * Prepares test data by creating a notification order chain with unique identifiers.
- * 
+ *
  * @returns {Object} Test context containing the order chain payload
  */
 export function setup() {
     const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
-        addDialogAssociation: true
+        addDialogAssociation: true,
     });
 
     return { orderChainPayload };
@@ -64,14 +71,17 @@ export function setup() {
 
 /**
  * Update the national identify number used to identify recipients.
- * 
+ *
  * @param {Object} recipient - The recipient object to update
  * @param {string} nationalIdentityNumber - The national identify number to set
  * @returns {Object} Updated recipient with new national identify number
  */
 function updateRecipientWithBirthNumber(recipient, nationalIdentityNumber) {
     if (!recipient?.recipientPerson) {
-        stopIterationOnFail("Recipient is missing required recipientPerson property", false);
+        stopIterationOnFail(
+            "Recipient is missing required recipientPerson property",
+            false
+        );
         return recipient;
     }
 
@@ -79,8 +89,8 @@ function updateRecipientWithBirthNumber(recipient, nationalIdentityNumber) {
         ...recipient,
         recipientPerson: {
             ...recipient.recipientPerson,
-            nationalIdentityNumber
-        }
+            nationalIdentityNumber,
+        },
     };
 }
 
@@ -100,14 +110,14 @@ function createUniqueOrderChainPayload(baseOrderChainPayload) {
             ninRecipient
         ),
         reminders: Array.isArray(baseOrderChainPayload.reminders)
-            ? baseOrderChainPayload.reminders.map(reminder => ({
-                ...reminder,
-                recipient: updateRecipientWithBirthNumber(
-                    reminder.recipient,
-                    ninRecipient
-                )
-            }))
-            : []
+            ? baseOrderChainPayload.reminders.map((reminder) => ({
+                  ...reminder,
+                  recipient: updateRecipientWithBirthNumber(
+                      reminder.recipient,
+                      ninRecipient
+                  ),
+              }))
+            : [],
     };
 }
 
@@ -125,15 +135,15 @@ function stripRecipientPersonFromOrderChainPayload(orderChainPayload) {
         ...orderChainPayload,
         recipient: {
             ...orderChainPayload.recipient,
-            recipientPerson: undefined
+            recipientPerson: undefined,
         },
-        reminders: orderChainPayload.reminders.map(reminder => ({
+        reminders: orderChainPayload.reminders.map((reminder) => ({
             ...reminder,
             recipient: {
                 ...reminder.recipient,
-                recipientPerson: undefined
-            }
-        }))
+                recipientPerson: undefined,
+            },
+        })),
     };
 }
 
@@ -143,22 +153,26 @@ function stripRecipientPersonFromOrderChainPayload(orderChainPayload) {
  * @param {Object} data - Setup context
  */
 export default async function runTests(data) {
-    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
-        uniqueFactory: createUniqueOrderChainPayload,
-        invalidTransform: stripRecipientPersonFromOrderChainPayload
-    });
+    const variants = generateOrderChainPayloads(
+        orderTypes,
+        data.orderChainPayload,
+        {
+            uniqueFactory: createUniqueOrderChainPayload,
+            invalidTransform: stripRecipientPersonFromOrderChainPayload,
+        }
+    );
 
     const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,
-            duplicate: post_duplicate_order
+            duplicate: post_duplicate_order,
         },
         durationMetrics: {
             valid: validOrderDuration,
             invalid: invalidOrderDuration,
-            duplicate: duplicateOrderDuration
-        }
+            duplicate: duplicateOrderDuration,
+        },
     });
 
     const validators = buildStandardValidators();

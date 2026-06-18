@@ -10,10 +10,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
+    <PackageReference Include="WolverineFx" Version="5.39.5" />
+    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.39.5" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
-    <PackageReference Include="WolverineFx" Version="5.39.3" />
-    <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.39.3" />
   </ItemGroup>
 
   <ItemGroup>
