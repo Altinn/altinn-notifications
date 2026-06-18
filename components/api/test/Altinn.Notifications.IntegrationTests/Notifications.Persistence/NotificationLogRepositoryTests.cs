@@ -82,11 +82,11 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var dialogId = Guid.NewGuid();
+        var gatewayReference = Guid.NewGuid().ToString();
         const string transmissionId = "test-transmission-sms-456";
         const string mobileNumber = "+4799999999";
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
-        string gatewayReference = Guid.NewGuid().ToString();
 
         (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
             dialogId: dialogId,
