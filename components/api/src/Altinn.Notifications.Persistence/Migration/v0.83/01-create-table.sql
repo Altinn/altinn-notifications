@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     orderchainid int8,
     shipmentid uuid NOT NULL,
     creatorname text,
-    dialogid uuid,
+    dialogid text,
     transmissionid text,
     operationid text, 
     gatewayreference text,

@@ -44,7 +44,7 @@ public record NotificationLogEntry(
     long? OrderChainId,
     Guid ShipmentId,
     string? CreatorName,
-    Guid? DialogId,
+    string? DialogId,
     string? TransmissionId,
     string? OperationId,
     string? GatewayReference,

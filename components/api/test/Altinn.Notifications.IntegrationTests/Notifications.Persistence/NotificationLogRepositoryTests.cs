@@ -66,7 +66,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, entry.ShipmentId);
         Assert.Equal(chainDbId, entry.OrderChainId);
         Assert.Equal(creatorName, entry.CreatorName);
-        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal(dialogId.ToString(), entry.DialogId);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(toAddress, entry.Destination);
         Assert.Equal(resourceId, entry.Resource);
@@ -116,7 +116,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, entry.ShipmentId);
         Assert.Equal(chainDbId, entry.OrderChainId);
         Assert.Equal(creatorName, entry.CreatorName);
-        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal(dialogId.ToString(), entry.DialogId);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(mobileNumber, entry.Destination);
         Assert.Equal(resourceId, entry.Resource);
