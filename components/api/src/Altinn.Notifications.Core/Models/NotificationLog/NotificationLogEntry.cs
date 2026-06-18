@@ -40,7 +40,7 @@ public record NotificationLogEntry(
     long? OrderChainId,
     Guid ShipmentId,
     string? CreatorName,
-    Guid? DialogId,
+    string? DialogId,
     string? TransmissionId,
     string? OperationId,
     string? GatewayReference,
@@ -48,4 +48,6 @@ public record NotificationLogEntry(
     string Type,
     string? Destination,
     string? Resource,
-    string? Status);
+    string? Status,
+    DateTime CreatedTimestamp,
+    DateTime? SentTimestamp);

@@ -936,7 +936,7 @@ public static class PostgreUtil
             OrderChainId: await reader.IsDBNullAsync(reader.GetOrdinal("orderchainid")) ? null : await reader.GetFieldValueAsync<long>("orderchainid"),
             ShipmentId: await reader.GetFieldValueAsync<Guid>("shipmentid"),
             CreatorName: await reader.IsDBNullAsync(reader.GetOrdinal("creatorname")) ? null : await reader.GetFieldValueAsync<string>("creatorname"),
-            DialogId: await reader.IsDBNullAsync(reader.GetOrdinal("dialogid")) ? null : await reader.GetFieldValueAsync<Guid>("dialogid"),
+            DialogId: await reader.IsDBNullAsync(reader.GetOrdinal("dialogid")) ? null : await reader.GetFieldValueAsync<string>("dialogid"),
             TransmissionId: await reader.IsDBNullAsync(reader.GetOrdinal("transmissionid")) ? null : await reader.GetFieldValueAsync<string>("transmissionid"),
             OperationId: await reader.IsDBNullAsync(reader.GetOrdinal("operationid")) ? null : await reader.GetFieldValueAsync<string>("operationid"),
             GatewayReference: await reader.IsDBNullAsync(reader.GetOrdinal("gatewayreference")) ? null : await reader.GetFieldValueAsync<string>("gatewayreference"),
@@ -944,6 +944,8 @@ public static class PostgreUtil
             Type: await reader.GetFieldValueAsync<string>("type"),
             Destination: await reader.IsDBNullAsync(reader.GetOrdinal("destination")) ? null : await reader.GetFieldValueAsync<string>("destination"),
             Resource: await reader.IsDBNullAsync(reader.GetOrdinal("resource")) ? null : await reader.GetFieldValueAsync<string>("resource"),
-            Status: await reader.IsDBNullAsync(reader.GetOrdinal("status")) ? null : await reader.GetFieldValueAsync<string>("status"));
+            Status: await reader.IsDBNullAsync(reader.GetOrdinal("status")) ? null : await reader.GetFieldValueAsync<string>("status"),
+            CreatedTimestamp: await reader.IsDBNullAsync(reader.GetOrdinal("created_timestamp")) ? DateTime.UtcNow : await reader.GetFieldValueAsync<DateTime>("created_timestamp"),
+            SentTimestamp: await reader.IsDBNullAsync(reader.GetOrdinal("sent_timestamp")) ? null : await reader.GetFieldValueAsync<DateTime>("sent_timestamp"));
     }
 }
