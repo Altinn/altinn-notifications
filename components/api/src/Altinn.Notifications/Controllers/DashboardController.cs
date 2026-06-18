@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Controllers;
 /// Controller for dashboard operations
 /// </summary>
 [ApiController]
-[Route("notifications/api/v1/dashboard")]
+[Route("notifications/api/v1/future/dashboard")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 
