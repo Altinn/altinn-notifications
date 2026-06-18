@@ -15,7 +15,6 @@ let memoizedSigningKeyPromise;
  * @returns {Promise<string>} The Maskinporten access token.
  */
 export async function generateAccessToken(scopes) {
-
     const encodedJwk = await getFromSecretSource("encodedJwk");
     const mpKid = await getFromSecretSource("mpKid");
     const mpClientId = await getFromSecretSource("mpClientId");
@@ -28,15 +27,23 @@ export async function generateAccessToken(scopes) {
         assertion: grant,
     };
 
-    const res = http.post(config.maskinporten.token, body, buildHeaderWithContentType("application/x-www-form-urlencoded"));
+    const res = http.post(
+        config.maskinporten.token,
+        body,
+        buildHeaderWithContentType("application/x-www-form-urlencoded")
+    );
 
     const success = check(res, {
-        "// Setup // Authentication towards Maskinporten Success": (r) => r.status === 200,
+        "// Setup // Authentication towards Maskinporten Success": (r) =>
+            r.status === 200,
     });
 
-    stopIterationOnFail("// Setup // Authentication towards Maskinporten Failed", success);
+    stopIterationOnFail(
+        "// Setup // Authentication towards Maskinporten Failed",
+        success
+    );
 
-    const accessToken = JSON.parse(res.body)['access_token'];
+    const accessToken = JSON.parse(res.body)["access_token"];
 
     return accessToken;
 }
@@ -68,7 +75,6 @@ function getSigningKey(encodedJwk) {
     }
     return memoizedSigningKeyPromise;
 }
-
 
 /**
  * Base64url-encodes a JSON-serializable object without padding.
@@ -120,9 +126,18 @@ async function createJwtGrant(scopes, encodedJwk, mpKid, mpClientId) {
 
     const cryptoKey = await getSigningKey(encodedJwk);
 
-    const signingInput = base64urlEncode(header) + "." + base64urlEncode(payload);
+    const signingInput =
+        base64urlEncode(header) + "." + base64urlEncode(payload);
     const data = stringToBytes(signingInput);
-    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, data);
+    const signature = await crypto.subtle.sign(
+        "RSASSA-PKCS1-v1_5",
+        cryptoKey,
+        data
+    );
 
-    return signingInput + "." + encoding.b64encode(new Uint8Array(signature), "rawurl");
+    return (
+        signingInput +
+        "." +
+        encoding.b64encode(new Uint8Array(signature), "rawurl")
+    );
 }

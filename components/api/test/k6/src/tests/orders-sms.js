@@ -20,13 +20,24 @@
 
 import { check } from "k6";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { randomString, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import {
+    randomString,
+    uuidv4,
+} from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
-import { post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
-import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
+import {
+    post_sms_order,
+    get_sms_notifications,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
+import {
+    getNotificationOrderById,
+    getNotificationOrderBySendersReference,
+    getNotificationOrderWithStatus,
+} from "../api/notifications/get-notification-orders.js";
 import { scopes } from "../shared/variables.js";
 import { getSmsRecipient } from "../shared/functions.js";
 
@@ -35,11 +46,21 @@ const labels = [post_sms_order, get_sms_notifications];
 const smsRecipient = getSmsRecipient();
 
 export const options = {
-    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
+    summaryTrendStats: [
+        "avg",
+        "min",
+        "med",
+        "max",
+        "p(95)",
+        "p(99)",
+        "p(99.5)",
+        "p(99.9)",
+        "count",
+    ],
     thresholds: {
         // Checks rate should be 100%. Raise error if any check has failed.
-        checks: ['rate>=1']
-    }
+        checks: ["rate>=1"],
+    },
 };
 setEmptyThresholds(labels, options);
 
@@ -53,13 +74,17 @@ export async function setup() {
 
     const smsOrderRequest = {
         senderNumber: "Altinn",
-        body: "This is an automated test: " + randomString(30) + " " + randomString(30),
+        body:
+            "This is an automated test: " +
+            randomString(30) +
+            " " +
+            randomString(30),
         recipients: [
             {
                 mobileNumber: smsRecipient,
             },
         ],
-        sendersReference: sendersReference
+        sendersReference: sendersReference,
     };
 
     const runFullTestSet = __ENV.runFullTestSet
@@ -87,7 +112,8 @@ function postSmsNotificationOrderRequest(data) {
     );
 
     const success = check(response, {
-        "POST SMS notification order request. Status is 202 Accepted": (r) => r.status === 202
+        "POST SMS notification order request. Status is 202 Accepted": (r) =>
+            r.status === 202,
     });
 
     stopIterationOnFail("POST SMS notification order request failed", success);
@@ -95,8 +121,10 @@ function postSmsNotificationOrderRequest(data) {
     const selfLink = response.headers["Location"];
 
     check(response, {
-        "POST SMS notification order request. Location header provided": (_) => selfLink,
-        "POST SMS notification order request. Response body is not an empty string": (r) => r.body
+        "POST SMS notification order request. Location header provided": (_) =>
+            selfLink,
+        "POST SMS notification order request. Response body is not an empty string":
+            (r) => r.body,
     });
 
     return selfLink;
@@ -108,14 +136,20 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} orderId - The ID of the order.
  */
 function getSmsNotificationSummary(data, orderId) {
-    const response = notificationsApi.getSmsNotifications(orderId, data.token, get_sms_notifications);
+    const response = notificationsApi.getSmsNotifications(
+        orderId,
+        data.token,
+        get_sms_notifications
+    );
 
     check(response, {
         "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,
     });
 
     check(JSON.parse(response.body), {
-        "GET SMS notifications. OrderId property is a match": (notificationSummary) => notificationSummary.orderId === orderId,
+        "GET SMS notifications. OrderId property is a match": (
+            notificationSummary
+        ) => notificationSummary.orderId === orderId,
     });
 }
 

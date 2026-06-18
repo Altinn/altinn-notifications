@@ -93,6 +93,22 @@ docker compose run k6 run /src/tests/orders-email.js \
 
 ---
 
+## Code formatting
+
+JavaScript files are formatted with [Prettier](https://prettier.io/). To format all k6 test files, run the following from the `k6` folder:
+
+```bash
+npx prettier --write "src/**/*.js"
+```
+
+To check formatting without making changes:
+
+```bash
+npx prettier --check "src/**/*.js"
+```
+
+---
+
 ## Load tests
 
 The same tests can be used to run load and performance tests. These can be executed as described above, but with additional parameters like `--vus` (virtual users) and `--duration` or `--iterations`. 
