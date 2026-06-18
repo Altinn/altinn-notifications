@@ -50,7 +50,7 @@ followed by a diagram showing the relation between the tables.
 
 | Table               | Description                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| orders              | Contains metadata for each notification order, including send time policy and order type                             |
+| orders              | Contains metadata for each notification order, including send time policy, order type, and a nullable FK to orderschain |
 | emailtexts          | Holds the template texts (subject, body, sender) for email notifications                                             |
 | emailnotifications  | Holds metadata for each email notification, recipient contact details, customized content, and raw delivery report   |
 | smstexts            | Holds the template texts (sender number, body) for SMS notifications                                                 |
