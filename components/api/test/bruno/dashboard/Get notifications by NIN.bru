@@ -5,15 +5,18 @@ meta {
 }
 
 get {
-  url: {{host}}/notifications/api/v1/dashboard/notifications/nin?nin={{nin}}
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/nin
   body: none
   auth: inherit
 }
 
 params:query {
-  nin: {{nin}}
   ~from: {{dateFrom}}
   ~to: {{dateTo}}
+}
+
+headers {
+  NationalIdentityNumber: {{nin}}
 }
 
 vars:pre-request {
