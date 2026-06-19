@@ -28,7 +28,6 @@
     <ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
-    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </ItemGroup>
 
   <ItemGroup>
