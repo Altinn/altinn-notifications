@@ -289,6 +289,10 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
         {
             policy.Requirements.Add(new CreateScopeOrAccessTokenRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_CREATE));
+        }).
+        AddPolicy(AuthorizationConstants.POLICY_SUPPORT_DASHBOARD_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_SUPPORT_DASHBOARD_ACCESS));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
