@@ -1801,7 +1801,7 @@ BEGIN
         resource,
         status,
         created_timestamp,
-        sent_timestamp
+        last_update_timestamp
     )
     SELECT
         src.orderchainid,
@@ -1817,7 +1817,7 @@ BEGIN
         src.resource,
         src.status,
         src.created_timestamp,
-        src.sent_timestamp
+        src.last_update_timestamp
     FROM (
         SELECT
             c._id AS orderchainid,
@@ -1833,7 +1833,7 @@ BEGIN
             email.toaddress AS destination,
             email.result::text AS status,
             o.created AS created_timestamp,
-            email.resulttime AS sent_timestamp
+            email.resulttime AS last_update_timestamp
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
@@ -1855,7 +1855,7 @@ BEGIN
             sms.mobilenumber AS destination,
             sms.result::text AS status,
             o.created AS created_timestamp,
-            sms.resulttime AS sent_timestamp
+            sms.resulttime AS last_update_timestamp
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid

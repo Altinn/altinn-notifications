@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     destination text,  -- Email address or phone number
     resource text,
     status text,
-    created_timestamp timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    sent_timestamp timestamp with time zone,
+    created_timestamp timestamp with time zone,
+    last_update_timestamp timestamp with time zone,
     PRIMARY KEY (id, created_timestamp)
 ) PARTITION BY RANGE (created_timestamp);
 

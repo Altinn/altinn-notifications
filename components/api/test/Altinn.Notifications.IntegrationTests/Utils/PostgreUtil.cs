@@ -919,7 +919,7 @@ public static class PostgreUtil
                 resource,
                 status,
                 created_timestamp,
-                sent_timestamp
+                last_update_timestamp
             FROM notifications.notificationlog
             WHERE shipmentid = @shipmentId
             LIMIT 1
@@ -948,6 +948,6 @@ public static class PostgreUtil
             Resource: await reader.IsDBNullAsync(reader.GetOrdinal("resource")) ? null : await reader.GetFieldValueAsync<string>("resource"),
             Status: await reader.IsDBNullAsync(reader.GetOrdinal("status")) ? null : await reader.GetFieldValueAsync<string>("status"),
             CreatedTimestamp: await reader.IsDBNullAsync(reader.GetOrdinal("created_timestamp")) ? DateTime.UtcNow : await reader.GetFieldValueAsync<DateTime>("created_timestamp"),
-            SentTimestamp: await reader.IsDBNullAsync(reader.GetOrdinal("sent_timestamp")) ? null : await reader.GetFieldValueAsync<DateTime>("sent_timestamp"));
+            LastUpdateTimestamp: await reader.IsDBNullAsync(reader.GetOrdinal("last_update_timestamp")) ? null : await reader.GetFieldValueAsync<DateTime>("last_update_timestamp"));
     }
 }
