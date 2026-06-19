@@ -14,8 +14,8 @@ internal sealed class NotificationsByNinRequestValidator : AbstractValidator<Not
     /// </summary>
     public NotificationsByNinRequestValidator()
     {
-        RuleFor(x => x.Nin)
-            .NotEmpty().WithMessage("'nin' is required and cannot be empty")
+        RuleFor(x => x.NationalIdentityNumber)
+            .NotEmpty().WithMessage("'NationalIdentityNumber' is required and cannot be empty")
             .MustBeValidNationalIdentityNumber();
 
         RuleFor(x => x.From)
