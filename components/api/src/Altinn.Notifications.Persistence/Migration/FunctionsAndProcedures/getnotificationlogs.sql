@@ -17,7 +17,7 @@ RETURNS TABLE (
     resource         text,
     status           text,
     created_timestamp timestamptz,
-    sent_timestamp   timestamptz
+    last_update_timestamp   timestamptz
 )
 LANGUAGE plpgsql
 STABLE PARALLEL SAFE
@@ -40,7 +40,7 @@ BEGIN
             nl.resource,
             nl.status,
             nl.created_timestamp,
-            nl.sent_timestamp
+            nl.last_update_timestamp
         FROM notifications.notificationlog nl
         WHERE nl.shipmentid = _id::uuid;
 
@@ -61,7 +61,7 @@ BEGIN
             nl.resource,
             nl.status,
             nl.created_timestamp,
-            nl.sent_timestamp
+            nl.last_update_timestamp
         FROM notifications.notificationlog nl
         WHERE nl.dialogid = _id;
 
@@ -82,7 +82,7 @@ BEGIN
             nl.resource,
             nl.status,
             nl.created_timestamp,
-            nl.sent_timestamp
+            nl.last_update_timestamp
         FROM notifications.notificationlog nl
         WHERE nl.transmissionid = _id;
 

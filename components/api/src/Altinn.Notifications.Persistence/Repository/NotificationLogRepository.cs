@@ -38,7 +38,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
             resource,
             status,
             created_timestamp,
-            sent_timestamp
+            last_update_timestamp
         FROM notifications.get_notification_logs(
             _id := @id,
             _id_type := @type)
@@ -112,7 +112,7 @@ public class NotificationLogRepository(NpgsqlDataSource dataSource) : ITransacti
                     await reader.NullcheckAndGetValueAsync<string?>("resource", cancellationToken),
                     await reader.NullcheckAndGetValueAsync<string?>("status", cancellationToken),
                     await reader.GetFieldValueAsync<DateTime>("created_timestamp", cancellationToken),
-                    await reader.NullcheckAndGetValueAsync<DateTime?>("sent_timestamp", cancellationToken)));
+                    await reader.NullcheckAndGetValueAsync<DateTime?>("last_update_timestamp", cancellationToken)));
             }
         }
 
