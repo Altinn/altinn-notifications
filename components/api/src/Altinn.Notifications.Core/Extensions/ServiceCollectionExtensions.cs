@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
+            .AddSingleton<IDashboardService, DashboardService>()
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>();
     }

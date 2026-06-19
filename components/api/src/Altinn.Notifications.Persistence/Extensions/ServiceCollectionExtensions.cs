@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
         .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
+        .AddSingleton<IDashboardRepository, DashboardRepository>()
         .AddSingleton<NotificationLogRepository>()
         .AddSingleton<INotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>())
         .AddSingleton<ITransactionalNotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>())
