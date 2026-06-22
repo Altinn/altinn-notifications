@@ -38,7 +38,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
-        (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
             dialogId: dialogId,
             transmissionId: transmissionId,
             toAddress: toAddress,
@@ -64,7 +64,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.NotNull(entry);
 
         Assert.Equal(orderId, entry.ShipmentId);
-        Assert.Equal(chainDbId, entry.OrderChainId);
+        Assert.Equal(orderChainId, entry.OrderChainId);
         Assert.Equal(creatorName, entry.CreatorName);
         Assert.Equal(dialogId.ToString(), entry.DialogId);
         Assert.Equal(transmissionId, entry.TransmissionId);
@@ -88,7 +88,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
-        (Guid orderId, long chainDbId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
             dialogId: dialogId,
             transmissionId: transmissionId,
             mobileNumber: mobileNumber,
@@ -114,7 +114,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.NotNull(entry);
 
         Assert.Equal(orderId, entry.ShipmentId);
-        Assert.Equal(chainDbId, entry.OrderChainId);
+        Assert.Equal(orderChainId, entry.OrderChainId);
         Assert.Equal(creatorName, entry.CreatorName);
         Assert.Equal(dialogId.ToString(), entry.DialogId);
         Assert.Equal(transmissionId, entry.TransmissionId);

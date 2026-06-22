@@ -583,8 +583,8 @@ public static class PostgreUtil
     /// Inserts an orderschain row with Dialogporten identifiers and an email order linked to it,
     /// then inserts a delivered email notification. Intended for NotificationLogRepository tests.
     /// </summary>
-    /// <returns>The order alternate ID (shipment ID), the bigint chain DB ID, and the order chain ID.</returns>
-    public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndEmailNotification(
+    /// <returns>The order alternate ID (shipment ID) and the order chain ID.</returns>
+    public static async Task<(Guid OrderId, Guid OrderChainId)> PopulateDBWithChainedOrderAndEmailNotification(
         Guid dialogId,
         string transmissionId,
         string toAddress = "log-test@example.com",
@@ -732,7 +732,7 @@ public static class PostgreUtil
             throw;
         }
 
-        return (orderId, chainDbId, orderChainId);
+        return (orderId, orderChainId);
     }
 
     /// <summary>
@@ -743,11 +743,10 @@ public static class PostgreUtil
     /// A tuple containing:
     /// <list type="bullet">
     /// <item><description><c>OrderId</c>: The alternate ID of the SMS order (shipment ID).</description></item>
-    /// <item><description><c>ChainDbId</c>: The bigint primary key of the inserted order chain row.</description></item>
     /// <item><description><c>OrderChainId</c>: The alternate ID (UUID) of the inserted order chain.</description></item>
     /// </list>
     /// </returns>
-    public static async Task<(Guid OrderId, long ChainDbId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
+    public static async Task<(Guid OrderId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
@@ -895,7 +894,7 @@ public static class PostgreUtil
             throw;
         }
 
-        return (orderId, chainDbId, orderChainId);
+        return (orderId, orderChainId);
     }
 
     /// <summary>
@@ -935,7 +934,7 @@ public static class PostgreUtil
         }
 
         return new NotificationLogEntry(
-            OrderChainId: await reader.IsDBNullAsync(reader.GetOrdinal("orderchainid")) ? null : await reader.GetFieldValueAsync<long>("orderchainid"),
+            OrderChainId: await reader.IsDBNullAsync(reader.GetOrdinal("orderchainid")) ? null : await reader.GetFieldValueAsync<Guid?>("orderchainid"),
             ShipmentId: await reader.GetFieldValueAsync<Guid>("shipmentid"),
             CreatorName: await reader.IsDBNullAsync(reader.GetOrdinal("creatorname")) ? null : await reader.GetFieldValueAsync<string>("creatorname"),
             DialogId: await reader.IsDBNullAsync(reader.GetOrdinal("dialogid")) ? null : await reader.GetFieldValueAsync<string>("dialogid"),

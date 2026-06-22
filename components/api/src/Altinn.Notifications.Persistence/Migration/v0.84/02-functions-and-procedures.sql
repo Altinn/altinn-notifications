@@ -1907,7 +1907,7 @@ BEGIN
         src.last_update_timestamp
     FROM (
         SELECT
-            c._id AS orderchainid,
+            c.orderid AS orderchainid,
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
@@ -1916,7 +1916,7 @@ BEGIN
             email.operationid AS operationid,
             NULL::text AS gatewayreference,
             COALESCE(email.recipientorgno, email.recipientnin) AS recipient,
-            o.type AS type,
+            o.type::text AS type,
             email.toaddress AS destination,
             email.result::text AS status,
             o.created AS created_timestamp,
@@ -1929,7 +1929,7 @@ BEGIN
         UNION ALL
 
         SELECT
-            c._id AS orderchainid,
+            c.orderid AS orderchainid,
             o.alternateid AS shipmentid,
             o.creatorname AS creatorname,
             o.notificationorder->>'ResourceId' AS resource,
@@ -1938,7 +1938,7 @@ BEGIN
             NULL::text AS operationid,
             sms.gatewayreference AS gatewayreference,
             COALESCE(sms.recipientorgno, sms.recipientnin) AS recipient,
-            o.type AS type,
+            o.type::text AS type,
             sms.mobilenumber AS destination,
             sms.result::text AS status,
             o.created AS created_timestamp,

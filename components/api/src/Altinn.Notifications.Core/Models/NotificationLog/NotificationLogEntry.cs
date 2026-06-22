@@ -39,7 +39,7 @@
 /// <param name="CreatedTimestamp">The timestamp when the order was created.</param>
 /// <param name="LastUpdateTimestamp">The timestamp when the notification status was last updated.</param>
 public record NotificationLogEntry(
-    long? OrderChainId,
+    Guid? OrderChainId,
     Guid ShipmentId,
     string? CreatorName,
     string? DialogId,

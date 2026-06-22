@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     id bigint GENERATED ALWAYS AS IDENTITY,
-    orderchainid int8,
+    orderchainid uuid,
     shipmentid uuid NOT NULL,
     creatorname text,
     dialogid text,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     operationid text, 
     gatewayreference text,
     recipient text,    -- Can store both orgnr and ssn
-    type notificationordertype NOT NULL,
+    type text NOT NULL,
     destination text,  -- Email address or phone number
     resource text,
     status text,
