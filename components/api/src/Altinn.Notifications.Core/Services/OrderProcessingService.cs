@@ -114,6 +114,7 @@ public class OrderProcessingService : IOrderProcessingService
                 {
                     case NotificationChannel.Sms:
                         await _smsProcessingService.ProcessOrder(order);
+
                         break;
 
                     case NotificationChannel.Email:
