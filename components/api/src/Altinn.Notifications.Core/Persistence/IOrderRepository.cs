@@ -140,7 +140,7 @@ public interface IOrderRepository
     /// and inserts it into the status feed. This is typically used for orders that
     /// reach terminal states such as failed or where send condition is not met.
     /// </remarks>
-    public Task InsertStatusFeedForOrder(Guid orderId);
+    public Task InsertStatusFeedAndNotificationLogForOrder(Guid orderId);
 
     /// <summary>
     /// Gets an order based on the provided id within the provided creator scope

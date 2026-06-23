@@ -1,6 +1,8 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 
+using Npgsql;
+
 namespace Altinn.Notifications.Persistence.Extensions;
 
 /// <summary>
@@ -37,6 +39,24 @@ public static class DataReaderExtensions
         object dbValue = reader[colNumber];
 
         return GetValue<T>(dbValue, default!);
+    }
+
+    /// <summary>
+    /// Returns the column value cast to <typeparamref name="T"/>, or <see langword="default"/>
+    /// when the column is <see cref="DBNull"/>.
+    /// </summary>
+    /// <typeparam name="T">The target type, typically a nullable value type or reference type.</typeparam>
+    /// <param name="reader">The reader positioned at a row.</param>
+    /// <param name="columnName">The column name to read.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    public static async Task<T?> NullcheckAndGetValueAsync<T>(
+        this NpgsqlDataReader reader,
+        string columnName,
+        CancellationToken cancellationToken)
+    {
+        return await reader.IsDBNullAsync(columnName, cancellationToken)
+            ? default
+            : await reader.GetFieldValueAsync<T>(columnName, cancellationToken: cancellationToken);
     }
 
     /// <summary>

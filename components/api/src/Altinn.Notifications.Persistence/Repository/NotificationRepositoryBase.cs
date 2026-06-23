@@ -35,17 +35,25 @@ public abstract class NotificationRepositoryBase
     private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
 
+    private readonly ITransactionalNotificationLogRepository _notificationLogRepository;
+
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
     /// </summary>
     /// <param name="dataSource">The datasource used to integrate with the database</param>
     /// <param name="logger">The logger associated with the above implementation</param>
     /// <param name="config">The notification configuration</param>
-    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger, IOptions<NotificationConfig> config)
+    /// <param name="notificationLogRepository">The notification log repository.</param>
+    protected NotificationRepositoryBase(
+        NpgsqlDataSource dataSource,
+        ILogger logger,
+        IOptions<NotificationConfig> config,
+        ITransactionalNotificationLogRepository notificationLogRepository)
     {
         _dataSource = dataSource;
         _logger = logger;
         _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
+        _notificationLogRepository = notificationLogRepository;
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -153,21 +161,17 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
     /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
-    /// <param name="alternateId">The unique identifier for the order, used to retrieve its status.</param>
+    /// <param name="alternateId">The alternate ID of the email or SMS notification, used to resolve the parent order.</param>
     protected async Task InsertOrderStatusCompletedOrder(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateId)
     {
         var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
         if (orderStatus != null)
         {
-            try
-            {
-                await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
-            }
-            catch (Exception ex)
-            {
-                var maskedAlternateId = string.Concat(alternateId.ToString().AsSpan(0, 8), "****");
-                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", maskedAlternateId);
-            }
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            await _notificationLogRepository.InsertAsync(
+                orderStatus.ShipmentId,
+                connection,
+                transaction);
         }
         else
         {
