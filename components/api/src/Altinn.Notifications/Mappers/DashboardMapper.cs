@@ -31,6 +31,7 @@ public static class DashboardMapper
             DeliveryAttempts = [.. notification.DeliveryAttempts.Select(r => new DashboardDeliveryAttemptExt
             {
                 NationalIdentityNumber = r.NationalIdentityNumber,
+                OrganizationNumber = r.OrganizationNumber,
                 Channel = r.Channel,
                 EmailAddress = r.EmailAddress,
                 MobileNumber = r.MobileNumber,
