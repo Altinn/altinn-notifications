@@ -18,7 +18,7 @@ public interface IEmailNotificationService : INotificationService
     /// <param name="emailRecipient">The email recipient to send the notification to.</param>
     /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
+    Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
     /// Sends pending email notifications.
