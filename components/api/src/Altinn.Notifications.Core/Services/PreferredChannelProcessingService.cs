@@ -28,18 +28,18 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrder(NotificationOrder order)
+    public async Task<OrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
-        await ProcessOrderInternal(order, false);
+        return await ProcessOrderInternal(order, false);
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetry(NotificationOrder order)
+    public async Task<OrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
     {
-        await ProcessOrderInternal(order, true);
+        return await ProcessOrderInternal(order, true);
     }
 
-    private async Task ProcessOrderInternal(NotificationOrder order, bool isRetry)
+    private async Task<OrderProcessingResult> ProcessOrderInternal(NotificationOrder order, bool isRetry)
     {
         List<Recipient> recipients = order.Recipients;
         List<Recipient> recipientsWithoutContactPoint =
@@ -53,6 +53,9 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         List<Recipient> preferredChannelRecipients;
         List<Recipient> fallBackChannelRecipients;
 
+        EmailOrderProcessingResult emailResult;
+        SmsOrderProcessingResult smsResult;
+
         switch (order.NotificationChannel)
         {
             case NotificationChannel.EmailPreferred:
@@ -61,13 +64,13 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
                 if (isRetry)
                 {
-                    await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
+                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
+                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
                 else
                 {
-                    await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
+                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
+                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
 
                 break;
@@ -78,17 +81,32 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
                 if (isRetry)
                 {
-                    await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
+                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
+                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
                 else
                 {
-                    await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
+                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
+                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
 
                 break;
+
+            default:
+                return new OrderProcessingResult(
+                    EmailNotifications: [],
+                    SmsNotifications: [],
+                    CompletesOrder: false,
+                    StatusFeed: null,
+                    NotificationLog: null);
         }
+
+        return new OrderProcessingResult(
+            EmailNotifications: emailResult.EmailNotifications,
+            SmsNotifications: smsResult.SmsNotifications,
+            CompletesOrder: false,
+            StatusFeed: null,
+            NotificationLog: null);
     }
 
     private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)
