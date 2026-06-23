@@ -192,7 +192,7 @@ public static class RecipientRules
         });
     }
 
-    private static IRuleBuilderOptions<T, string?> MustBeValidOrganizationNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
+    internal static IRuleBuilderOptions<T, string?> MustBeValidOrganizationNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
     {
         return ruleBuilder
        .ChildRules(organizationNumber =>
