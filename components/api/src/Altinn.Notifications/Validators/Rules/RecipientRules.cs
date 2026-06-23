@@ -192,6 +192,12 @@ public static class RecipientRules
         });
     }
 
+    /// <summary>
+    /// Validates that the organization number is 9 digits long and contains only numeric characters.
+    /// </summary>
+    /// <typeparam name="T">The type of the object being validated.</typeparam>
+    /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
+    /// <returns>The rule builder options with the added validation rules.</returns>
     internal static IRuleBuilderOptions<T, string?> MustBeValidOrganizationNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
     {
         return ruleBuilder
