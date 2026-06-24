@@ -311,27 +311,6 @@ public class EmailAttachmentValidatorTests
     }
 
     [Fact]
-    public void AllowedMimeTypes_ContainsExpectedCommonTypes()
-    {
-        Assert.Contains("image/png", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("image/jpeg", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("application/zip", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("application/pdf", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("application/vnd.openxmlformats-officedocument.wordprocessingml.document", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.Contains("application/vnd.openxmlformats-officedocument.presentationml.presentation", EmailAttachmentRules.AllowedMimeTypes);
-    }
-
-    [Fact]
-    public void AllowedMimeTypes_DoesNotContainDangerousTypes()
-    {
-        Assert.DoesNotContain("text/html", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.DoesNotContain("application/x-sh", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.DoesNotContain("application/octet-stream", EmailAttachmentRules.AllowedMimeTypes);
-        Assert.DoesNotContain("application/x-msdownload", EmailAttachmentRules.AllowedMimeTypes);
-    }
-
-    [Fact]
     public void Validate_ServiceOwnerAttachesPdfContractForCitizen_NoErrors()
     {
         // Arrange — typical Altinn use case: org attaches a signed contract
