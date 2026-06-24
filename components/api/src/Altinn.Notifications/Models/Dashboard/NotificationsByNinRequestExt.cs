@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Altinn.Notifications.Models.Dashboard;
 
@@ -10,6 +11,7 @@ public class NotificationsByNinRequestExt
     /// <summary>
     /// The national identity number of the recipient.
     /// </summary>
+    [BindRequired]
     [FromHeader(Name = "NationalIdentityNumber")]
     public required string NationalIdentityNumber { get; set; }
 

@@ -32,7 +32,7 @@ public class DashboardController : ControllerBase
     private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cname="DashboardController"/> class.
+    /// Initializes a new instance of the <see cref="DashboardController"/> class.
     /// </summary>
     /// <param name="dashboardService">The dashboard service.</param>
     /// <param name="ninValidator">The validator for NIN lookup requests.</param>
@@ -83,9 +83,9 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves all notifications for a giver organization number.
+    /// Retrieves all notifications for a given organization number.
     /// </summary>
-    /// <param name="request">The request containing the NIN and optional date range filters.</param>
+    /// <param name="request">The request containing the organization number and optional date range filters.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of notifications matching the search criteria.</returns>
     [HttpGet("recipients/notifications/orgnumber")]
