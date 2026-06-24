@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models.Dashboard;
 public class NotificationsByOrgNumberRequestExt
 {
     /// <summary>
-    /// The national identity number of the recipient.
+    /// The organization number of the recipient.
     /// </summary>
     [FromHeader(Name = "OrganizationNumber")]
     public required string OrganizationNumber { get; set; }
