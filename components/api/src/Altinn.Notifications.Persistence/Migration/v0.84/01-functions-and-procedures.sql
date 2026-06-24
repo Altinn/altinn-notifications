@@ -751,6 +751,7 @@ COMMENT ON FUNCTION notifications.get_metrics_v2(integer, integer) IS
 
 
 -- getnotificationsbynin.sql:
+DROP FUNCTION IF EXISTS notifications.get_notifications_by_nin(text, timestamptz, timestamptz);
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin
 (
     _recipientnin text,
