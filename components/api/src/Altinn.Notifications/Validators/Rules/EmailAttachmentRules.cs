@@ -18,7 +18,7 @@ internal static class EmailAttachmentRules
     /// <remarks>
     /// Source: https://learn.microsoft.com/en-us/azure/communication-services/concepts/email/email-attachment-allowed-mime-types
     /// </remarks>
-    internal static readonly IReadOnlySet<string> AllowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlySet<string> _allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "video/3gpp",
         "video/3gpp2",
@@ -121,7 +121,7 @@ internal static class EmailAttachmentRules
                 .WithMessage("Attachment mimeType must not be empty.");
 
             rules.RuleFor(m => m)
-                .Must(AllowedMimeTypes.Contains)
+                .Must(_allowedMimeTypes.Contains)
                 .When(m => !string.IsNullOrEmpty(m))
                 .WithMessage("Attachment mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
         });
