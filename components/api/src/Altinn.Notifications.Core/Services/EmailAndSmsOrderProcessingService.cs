@@ -73,8 +73,7 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
             EmailNotifications: emailResult.EmailNotifications,
             SmsNotifications: smsResult.SmsNotifications,
             CompletesOrder: false,
-            StatusFeed: null,
-            NotificationLog: null);
+            StatusFeed: null);
     }
 
     /// <summary>

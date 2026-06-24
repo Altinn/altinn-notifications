@@ -1,6 +1,4 @@
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Status;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -15,19 +13,16 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// <param name="SmsNotifications">SMS notifications to persist. Empty if the order has no SMS channel.</param>
 /// <param name="CompletesOrder">
 /// Whether this processing result transitions the order to <see cref="OrderProcessingStatus.Completed"/>.
-/// When <c>true</c>, <paramref name="StatusFeed"/> and <paramref name="NotificationLog"/> must be populated.
+/// When <c>true</c>, <paramref name="StatusFeed"/> must be populated.
 /// </param>
 /// <param name="StatusFeed">
 /// The status feed entry to persist alongside order completion.
 /// Must be non-null when <paramref name="CompletesOrder"/> is <c>true</c>.
 /// </param>
-/// <param name="NotificationLog">
-/// The notification log entry to persist alongside order completion.
 /// Must be non-null when <paramref name="CompletesOrder"/> is <c>true</c>.
 /// </param>
 public sealed record OrderProcessingResult(
     IReadOnlyList<EmailNotification> EmailNotifications,
     IReadOnlyList<SmsNotification> SmsNotifications,
     bool CompletesOrder,
-    StatusFeed? StatusFeed,
-    NotificationLogEntry? NotificationLog);
+    StatusFeed? StatusFeed);
