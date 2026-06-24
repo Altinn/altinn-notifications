@@ -85,6 +85,7 @@ public class DashboardMapperTests
         Assert.Equal("ref-123", ext.SendersReference);
         Assert.Equal(sendTime, ext.RequestedSendTime);
         Assert.Equal("EmailPreferred", ext.NotificationChannel);
+        Assert.Equal("notification", ext.NotificationType);
     }
 
     [Fact]
