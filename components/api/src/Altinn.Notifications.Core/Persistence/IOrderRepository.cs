@@ -131,17 +131,6 @@ public interface IOrderRepository
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 
     /// <summary>
-    /// Inserts a status feed entry for the specified order.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the order.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// This method retrieves the current shipment tracking information for the order
-    /// and inserts it into the status feed. This is typically used for orders that
-    /// reach terminal states such as failed or where send condition is not met.
-    /// </remarks>
-    public Task InsertStatusFeedAndNotificationLogForOrder(Guid orderId);
-
     /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
     /// </summary>
@@ -234,4 +223,24 @@ public interface IOrderRepository
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
     Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically persists all notifications produced during order processing and, if all notifications
+    /// have reached terminal states, transitions the order to <see cref="OrderProcessingStatus.Completed"/>
+    /// while also inserting the status feed entry and notification log entry — all in one database transaction.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the order was transitioned to <see cref="OrderProcessingStatus.Completed"/>;
+    /// <c>false</c> if some notifications are still pending or the order was already completed.
+    /// </returns>
+    Task<bool> PersistProcessingResultAsync(
+        Guid orderId,
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications);
+
+    /// <summary>
+    /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
+    /// inserts the corresponding status feed entry and notification log entry within a single database transaction.
+    /// </summary>
+    Task SetOrderSendConditionNotMetAsync(Guid orderId);
 }

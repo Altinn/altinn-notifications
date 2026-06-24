@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
@@ -99,45 +100,45 @@ public class OrderProcessingService : IOrderProcessingService
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
-        var isOrderCompleted = false;
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                isOrderCompleted = true;
+                await _orderRepository.SetOrderSendConditionNotMetAsync(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
+                IReadOnlyList<EmailNotification> emailNotifications = [];
+                IReadOnlyList<SmsNotification> smsNotifications = [];
 
                 switch (order.NotificationChannel)
                 {
                     case NotificationChannel.Sms:
-                        await _smsProcessingService.ProcessOrder(order);
-
+                        var smsResult = await _smsProcessingService.ProcessOrder(order);
+                        smsNotifications = smsResult.SmsNotifications;
                         break;
 
                     case NotificationChannel.Email:
-                        await _emailProcessingService.ProcessOrder(order);
+                        var emailResult = await _emailProcessingService.ProcessOrder(order);
+                        emailNotifications = emailResult.EmailNotifications;
                         break;
 
                     case NotificationChannel.EmailAndSms:
-                        await _emailAndSmsProcessingService.ProcessOrderAsync(order);
+                        var emailAndSmsResult = await _emailAndSmsProcessingService.ProcessOrderAsync(order);
+                        emailNotifications = emailAndSmsResult.EmailNotifications;
+                        smsNotifications = emailAndSmsResult.SmsNotifications;
                         break;
 
                     case NotificationChannel.SmsPreferred:
                     case NotificationChannel.EmailPreferred:
-                        await _preferredChannelProcessingService.ProcessOrder(order);
+                        var preferredResult = await _preferredChannelProcessingService.ProcessOrder(order);
+                        emailNotifications = preferredResult.EmailNotifications;
+                        smsNotifications = preferredResult.SmsNotifications;
                         break;
                 }
 
-                isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                await _orderRepository.PersistProcessingResultAsync(order.Id, emailNotifications, smsNotifications);
                 break;
-        }
-
-        if (isOrderCompleted)
-        {
-            await TryInsertStatusFeedForCompletedOrder(order.Id);
         }
 
         return new NotificationOrderProcessingResult
@@ -156,12 +157,12 @@ public class OrderProcessingService : IOrderProcessingService
         catch (PlatformDependencyException e)
         {
             _logger.LogError(
-           e,
-           "Platform dependency '{DependencyName}' failed during '{Operation}' when retrying past due order {OrderId}. IsTransient: {IsTransient}",
-           e.DependencyName,
-           e.Operation,
-           order!.Id,
-           e.IsTransient?.ToString() ?? "Not available");
+               e,
+               "Platform dependency '{DependencyName}' failed during '{Operation}' when retrying past due order {OrderId}. IsTransient: {IsTransient}",
+               e.DependencyName,
+               e.Operation,
+               order!.Id,
+               e.IsTransient?.ToString() ?? "Not available");
 
             await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
         }
@@ -169,63 +170,46 @@ public class OrderProcessingService : IOrderProcessingService
 
     private async Task ProcessOrderRetryInternal(NotificationOrder order)
     {
-        var isOrderCompleted = false;
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                isOrderCompleted = true;
+                await _orderRepository.SetOrderSendConditionNotMetAsync(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
+                IReadOnlyList<EmailNotification> emailNotifications = [];
+                IReadOnlyList<SmsNotification> smsNotifications = [];
 
                 switch (order.NotificationChannel)
                 {
                     case NotificationChannel.Sms:
-                        await _smsProcessingService.ProcessOrderRetry(order);
+                        var smsResult = await _smsProcessingService.ProcessOrderRetry(order);
+                        smsNotifications = smsResult.SmsNotifications;
                         break;
 
                     case NotificationChannel.Email:
-                        await _emailProcessingService.ProcessOrderRetry(order);
+                        var emailResult = await _emailProcessingService.ProcessOrderRetry(order);
+                        emailNotifications = emailResult.EmailNotifications;
                         break;
 
                     case NotificationChannel.EmailAndSms:
-                        await _emailAndSmsProcessingService.ProcessOrderRetryAsync(order);
+                        var emailAndSmsResult = await _emailAndSmsProcessingService.ProcessOrderRetryAsync(order);
+                        emailNotifications = emailAndSmsResult.EmailNotifications;
+                        smsNotifications = emailAndSmsResult.SmsNotifications;
                         break;
 
                     case NotificationChannel.SmsPreferred:
                     case NotificationChannel.EmailPreferred:
-                        await _preferredChannelProcessingService.ProcessOrderRetry(order);
+                        var preferredResult = await _preferredChannelProcessingService.ProcessOrderRetry(order);
+                        emailNotifications = preferredResult.EmailNotifications;
+                        smsNotifications = preferredResult.SmsNotifications;
                         break;
                 }
 
-                isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                await _orderRepository.PersistProcessingResultAsync(order.Id, emailNotifications, smsNotifications);
                 break;
-        }
-
-        if (isOrderCompleted)
-        {
-            await TryInsertStatusFeedForCompletedOrder(order.Id);
-        }
-    }
-
-    /// <summary>
-    /// Attempts to insert a status feed entry and a notification log entry for a completed order.
-    /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the completed order.</param>
-    private async Task TryInsertStatusFeedForCompletedOrder(Guid orderId)
-    {
-        try
-        {
-            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
-        }
-        catch (Exception ex)
-        {
-            var maskedOrderId = string.Concat(orderId.ToString().AsSpan(0, 8), "****");
-            _logger.LogWarning(ex, "Failed to insert status feed and notification log for completed order {OrderId}.", maskedOrderId);
         }
     }
 
