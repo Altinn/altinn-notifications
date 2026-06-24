@@ -27,7 +27,7 @@ public static class DashboardMapper
             ResourceId = notification.ResourceId,
             SendersReference = notification.SendersReference,
             RequestedSendTime = notification.RequestedSendTime,
-            NotificationChannel = notification.NotificationChannel,
+            NotificationChannel = notification.NotificationChannel?.ToString(),
             NotificationType = notification.NotificationType,
             DeliveryAttempts = [.. notification.DeliveryAttempts.Select(r => new DashboardDeliveryAttemptExt
             {

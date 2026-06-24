@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -40,7 +41,7 @@ public class DashboardRepository : IDashboardRepository
 
         // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
         var orderList = new List<Guid>();
-        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, string? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNotificationsByNin);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientNin);
@@ -69,12 +70,13 @@ public class DashboardRepository : IDashboardRepository
                 }
                 else
                 {
+                    var channelString = reader.GetValue<string>("notificationchannel");
                     var newEntry = (
                         CreatorName: reader.GetValue<string>("creatorname"),
                         ResourceId: reader.GetValue<string>("resourceid"),
                         SendersReference: reader.GetValue<string>("sendersreference"),
                         RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
-                        NotificationChannel: reader.GetValue<string>("notificationchannel"),
+                        NotificationChannel: Enum.TryParse<NotificationChannel>(channelString, out var notificationChannel) ? notificationChannel : (NotificationChannel?)null,
                         NotificationType: reader.GetValue<string>("notificationtype"),
                         DeliveryAttempts: new List<DashboardDeliveryAttempt> { recipient });
 

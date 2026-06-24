@@ -1,3 +1,5 @@
+using Altinn.Notifications.Core.Enums;
+
 namespace Altinn.Notifications.Core.Models.Dashboard;
 
 /// <summary>
@@ -36,9 +38,9 @@ public record DashboardNotification
     public DateTime RequestedSendTime { get; init; }
 
     /// <summary>
-    /// The requested notification channel from the order (e.g. "EmailPreferred", "SmsPreferred").
+    /// The requested notification channel from the order.
     /// </summary>
-    public string? NotificationChannel { get; init; }
+    public NotificationChannel? NotificationChannel { get; init; }
 
     /// <summary>
     /// The delivery attempts for this notification, one per channel.
@@ -54,7 +56,7 @@ public record DashboardNotification
         string? resourceId,
         string? sendersReference,
         DateTime requestedSendTime,
-        string? notificationChannel,
+        NotificationChannel? notificationChannel,
         string notificationType,
         List<DashboardDeliveryAttempt> deliveryAttempts)
     {

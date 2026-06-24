@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
@@ -70,7 +71,8 @@ public class DashboardMapperTests
                 "urn:altinn:resource:app-ttd-test",
                 "ref-123",
                 sendTime,
-                "EmailPreferred",
+                NotificationChannel.EmailPreferred,
+                "notification",
                 [new DashboardDeliveryAttempt(_nin, "email", "a@b.com", null, "Succeeded", resultTime)]),
         };
 
@@ -125,6 +127,7 @@ public class DashboardMapperTests
                 null,
                 DateTime.UtcNow,
                 null,
+                "notification",
                 recipients),
         ];
     }
