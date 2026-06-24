@@ -28,6 +28,7 @@ public static class DashboardMapper
             SendersReference = notification.SendersReference,
             RequestedSendTime = notification.RequestedSendTime,
             NotificationChannel = notification.NotificationChannel,
+            NotificationType = notification.NotificationType,
             DeliveryAttempts = [.. notification.DeliveryAttempts.Select(r => new DashboardDeliveryAttemptExt
             {
                 NationalIdentityNumber = r.NationalIdentityNumber,

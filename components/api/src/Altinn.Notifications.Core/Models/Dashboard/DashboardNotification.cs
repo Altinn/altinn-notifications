@@ -16,6 +16,11 @@ public record DashboardNotification
     public string CreatorName { get; init; }
 
     /// <summary>
+    /// Th type of notification for the order (e.g. "notification", "reminder", "instant")
+    /// </summary>
+    public string NotificationType { get; init; }
+
+    /// <summary>
     /// The Altinn resource the notification is related to.
     /// </summary>
     public string? ResourceId { get; init; }
@@ -50,6 +55,7 @@ public record DashboardNotification
         string? sendersReference,
         DateTime requestedSendTime,
         string? notificationChannel,
+        string notificationType,
         List<DashboardDeliveryAttempt> deliveryAttempts)
     {
         ShipmentId = shipmentId;
@@ -58,6 +64,7 @@ public record DashboardNotification
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         NotificationChannel = notificationChannel;
+        NotificationType = notificationType;
         DeliveryAttempts = deliveryAttempts;
     }
 }

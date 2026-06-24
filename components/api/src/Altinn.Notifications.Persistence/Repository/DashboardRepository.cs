@@ -40,7 +40,7 @@ public class DashboardRepository : IDashboardRepository
 
         // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
         var orderList = new List<Guid>();
-        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, string? NotificationChannel, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, string? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNotificationsByNin);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientNin);
@@ -75,6 +75,7 @@ public class DashboardRepository : IDashboardRepository
                         SendersReference: reader.GetValue<string>("sendersreference"),
                         RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
                         NotificationChannel: reader.GetValue<string>("notificationchannel"),
+                        NotificationType: reader.GetValue<string>("notificationtype"),
                         DeliveryAttempts: new List<DashboardDeliveryAttempt> { recipient });
 
                     groups[shipmentId] = newEntry;
@@ -86,7 +87,7 @@ public class DashboardRepository : IDashboardRepository
         return [.. orderList.Select(id =>
         {
             var e = groups[id];
-            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.DeliveryAttempts);
+            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
         })];
     }
 }
