@@ -3,18 +3,17 @@
 ## Summary
 
 `OrderProcessingService.ProcessOrder` and `OrderProcessingService.ProcessOrderRetry`
-perform several persistence operations that are currently executed as **independent
-writes**, each on its own database connection. Among them, the order-completion path
-(`TryCompleteOrderBasedOnNotificationsState`) writes derived records — a **status
-feed** record and a **notification log** entry — outside the order status update's
-transaction. The notification-log insert is currently best-effort
-(`TryInsertNotificationLog` guarded by `try/catch` + `LogWarning`), so it can fail
-silently.
+previously performed several persistence operations as **independent writes**, each on
+its own database connection. The order-completion path
+(`TryCompleteOrderBasedOnNotificationsState`) wrote derived records — a **status feed**
+record and a **notification log** entry — outside the order status update's transaction.
+The status-feed insert was best-effort (guarded by `try/catch` + `LogWarning`), so it
+could fail silently, leaving the system asymmetric.
 
-Because these writes are not part of a single database transaction, a failure in one
-can leave the system **asymmetric / diverged** (e.g. an order marked `Completed` with
-no status feed record and/or no notification log entry, or generated notifications
-persisted while the order status update is lost).
+This document describes the changes made and the remaining work to achieve full
+atomicity.
+
+---
 
 ## Goal
 
@@ -31,7 +30,7 @@ persisted while the order status update is lost).
 
 ---
 
-## Step 1 inventory — what actually writes to the database
+## Step 1 — Inventory: what writes to the database
 
 ### Call-chain map
 
@@ -94,24 +93,20 @@ OrderProcessingService.ProcessOrder
 
 ### Operations classified
 
-**External / read — must run BEFORE the transaction (no transaction held across HTTP):**
+**External / read — run BEFORE the transaction (no transaction held across HTTP):**
 - `IContactPointService` lookups (`AddEmailAndSmsContactPointsAsync`, preferred /
   per-channel address resolution).
 
 **DB writes — must run INSIDE one transaction:**
 - `EmailNotificationRepository.AddNotification` (one per email notification).
-- `SmsNotificationRepository.AddNotification` (one per sms notification).
-- Order processing-status update (`OrderRepository.SetProcessingStatus`).
-- `OrderRepository.TryCompleteOrderBasedOnNotificationsState`.
-- Status feed insert (today `TryInsertStatusFeedForCompletedOrder`, service-layer best-effort).
-- Notification log insert (today `TryInsertNotificationLog`, service-layer best-effort).
+- `SmsNotificationRepository.AddNotification` (one per SMS notification).
+- Order processing-status update.
+- Order completion check and status transition.
+- Status feed insert.
+- Notification log insert.
 
 **Publish — must run AFTER commit (or via outbox):**
 - Azure Service Bus message.
-
-> **Note:** Kafka has been fully replaced by Azure Service Bus; there is no
-> Kafka-related logic on these paths. A Service Bus send still cannot enroll in a
-> Postgres transaction, so the dual-write boundary below still applies.
 
 ---
 
@@ -126,8 +121,7 @@ participate in a Postgres transaction and must be kept **outside** the boundary:
   be performed while a DB transaction is held open (holding a transaction across
   network latency is harmful).
 
-Therefore "same transaction" applies to **DB writes only**. The non-transactional
-steps must be ordered safely around the transaction.
+Therefore "same transaction" applies to **DB writes only**.
 
 ---
 
@@ -165,12 +159,9 @@ ProcessOrder:
 
 ## Implementation plan
 
-### Step 2 — Define the in-memory result models (the "unit of work")
+### Step 2 — Define the in-memory result models ✅ Done
 
-Each channel service returns an in-memory record of what must be persisted, instead
-of writing to the DB. Define a **per-channel** sub-result and a **combined** aggregate.
-
-Per-channel sub-results (returned by the channel services):
+Per-channel sub-results returned by the channel processing services:
 
 ```csharp
 public sealed record SmsOrderProcessingResult(
@@ -182,7 +173,7 @@ public sealed record EmailOrderProcessingResult(
 	IReadOnlyList<EmailNotification> EmailNotifications);
 ```
 
-Combined aggregate (handed to the single persist call):
+Combined aggregate wrapping both sub-results, handed to the single repository persist call:
 
 ```csharp
 public sealed record OrderProcessingResult(
@@ -199,139 +190,114 @@ saving. The per-channel split is required because `EmailAndSmsOrderProcessingSer
 and `PreferredChannelProcessingService` compose **two** channel sub-results into one
 `OrderProcessingResult` — which is only possible if neither channel persisted eagerly.
 
-### Step 3 — Make the channel + notification services "pure" (responsibility reordering)
+### Step 3 — Make channel and notification services pure ✅ Done
 
-- `EmailNotificationService.CreateNotification` /
-  `SmsNotificationService.CreateNotification` already build the model in memory inside
-  a `foreach` over recipients. Change them to **accumulate and return** the
-  materialized notifications **instead of** calling `AddNotification` eagerly:
+- `EmailNotificationService.CreateNotification` and `SmsNotificationService.CreateNotification`
+  now **accumulate and return** materialized notifications instead of calling
+  `AddNotification` eagerly. Each returns `IReadOnlyList<EmailNotification>` /
+  `IReadOnlyList<SmsNotification>`.
 
-  ```csharp
-  // Before (eager persist, returns Task)
-  foreach (var recipient in recipients)
-  {
-	  var notification = new SmsNotification(...);
-	  await _repository.AddNotification(notification, ...); // ← remove
-  }
+- A fresh recipient copy is created per address point in both services, preventing shared
+  mutable reference bugs across multiple notifications for the same recipient.
 
-  // After (pure, returns the list)
-  var notifications = new List<SmsNotification>();
-  foreach (var recipient in recipients)
-  {
-	  notifications.Add(new SmsNotification(...));
-  }
-  return notifications;
-  ```
+- All channel service entry points (`ProcessOrder`, `ProcessOrderRetry`,
+  `ProcessOrderWithoutAddressLookup`, `ProcessOrderRetryWithoutAddressLookup`) now return
+  typed result objects instead of `Task`.
 
-- The channel services change **both** entry points to return a sub-result:
+- `EmailAndSmsOrderProcessingService` and `PreferredChannelProcessingService` perform the
+  `IContactPointService` lookup once up front, then merge the two sub-results into an
+  `OrderProcessingResult`. The `default` branch in `PreferredChannelProcessingService`
+  throws `ArgumentOutOfRangeException` for unsupported channel values.
 
-  ```csharp
-  // Before
-  Task ProcessOrder(NotificationOrder order);
-  Task ProcessOrderWithoutAddressLookup(NotificationOrder order, ...);
+- The retry path in both `EmailOrderProcessingService` and `SmsOrderProcessingService`
+  now checks registration per address (not just the first address), matching the
+  behaviour of the normal processing path.
 
-  // After
-  Task<SmsOrderProcessingResult> ProcessOrder(NotificationOrder order);
-  Task<SmsOrderProcessingResult> ProcessOrderWithoutAddressLookup(NotificationOrder order, ...);
-  ```
+### Step 4 — Add atomic persist methods to the repository ⏳ Pending
 
-  (Symmetrically for the email service with `EmailOrderProcessingResult`.)
+Two new methods on `IOrderRepository` replace the old piecemeal calls:
 
-- `EmailAndSmsOrderProcessingService` / `PreferredChannelProcessingService`:
-  - Do the `IContactPointService` lookup **once**, up front (outside the future
-	transaction).
-  - Call each channel's `ProcessOrderWithoutAddressLookup`, then **merge** the
-	sub-results into a single `OrderProcessingResult`:
+````````markdown
+/// <summary>
+/// Persist a fully-formed order processing result in a single transaction:
+/// 1. Generated notifications (email + SMS).
+/// 2. Order processing status.
+/// 3. Order completion check and status transition.
+/// 4. Status feed insert (optional, if completes order).
+/// 5. Notification log insert (optional, if completes order).
+/// </summary>
+Task PersistProcessingResultAsync(OrderProcessingResult result, IOrderContext transactionContext, CancellationToken cancellationToken = default);
+````````
 
-	```csharp
-	var sms   = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, ...);
-	var email = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, ...);
+Implementation sketch for `PersistProcessingResultAsync`:
 
-	return new OrderProcessingResult(
-		StatusToSet:        ...,
-		EmailNotifications: email.EmailNotifications,
-		SmsNotifications:   sms.SmsNotifications,
-		CompletesOrder:     ...,
-		StatusFeed:         ...,
-		NotificationLog:    ...);
-	```
-
-Because every case now returns the same aggregate type, the `switch` in
-`OrderProcessingService` collapses to "pick the builder, get a model" — the invariant
-is enforced centrally, not duplicated per case.
-
-### Step 4 — Add one transactional persist method to the repository
-
-Mirror `OrderRepository.Create`; accept the aggregate and write everything in a single
-transaction.
-
-```csharp
-public async Task<bool> PersistOrderProcessingResult(
-	Guid orderId, OrderProcessingResult result, CancellationToken ct = default)
+````````csharp
+public async Task PersistProcessingResultAsync(OrderProcessingResult result, IOrderContext transactionContext, CancellationToken cancellationToken = default)
 {
-	await using var connection = await _dataSource.OpenConnectionAsync(ct);
-	await using var transaction = await connection.BeginTransactionAsync(ct);
-	try
+	// 1. Generated notifications (email + SMS).
+	foreach (var sms in result.SmsNotifications)
+		await _smsNotificationRepository.AddNotificationAsync(sms, transactionContext, cancellationToken);
+
+	foreach (var email in result.EmailNotifications)
+		await _emailNotificationRepository.AddNotificationAsync(email, transactionContext, cancellationToken);
+
+	// 2. Order processing status.
+	order.ProcessingStatus = result.StatusToSet;
+
+	// 3. Order completion check and status transition.
+	if (result.CompletesOrder)
 	{
-		await SetProcessingStatus(connection, transaction, orderId, result.StatusToSet, ct);
-		await InsertEmailNotifications(connection, transaction, result.EmailNotifications, ct);
-		await InsertSmsNotifications(connection, transaction, result.SmsNotifications, ct);
-
-		bool completed = result.CompletesOrder
-			&& await TryCompleteOrder(connection, transaction, orderId, ct);
-
-		if (completed)
-		{
-			await InsertStatusFeed(connection, transaction, result.StatusFeed!, ct);
-			await InsertNotificationLog(connection, transaction, result.NotificationLog!, ct);
-		}
-
-		await transaction.CommitAsync(ct);
-		return completed;
+		// transition logic
 	}
-	catch
-	{
-		await transaction.RollbackAsync(ct);
-		throw;
-	}
+
+	// 4. Status feed insert (optional, if completes order).
+	if (result.StatusFeed is { } feed)
+		await _statusFeedRepository.AddStatusFeedEntryAsync(feed, transactionContext, cancellationToken);
+
+	// 5. Notification log insert (optional, if completes order).
+	if (result.NotificationLog is { } log)
+		await _notificationLogRepository.AddNotificationLogEntryAsync(log, transactionContext, cancellationToken);
 }
-```
+````````
 
-Every command binds to the **same** `connection` + `transaction`. All Npgsql stays in
-the repository layer.
+### Step 5 — Rewrite `ProcessOrder` / `ProcessOrderRetry` orchestration ✅ Done
 
-> **Sub-task:** `EmailNotificationRepository.AddNotification` and
-> `SmsNotificationRepository.AddNotification` currently open their own connection and
-> have no transaction parameter. Either add internal overloads that accept an existing
-> `NpgsqlConnection` + `NpgsqlTransaction`, or move their insert SQL into
-> `PersistOrderProcessingResult`. The public `AddNotification` (used elsewhere) can
-> remain as a thin wrapper that opens its own transaction.
+The `switch` in both methods now captures typed results from the channel services and
+calls the new repository methods:
 
-### Step 5 — Rewrite `ProcessOrder` / `ProcessOrderRetry` orchestration
-
-```csharp
-// 1. external lookups (no transaction held)
-var enriched = await _contactPointService.AddEmailAndSmsContactPoints(order, ...);
-
-// 2. switch builds in-memory model only
-OrderProcessingResult result = order.NotificationChannel switch
+````````csharp
+switch (order.NotificationChannel)
 {
-	/* each case returns a model; no DB writes */
-};
+	case NotificationChannel.Email:
+		var emailResult = await _emailOrderProcessingService.ProcessOrder(request, cancellationToken);
+		return await PersistOrderProcessingResult(request, emailResult, cancellationToken);
 
-// 3. one atomic persist
-bool isOrderCompleted = await _orderRepository.PersistOrderProcessingResult(order.Id, result);
+	case NotificationChannel.Sms:
+		var smsResult = await _smsOrderProcessingService.ProcessOrder(request, cancellationToken);
+		return await PersistOrderProcessingResult(request, smsResult, cancellationToken);
 
-// 4. publish AFTER commit (or via outbox)
-```
+	case NotificationChannel.EmailPreferred:
+		var emailPreferredResult = await _preferredChannelProcessingService.ProcessOrder(request, cancellationToken);
+		return await PersistOrderProcessingResult(request, emailPreferredResult, cancellationToken);
 
-The `if (isOrderCompleted) { await TryInsertStatusFeedForCompletedOrder(...); }` block
-is **deleted** — its work now happens inside the transaction in Step 4.
+	case NotificationChannel.SmsPreferred:
+		var smsPreferredResult = await _preferredChannelProcessingService.ProcessOrder(request, cancellationToken);
+		return await PersistOrderProcessingResult(request, smsPreferredResult, cancellationToken);
 
-### Step 6 — Remove the best-effort paths
+	case NotificationChannel.EmailAndSms:
+		var emailAndSmsResult = await _emailAndSmsOrderProcessingService.ProcessOrder(request, cancellationToken);
+		return await PersistOrderProcessingResult(request, emailAndSmsResult, cancellationToken);
 
-Delete `TryInsertStatusFeedForCompletedOrder`, `TryInsertNotificationLog`, and their
-`LogWarning` handlers from the service. No swallowed exceptions remain on these paths.
+	default:
+		throw new ArgumentOutOfRangeException($"Unsupported notification channel: {order.NotificationChannel}");
+}
+````````
+
+### Step 6 — Remove the best-effort paths ✅ Done
+
+The old `TryInsertStatusFeedForCompletedOrder` wrapper with its swallowed exception is
+deleted. `TryCompleteOrderBasedOnNotificationsState` is no longer called from the
+service layer.
 
 ### Step 7 — Azure Service Bus boundary
 
@@ -339,21 +305,18 @@ Keep the publish strictly **after** commit. Prefer a transactional **outbox** ro
 written inside the Step 4 transaction (published after commit) to avoid the dual-write
 problem; otherwise document the after-commit / at-least-once tradeoff.
 
-### Step 8 — Tests
+### Step 8 — Tests ⏳ Pending
 
-- Forced failure in **any** DB write (notifications, processing status, completion,
-  status feed, log) → full rollback, order not completed, no partial rows.
-- Happy path → exactly one status feed + one notification log, order completed.
+- Forced failure in **any** DB write → full rollback, no partial rows.
+- Happy path → exactly one status feed + one notification log, order `Completed`.
 - No-completion path → no status feed / log written.
-- Azure Service Bus publish failure after commit → DB state preserved, handled per the
-  documented strategy.
-- Architecture guard → the `Core` (service) project references no Npgsql types on
-  these flows.
+- Send-condition-not-met path → status feed and notification log written atomically.
+- Azure Service Bus publish failure after commit → DB state preserved.
+- Architecture guard → the `Core` project references no Npgsql types on these flows.
 
 ### Sequencing
 
-Step 1 (inventory, done) → 2–3 (records + pure services) → 4 (repository) →
-5–6 (service) → 7 (bus) → 8 (tests).
+Steps 1–3, 5–6 ✅ → **Step 4** (repository implementation) → Step 7 (bus) → Step 8 (tests).
 
 ---
 
@@ -366,27 +329,30 @@ Step 1 (inventory, done) → 2–3 (records + pure services) → 4 (repository) 
   `OrderRepository` (`await using var transaction` / `CommitAsync` / `RollbackAsync` /
   `throw;`).
 
+---
+
 ## Acceptance criteria
 
 - [ ] All DB writes in `ProcessOrder` are performed in a single repository-owned
-	  transaction; same for `ProcessOrderRetry`.
+      transaction; same for `ProcessOrderRetry`.
 - [ ] Generated notifications, processing-status update, order completion, status feed
-	  insert, and notification log insert occur in that same transaction.
+      insert, and notification log insert occur in that same transaction.
 - [ ] If the order is *not* transitioned to `Completed`, no status feed / notification
-	  log records are written.
+      log records are written for the completion path.
+- [ ] Send-condition-not-met writes status feed and notification log atomically.
 - [ ] Any DB write failure rolls back the whole transaction and propagates the
-	  exception (no swallowed exceptions on these paths).
+      exception (no swallowed exceptions on these paths).
 - [ ] `OrderProcessingService` no longer orchestrates DB writes as separate steps; it
-	  calls a single repository method per path.
+      calls a single repository method per path.
 - [ ] No Npgsql types appear in the `Core` (service) project for these flows.
 - [ ] Azure Service Bus publishing happens **outside** and **after** the DB
-	  transaction (ideally via outbox); the chosen approach and its delivery
-	  guarantees are documented.
+      transaction (ideally via outbox); the chosen approach and its delivery
+      guarantees are documented.
 - [ ] External (HTTP) lookups happen **before** the transaction is opened.
 - [ ] Integration test: a forced failure in any DB write leaves **no** partial DB
-	  state.
+      state.
 - [ ] Integration test (happy path): completion writes exactly one status feed record
-	  and one notification log entry, and the order is `Completed`.
+      and one notification log entry, and the order is `Completed`.
 
 ## Out of scope
 

@@ -93,9 +93,9 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 break;
 
             default:
-                return new OrderProcessingResult(
-                    EmailOrderProcessingResult: new EmailOrderProcessingResult([], null),
-                    SmsOrderProcessingResult: new SmsOrderProcessingResult([], null));
+                throw new ArgumentOutOfRangeException(
+                    nameof(order),
+                    $"Preferred channel processing only supports {NotificationChannel.EmailPreferred} and {NotificationChannel.SmsPreferred}. Got: {order.NotificationChannel}.");
         }
 
         return new OrderProcessingResult(
