@@ -25,20 +25,20 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE)]
-public class NotificationOrderWithAttachmentsController : ControllerBase
+public class ComposedEmailOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
     private readonly IValidator<ComposedEmailRequestExt> _validator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderWithAttachmentsController"/> class.
+    /// Initializes a new instance of the <see cref="ComposedEmailOrdersController"/> class.
     /// </summary>
-    public NotificationOrderWithAttachmentsController(
+    public ComposedEmailOrdersController(
         IOrderRequestService orderRequestService,
         IValidator<ComposedEmailRequestExt> validator)
     {
-        _orderRequestService = orderRequestService;
         _validator = validator;
+        _orderRequestService = orderRequestService;
     }
 
     /// <summary>

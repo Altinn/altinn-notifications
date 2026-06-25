@@ -2823,7 +2823,7 @@ public class OrderRequestServiceTests
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("ttd"))
-            .SetType(OrderType.NotificationWithAttachments)
+            .SetType(OrderType.ComposedEmail)
             .SetIdempotencyId("attach-idempotency-001")
             .SetSendersReference("attach-ref-001")
             .SetRequestedSendTime(currentTime.AddMinutes(30))
@@ -2855,7 +2855,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(o =>
                     o.Id == orderId &&
-                    o.Type == OrderType.NotificationWithAttachments &&
+                    o.Type == OrderType.ComposedEmail &&
                     o.NotificationChannel == NotificationChannel.Email &&
                     o.Recipients.Any(r => r.AddressInfo.OfType<EmailAddressPoint>().Any(ep => ep.EmailAddress == recipientEmail))),
                 It.IsAny<List<NotificationOrder>?>(),
@@ -2896,7 +2896,7 @@ public class OrderRequestServiceTests
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("ttd"))
-            .SetType(OrderType.NotificationWithAttachments)
+            .SetType(OrderType.ComposedEmail)
             .SetIdempotencyId("attach-idempotency-002")
             .SetRequestedSendTime(currentTime.AddHours(1))
             .SetRecipient(new NotificationRecipient

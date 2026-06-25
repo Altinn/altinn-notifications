@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -237,7 +237,7 @@ public class NotificationOrderChainRequest
                 throw new InvalidOperationException("OrderChainId must be set.");
             }
 
-            if (_type != OrderType.Notification && _type != OrderType.NotificationWithAttachments)
+            if (_type != OrderType.Notification && _type != OrderType.ComposedEmail)
             {
                 throw new InvalidOperationException("Invalid type used.");
             }

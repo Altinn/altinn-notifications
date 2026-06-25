@@ -1,1 +1,1 @@
-ALTER TYPE public.notificationordertype ADD VALUE IF NOT EXISTS 'NotificationWithAttachments';
+ALTER TYPE public.notificationordertype ADD VALUE IF NOT EXISTS 'ComposedEmail';

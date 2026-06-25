@@ -43,10 +43,10 @@ public static partial class NotificationOrderChainMapper
             .SetRecipient(recipient)
             .SetOrderId(Guid.NewGuid())
             .SetOrderChainId(Guid.NewGuid())
+            .SetType(OrderType.ComposedEmail)
             .SetCreator(new Creator(creatorName))
             .SetIdempotencyId(request.IdempotencyId)
             .SetSendersReference(request.SendersReference)
-            .SetType(OrderType.NotificationWithAttachments)
             .SetConditionEndpoint(request.ConditionEndpoint)
             .SetDialogportenAssociation(dialogportenAssociation)
             .SetRequestedSendTime(request.RequestedSendTime.ToUniversalTime())
@@ -152,16 +152,16 @@ public static partial class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="ComposedEmailSendingOptionsExt"/> to a <see cref="ComposedEmailSendingOptions"/>.
     /// </summary>
-    private static ComposedEmailSendingOptions MapToComposedEmailSendingOptions(this ComposedEmailSendingOptionsExt ext)
+    private static ComposedEmailSendingOptions MapToComposedEmailSendingOptions(this ComposedEmailSendingOptionsExt composedEmailSendingOptions)
     {
         return new ComposedEmailSendingOptions
         {
-            Body = ext.Body,
-            ContentType = (EmailContentType)ext.ContentType,
-            SenderEmailAddress = ext.SenderEmailAddress?.Trim(),
-            SendingTimePolicy = (SendingTimePolicy)ext.SendingTimePolicy,
-            Subject = NormalizeLineEndingsRegex().Replace(ext.Subject, SingleWhiteSpace),
-            Attachments = [.. ext.Attachments.Select(MapToSasFileReference)]
+            Body = composedEmailSendingOptions.Body,
+            ContentType = (EmailContentType)composedEmailSendingOptions.ContentType,
+            SenderEmailAddress = composedEmailSendingOptions.SenderEmailAddress?.Trim(),
+            SendingTimePolicy = (SendingTimePolicy)composedEmailSendingOptions.SendingTimePolicy,
+            Attachments = [.. composedEmailSendingOptions.Attachments.Select(MapToSasFileReference)],
+            Subject = NormalizeLineEndingsRegex().Replace(composedEmailSendingOptions.Subject, SingleWhiteSpace)
         };
     }
 

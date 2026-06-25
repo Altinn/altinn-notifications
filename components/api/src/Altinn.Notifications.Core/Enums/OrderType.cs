@@ -40,11 +40,11 @@ public enum OrderType : uint
     Instant = 2,
 
     /// <summary>
-    /// Represents a notification order that includes one or more file attachments delivered via SAS URL.
+    /// Represents a composed email order that references one or more files via SAS URLs.
     /// </summary>
     /// <remarks>
-    /// Attachment orders are processed through a dedicated pipeline isolated from the standard email pipeline
-    /// to prevent head-of-line blocking. The email service downloads attachments from blob storage at send time.
+    /// Composed email orders are processed through a dedicated pipeline isolated from the standard email pipeline
+    /// to prevent head-of-line blocking. The email service downloads the referenced files from blob storage at send time.
     /// </remarks>
-    NotificationWithAttachments = 3
+    ComposedEmail = 3
 }

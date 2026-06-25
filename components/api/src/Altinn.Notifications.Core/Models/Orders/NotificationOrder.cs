@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
@@ -63,7 +63,7 @@ public class NotificationOrder : IBaseNotificationOrder
     public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
 
     /// <summary>
-    /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.NotificationWithAttachments"/>.
+    /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.ComposedEmail"/>.
     /// </summary>
     [JsonInclude]
     public List<SasFileReference>? EmailAttachments { get; internal set; }

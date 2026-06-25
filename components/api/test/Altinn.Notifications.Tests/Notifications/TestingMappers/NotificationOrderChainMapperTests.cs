@@ -2364,12 +2364,12 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.NotEqual(result.OrderId, result.OrderChainId);
+        Assert.Equal(OrderType.ComposedEmail, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
-        Assert.Equal(OrderType.NotificationWithAttachments, result.Type);
+        Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-attach-001", result.SendersReference);
-        Assert.Equal("A1B2C3D4-E5F6-7890-ABCD-EF1234567890", result.IdempotencyId);
         Assert.Equal(sendTime.ToUniversalTime(), result.RequestedSendTime);
+        Assert.Equal("A1B2C3D4-E5F6-7890-ABCD-EF1234567890", result.IdempotencyId);
 
         // Assert — recipient email settings
         Assert.NotNull(result.Recipient.RecipientComposedEmail);

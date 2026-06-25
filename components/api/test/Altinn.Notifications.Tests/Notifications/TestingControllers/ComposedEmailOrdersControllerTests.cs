@@ -26,13 +26,13 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 
-public class NotificationOrderWithAttachmentsControllerTests
+public class ComposedEmailOrdersControllerTests
 {
     private const string _validSasUrl =
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    public NotificationOrderWithAttachmentsControllerTests()
+    public ComposedEmailOrdersControllerTests()
     {
         ResourceLinkExtensions.Initialize("http://localhost:5090");
     }
@@ -202,7 +202,7 @@ public class NotificationOrderWithAttachmentsControllerTests
         Assert.NotNull(captured);
         Assert.Equal("ttd", captured.Creator.ShortName);
         Assert.Equal(request.IdempotencyId, captured.IdempotencyId);
-        Assert.Equal(OrderType.NotificationWithAttachments, captured.Type);
+        Assert.Equal(OrderType.ComposedEmail, captured.Type);
         Assert.NotNull(captured.Recipient.RecipientComposedEmail);
         Assert.NotNull(captured.Recipient.RecipientComposedEmail.Settings.Attachments);
         Assert.Single(captured.Recipient.RecipientComposedEmail.Settings.Attachments);
@@ -234,7 +234,7 @@ public class NotificationOrderWithAttachmentsControllerTests
         }
     };
 
-    private static NotificationOrderWithAttachmentsController CreateController(
+    private static ComposedEmailOrdersController CreateController(
         IOrderRequestService orderRequestService,
         IValidator<ComposedEmailRequestExt> validator,
         string? org = "ttd")
@@ -242,7 +242,7 @@ public class NotificationOrderWithAttachmentsControllerTests
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = org;
 
-        return new NotificationOrderWithAttachmentsController(orderRequestService, validator)
+        return new ComposedEmailOrdersController(orderRequestService, validator)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };

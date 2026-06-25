@@ -30,12 +30,12 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
 
 /// <summary>
-/// Integration tests for the <see cref="NotificationOrderWithAttachmentsController"/>.
+/// Integration tests for the <see cref="ComposedEmailOrdersController"/>.
 /// </summary>
-public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<NotificationOrderWithAttachmentsController>>
+public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<ComposedEmailOrdersController>>
 {
-    private const string BasePath = "/notifications/api/v1/future/orders/email-with-attachments";
-    private const string ValidScope = "altinn:serviceowner/notifications.emailwithattachments.create";
+    private const string _basePath = "/notifications/api/v1/future/orders/email-with-attachments";
+    private const string _validScope = "altinn:serviceowner/notifications.emailwithattachments.create";
 
     private static readonly JsonSerializerOptions _options = new()
     {
@@ -47,12 +47,12 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    private readonly IntegrationTestWebApplicationFactory<NotificationOrderWithAttachmentsController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<ComposedEmailOrdersController> _factory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderWithAttachmentsControllerTests"/> class.
+    /// Initializes a new instance of the <see cref="ComposedEmailOrdersControllerTests"/> class.
     /// </summary>
-    public NotificationOrderWithAttachmentsControllerTests(IntegrationTestWebApplicationFactory<NotificationOrderWithAttachmentsController> factory)
+    public ComposedEmailOrdersControllerTests(IntegrationTestWebApplicationFactory<ComposedEmailOrdersController> factory)
     {
         _factory = factory;
     }
@@ -121,7 +121,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
 
         var client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: ValidScope));
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
         var response = await SendPostRequest(client, request);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -163,7 +163,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
 
         var client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: ValidScope));
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
         var response = await SendPostRequest(client, request);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -204,7 +204,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
 
         var client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: ValidScope));
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
         var response = await SendPostRequest(client, request);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -221,7 +221,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
 
         var client = GetTestClient(expectedResponse);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: ValidScope));
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
         var response = await SendPostRequest(client, request);
         var responseObject = await DeserializeResponse(response);
@@ -244,7 +244,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
 
         var client = GetTestClient(orderRequestService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: ValidScope));
+            "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
         var response = await SendPostRequest(client, request);
         var responseObject = await DeserializeResponse(response);
@@ -293,7 +293,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
     private static async Task<HttpResponseMessage> SendPostRequest(HttpClient client, ComposedEmailRequestExt request)
     {
         using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        return await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
+        return await client.PostAsync(_basePath, content, TestContext.Current.CancellationToken);
     }
 
     private static async Task<NotificationOrderChainResponseExt?> DeserializeResponse(HttpResponseMessage response)
