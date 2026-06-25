@@ -2371,24 +2371,24 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(sendTime.ToUniversalTime(), result.RequestedSendTime);
 
         // Assert — recipient email settings
-        Assert.NotNull(result.Recipient.RecipientEmail);
-        Assert.Equal("recipient@agency.no", result.Recipient.RecipientEmail.EmailAddress);
-        Assert.Equal("Decision notice", result.Recipient.RecipientEmail.Settings.Subject);
-        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
-        Assert.Equal("sender@agency.no", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
-        Assert.Equal("Please review the attached document.", result.Recipient.RecipientEmail.Settings.Body);
-        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+        Assert.NotNull(result.Recipient.RecipientEmailWithAttachments);
+        Assert.Equal("recipient@agency.no", result.Recipient.RecipientEmailWithAttachments.EmailAddress);
+        Assert.Equal("Decision notice", result.Recipient.RecipientEmailWithAttachments.Settings.Subject);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmailWithAttachments.Settings.ContentType);
+        Assert.Equal("sender@agency.no", result.Recipient.RecipientEmailWithAttachments.Settings.SenderEmailAddress);
+        Assert.Equal("Please review the attached document.", result.Recipient.RecipientEmailWithAttachments.Settings.Body);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmailWithAttachments.Settings.SendingTimePolicy);
 
         // Assert — attachments mapped correctly
-        Assert.NotNull(result.Recipient.RecipientEmail.Settings.Attachments);
-        Assert.Equal(2, result.Recipient.RecipientEmail.Settings.Attachments.Count);
+        Assert.NotNull(result.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
+        Assert.Equal(2, result.Recipient.RecipientEmailWithAttachments.Settings.Attachments.Count);
 
-        var firstAttachment = result.Recipient.RecipientEmail.Settings.Attachments[0];
+        var firstAttachment = result.Recipient.RecipientEmailWithAttachments.Settings.Attachments[0];
         Assert.Equal("decision.pdf", firstAttachment.Filename);
         Assert.Equal("application/pdf", firstAttachment.MimeType);
         Assert.Equal(requestExt.Recipient.Settings.Attachments[0].SasUrl, firstAttachment.SasUrl);
 
-        var secondAttachment = result.Recipient.RecipientEmail.Settings.Attachments[1];
+        var secondAttachment = result.Recipient.RecipientEmailWithAttachments.Settings.Attachments[1];
         Assert.Equal("appendix.docx", secondAttachment.Filename);
         Assert.Equal(requestExt.Recipient.Settings.Attachments[1].SasUrl, secondAttachment.SasUrl);
         Assert.Equal("application/vnd.openxmlformats-officedocument.wordprocessingml.document", secondAttachment.MimeType);
@@ -2430,7 +2430,7 @@ public class NotificationOrderChainMapperTests
         var result = requestExt.MapToNotificationOrderChainRequest("ttd");
 
         // Assert
-        Assert.Equal("Line one Line two Line three Line four", result.Recipient.RecipientEmail!.Settings.Subject);
+        Assert.Equal("Line one Line two Line three Line four", result.Recipient.RecipientEmailWithAttachments!.Settings.Subject);
     }
 
     [Fact]

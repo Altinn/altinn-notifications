@@ -28,7 +28,7 @@ public static partial class NotificationOrderChainMapper
     {
         var recipient = new NotificationRecipient
         {
-            RecipientEmail = new RecipientEmail
+            RecipientEmailWithAttachments = new RecipientEmailWithAttachments
             {
                 EmailAddress = request.Recipient.EmailAddress,
                 Settings = request.Recipient.Settings.MapToEmailWithAttachmentsSendingOptions()
@@ -148,18 +148,18 @@ public static partial class NotificationOrderChainMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="EmailWithAttachmentsSendingOptionsExt"/> to a <see cref="EmailSendingOptions"/>.
+    /// Maps a <see cref="EmailWithAttachmentsSendingOptionsExt"/> to a <see cref="EmailWithAttachmentsSendingOptions"/>.
     /// </summary>
-    private static EmailSendingOptions MapToEmailWithAttachmentsSendingOptions(this EmailWithAttachmentsSendingOptionsExt emailWithAttachmentsSendingOptionsExt)
+    private static EmailWithAttachmentsSendingOptions MapToEmailWithAttachmentsSendingOptions(this EmailWithAttachmentsSendingOptionsExt ext)
     {
-        return new EmailSendingOptions
+        return new EmailWithAttachmentsSendingOptions
         {
-            Body = emailWithAttachmentsSendingOptionsExt.Body,
-            ContentType = (EmailContentType)emailWithAttachmentsSendingOptionsExt.ContentType,
-            SenderEmailAddress = emailWithAttachmentsSendingOptionsExt.SenderEmailAddress?.Trim(),
-            SendingTimePolicy = (SendingTimePolicy)emailWithAttachmentsSendingOptionsExt.SendingTimePolicy,
-            Attachments = [.. emailWithAttachmentsSendingOptionsExt.Attachments.Select(MapToEmailAttachment)],
-            Subject = NormalizeLineEndingsRegex().Replace(emailWithAttachmentsSendingOptionsExt.Subject, SingleWhiteSpace)
+            Body = ext.Body,
+            ContentType = (EmailContentType)ext.ContentType,
+            SenderEmailAddress = ext.SenderEmailAddress?.Trim(),
+            SendingTimePolicy = (SendingTimePolicy)ext.SendingTimePolicy,
+            Subject = NormalizeLineEndingsRegex().Replace(ext.Subject, SingleWhiteSpace),
+            Attachments = [.. ext.Attachments.Select(MapToEmailAttachment)]
         };
     }
 

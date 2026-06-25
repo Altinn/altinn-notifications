@@ -169,6 +169,11 @@ public class OrderRequestService : IOrderRequestService
             return ExtractSmsRecipientComponents(recipient.RecipientSms);
         }
 
+        if (recipient.RecipientEmailWithAttachments?.Settings != null)
+        {
+            return ExtractEmailWithAttachmentsRecipientComponents(recipient.RecipientEmailWithAttachments);
+        }
+
         if (recipient.RecipientEmail?.Settings != null)
         {
             return ExtractEmailRecipientComponents(recipient.RecipientEmail);
@@ -214,9 +219,21 @@ public class OrderRequestService : IOrderRequestService
         return new RecipientDeliveryDetails
         {
             Channel = NotificationChannel.Email,
-            Attachments = recipientEmail.Settings?.Attachments,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
+        };
+    }
+
+    /// <summary>
+    /// Extracts delivery components for an email-with-attachments recipient.
+    /// </summary>
+    private static RecipientDeliveryDetails ExtractEmailWithAttachmentsRecipientComponents(RecipientEmailWithAttachments recipient)
+    {
+        return new RecipientDeliveryDetails
+        {
+            Channel = NotificationChannel.Email,
+            Templates = [CreateEmailTemplate(recipient.Settings)],
+            Recipients = [new([new EmailAddressPoint(recipient.EmailAddress)])]
         };
     }
 
@@ -415,7 +432,7 @@ public class OrderRequestService : IOrderRequestService
             ResourceId = deliveryDetails.ResourceId,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
-            EmailAttachments = deliveryDetails.Attachments,
+            EmailAttachments = orderRequest.Recipient.RecipientEmailWithAttachments?.Settings.Attachments,
             ResourceAction = deliveryDetails.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,

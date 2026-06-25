@@ -14,7 +14,7 @@ public record EmailAttachmentExt
     /// <remarks>
     /// Must not contain path separators (<c>/</c>, <c>\</c>) or traversal sequences (<c>..</c>).
     /// </remarks>
-    /// <example>contract.pdf</example>
+    /// <example>attachment.pdf</example>
     [Required]
     [JsonPropertyName("filename")]
     public required string Filename { get; init; }
@@ -24,7 +24,6 @@ public record EmailAttachmentExt
     /// </summary>
     /// <remarks>
     /// Must be one of the MIME types accepted by Azure Communication Services.
-    /// See: https://learn.microsoft.com/en-us/azure/communication-services/concepts/email/email-attachment-allowed-mime-types
     /// </remarks>
     /// <example>application/pdf</example>
     [Required]

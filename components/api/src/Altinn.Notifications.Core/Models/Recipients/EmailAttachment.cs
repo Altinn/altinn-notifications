@@ -10,7 +10,7 @@
 public record EmailAttachment
 {
     /// <summary>
-    /// The filename, including extension, to be shown in the recipient's email client.
+    /// The filename, including extension, to be shown in the recipient''s email client.
     /// </summary>
     public required string Filename { get; init; }
 

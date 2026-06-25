@@ -13,6 +13,12 @@ public class NotificationRecipient
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed
+    /// to send an email with file attachments to a specific address.
+    /// </summary>
+    public RecipientEmailWithAttachments? RecipientEmailWithAttachments { get; set; }
+
+    /// <summary>
+    /// Gets or sets an object capturing all the information needed
     /// to send an SMS to a specific phone number.
     /// </summary>
     public RecipientSms? RecipientSms { get; set; }

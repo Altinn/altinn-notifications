@@ -110,6 +110,62 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_AttachmentSasUrlMissingSeParameter_HasDistinctError()
+    {
+        // URL is valid HTTPS with other required params but 'se' is absent
+        var recipient = new RecipientEmailWithAttachmentsExt
+        {
+            EmailAddress = "recipient@agency.no",
+            Settings = new EmailWithAttachmentsSendingOptionsExt
+            {
+                Subject = "Decision from Altinn",
+                Body = "Please see the attached document.",
+                Attachments =
+                [
+                    new EmailAttachmentExt
+                    {
+                        Filename = "contract.pdf",
+                        MimeType = "application/pdf",
+                        SasUrl = "https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b&sig=fakesig"
+                    }
+                ]
+            }
+        };
+
+        var result = _validator.TestValidate(ValidRequest(recipient: recipient));
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing a valid 'se' (signed expiry) parameter.");
+    }
+
+    [Fact]
+    public void Validate_AttachmentSasUrlWithMalformedSe_HasDistinctError()
+    {
+        // URL has all required params but 'se' is not a valid date — distinct from "expiry too short"
+        var recipient = new RecipientEmailWithAttachmentsExt
+        {
+            EmailAddress = "recipient@agency.no",
+            Settings = new EmailWithAttachmentsSendingOptionsExt
+            {
+                Subject = "Decision from Altinn",
+                Body = "Please see the attached document.",
+                Attachments =
+                [
+                    new EmailAttachmentExt
+                    {
+                        Filename = "contract.pdf",
+                        MimeType = "application/pdf",
+                        SasUrl = "https://account.blob.core.windows.net/container/file.pdf?se=not-a-date&sp=r&sr=b&sig=fakesig"
+                    }
+                ]
+            }
+        };
+
+        var result = _validator.TestValidate(ValidRequest(recipient: recipient));
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing a valid 'se' (signed expiry) parameter.");
+    }
+
+    [Fact]
     public void Validate_InvalidRecipientEmailAddress_HasError()
     {
         var result = _validator.TestValidate(ValidRequest(recipient: ValidRecipient(emailAddress: "not-an-email")));

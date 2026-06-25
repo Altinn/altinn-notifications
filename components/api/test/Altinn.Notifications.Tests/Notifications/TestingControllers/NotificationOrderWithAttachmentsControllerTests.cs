@@ -202,10 +202,10 @@ public class NotificationOrderWithAttachmentsControllerTests
         Assert.Equal("ttd", captured.Creator.ShortName);
         Assert.Equal(request.IdempotencyId, captured.IdempotencyId);
         Assert.Equal(OrderType.NotificationWithAttachments, captured.Type);
-        Assert.NotNull(captured.Recipient.RecipientEmail);
-        Assert.NotNull(captured.Recipient.RecipientEmail.Settings.Attachments);
-        Assert.Single(captured.Recipient.RecipientEmail.Settings.Attachments);
-        Assert.Equal("contract.pdf", captured.Recipient.RecipientEmail.Settings.Attachments[0].Filename);
+        Assert.NotNull(captured.Recipient.RecipientEmailWithAttachments);
+        Assert.NotNull(captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
+        Assert.Single(captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
+        Assert.Equal("contract.pdf", captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments[0].Filename);
     }
 
     private static NotificationOrderWithAttachmentsRequestExt ValidRequest() => new()

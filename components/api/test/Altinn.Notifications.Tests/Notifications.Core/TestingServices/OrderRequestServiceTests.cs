@@ -2806,6 +2806,139 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task RegisterNotificationOrderChain_WithRecipientEmailWithAttachments_CreatesOrderWithCorrectPropertiesAndSkipsContactPointLookup()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        const string recipientEmail = "recipient@agency.no";
+
+        var sasUrl1 = "https://storage.example.com/doc1.pdf?se=2099-01-01T00%3A00%3A00Z&sig=abc";
+        var sasUrl2 = "https://storage.example.com/doc2.docx?se=2099-01-01T00%3A00%3A00Z&sig=xyz";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.NotificationWithAttachments)
+            .SetIdempotencyId("attach-idempotency-001")
+            .SetSendersReference("attach-ref-001")
+            .SetRequestedSendTime(currentTime.AddMinutes(30))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmailWithAttachments = new RecipientEmailWithAttachments
+                {
+                    EmailAddress = recipientEmail,
+                    Settings = new EmailWithAttachmentsSendingOptions
+                    {
+                        Subject = "Decision document",
+                        Body = "Please review the attached decision.",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@agency.no",
+                        SendingTimePolicy = SendingTimePolicy.Anytime,
+                        Attachments =
+                        [
+                            new EmailAttachment { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
+                            new EmailAttachment { Filename = "appendix.docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", SasUrl = sasUrl2 }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.Type == OrderType.NotificationWithAttachments &&
+                    o.NotificationChannel == NotificationChannel.Email &&
+                    o.Recipients.Any(r => r.AddressInfo.OfType<EmailAddressPoint>().Any(ep => ep.EmailAddress == recipientEmail))),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+
+        contactPointServiceMock.Verify(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
+        contactPointServiceMock.Verify(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
+        contactPointServiceMock.Verify(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
+        contactPointServiceMock.Verify(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
+
+        orderRepositoryMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_WithRecipientEmailWithAttachments_EmailAttachmentsPopulatedOnPersistedOrder()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var sasUrl = "https://storage.example.com/contract.pdf?se=2099-01-01T00%3A00%3A00Z&sig=abc";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.NotificationWithAttachments)
+            .SetIdempotencyId("attach-idempotency-002")
+            .SetRequestedSendTime(currentTime.AddHours(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmailWithAttachments = new RecipientEmailWithAttachments
+                {
+                    EmailAddress = "recipient@agency.no",
+                    Settings = new EmailWithAttachmentsSendingOptions
+                    {
+                        Subject = "Contract",
+                        Body = "See attached contract.",
+                        Attachments = [new EmailAttachment { Filename = "contract.pdf", MimeType = "application/pdf", SasUrl = sasUrl }]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder? capturedOrder = null;
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, order, _, _) => capturedOrder = order)
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedOrder);
+        Assert.NotNull(capturedOrder.EmailAttachments);
+        Assert.Single(capturedOrder.EmailAttachments);
+        Assert.Equal("contract.pdf", capturedOrder.EmailAttachments[0].Filename);
+        Assert.Equal("application/pdf", capturedOrder.EmailAttachments[0].MimeType);
+        Assert.Equal(sasUrl, capturedOrder.EmailAttachments[0].SasUrl);
+    }
+
     private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)

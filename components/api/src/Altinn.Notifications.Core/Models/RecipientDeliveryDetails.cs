@@ -50,12 +50,6 @@ internal sealed record RecipientDeliveryDetails
     public SendingTimePolicy? SmsSendingTimePolicy { get; init; }
 
     /// <summary>
-    /// Gets the file attachments for <see cref="OrderType.NotificationWithAttachments"/> orders.
-    /// <c>null</c> for all other order types.
-    /// </summary>
-    public List<EmailAttachment>? Attachments { get; init; }
-
-    /// <summary>
     /// Gets an empty <see cref="RecipientDeliveryDetails"/> instance with default values.
     /// </summary>
     /// <remarks>

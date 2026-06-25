@@ -26,15 +26,6 @@ public record EmailSendingOptions
     public required string Body { get; init; }
 
     /// <summary>
-    /// The file attachments to include in the email.
-    /// </summary>
-    /// <remarks>
-    /// Each attachment is referenced by SAS URL and downloaded by the email service at send time.
-    /// <c>null</c> for standard email orders; populated only for <see cref="Enums.OrderType.NotificationWithAttachments"/> orders.
-    /// </remarks>
-    public List<EmailAttachment>? Attachments { get; init; }
-
-    /// <summary>
     /// The content type of the email body.
     /// </summary>
     /// <remarks>

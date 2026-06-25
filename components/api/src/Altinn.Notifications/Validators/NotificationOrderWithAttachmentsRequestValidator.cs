@@ -32,10 +32,22 @@ internal sealed class NotificationOrderWithAttachmentsRequestValidator : Abstrac
         When(order => order.Recipient?.Settings?.Attachments is { Count: > 0 }, () =>
         {
             RuleForEach(order => order.Recipient.Settings.Attachments)
+                .Must((_, attachment) =>
+                    attachment == null ||
+                    string.IsNullOrWhiteSpace(attachment.SasUrl) ||
+                    EmailAttachmentRules.ParseSasExpiry(attachment.SasUrl) != null)
+                .WithMessage((_, attachment) => $"Attachment '{attachment.Filename}': sasUrl is missing a valid 'se' (signed expiry) parameter.");
+
+            RuleForEach(order => order.Recipient.Settings.Attachments)
                 .Must((order, attachment) =>
                 {
+                    if (attachment == null || string.IsNullOrWhiteSpace(attachment.SasUrl))
+                    {
+                        return true;
+                    }
+
                     var expiry = EmailAttachmentRules.ParseSasExpiry(attachment.SasUrl);
-                    return expiry != null && expiry >= order.RequestedSendTime.AddMinutes(15);
+                    return expiry == null || expiry >= order.RequestedSendTime.AddMinutes(15);
                 })
                 .WithMessage((_, attachment) => $"Attachment '{attachment.Filename}': sasUrl must be valid for at least 15 minutes after requestedSendTime.");
         });
