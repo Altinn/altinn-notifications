@@ -233,7 +233,7 @@ public interface IOrderRepository
     /// <c>false</c> if some notifications are still pending or the order was already completed.
     /// </returns>
     Task<bool> PersistProcessingResultAsync(
-        Guid orderId,
+        NotificationOrder order,
         EmailOrderProcessingResult emailOrderProcessingResult,
         SmsOrderProcessingResult smsOrderProcessingResult);
 

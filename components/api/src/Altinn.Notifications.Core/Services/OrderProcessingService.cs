@@ -137,7 +137,7 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order.Id, emailOrderProcessingResult, smsOrderProcessingResult);
+                await _orderRepository.PersistProcessingResultAsync(order, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
 
@@ -208,7 +208,7 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order.Id, emailOrderProcessingResult, smsOrderProcessingResult);
+                await _orderRepository.PersistProcessingResultAsync(order, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
     }
