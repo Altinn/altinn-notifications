@@ -60,8 +60,15 @@ public class SmsNotificationService : ISmsNotificationService
 
         foreach (SmsAddressPoint addressPoint in addressPoints)
         {
-            recipient.MobileNumber = addressPoint.MobileNumber;
-            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.New));
+            var recipientForAddress = new SmsRecipient
+            {
+                IsReserved = recipient.IsReserved,
+                OrganizationNumber = recipient.OrganizationNumber,
+                NationalIdentityNumber = recipient.NationalIdentityNumber,
+                CustomizedBody = recipient.CustomizedBody,
+                MobileNumber = addressPoint.MobileNumber
+            };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipientForAddress, SmsNotificationResultType.New));
         }
 
         return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);

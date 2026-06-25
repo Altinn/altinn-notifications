@@ -28,7 +28,7 @@ public interface ISmsNotificationService : INotificationService
 
     /// <summary>
     /// Builds in-memory SMS notifications for the given recipient and address points.
-    /// Does not persist. Expiry time is computed internally.
+    /// Does not persist.
     /// </summary>
     /// <param name="orderId">The unique identifier of the order associated with the notification.</param>
     /// <param name="requestedSendTime">The date and time when the notification is requested to be sent.</param>
@@ -37,6 +37,6 @@ public interface ISmsNotificationService : INotificationService
     /// <param name="recipient">The recipient details of the SMS notification.</param>
     /// <param name="count">The number of SMS messages to be sent.</param>
     /// <param name="ignoreReservation">A flag indicating whether to ignore the recipient's reservation status for receiving SMS notifications.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <returns>A read-only list of the materialized <see cref="SmsNotification"/> instances, not yet persisted.</returns>
     Task<IReadOnlyList<SmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false);
 }

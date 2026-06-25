@@ -51,8 +51,16 @@ public class EmailNotificationService(
 
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
-            emailRecipient.ToAddress = addressPoint.EmailAddress;
-            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New));
+            var recipientForAddress = new EmailRecipient
+            {
+                IsReserved = emailRecipient.IsReserved,
+                OrganizationNumber = emailRecipient.OrganizationNumber,
+                NationalIdentityNumber = emailRecipient.NationalIdentityNumber,
+                CustomizedBody = emailRecipient.CustomizedBody,
+                CustomizedSubject = emailRecipient.CustomizedSubject,
+                ToAddress = addressPoint.EmailAddress
+            };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipientForAddress, EmailNotificationResultType.New));
         }
 
         return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);

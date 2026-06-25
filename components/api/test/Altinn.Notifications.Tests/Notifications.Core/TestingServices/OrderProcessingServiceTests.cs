@@ -741,7 +741,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_InsertStatusFeedThrowsException_ProcessingContinues()
+    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_SetsConditionNotMetStatus_SkipsProcessing()
     {
         // Arrange
         NotificationOrder order = new()
@@ -755,37 +755,6 @@ public class OrderProcessingServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
             
-        var processingServiceMock = new Mock<IEmailOrderProcessingService>();
-
-        var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
-
-        // Act
-        var processingResult = await orderProcessingService.ProcessOrder(order);
-
-        // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
-        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), OrderProcessingStatus.SendConditionNotMet), Times.Once);
-        processingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_InsertStatusFeedThrowsInvalidOperationException_ProcessingContinues()
-    {
-        // Arrange
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Email,
-            ConditionEndpoint = new Uri("https://sendingCondition.no")
-        };
-
-        var conditionClientMock = new Mock<IConditionClient>();
-        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-
         var processingServiceMock = new Mock<IEmailOrderProcessingService>();
 
         var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
@@ -1283,35 +1252,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailOrderWithUnmetSendingCondition_InsertStatusFeedThrowsException_ProcessingContinues()
-    {
-        // Arrange
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Email,
-            ConditionEndpoint = new Uri("https://sendingCondition.no")
-        };
-
-        var conditionClientMock = new Mock<IConditionClient>();
-        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-
-        var processingServiceMock = new Mock<IEmailOrderProcessingService>();
-
-        var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
-
-        // Act
-        await orderProcessingService.ProcessOrderRetry(order);
-
-        // Assert
-        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), OrderProcessingStatus.SendConditionNotMet), Times.Once);
-        processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProcessOrderRetry_EmailOrderWithUnmetSendingCondition_InsertStatusFeedThrowsInvalidOperationException_ProcessingContinues()
+    public async Task ProcessOrderRetry_EmailOrderWithUnmetSendingCondition_SetsConditionNotMetStatus_SkipsProcessing()
     {
         // Arrange
         NotificationOrder order = new()
