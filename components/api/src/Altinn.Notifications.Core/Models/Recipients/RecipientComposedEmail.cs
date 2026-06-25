@@ -1,16 +1,14 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Defines a model for sending an email notification with file attachments to a specific email address.
+/// Identifies a recipient for a composed email notification by their email address
+/// and the associated sending options, including SAS-referenced files.
 /// </summary>
-public class RecipientEmailWithAttachments
+public class RecipientComposedEmail
 {
     /// <summary>
-    /// Gets or sets the email address of the intended recipient.
+    /// Gets or sets the email address of the recipient.
     /// </summary>
-    /// <remarks>
-    /// This is the destination address where the email will be delivered.
-    /// </remarks>
     public required string EmailAddress { get; set; }
 
     /// <summary>

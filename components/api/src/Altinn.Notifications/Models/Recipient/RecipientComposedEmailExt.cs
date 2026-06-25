@@ -6,13 +6,13 @@ using Altinn.Notifications.Models.Email;
 namespace Altinn.Notifications.Models.Recipient;
 
 /// <summary>
-/// Defines the recipient and email settings for an email notification with file attachments.
+/// Identifies a recipient for a composed email notification by their email address
+/// and the associated sending options, including SAS-referenced files.
 /// </summary>
 /// <remarks>
-/// Used exclusively with the email-with-attachments order endpoint. The recipient is
-/// identified by a direct email address rather than through KRR lookup.
+/// The recipient is identified by a direct email address; no KRR lookup is performed.
 /// </remarks>
-public class RecipientEmailWithAttachmentsExt
+public class RecipientComposedEmailExt
 {
     /// <summary>
     /// The email address of the recipient.

@@ -12,13 +12,13 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
-public class NotificationOrderWithAttachmentsRequestValidatorTests
+public class ComposedEmailRequestValidatorTests
 {
     private const string _validSasUrl =
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    private static RecipientEmailWithAttachmentsExt ValidRecipient(string emailAddress = "recipient@agency.no") => new()
+    private static RecipientComposedEmailExt ValidRecipient(string emailAddress = "recipient@agency.no") => new()
     {
         EmailAddress = emailAddress,
         Settings = new ComposedEmailSendingOptionsExt
@@ -37,10 +37,10 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
         }
     };
 
-    private static NotificationOrderWithAttachmentsRequestExt ValidRequest(
+    private static ComposedEmailRequestExt ValidRequest(
         string idempotencyId = "order-001",
         DateTime? requestedSendTime = null,
-        RecipientEmailWithAttachmentsExt? recipient = null,
+        RecipientComposedEmailExt? recipient = null,
         DialogportenIdentifiersExt? dialogportenAssociation = null) => new()
         {
             SendersReference = "ref-001",
@@ -50,7 +50,7 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
             RequestedSendTime = requestedSendTime ?? DateTime.UtcNow.AddHours(1)
         };
 
-    private static readonly NotificationOrderWithAttachmentsRequestValidator _validator = new();
+    private static readonly ComposedEmailRequestValidator _validator = new();
 
     [Fact]
     public void Validate_ValidRequest_NoErrors()
@@ -86,7 +86,7 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
             "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
             $"?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature";
 
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -114,7 +114,7 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
     public void Validate_AttachmentSasUrlMissingSeParameter_HasDistinctError()
     {
         // URL is valid HTTPS with other required params but 'se' is absent
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -142,7 +142,7 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
     public void Validate_AttachmentSasUrlWithMalformedSe_HasDistinctError()
     {
         // URL has all required params but 'se' is not a valid date — distinct from "expiry too short"
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt

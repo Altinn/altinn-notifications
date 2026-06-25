@@ -18,7 +18,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
-/// Controller for submitting email notification orders with file attachments.
+/// Controller for submitting composed email notification orders.
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/future/orders/email-with-attachments")]
@@ -28,27 +28,27 @@ namespace Altinn.Notifications.Controllers;
 public class NotificationOrderWithAttachmentsController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
-    private readonly IValidator<NotificationOrderWithAttachmentsRequestExt> _validator;
+    private readonly IValidator<ComposedEmailRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderWithAttachmentsController"/> class.
     /// </summary>
     public NotificationOrderWithAttachmentsController(
         IOrderRequestService orderRequestService,
-        IValidator<NotificationOrderWithAttachmentsRequestExt> validator)
+        IValidator<ComposedEmailRequestExt> validator)
     {
         _orderRequestService = orderRequestService;
         _validator = validator;
     }
 
     /// <summary>
-    /// Creates a new email notification order with one or more file attachments.
+    /// Creates a new composed email notification order.
     /// </summary>
     /// <remarks>
     /// The API validates the request at the boundary before any database write or queue publish.
-    /// Attachments are referenced by SAS URL and downloaded by the email service at send time.
+    /// Files are referenced by SAS URL and downloaded by the email service at send time.
     /// </remarks>
-    /// <param name="orderRequest">The email-with-attachments order request.</param>
+    /// <param name="orderRequest">The composed email order request.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The notification order chain response.</returns>
     [HttpPost]
@@ -59,7 +59,7 @@ public class NotificationOrderWithAttachmentsController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid.", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "Missing contact information for one or more recipients", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
-    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderWithAttachmentsRequestExt orderRequest, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(ComposedEmailRequestExt orderRequest, CancellationToken cancellationToken = default)
     {
         try
         {

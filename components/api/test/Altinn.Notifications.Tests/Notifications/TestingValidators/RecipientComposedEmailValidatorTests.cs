@@ -1,7 +1,7 @@
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
-using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Recipient;
 
 using FluentValidation.TestHelper;
 
@@ -9,15 +9,15 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
-public class RecipientEmailWithAttachmentsValidatorTests
+public class RecipientComposedEmailValidatorTests
 {
-    private readonly RecipientEmailWithAttachmentsValidator _validator = new();
+    private readonly RecipientComposedEmailValidator _validator = new();
 
     private const string _validSasUrl =
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    private static RecipientEmailWithAttachmentsExt RecipientWith(SasFileReferenceExt attachment) => new()
+    private static RecipientComposedEmailExt RecipientWith(SasFileReferenceExt attachment) => new()
     {
         EmailAddress = "recipient@agency.no",
         Settings = new ComposedEmailSendingOptionsExt
@@ -28,7 +28,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
         }
     };
 
-    private static RecipientEmailWithAttachmentsExt ValidRecipient() => new()
+    private static RecipientComposedEmailExt ValidRecipient() => new()
     {
         EmailAddress = "recipient@agency.no",
         Settings = new ComposedEmailSendingOptionsExt
@@ -59,7 +59,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("   ")]
     public void Validate_EmptyEmailAddress_HasError(string emailAddress)
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = emailAddress,
             Settings = ValidRecipient().Settings
@@ -74,7 +74,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("@nodomain.no")]
     public void Validate_InvalidEmailAddress_HasError(string emailAddress)
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = emailAddress,
             Settings = ValidRecipient().Settings
@@ -90,7 +90,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("caseworker@municipality.no")]
     public void Validate_ValidEmailAddresses_NoError(string emailAddress)
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = emailAddress,
             Settings = ValidRecipient().Settings
@@ -102,7 +102,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [Fact]
     public void Validate_NullSettings_HasError()
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = null!
@@ -115,7 +115,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [Fact]
     public void Validate_EmptyAttachmentsList_HasError()
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -159,8 +159,6 @@ public class RecipientEmailWithAttachmentsValidatorTests
             .WithErrorMessage("Attachment 'script.sh': mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
     }
 
-    // --- Attachment SasUrl ---
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -199,9 +197,11 @@ public class RecipientEmailWithAttachmentsValidatorTests
 
     [Theory]
     [InlineData("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
-    public void Validate_AttachmentValidAbsoluteHttpsSasUrl_NoSasUrlError(string sasUrl)
+    public void Validate_AttachmentWithValidSasUrl_NoSasUrlErrors(string sasUrl)
     {
-        // This validator only checks format; expiry is the order-level validator's responsibility
+        // A URL that passes all SAS checks at the recipient level (HTTPS, required params,
+        // parseable se, read permission). The expiry relative to requestedSendTime is
+        // intentionally not checked here — that is the order-level validator's responsibility.
         var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
@@ -212,12 +212,10 @@ public class RecipientEmailWithAttachmentsValidatorTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    // --- Attachment Filename ---
-
     [Theory]
     [InlineData("")]
-    [InlineData("   ")]
     [InlineData("\t")]
+    [InlineData("   ")]
     public void Validate_AttachmentEmptyOrWhitespaceFilename_HasError(string filename)
     {
         var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
@@ -251,8 +249,6 @@ public class RecipientEmailWithAttachmentsValidatorTests
         result.ShouldHaveValidationErrors()
             .WithErrorMessage($"Attachment '{filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
     }
-
-    // --- Attachment MimeType ---
 
     [Theory]
     [InlineData("")]
@@ -308,12 +304,10 @@ public class RecipientEmailWithAttachmentsValidatorTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    // --- SAS semantic validation ---
-
     [Fact]
     public void Validate_AttachmentNullItem_HasError()
     {
-        var recipient = new RecipientEmailWithAttachmentsExt
+        var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -373,8 +367,6 @@ public class RecipientEmailWithAttachmentsValidatorTests
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl does not grant read permission ('r' must be present in 'sp').");
     }
-
-    // --- Attachment happy paths ---
 
     [Theory]
     [InlineData("data.csv", "text/csv")]

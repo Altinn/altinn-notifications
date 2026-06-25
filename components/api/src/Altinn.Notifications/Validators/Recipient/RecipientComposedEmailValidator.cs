@@ -1,19 +1,20 @@
 using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Validators.Email;
 using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators.Email;
+namespace Altinn.Notifications.Validators.Recipient;
 
 /// <summary>
-/// Validates a <see cref="RecipientEmailWithAttachmentsExt"/> object within an email-with-attachments order request.
+/// Validates a <see cref="RecipientComposedEmailExt"/> within a composed email order request.
 /// </summary>
-internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator<RecipientEmailWithAttachmentsExt?>
+internal sealed class RecipientComposedEmailValidator : AbstractValidator<RecipientComposedEmailExt?>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RecipientEmailWithAttachmentsValidator"/> class.
+    /// Initializes a new instance of the <see cref="RecipientComposedEmailValidator"/> class.
     /// </summary>
-    public RecipientEmailWithAttachmentsValidator()
+    public RecipientComposedEmailValidator()
     {
         RuleFor(e => e)
             .NotNull()
@@ -48,6 +49,15 @@ internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator
                     RuleForEach(e => e!.Settings.Attachments)
                         .ChildRules(rules =>
                         {
+                            rules.RuleFor(a => a.Filename)
+                                .NotEmpty()
+                                .WithMessage("Attachment filename must not be empty.");
+
+                            rules.RuleFor(a => a.Filename)
+                                .Must(SasFileReferenceRules.IsValidFilename)
+                                .When(a => !string.IsNullOrWhiteSpace(a.Filename))
+                                .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
+
                             rules.RuleFor(a => a.SasUrl)
                                 .NotEmpty()
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must not be empty.");
@@ -71,15 +81,6 @@ internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator
                                 .Must(SasFileReferenceRules.HasReadPermission)
                                 .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl does not grant read permission ('r' must be present in 'sp').");
-
-                            rules.RuleFor(a => a.Filename)
-                                .NotEmpty()
-                                .WithMessage("Attachment filename must not be empty.");
-
-                            rules.RuleFor(a => a.Filename)
-                                .Must(SasFileReferenceRules.IsValidFilename)
-                                .When(a => !string.IsNullOrWhiteSpace(a.Filename))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
 
                             rules.RuleFor(a => a.MimeType)
                                 .NotEmpty()

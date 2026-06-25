@@ -21,16 +21,16 @@ public static partial class NotificationOrderChainMapper
     private const string SingleWhiteSpace = " ";
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderWithAttachmentsRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
+    /// Maps a <see cref="ComposedEmailRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
     /// <param name="request">The email-with-attachments order request.</param>
     /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
     /// <returns>A <see cref="NotificationOrderChainRequest"/> mapped from the provided request.</returns>
-    public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this NotificationOrderWithAttachmentsRequestExt request, string creatorName)
+    public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this ComposedEmailRequestExt request, string creatorName)
     {
         var recipient = new NotificationRecipient
         {
-            RecipientEmailWithAttachments = new RecipientEmailWithAttachments
+            RecipientComposedEmail = new RecipientComposedEmail
             {
                 EmailAddress = request.Recipient.EmailAddress,
                 Settings = request.Recipient.Settings.MapToComposedEmailSendingOptions()
@@ -161,7 +161,7 @@ public static partial class NotificationOrderChainMapper
             SenderEmailAddress = ext.SenderEmailAddress?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)ext.SendingTimePolicy,
             Subject = NormalizeLineEndingsRegex().Replace(ext.Subject, SingleWhiteSpace),
-            Attachments = [.. ext.Attachments.Select(MapToEmailAttachment)]
+            Attachments = [.. ext.Attachments.Select(MapToSasFileReference)]
         };
     }
 

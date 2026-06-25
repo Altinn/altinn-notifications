@@ -1,4 +1,4 @@
-﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
@@ -169,9 +169,9 @@ public class OrderRequestService : IOrderRequestService
             return ExtractSmsRecipientComponents(recipient.RecipientSms);
         }
 
-        if (recipient.RecipientEmailWithAttachments?.Settings != null)
+        if (recipient.RecipientComposedEmail?.Settings != null)
         {
-            return ExtractEmailWithAttachmentsRecipientComponents(recipient.RecipientEmailWithAttachments);
+            return ExtractComposedEmailRecipientComponents(recipient.RecipientComposedEmail);
         }
 
         if (recipient.RecipientEmail?.Settings != null)
@@ -225,9 +225,9 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Extracts delivery components for an email-with-attachments recipient.
+    /// Extracts delivery components for a composed email recipient.
     /// </summary>
-    private static RecipientDeliveryDetails ExtractEmailWithAttachmentsRecipientComponents(RecipientEmailWithAttachments recipient)
+    private static RecipientDeliveryDetails ExtractComposedEmailRecipientComponents(RecipientComposedEmail recipient)
     {
         return new RecipientDeliveryDetails
         {
@@ -432,7 +432,7 @@ public class OrderRequestService : IOrderRequestService
             ResourceId = deliveryDetails.ResourceId,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
-            EmailAttachments = orderRequest.Recipient.RecipientEmailWithAttachments?.Settings.Attachments,
+            EmailAttachments = orderRequest.Recipient.RecipientComposedEmail?.Settings.Attachments,
             ResourceAction = deliveryDetails.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,

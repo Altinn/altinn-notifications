@@ -2808,7 +2808,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_WithRecipientEmailWithAttachments_CreatesOrderWithCorrectPropertiesAndSkipsContactPointLookup()
+    public async Task RegisterNotificationOrderChain_WithRecipientComposedEmail_CreatesOrderWithCorrectPropertiesAndSkipsContactPointLookup()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -2829,7 +2829,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddMinutes(30))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientEmailWithAttachments = new RecipientEmailWithAttachments
+                RecipientComposedEmail = new RecipientComposedEmail
                 {
                     EmailAddress = recipientEmail,
                     Settings = new ComposedEmailSendingOptions
@@ -2883,7 +2883,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_WithRecipientEmailWithAttachments_EmailAttachmentsPopulatedOnPersistedOrder()
+    public async Task RegisterNotificationOrderChain_WithRecipientComposedEmail_EmailAttachmentsPopulatedOnPersistedOrder()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -2901,7 +2901,7 @@ public class OrderRequestServiceTests
             .SetRequestedSendTime(currentTime.AddHours(1))
             .SetRecipient(new NotificationRecipient
             {
-                RecipientEmailWithAttachments = new RecipientEmailWithAttachments
+                RecipientComposedEmail = new RecipientComposedEmail
                 {
                     EmailAddress = "recipient@agency.no",
                     Settings = new ComposedEmailSendingOptions

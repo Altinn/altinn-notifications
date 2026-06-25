@@ -94,12 +94,12 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
     [Fact]
     public async Task Post_InvalidRequest_MissingIdempotencyId_ReturnsBadRequest()
     {
-        var request = new NotificationOrderWithAttachmentsRequestExt
+        var request = new ComposedEmailRequestExt
         {
             IdempotencyId = string.Empty,
             SendersReference = "ref-attach-001",
             RequestedSendTime = DateTime.UtcNow.AddHours(2),
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
@@ -136,12 +136,12 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
     [Fact]
     public async Task Post_InvalidRequest_SasUrlNotHttps_ReturnsBadRequest()
     {
-        var request = new NotificationOrderWithAttachmentsRequestExt
+        var request = new ComposedEmailRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
             SendersReference = "ref-attach-001",
             RequestedSendTime = DateTime.UtcNow.AddHours(2),
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
@@ -178,11 +178,11 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
         var sendTime = DateTime.UtcNow.AddHours(2);
         var expiryTooSoon = sendTime.AddMinutes(10).ToString("o");
 
-        var request = new NotificationOrderWithAttachmentsRequestExt
+        var request = new ComposedEmailRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
             RequestedSendTime = sendTime,
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
@@ -255,12 +255,12 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
         serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private static NotificationOrderWithAttachmentsRequestExt ValidRequest() => new()
+    private static ComposedEmailRequestExt ValidRequest() => new()
     {
         IdempotencyId = Guid.NewGuid().ToString(),
         SendersReference = "ref-attach-001",
         RequestedSendTime = DateTime.UtcNow.AddHours(2),
-        Recipient = new RecipientEmailWithAttachmentsExt
+        Recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -290,7 +290,7 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
         }
     };
 
-    private static async Task<HttpResponseMessage> SendPostRequest(HttpClient client, NotificationOrderWithAttachmentsRequestExt request)
+    private static async Task<HttpResponseMessage> SendPostRequest(HttpClient client, ComposedEmailRequestExt request)
     {
         using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
         return await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);

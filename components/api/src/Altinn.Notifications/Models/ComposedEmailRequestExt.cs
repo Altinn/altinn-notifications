@@ -6,13 +6,13 @@ using Altinn.Notifications.Models.Recipient;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines the structure of a notification order request for sending an email with file attachments.
+/// Represents a request to create a composed email order with one or more SAS-referenced files.
 /// </summary>
 /// <remarks>
 /// This request type is email-only. For multi-channel notifications or reminders,
 /// use <c>POST notifications/api/v1/future/orders</c> with <see cref="NotificationOrderChainRequestExt"/> instead.
 /// </remarks>
-public class NotificationOrderWithAttachmentsRequestExt : NotificationOrderBaseExt
+public class ComposedEmailRequestExt : NotificationOrderBaseExt
 {
     /// <summary>
     /// Optional identifiers for one or more dialogs or transmissions in Dialogporten.
@@ -36,9 +36,9 @@ public class NotificationOrderWithAttachmentsRequestExt : NotificationOrderBaseE
     public required string IdempotencyId { get; init; }
 
     /// <summary>
-    /// The email recipient and sending settings for this order, including attachments.
+    /// The recipient and sending settings for this composed email order.
     /// </summary>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientEmailWithAttachmentsExt Recipient { get; init; }
+    public required RecipientComposedEmailExt Recipient { get; init; }
 }

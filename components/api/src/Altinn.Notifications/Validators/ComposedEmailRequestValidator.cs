@@ -1,5 +1,5 @@
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Recipient;
 using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
@@ -7,15 +7,14 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators;
 
 /// <summary>
-/// Validates <see cref="NotificationOrderWithAttachmentsRequestExt"/> requests submitted to the
-/// email-with-attachments order endpoint.
+/// Validates <see cref="ComposedEmailRequestExt"/> requests submitted to the composed email order endpoint.
 /// </summary>
-internal sealed class NotificationOrderWithAttachmentsRequestValidator : AbstractValidator<NotificationOrderWithAttachmentsRequestExt>
+internal sealed class ComposedEmailRequestValidator : AbstractValidator<ComposedEmailRequestExt>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderWithAttachmentsRequestValidator"/> class.
+    /// Initializes a new instance of the <see cref="ComposedEmailRequestValidator"/> class.
     /// </summary>
-    public NotificationOrderWithAttachmentsRequestValidator()
+    public ComposedEmailRequestValidator()
     {
         Include(new NotificationOrderBaseValidator());
 
@@ -24,10 +23,9 @@ internal sealed class NotificationOrderWithAttachmentsRequestValidator : Abstrac
             .NotEmpty()
             .WithMessage("IdempotencyId cannot be null or empty.");
 
-        // required
         RuleFor(order => order.Recipient)
             .NotNull()
-            .SetValidator(validator: new RecipientEmailWithAttachmentsValidator());
+            .SetValidator(validator: new RecipientComposedEmailValidator());
 
         When(order => order.Recipient?.Settings?.Attachments is { Count: > 0 }, () =>
         {
@@ -52,7 +50,6 @@ internal sealed class NotificationOrderWithAttachmentsRequestValidator : Abstrac
                 .WithMessage((_, attachment) => $"Attachment '{attachment.Filename}': sasUrl must be valid for at least 15 minutes after requestedSendTime.");
         });
 
-        // should not run if DialogportenAssociation is null
         When(order => order.DialogportenAssociation != null, () =>
         {
             RuleFor(order => order.DialogportenAssociation)

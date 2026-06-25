@@ -203,18 +203,18 @@ public class NotificationOrderWithAttachmentsControllerTests
         Assert.Equal("ttd", captured.Creator.ShortName);
         Assert.Equal(request.IdempotencyId, captured.IdempotencyId);
         Assert.Equal(OrderType.NotificationWithAttachments, captured.Type);
-        Assert.NotNull(captured.Recipient.RecipientEmailWithAttachments);
-        Assert.NotNull(captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
-        Assert.Single(captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
-        Assert.Equal("contract.pdf", captured.Recipient.RecipientEmailWithAttachments.Settings.Attachments[0].Filename);
+        Assert.NotNull(captured.Recipient.RecipientComposedEmail);
+        Assert.NotNull(captured.Recipient.RecipientComposedEmail.Settings.Attachments);
+        Assert.Single(captured.Recipient.RecipientComposedEmail.Settings.Attachments);
+        Assert.Equal("contract.pdf", captured.Recipient.RecipientComposedEmail.Settings.Attachments[0].Filename);
     }
 
-    private static NotificationOrderWithAttachmentsRequestExt ValidRequest() => new()
+    private static ComposedEmailRequestExt ValidRequest() => new()
     {
         IdempotencyId = "order-001",
         SendersReference = "ref-001",
         RequestedSendTime = DateTime.UtcNow.AddHours(1),
-        Recipient = new RecipientEmailWithAttachmentsExt
+        Recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
             Settings = new ComposedEmailSendingOptionsExt
@@ -236,7 +236,7 @@ public class NotificationOrderWithAttachmentsControllerTests
 
     private static NotificationOrderWithAttachmentsController CreateController(
         IOrderRequestService orderRequestService,
-        IValidator<NotificationOrderWithAttachmentsRequestExt> validator,
+        IValidator<ComposedEmailRequestExt> validator,
         string? org = "ttd")
     {
         var httpContext = new DefaultHttpContext();
@@ -248,18 +248,18 @@ public class NotificationOrderWithAttachmentsControllerTests
         };
     }
 
-    private static Mock<IValidator<NotificationOrderWithAttachmentsRequestExt>> ValidatorThatPasses()
+    private static Mock<IValidator<ComposedEmailRequestExt>> ValidatorThatPasses()
     {
-        var mock = new Mock<IValidator<NotificationOrderWithAttachmentsRequestExt>>();
-        mock.Setup(v => v.Validate(It.IsAny<NotificationOrderWithAttachmentsRequestExt>()))
+        var mock = new Mock<IValidator<ComposedEmailRequestExt>>();
+        mock.Setup(v => v.Validate(It.IsAny<ComposedEmailRequestExt>()))
             .Returns(new ValidationResult());
         return mock;
     }
 
-    private static Mock<IValidator<NotificationOrderWithAttachmentsRequestExt>> ValidatorThatFails()
+    private static Mock<IValidator<ComposedEmailRequestExt>> ValidatorThatFails()
     {
-        var mock = new Mock<IValidator<NotificationOrderWithAttachmentsRequestExt>>();
-        mock.Setup(v => v.Validate(It.IsAny<NotificationOrderWithAttachmentsRequestExt>()))
+        var mock = new Mock<IValidator<ComposedEmailRequestExt>>();
+        mock.Setup(v => v.Validate(It.IsAny<ComposedEmailRequestExt>()))
             .Returns(new ValidationResult([new ValidationFailure("SasUrl", "Attachment sasUrl must be an absolute HTTPS URI.")]));
         return mock;
     }

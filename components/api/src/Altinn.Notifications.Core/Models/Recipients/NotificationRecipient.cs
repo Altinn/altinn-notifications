@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Core.Models.Recipients;
+namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
 /// Represents a container that holds recipient-specific data for creating a notification order.
@@ -13,9 +13,9 @@ public class NotificationRecipient
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed
-    /// to send an email with file attachments to a specific address.
+    /// to send a composed email (with SAS-referenced files) to a specific address.
     /// </summary>
-    public RecipientEmailWithAttachments? RecipientEmailWithAttachments { get; set; }
+    public RecipientComposedEmail? RecipientComposedEmail { get; set; }
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed

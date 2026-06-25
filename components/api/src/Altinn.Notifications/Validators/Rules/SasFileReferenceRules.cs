@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Web;
 
-using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 
 namespace Altinn.Notifications.Validators.Rules;
 

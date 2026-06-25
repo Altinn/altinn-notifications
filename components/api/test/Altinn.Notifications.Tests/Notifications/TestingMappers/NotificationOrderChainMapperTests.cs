@@ -2325,12 +2325,12 @@ public class NotificationOrderChainMapperTests
         // Arrange
         var creatorName = "ttd";
         var sendTime = DateTime.UtcNow.AddHours(2);
-        var requestExt = new NotificationOrderWithAttachmentsRequestExt
+        var requestExt = new ComposedEmailRequestExt
         {
             SendersReference = "ref-attach-001",
             IdempotencyId = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
             RequestedSendTime = sendTime,
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
@@ -2372,24 +2372,24 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(sendTime.ToUniversalTime(), result.RequestedSendTime);
 
         // Assert — recipient email settings
-        Assert.NotNull(result.Recipient.RecipientEmailWithAttachments);
-        Assert.Equal("recipient@agency.no", result.Recipient.RecipientEmailWithAttachments.EmailAddress);
-        Assert.Equal("Decision notice", result.Recipient.RecipientEmailWithAttachments.Settings.Subject);
-        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmailWithAttachments.Settings.ContentType);
-        Assert.Equal("sender@agency.no", result.Recipient.RecipientEmailWithAttachments.Settings.SenderEmailAddress);
-        Assert.Equal("Please review the attached document.", result.Recipient.RecipientEmailWithAttachments.Settings.Body);
-        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmailWithAttachments.Settings.SendingTimePolicy);
+        Assert.NotNull(result.Recipient.RecipientComposedEmail);
+        Assert.Equal("recipient@agency.no", result.Recipient.RecipientComposedEmail.EmailAddress);
+        Assert.Equal("Decision notice", result.Recipient.RecipientComposedEmail.Settings.Subject);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientComposedEmail.Settings.ContentType);
+        Assert.Equal("sender@agency.no", result.Recipient.RecipientComposedEmail.Settings.SenderEmailAddress);
+        Assert.Equal("Please review the attached document.", result.Recipient.RecipientComposedEmail.Settings.Body);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientComposedEmail.Settings.SendingTimePolicy);
 
         // Assert — attachments mapped correctly
-        Assert.NotNull(result.Recipient.RecipientEmailWithAttachments.Settings.Attachments);
-        Assert.Equal(2, result.Recipient.RecipientEmailWithAttachments.Settings.Attachments.Count);
+        Assert.NotNull(result.Recipient.RecipientComposedEmail.Settings.Attachments);
+        Assert.Equal(2, result.Recipient.RecipientComposedEmail.Settings.Attachments.Count);
 
-        var firstAttachment = result.Recipient.RecipientEmailWithAttachments.Settings.Attachments[0];
+        var firstAttachment = result.Recipient.RecipientComposedEmail.Settings.Attachments[0];
         Assert.Equal("decision.pdf", firstAttachment.Filename);
         Assert.Equal("application/pdf", firstAttachment.MimeType);
         Assert.Equal(requestExt.Recipient.Settings.Attachments[0].SasUrl, firstAttachment.SasUrl);
 
-        var secondAttachment = result.Recipient.RecipientEmailWithAttachments.Settings.Attachments[1];
+        var secondAttachment = result.Recipient.RecipientComposedEmail.Settings.Attachments[1];
         Assert.Equal("appendix.docx", secondAttachment.Filename);
         Assert.Equal(requestExt.Recipient.Settings.Attachments[1].SasUrl, secondAttachment.SasUrl);
         Assert.Equal("application/vnd.openxmlformats-officedocument.wordprocessingml.document", secondAttachment.MimeType);
@@ -2403,11 +2403,11 @@ public class NotificationOrderChainMapperTests
     public void MapToNotificationOrderChainRequest_WithAttachmentsRequestContainingNewlinesInSubject_ReplacesNewlinesWithSingleWhiteSpace()
     {
         // Arrange
-        var requestExt = new NotificationOrderWithAttachmentsRequestExt
+        var requestExt = new ComposedEmailRequestExt
         {
             IdempotencyId = "B2C3D4E5-F6A7-8901-BCDE-F12345678901",
             RequestedSendTime = DateTime.UtcNow.AddHours(1),
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
@@ -2431,14 +2431,14 @@ public class NotificationOrderChainMapperTests
         var result = requestExt.MapToNotificationOrderChainRequest("ttd");
 
         // Assert
-        Assert.Equal("Line one Line two Line three Line four", result.Recipient.RecipientEmailWithAttachments!.Settings.Subject);
+        Assert.Equal("Line one Line two Line three Line four", result.Recipient.RecipientComposedEmail!.Settings.Subject);
     }
 
     [Fact]
     public void MapToNotificationOrderChainRequest_WithAttachmentsRequestAndDialogportenAssociation_MapsAssociationCorrectly()
     {
         // Arrange
-        var requestExt = new NotificationOrderWithAttachmentsRequestExt
+        var requestExt = new ComposedEmailRequestExt
         {
             IdempotencyId = "C3D4E5F6-A7B8-9012-CDEF-123456789012",
             RequestedSendTime = DateTime.UtcNow.AddHours(1),
@@ -2447,7 +2447,7 @@ public class NotificationOrderChainMapperTests
                 DialogId = "dialog-abc",
                 TransmissionId = "transmission-xyz"
             },
-            Recipient = new RecipientEmailWithAttachmentsExt
+            Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
                 Settings = new ComposedEmailSendingOptionsExt
