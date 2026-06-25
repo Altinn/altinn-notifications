@@ -30,13 +30,6 @@ internal sealed class ComposedEmailRequestValidator : AbstractValidator<Composed
         When(order => order.Recipient?.Settings?.Attachments is { Count: > 0 }, () =>
         {
             RuleForEach(order => order.Recipient.Settings.Attachments)
-                .Must((_, attachment) =>
-                    attachment == null ||
-                    string.IsNullOrWhiteSpace(attachment.SasUrl) ||
-                    SasFileReferenceRules.ParseSasExpiry(attachment.SasUrl) != null)
-                .WithMessage((_, attachment) => $"Attachment '{attachment.Filename}': sasUrl is missing a valid 'se' (signed expiry) parameter.");
-
-            RuleForEach(order => order.Recipient.Settings.Attachments)
                 .Must((order, attachment) =>
                 {
                     if (attachment == null || string.IsNullOrWhiteSpace(attachment.SasUrl))

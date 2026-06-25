@@ -202,7 +202,7 @@ public class ComposedEmailOrdersControllerTests
         Assert.NotNull(captured);
         Assert.Equal("ttd", captured.Creator.ShortName);
         Assert.Equal(request.IdempotencyId, captured.IdempotencyId);
-        Assert.Equal(OrderType.ComposedEmail, captured.Type);
+        Assert.Equal(OrderType.Composed, captured.Type);
         Assert.NotNull(captured.Recipient.RecipientComposedEmail);
         Assert.NotNull(captured.Recipient.RecipientComposedEmail.Settings.Attachments);
         Assert.Single(captured.Recipient.RecipientComposedEmail.Settings.Attachments);

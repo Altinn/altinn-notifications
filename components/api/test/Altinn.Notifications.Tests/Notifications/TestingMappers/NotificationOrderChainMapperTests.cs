@@ -2364,7 +2364,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderType.ComposedEmail, result.Type);
+        Assert.Equal(OrderType.Composed, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-attach-001", result.SendersReference);

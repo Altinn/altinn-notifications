@@ -43,8 +43,8 @@ public enum OrderType : uint
     /// Represents a composed email order that references one or more files via SAS URLs.
     /// </summary>
     /// <remarks>
-    /// Composed email orders are processed through a dedicated pipeline isolated from the standard email pipeline
+    /// Composed orders are processed through a dedicated pipeline isolated from the standard email pipeline
     /// to prevent head-of-line blocking. The email service downloads the referenced files from blob storage at send time.
     /// </remarks>
-    ComposedEmail = 3
+    Composed = 3
 }

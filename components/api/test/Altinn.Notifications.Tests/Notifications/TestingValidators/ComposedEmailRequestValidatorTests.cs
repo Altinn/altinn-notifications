@@ -113,7 +113,7 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_AttachmentSasUrlMissingSeParameter_HasDistinctError()
     {
-        // URL is valid HTTPS with other required params but 'se' is absent
+        // URL is valid HTTPS with other required params but 'se' is absent — inner validator fires "missing required SAS parameters"
         var recipient = new RecipientComposedEmailExt
         {
             EmailAddress = "recipient@agency.no",
@@ -135,7 +135,8 @@ public class ComposedEmailRequestValidatorTests
 
         var result = _validator.TestValidate(ValidRequest(recipient: recipient));
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing a valid 'se' (signed expiry) parameter.");
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing required SAS parameters (se, sig, sp, sr).");
+        Assert.Single(result.Errors);
     }
 
     [Fact]
@@ -163,7 +164,8 @@ public class ComposedEmailRequestValidatorTests
 
         var result = _validator.TestValidate(ValidRequest(recipient: recipient));
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing a valid 'se' (signed expiry) parameter.");
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl has an invalid 'se' (signed expiry) value.");
+        Assert.Single(result.Errors);
     }
 
     [Fact]

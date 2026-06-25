@@ -43,7 +43,7 @@ public static partial class NotificationOrderChainMapper
             .SetRecipient(recipient)
             .SetOrderId(Guid.NewGuid())
             .SetOrderChainId(Guid.NewGuid())
-            .SetType(OrderType.ComposedEmail)
+            .SetType(OrderType.Composed)
             .SetCreator(new Creator(creatorName))
             .SetIdempotencyId(request.IdempotencyId)
             .SetSendersReference(request.SendersReference)
