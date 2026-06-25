@@ -72,13 +72,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 3 && !l.Exists(r => r.NationalIdentityNumber == "19100047414"))))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 1 && l.Exists(r => r.NationalIdentityNumber == "19100047414"))))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(_emailProcessingMock.Object, _smsProcessingMock.Object, _contactPointMock.Object);
 
@@ -141,13 +141,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(e => e.Count == 1 && e.Exists(r => r.NationalIdentityNumber == "22012047278"))))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(e => e.Count == 3 && !e.Exists(r => r.NationalIdentityNumber == "22012047278"))))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -193,12 +193,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -276,13 +276,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 3 && !l.Exists(r => r.NationalIdentityNumber == "19100047414"))))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 1 && l.Exists(r => r.NationalIdentityNumber == "19100047414"))))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -328,12 +328,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -411,13 +411,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 1 && l.Exists(r => r.NationalIdentityNumber == "22012047278"))))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(
                     It.IsAny<NotificationOrder>(),
                     It.Is<List<Recipient>>(l => l.Count == 3 && !l.Exists(r => r.NationalIdentityNumber == "22012047278"))))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -460,11 +460,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -507,11 +507,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             _contactPointMock
                 .Setup(cp => cp.AddPreferredContactPoints(
@@ -568,11 +568,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -614,11 +614,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -659,11 +659,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -708,11 +708,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -758,12 +758,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -802,11 +802,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             _contactPointMock
                 .Setup(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()))
@@ -892,12 +892,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,
@@ -945,11 +945,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _emailProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
                 .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
-                .Returns(Task.FromResult(new EmailOrderProcessingResult([])));
+                .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
 
             _smsProcessingMock
                 .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
-                .Returns(Task.FromResult(new SmsOrderProcessingResult([])));
+                .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
 
             var service = new PreferredChannelProcessingService(
                 _emailProcessingMock.Object,

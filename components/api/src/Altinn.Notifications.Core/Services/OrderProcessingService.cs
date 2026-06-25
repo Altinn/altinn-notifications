@@ -108,36 +108,36 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
-                IReadOnlyList<PendingEmailNotification> emailNotifications = [];
-                IReadOnlyList<PendingSmsNotification> smsNotifications = [];
+                SmsOrderProcessingResult smsOrderProcessingResult = new([], null);
+                EmailOrderProcessingResult emailOrderProcessingResult = new([], null);
 
                 switch (order.NotificationChannel)
                 {
                     case NotificationChannel.Sms:
                         var smsResult = await _smsProcessingService.ProcessOrder(order);
-                        smsNotifications = smsResult.SmsNotifications;
+                        smsOrderProcessingResult = smsResult;
                         break;
 
                     case NotificationChannel.Email:
                         var emailResult = await _emailProcessingService.ProcessOrder(order);
-                        emailNotifications = emailResult.EmailNotifications;
+                        emailOrderProcessingResult = emailResult;
                         break;
 
                     case NotificationChannel.EmailAndSms:
                         var emailAndSmsResult = await _emailAndSmsProcessingService.ProcessOrderAsync(order);
-                        emailNotifications = emailAndSmsResult.EmailNotifications;
-                        smsNotifications = emailAndSmsResult.SmsNotifications;
+                        emailOrderProcessingResult = emailAndSmsResult.EmailOrderProcessingResult;
+                        smsOrderProcessingResult = emailAndSmsResult.SmsOrderProcessingResult;
                         break;
 
                     case NotificationChannel.SmsPreferred:
                     case NotificationChannel.EmailPreferred:
                         var preferredResult = await _preferredChannelProcessingService.ProcessOrder(order);
-                        emailNotifications = preferredResult.EmailNotifications;
-                        smsNotifications = preferredResult.SmsNotifications;
+                        emailOrderProcessingResult = preferredResult.EmailOrderProcessingResult;
+                        smsOrderProcessingResult = preferredResult.SmsOrderProcessingResult;
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order.Id, emailNotifications, smsNotifications);
+                await _orderRepository.PersistProcessingResultAsync(order.Id, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
 
@@ -179,36 +179,36 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
-                IReadOnlyList<PendingEmailNotification> emailNotifications = [];
-                IReadOnlyList<PendingSmsNotification> smsNotifications = [];
+                EmailOrderProcessingResult emailOrderProcessingResult = new([], null);
+                SmsOrderProcessingResult smsOrderProcessingResult = new([], null);
 
                 switch (order.NotificationChannel)
                 {
                     case NotificationChannel.Sms:
                         var smsResult = await _smsProcessingService.ProcessOrderRetry(order);
-                        smsNotifications = smsResult.SmsNotifications;
+                        smsOrderProcessingResult = smsResult;
                         break;
 
                     case NotificationChannel.Email:
                         var emailResult = await _emailProcessingService.ProcessOrderRetry(order);
-                        emailNotifications = emailResult.EmailNotifications;
+                        emailOrderProcessingResult = emailResult;
                         break;
 
                     case NotificationChannel.EmailAndSms:
                         var emailAndSmsResult = await _emailAndSmsProcessingService.ProcessOrderRetryAsync(order);
-                        emailNotifications = emailAndSmsResult.EmailNotifications;
-                        smsNotifications = emailAndSmsResult.SmsNotifications;
+                        emailOrderProcessingResult = emailAndSmsResult.EmailOrderProcessingResult;
+                        smsOrderProcessingResult = emailAndSmsResult.SmsOrderProcessingResult;
                         break;
 
                     case NotificationChannel.SmsPreferred:
                     case NotificationChannel.EmailPreferred:
                         var preferredResult = await _preferredChannelProcessingService.ProcessOrderRetry(order);
-                        emailNotifications = preferredResult.EmailNotifications;
-                        smsNotifications = preferredResult.SmsNotifications;
+                        emailOrderProcessingResult = preferredResult.EmailOrderProcessingResult;
+                        smsOrderProcessingResult = preferredResult.SmsOrderProcessingResult;
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order.Id, emailNotifications, smsNotifications);
+                await _orderRepository.PersistProcessingResultAsync(order.Id, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
     }
@@ -219,7 +219,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <param name="order">The notification order containing the optional condition endpoint to evaluate.</param>
     /// <param name="isRetry">
     /// Indicates whether this evaluation is part of a retry attempt.
-    /// If <c>false</c>, a failed or inconclusive condition check will result in a retry recommendation.
+    /// If <c>false</c>, a failed or inconclusive condition check will smsResult in a retry recommendation.
     /// If <c>true</c>, the order will be processed even if the condition check fails.
     /// </param>
     /// <returns>

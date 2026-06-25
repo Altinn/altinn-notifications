@@ -69,7 +69,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
-        var notifications = new List<PendingSmsNotification>();
+        var notifications = new List<SmsNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -102,7 +102,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             notifications.AddRange(created);
         }
 
-        return new SmsOrderProcessingResult(notifications);
+        return new SmsOrderProcessingResult(notifications, expirationDateTime);
     }
 
     /// <inheritdoc/>
@@ -113,7 +113,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
-        var notifications = new List<PendingSmsNotification>();
+        var notifications = new List<SmsNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -136,7 +136,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             notifications.AddRange(created);
         }
 
-        return new SmsOrderProcessingResult(notifications);
+        return new SmsOrderProcessingResult(notifications, expirationDateTime);
     }
 
     /// <summary>

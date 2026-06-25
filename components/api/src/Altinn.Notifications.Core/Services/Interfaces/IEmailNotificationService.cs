@@ -18,8 +18,8 @@ public interface IEmailNotificationService : INotificationService
     /// <param name="emailAddresses">The list of email addresses to send the notification to.</param>
     /// <param name="emailRecipient">The email recipient to send the notification to.</param>
     /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
-    /// <returns>A read-only list of the materialized <see cref="PendingEmailNotification"/> instances, not yet persisted.</returns>
-    Task<IReadOnlyList<PendingEmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
+    /// <returns>A read-only list of the materialized <see cref="EmailNotification"/> instances, not yet persisted.</returns>
+    Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
     /// Sends pending email notifications.

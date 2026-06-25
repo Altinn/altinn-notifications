@@ -94,13 +94,13 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
             default:
                 return new OrderProcessingResult(
-                    EmailNotifications: [],
-                    SmsNotifications: []);
+                    EmailOrderProcessingResult: new EmailOrderProcessingResult([], null),
+                    SmsOrderProcessingResult: new SmsOrderProcessingResult([], null));
         }
 
         return new OrderProcessingResult(
-            EmailNotifications: emailResult.EmailNotifications,
-            SmsNotifications: smsResult.SmsNotifications);
+            EmailOrderProcessingResult: emailResult,
+            SmsOrderProcessingResult: smsResult);
     }
 
     private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)

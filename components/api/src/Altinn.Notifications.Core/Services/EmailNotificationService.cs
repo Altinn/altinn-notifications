@@ -32,31 +32,30 @@ public class EmailNotificationService(
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<PendingEmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
+    public Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
-        var notifications = new List<PendingEmailNotification>();
-        var expiryTime = requestedSendTime.AddHours(48);
+        var notifications = new List<EmailNotification>();
 
         if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
             emailRecipient.ToAddress = string.Empty;
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved), expiryTime));
-            return Task.FromResult<IReadOnlyList<PendingEmailNotification>>(notifications);
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         if (emailAddresses.Count == 0)
         {
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified), expiryTime));
-            return Task.FromResult<IReadOnlyList<PendingEmailNotification>>(notifications);
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
             emailRecipient.ToAddress = addressPoint.EmailAddress;
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New), expiryTime));
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New));
         }
 
-        return Task.FromResult<IReadOnlyList<PendingEmailNotification>>(notifications);
+        return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
     }
 
     /// <inheritdoc/>
@@ -154,7 +153,4 @@ public class EmailNotificationService(
             SendResult = new(result, _dateTimeService.UtcNow())
         };
     }
-
-    private static PendingEmailNotification Wrap(EmailNotification notification, DateTime expiryTime) =>
-        new(notification, expiryTime);
 }

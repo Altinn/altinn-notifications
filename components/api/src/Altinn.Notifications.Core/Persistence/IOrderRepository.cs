@@ -234,8 +234,8 @@ public interface IOrderRepository
     /// </returns>
     Task<bool> PersistProcessingResultAsync(
         Guid orderId,
-        IReadOnlyList<PendingEmailNotification> emailNotifications,
-        IReadOnlyList<PendingSmsNotification> smsNotifications);
+        EmailOrderProcessingResult emailOrderProcessingResult,
+        SmsOrderProcessingResult smsOrderProcessingResult);
 
     /// <summary>
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and

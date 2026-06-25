@@ -60,8 +60,9 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
         var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
+        var expiryTime = order.RequestedSendTime.AddHours(48);
 
-        var notifications = new List<PendingEmailNotification>();
+        var notifications = new List<EmailNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -90,15 +91,15 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             notifications.AddRange(created);
         }
 
-        return new EmailOrderProcessingResult(notifications);
+        return new EmailOrderProcessingResult(notifications, expiryTime);
     }
 
     /// <inheritdoc/>
     public async Task<EmailOrderProcessingResult> ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
-
-        var notifications = new List<PendingEmailNotification>();
+        var expiryTime = order.RequestedSendTime.AddHours(48);
+        var notifications = new List<EmailNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -120,7 +121,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             notifications.AddRange(created);
         }
 
-        return new EmailOrderProcessingResult(notifications);
+        return new EmailOrderProcessingResult(notifications, expiryTime);
     }
 
     /// <summary>

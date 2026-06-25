@@ -8,4 +8,5 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// handed to the repository layer for atomic persistence.
 /// </summary>
 public sealed record EmailOrderProcessingResult(
-    IReadOnlyList<PendingEmailNotification> EmailNotifications);
+    IReadOnlyList<EmailNotification> EmailNotifications,
+    DateTime? ExpirationDateTime);

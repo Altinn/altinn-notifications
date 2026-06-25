@@ -8,5 +8,5 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// to be persisted atomically within one database transaction.
 /// </summary>
 public sealed record OrderProcessingResult(
-    IReadOnlyList<PendingEmailNotification> EmailNotifications,
-    IReadOnlyList<PendingSmsNotification> SmsNotifications);
+    EmailOrderProcessingResult EmailOrderProcessingResult,
+    SmsOrderProcessingResult SmsOrderProcessingResult);

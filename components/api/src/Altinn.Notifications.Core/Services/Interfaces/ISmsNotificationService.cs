@@ -11,19 +11,20 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface ISmsNotificationService : INotificationService
 {
     /// <summary>
-    /// Sends pending email notifications.
+    /// Sends pending SMS notifications.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The policy to determine when SMS notifications should be sent.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendNotifications(CancellationToken cancellationToken);
+    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
-    /// Updates the send status of an email notification based on the provided send operation result.
+    /// Updates the send status of an SMS notification based on the provided send operation result.
     /// </summary>
     /// <param name="sendOperationResult">The result of the send operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
+    Task UpdateSendStatus(SmsSendOperationResult sendOperationResult);
 
     /// <summary>
     /// Builds in-memory SMS notifications for the given recipient and address points.
@@ -37,5 +38,5 @@ public interface ISmsNotificationService : INotificationService
     /// <param name="count">The number of SMS messages to be sent.</param>
     /// <param name="ignoreReservation">A flag indicating whether to ignore the recipient's reservation status for receiving SMS notifications.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task<IReadOnlyList<PendingSmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false);
+    Task<IReadOnlyList<SmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false);
 }

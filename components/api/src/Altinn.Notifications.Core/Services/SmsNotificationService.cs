@@ -42,33 +42,30 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<PendingSmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false)
+    public Task<IReadOnlyList<SmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false)
     {
-        var notifications = new List<PendingSmsNotification>();
+        var notifications = new List<SmsNotification>();
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientReserved), expiryDateTime, count));
-            return Task.FromResult<IReadOnlyList<PendingSmsNotification>>(notifications);
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientReserved));
+            return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
         }
 
         if (addressPoints.Count == 0)
         {
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientNotIdentified), expiryDateTime, count));
-            return Task.FromResult<IReadOnlyList<PendingSmsNotification>>(notifications);
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientNotIdentified));
+            return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
         }
 
         foreach (SmsAddressPoint addressPoint in addressPoints)
         {
             recipient.MobileNumber = addressPoint.MobileNumber;
-            notifications.Add(Wrap(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.New), expiryDateTime, count));
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.New));
         }
 
-        return Task.FromResult<IReadOnlyList<PendingSmsNotification>>(notifications);
+        return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
     }
-
-    private static PendingSmsNotification Wrap(SmsNotification notification, DateTime expiryTime, int segmentCount) =>
-        new(notification, expiryTime, segmentCount);
 
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)

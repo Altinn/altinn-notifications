@@ -70,8 +70,8 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
         }
 
         return new OrderProcessingResult(
-            EmailNotifications: emailResult.EmailNotifications,
-            SmsNotifications: smsResult.SmsNotifications);
+            EmailOrderProcessingResult: emailResult,
+            SmsOrderProcessingResult: smsResult);
     }
 
     /// <summary>
