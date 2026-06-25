@@ -50,7 +50,7 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
 
         // Verify that we have the data we inserted
         Assert.Equal(1, metrics.OrdersCreated);
-        Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
+        Assert.Equal(0, metrics.SmsNotificationsCreated); // smscount column is no longer populated (#1661)
         Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
     }
 

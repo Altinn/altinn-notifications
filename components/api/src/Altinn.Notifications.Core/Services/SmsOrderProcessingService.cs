@@ -65,7 +65,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         var smsTemplate = GetValidatedSmsTemplate(order);
         var expirationDateTime = GetExpirationDateTime(order);
-        var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
+
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
@@ -96,7 +96,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expirationDateTime,
                 smsAddresses,
                 smsRecipient,
-                segmentsCount,
                 order.IgnoreReservation ?? false);
 
             notifications.AddRange(created);
@@ -110,7 +109,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         var smsTemplate = GetValidatedSmsTemplate(order);
         var expirationDateTime = GetExpirationDateTime(order);
-        var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
+
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
         var notifications = new List<SmsNotification>();
@@ -130,45 +129,12 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expirationDateTime,
                 smsAddresses,
                 smsRecipient,
-                segmentsCount,
                 order.IgnoreReservation ?? false);
 
             notifications.AddRange(created);
         }
 
         return new SmsOrderProcessingResult(notifications, expirationDateTime);
-    }
-
-    /// <summary>
-    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
-    /// </summary>
-    /// <param name="message">The SMS message content.</param>
-    /// <returns>
-    /// The number of message segments required to send the SMS message.
-    /// The value is capped at the maximum number of messages allowed per concatenation.
-    /// </returns>
-    private static int CalculateSegmentCount(string message)
-    {
-        const int maxCharactersPerMessage = 160;
-        const int maxMessagesPerConcatenation = 16;
-        const int charactersPerConcatenatedMessage = 134;
-
-        string urlEncodedMessage = HttpUtility.UrlEncode(message);
-        int messageLength = urlEncodedMessage.Length;
-
-        if (messageLength <= maxCharactersPerMessage)
-        {
-            return 1;
-        }
-
-        int numberOfMessages = (int)Math.Ceiling((double)messageLength / charactersPerConcatenatedMessage);
-
-        if (numberOfMessages > maxMessagesPerConcatenation)
-        {
-            numberOfMessages = maxMessagesPerConcatenation;
-        }
-
-        return numberOfMessages;
     }
 
     /// <summary>
