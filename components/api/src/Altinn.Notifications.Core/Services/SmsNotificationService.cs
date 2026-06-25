@@ -125,30 +125,6 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <summary>
-    /// Creates a new SMS notification and adds it to the repository.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the order associated with the notification.</param>
-    /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
-    /// <param name="expiryDateTime">The date and time when the notification expires and should no longer be sent.</param>
-    /// <param name="recipient">The recipient details for the SMS notification.</param>
-    /// <param name="resultType">The result type indicating the status of the notification.</param>
-    /// <param name="count">The number of attempts made to send the notification. Defaults to 0.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, SmsRecipient recipient, SmsNotificationResultType resultType, int count = 0)
-    {
-        var smsNotification = new SmsNotification()
-        {
-            OrderId = orderId,
-            Id = _guidService.NewGuid(),
-            Recipient = recipient,
-            RequestedSendTime = requestedSendTime,
-            SendResult = new(resultType, _dateTimeService.UtcNow())
-        };
-
-        await _repository.AddNotification(smsNotification, expiryDateTime, count);
-    }
-
-    /// <summary>
     /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
     /// </summary>
     /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
