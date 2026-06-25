@@ -11,14 +11,19 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface ISmsNotificationService : INotificationService
 {
     /// <summary>
-    /// Sends pending SMS notifications that are eligible under the specified sending time policy.
+    /// Sends pending email notifications.
     /// </summary>
-    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
+    Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Updates the send status of an SMS notification based on the provided send operation result.
+    /// Updates the send status of an email notification based on the provided send operation result.
     /// </summary>
-    Task UpdateSendStatus(SmsSendOperationResult sendOperationResult);
+    /// <param name="sendOperationResult">The result of the send operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 
     /// <summary>
     /// Builds in-memory SMS notifications for the given recipient and address points.
