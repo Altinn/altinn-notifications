@@ -21,10 +21,10 @@ namespace Altinn.Notifications.Controllers;
 /// Controller for submitting composed email notification orders.
 /// </summary>
 [ApiController]
-[Route("notifications/api/v1/future/orders/email-with-attachments")]
+[Route("notifications/api/v1/future/orders/composed-email")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
-[Authorize(Policy = AuthorizationConstants.POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE)]
+[Authorize(Policy = AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE)]
 public class ComposedEmailOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;

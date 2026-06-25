@@ -294,9 +294,9 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         {
             policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_SUPPORT_DASHBOARD_ACCESS));
         })
-        .AddPolicy(AuthorizationConstants.POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE, policy =>
+        .AddPolicy(AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE, policy =>
         {
-            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_EMAIL_WITH_ATTACHMENTS_CREATE));
+            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_COMPOSED_EMAIL_CREATE));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();

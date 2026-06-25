@@ -18,7 +18,7 @@ public class ComposedEmailRequestValidatorTests
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    private static RecipientComposedEmailExt ValidRecipient(string emailAddress = "recipient@agency.no") => new()
+    private static RecipientComposedEmailExt RecipientWithSingleFileReference(string emailAddress = "recipient@altinnxyz.no") => new()
     {
         EmailAddress = emailAddress,
         Settings = new ComposedEmailSendingOptionsExt
@@ -37,7 +37,7 @@ public class ComposedEmailRequestValidatorTests
         }
     };
 
-    private static ComposedEmailRequestExt ValidRequest(
+    private static ComposedEmailRequestExt ValidComposedEmailRequest(
         string idempotencyId = "order-001",
         DateTime? requestedSendTime = null,
         RecipientComposedEmailExt? recipient = null,
@@ -45,8 +45,8 @@ public class ComposedEmailRequestValidatorTests
         {
             SendersReference = "ref-001",
             IdempotencyId = idempotencyId,
-            Recipient = recipient ?? ValidRecipient(),
             DialogportenAssociation = dialogportenAssociation,
+            Recipient = recipient ?? RecipientWithSingleFileReference(),
             RequestedSendTime = requestedSendTime ?? DateTime.UtcNow.AddHours(1)
         };
 
@@ -55,7 +55,13 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_ValidRequest_NoErrors()
     {
-        var result = _validator.TestValidate(ValidRequest());
+        // Arrange
+        var request = ValidComposedEmailRequest();
+
+        // Act
+        var result = _validator.TestValidate(request);
+
+        // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
 
@@ -64,7 +70,13 @@ public class ComposedEmailRequestValidatorTests
     [InlineData("   ")]
     public void Validate_EmptyIdempotencyId_HasError(string idempotencyId)
     {
-        var result = _validator.TestValidate(ValidRequest(idempotencyId: idempotencyId));
+        // Arrange
+        var request = ValidComposedEmailRequest(idempotencyId: idempotencyId);
+
+        // Act
+        var result = _validator.TestValidate(request);
+
+        // Assert
         result.ShouldHaveValidationErrorFor(r => r.IdempotencyId)
             .WithErrorMessage("IdempotencyId cannot be null or empty.");
     }
@@ -72,7 +84,13 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_RequestedSendTimeInThePast_HasError()
     {
-        var result = _validator.TestValidate(ValidRequest(requestedSendTime: DateTime.UtcNow.AddDays(-1)));
+        // Arrange
+        var request = ValidComposedEmailRequest(requestedSendTime: DateTime.UtcNow.AddDays(-1));
+
+        // Act
+        var result = _validator.TestValidate(request);
+
+        // Assert
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
     }
@@ -80,6 +98,7 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_AttachmentSasExpiryTooCloseToSendTime_HasError()
     {
+        // Arrange
         var sendTime = DateTime.UtcNow.AddHours(2);
         var expiryTooSoon = sendTime.AddMinutes(10).ToString("o");
         var sasUrlWithShortExpiry =
@@ -88,7 +107,7 @@ public class ComposedEmailRequestValidatorTests
 
         var recipient = new RecipientComposedEmailExt
         {
-            EmailAddress = "recipient@agency.no",
+            EmailAddress = "recipient@altinnxyz.no",
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
@@ -105,7 +124,10 @@ public class ComposedEmailRequestValidatorTests
             }
         };
 
-        var result = _validator.TestValidate(ValidRequest(requestedSendTime: sendTime, recipient: recipient));
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(requestedSendTime: sendTime, recipient: recipient));
+
+        // Assert
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl must be valid for at least 15 minutes after requestedSendTime.");
     }
@@ -113,10 +135,11 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_AttachmentSasUrlMissingSeParameter_HasDistinctError()
     {
+        // Arrange
         // URL is valid HTTPS with other required params but 'se' is absent — inner validator fires "missing required SAS parameters"
         var recipient = new RecipientComposedEmailExt
         {
-            EmailAddress = "recipient@agency.no",
+            EmailAddress = "recipient@altinnxyz.no",
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
@@ -133,7 +156,10 @@ public class ComposedEmailRequestValidatorTests
             }
         };
 
-        var result = _validator.TestValidate(ValidRequest(recipient: recipient));
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(recipient: recipient));
+
+        // Assert
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl is missing required SAS parameters (se, sig, sp, sr).");
         Assert.Single(result.Errors);
@@ -142,10 +168,11 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_AttachmentSasUrlWithMalformedSe_HasDistinctError()
     {
+        // Arrange
         // URL has all required params but 'se' is not a valid date — distinct from "expiry too short"
         var recipient = new RecipientComposedEmailExt
         {
-            EmailAddress = "recipient@agency.no",
+            EmailAddress = "recipient@altinnxyz.no",
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
@@ -162,7 +189,10 @@ public class ComposedEmailRequestValidatorTests
             }
         };
 
-        var result = _validator.TestValidate(ValidRequest(recipient: recipient));
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(recipient: recipient));
+
+        // Assert
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl has an invalid 'se' (signed expiry) value.");
         Assert.Single(result.Errors);
@@ -171,7 +201,13 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_InvalidRecipientEmailAddress_HasError()
     {
-        var result = _validator.TestValidate(ValidRequest(recipient: ValidRecipient(emailAddress: "not-an-email")));
+        // Arrange
+        var request = ValidComposedEmailRequest(recipient: RecipientWithSingleFileReference(emailAddress: "not-an-email"));
+
+        // Act
+        var result = _validator.TestValidate(request);
+
+        // Assert
         result.ShouldHaveValidationErrors()
             .WithErrorMessage("Invalid email address format.");
     }
@@ -179,13 +215,17 @@ public class ComposedEmailRequestValidatorTests
     [Fact]
     public void Validate_ValidDialogportenAssociation_NoErrors()
     {
+        // Arrange
         var association = new DialogportenIdentifiersExt
         {
             DialogId = "dialog-001",
             TransmissionId = "transmission-001"
         };
 
-        var result = _validator.TestValidate(ValidRequest(dialogportenAssociation: association));
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(dialogportenAssociation: association));
+
+        // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
 }

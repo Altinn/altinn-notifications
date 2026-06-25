@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Configuration
+namespace Altinn.Notifications.Configuration
 {
     /// <summary>
     /// Constants related to authorization of notifications
@@ -26,13 +26,13 @@
         public const string POLICY_SUPPORT_DASHBOARD_ACCESS = "SupportDashboardAccess";
 
         /// <summary>
-        /// Scope for allowing access to creating email notification orders with file attachments
+        /// Scope for allowing access to creating composed email notification orders
         /// </summary>
-        public const string SCOPE_NOTIFICATIONS_EMAIL_WITH_ATTACHMENTS_CREATE = "altinn:serviceowner/notifications.emailwithattachments.create";
+        public const string SCOPE_NOTIFICATIONS_COMPOSED_EMAIL_CREATE = "altinn:serviceowner/notifications.composedemail.create";
 
         /// <summary>
-        /// Id for the policy requiring the email-with-attachments create scope
+        /// Id for the policy requiring the composed email create scope
         /// </summary>
-        public const string POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE = "EmailWithAttachmentsCreateScope";
+        public const string POLICY_COMPOSED_EMAIL_CREATE_SCOPE = "ComposedEmailCreateScope";
     }
 }

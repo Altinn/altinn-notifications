@@ -23,7 +23,7 @@ public static partial class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="ComposedEmailRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
-    /// <param name="request">The email-with-attachments order request.</param>
+    /// <param name="request">The composed email order request.</param>
     /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
     /// <returns>A <see cref="NotificationOrderChainRequest"/> mapped from the provided request.</returns>
     public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this ComposedEmailRequestExt request, string creatorName)

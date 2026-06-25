@@ -34,8 +34,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers
 /// </summary>
 public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<ComposedEmailOrdersController>>
 {
-    private const string _basePath = "/notifications/api/v1/future/orders/email-with-attachments";
-    private const string _validScope = "altinn:serviceowner/notifications.emailwithattachments.create";
+    private const string _basePath = "/notifications/api/v1/future/orders/composed-email";
+    private const string _validScope = "altinn:serviceowner/notifications.composedemail.create";
 
     private static readonly JsonSerializerOptions _options = new()
     {
@@ -101,7 +101,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             RequestedSendTime = DateTime.UtcNow.AddHours(2),
             Recipient = new RecipientComposedEmailExt
             {
-                EmailAddress = "recipient@agency.no",
+                EmailAddress = "recipient@altinnxyz.no",
                 Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
@@ -143,7 +143,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             RequestedSendTime = DateTime.UtcNow.AddHours(2),
             Recipient = new RecipientComposedEmailExt
             {
-                EmailAddress = "recipient@agency.no",
+                EmailAddress = "recipient@altinnxyz.no",
                 Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
@@ -184,7 +184,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             RequestedSendTime = sendTime,
             Recipient = new RecipientComposedEmailExt
             {
-                EmailAddress = "recipient@agency.no",
+                EmailAddress = "recipient@altinnxyz.no",
                 Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
@@ -262,7 +262,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         RequestedSendTime = DateTime.UtcNow.AddHours(2),
         Recipient = new RecipientComposedEmailExt
         {
-            EmailAddress = "recipient@agency.no",
+            EmailAddress = "recipient@altinnxyz.no",
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",

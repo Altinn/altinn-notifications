@@ -1,11 +1,11 @@
 meta {
-  name: Validation - HTTP sasUrl (not HTTPS)
+  name: Validation - unsupported MIME type
   type: http
-  seq: 6
+  seq: 4
 }
 
 post {
-  url: {{host}}/notifications/api/v1/future/orders/email-with-attachments
+  url: {{host}}/notifications/api/v1/future/orders/composed-email
   body: json
   auth: inherit
 }
@@ -18,15 +18,15 @@ body:json {
     "recipient": {
       "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
       "emailSettings": {
-        "subject": "(TEST) Should fail - HTTP sasUrl",
+        "subject": "(TEST) Should fail - unsupported MIME type",
         "body": "(TEST) This should be rejected",
         "contentType": "Plain",
         "sendingTimePolicy": "Anytime",
         "attachments": [
           {
-            "filename": "document.pdf",
-            "mimeType": "application/pdf",
-            "sasUrl": "http://example.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+            "filename": "script.exe",
+            "mimeType": "application/x-msdownload",
+            "sasUrl": "{{process.env.TESTDATA_ATTACHMENT_SAS_URL}}"
           }
         ]
       }
@@ -35,8 +35,8 @@ body:json {
 }
 
 docs {
-  Validation: the sasUrl uses HTTP instead of HTTPS.
+  Validation: 'application/x-msdownload' (.exe) is not in the ACS-supported MIME type list.
   The request must be rejected with 400 Bad Request.
 
-  Expected: 400 Bad Request with a validation error referencing sasUrl.
+  Expected: 400 Bad Request with a validation error referencing mimeType.
 }

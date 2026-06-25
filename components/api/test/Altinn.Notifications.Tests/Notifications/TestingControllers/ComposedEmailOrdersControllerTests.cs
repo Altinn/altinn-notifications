@@ -216,7 +216,7 @@ public class ComposedEmailOrdersControllerTests
         RequestedSendTime = DateTime.UtcNow.AddHours(1),
         Recipient = new RecipientComposedEmailExt
         {
-            EmailAddress = "recipient@agency.no",
+            EmailAddress = "recipient@altinnxyz.no",
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
