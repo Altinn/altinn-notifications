@@ -20,7 +20,7 @@ RUN dotnet publish -c Release -o out \
     ./components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:72ba73e4bec80e6791a022454b2dda2d6f6f77bdf48d89afb35186deebf73eb9 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:ccc91cce4939ae4524b8389780c783cd8b9a5f093c93b3398d5f98f3dc660591 AS final
 EXPOSE 5091
 WORKDIR /app
 COPY --from=build /app/out ./
