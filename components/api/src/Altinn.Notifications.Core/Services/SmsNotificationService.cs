@@ -141,7 +141,7 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(resultType, _dateTimeService.UtcNow())
         };
 
-        await _repository.AddNotification(smsNotification, expiryDateTime, count);
+        await _repository.AddNotification(smsNotification, expiryDateTime);
     }
 
     /// <summary>

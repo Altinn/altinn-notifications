@@ -182,7 +182,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         };
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
         await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4");
 
         // Add an Email notification to the order, and set its staus.
@@ -365,7 +365,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -548,7 +548,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -659,7 +659,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add an SMS notification to the order, and set its status.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
         await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "FEF0E7BF-686A-4A6A-A9A1-11B788AD7A95");
 
         // Act
