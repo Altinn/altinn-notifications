@@ -882,4 +882,141 @@ public class OrderRepository : IOrderRepository
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> PersistProcessingResultAsync(
+        NotificationOrder order,
+        EmailOrderProcessingResult emailOrderProcessingResult,
+        SmsOrderProcessingResult smsOrderProcessingResult)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            IReadOnlyList<EmailNotification> emailNotifications = emailOrderProcessingResult?.EmailNotifications ?? [];
+            IReadOnlyList<SmsNotification> smsNotifications = smsOrderProcessingResult?.Notifications ?? [];
+
+            if (emailNotifications.Count > 0)
+            {
+                var emailExpiry = emailOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
+                foreach (var notification in emailNotifications)
+                {
+                    await InsertEmailNotificationAsync(notification, emailExpiry, connection, transaction);
+                }
+            }
+
+            if (smsNotifications.Count > 0)
+            {
+                var smsExpiry = smsOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
+                foreach (var notification in smsNotifications)
+                {
+                    await InsertSmsNotificationAsync(notification, smsExpiry, connection, transaction);
+                }
+            }
+
+            bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
+
+            var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
+            await SetProcessingStatusAsync(order.Id, status, connection, transaction);
+
+            if (isCompleted)
+            {
+                await InsertStatusFeedForOrderAsync(order, status, emailNotifications, smsNotifications, connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+            return isCompleted;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetOrderSendConditionNotMetAsync(NotificationOrder order)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            await SetProcessingStatusAsync(order.Id, OrderProcessingStatus.SendConditionNotMet, connection, transaction);
+            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private static bool IsImmediatelyCompleted(
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications)
+    {
+        static bool IsEmailTerminal(EmailNotification n) =>
+            n.SendResult.Result is EmailNotificationResultType.Failed_RecipientNotIdentified
+                or EmailNotificationResultType.Failed_RecipientReserved;
+
+        static bool IsSmsTerminal(SmsNotification n) =>
+            n.SendResult.Result is SmsNotificationResultType.Failed_RecipientNotIdentified
+                or SmsNotificationResultType.Failed_RecipientReserved;
+
+        return emailNotifications.All(IsEmailTerminal) && smsNotifications.All(IsSmsTerminal);
+    }
+
+    private static async Task SetProcessingStatusAsync(Guid orderId, OrderProcessingStatus status, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_setProcessCompleted, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task InsertStatusFeedForOrderAsync(
+        NotificationOrder order,
+        OrderProcessingStatus status,
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction)
+    {
+        var recipients = new List<Core.Models.Status.Recipient>(emailNotifications.Count + smsNotifications.Count);
+
+        foreach (var n in emailNotifications)
+        {
+            recipients.Add(new Core.Models.Status.Recipient
+            {
+                Destination = n.Recipient.ToAddress,
+                Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(n.SendResult.Result.ToString()),
+                LastUpdate = n.SendResult.ResultTime
+            });
+        }
+
+        foreach (var n in smsNotifications)
+        {
+            recipients.Add(new Core.Models.Status.Recipient
+            {
+                Destination = n.Recipient.MobileNumber ?? string.Empty,
+                Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(n.SendResult.Result.ToString()),
+                LastUpdate = n.SendResult.ResultTime
+            });
+        }
+
+        var orderStatus = new OrderStatus
+        {
+            ShipmentId = order.Id,
+            SendersReference = order.SendersReference,
+            Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status.ToString()),
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = order.Type.ToString(),
+            Recipients = recipients.ToImmutableArray()
+        };
+
+        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+    }
 }
