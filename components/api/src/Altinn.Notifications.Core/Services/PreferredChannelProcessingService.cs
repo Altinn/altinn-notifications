@@ -95,16 +95,12 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
             default:
                 return new OrderProcessingResult(
                     EmailNotifications: [],
-                    SmsNotifications: [],
-                    CompletesOrder: false,
-                    StatusFeed: null);
+                    SmsNotifications: []);
         }
 
         return new OrderProcessingResult(
             EmailNotifications: emailResult.EmailNotifications,
-            SmsNotifications: smsResult.SmsNotifications,
-            CompletesOrder: false,
-            StatusFeed: null);
+            SmsNotifications: smsResult.SmsNotifications);
     }
 
     private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)

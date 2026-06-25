@@ -39,7 +39,7 @@ public interface IOrderRepository
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a new new high-priority instant notification order in the database.
+    /// Creates a new high-priority instant notification order in the database.
     /// </summary>
     /// <param name="instantNotificationOrder">
     /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
@@ -130,7 +130,6 @@ public interface IOrderRepository
     /// </summary>
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 
-    /// <summary>
     /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
     /// </summary>
@@ -235,8 +234,8 @@ public interface IOrderRepository
     /// </returns>
     Task<bool> PersistProcessingResultAsync(
         Guid orderId,
-        IReadOnlyList<EmailNotification> emailNotifications,
-        IReadOnlyList<SmsNotification> smsNotifications);
+        IReadOnlyList<PendingEmailNotification> emailNotifications,
+        IReadOnlyList<PendingSmsNotification> smsNotifications);
 
     /// <summary>
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and

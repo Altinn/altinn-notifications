@@ -69,7 +69,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
-        var notifications = new List<SmsNotification>();
+        var notifications = new List<PendingSmsNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -113,7 +113,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
-        var notifications = new List<SmsNotification>();
+        var notifications = new List<PendingSmsNotification>();
 
         foreach (var recipient in recipients)
         {

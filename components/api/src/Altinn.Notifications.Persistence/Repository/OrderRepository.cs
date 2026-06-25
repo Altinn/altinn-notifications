@@ -818,7 +818,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public Task<bool> PersistProcessingResultAsync(Guid orderId, IReadOnlyList<EmailNotification> emailNotifications, IReadOnlyList<SmsNotification> smsNotifications)
+    public Task<bool> PersistProcessingResultAsync(Guid orderId, IReadOnlyList<PendingEmailNotification> emailNotifications, IReadOnlyList<PendingSmsNotification> smsNotifications)
     {
         throw new NotImplementedException();
     }

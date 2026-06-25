@@ -61,7 +61,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
         var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
-        var notifications = new List<EmailNotification>();
+        var notifications = new List<PendingEmailNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -98,7 +98,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
 
-        var notifications = new List<EmailNotification>();
+        var notifications = new List<PendingEmailNotification>();
 
         foreach (var recipient in recipients)
         {

@@ -108,8 +108,8 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
-                IReadOnlyList<EmailNotification> emailNotifications = [];
-                IReadOnlyList<SmsNotification> smsNotifications = [];
+                IReadOnlyList<PendingEmailNotification> emailNotifications = [];
+                IReadOnlyList<PendingSmsNotification> smsNotifications = [];
 
                 switch (order.NotificationChannel)
                 {
@@ -179,8 +179,8 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
-                IReadOnlyList<EmailNotification> emailNotifications = [];
-                IReadOnlyList<SmsNotification> smsNotifications = [];
+                IReadOnlyList<PendingEmailNotification> emailNotifications = [];
+                IReadOnlyList<PendingSmsNotification> smsNotifications = [];
 
                 switch (order.NotificationChannel)
                 {

@@ -71,9 +71,7 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
 
         return new OrderProcessingResult(
             EmailNotifications: emailResult.EmailNotifications,
-            SmsNotifications: smsResult.SmsNotifications,
-            CompletesOrder: false,
-            StatusFeed: null);
+            SmsNotifications: smsResult.SmsNotifications);
     }
 
     /// <summary>
