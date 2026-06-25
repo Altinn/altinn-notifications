@@ -53,23 +53,23 @@ internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must not be empty.");
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(EmailAttachmentRules.IsAbsoluteHttpsUri)
+                                .Must(SasFileReferenceRules.IsAbsoluteHttpsUri)
                                 .When(a => !string.IsNullOrWhiteSpace(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must be an absolute HTTPS URI.");
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(EmailAttachmentRules.HasRequiredSasParameters)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && EmailAttachmentRules.IsAbsoluteHttpsUri(a.SasUrl))
+                                .Must(SasFileReferenceRules.HasRequiredSasParameters)
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl is missing required SAS parameters (se, sig, sp, sr).");
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(url => EmailAttachmentRules.ParseSasExpiry(url) != null)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && EmailAttachmentRules.IsAbsoluteHttpsUri(a.SasUrl) && EmailAttachmentRules.HasRequiredSasParameters(a.SasUrl))
+                                .Must(url => SasFileReferenceRules.ParseSasExpiry(url) != null)
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl has an invalid 'se' (signed expiry) value.");
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(EmailAttachmentRules.HasReadPermission)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && EmailAttachmentRules.IsAbsoluteHttpsUri(a.SasUrl) && EmailAttachmentRules.HasRequiredSasParameters(a.SasUrl))
+                                .Must(SasFileReferenceRules.HasReadPermission)
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl does not grant read permission ('r' must be present in 'sp').");
 
                             rules.RuleFor(a => a.Filename)
@@ -77,7 +77,7 @@ internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator
                                 .WithMessage("Attachment filename must not be empty.");
 
                             rules.RuleFor(a => a.Filename)
-                                .Must(EmailAttachmentRules.IsValidFilename)
+                                .Must(SasFileReferenceRules.IsValidFilename)
                                 .When(a => !string.IsNullOrWhiteSpace(a.Filename))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
 
@@ -86,7 +86,7 @@ internal sealed class RecipientEmailWithAttachmentsValidator : AbstractValidator
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType must not be empty.");
 
                             rules.RuleFor(a => a.MimeType)
-                                .Must(EmailAttachmentRules.IsAllowedMimeType)
+                                .Must(SasFileReferenceRules.IsAllowedMimeType)
                                 .When(a => !string.IsNullOrWhiteSpace(a.MimeType))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
                         });

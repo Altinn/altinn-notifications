@@ -11,6 +11,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 
 using FluentValidation;
@@ -216,13 +217,13 @@ public class NotificationOrderWithAttachmentsControllerTests
         Recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
                 Attachments =
                 [
-                    new EmailAttachmentExt
+                    new SasFileReferenceExt
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",

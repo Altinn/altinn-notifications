@@ -22,9 +22,9 @@ public class RecipientEmailWithAttachmentsExt
     public required string EmailAddress { get; init; }
 
     /// <summary>
-    /// The email sending options, including subject, body, and attachments.
+    /// The email sending options, including subject, body, and SAS-referenced files to include.
     /// </summary>
     [Required]
     [JsonPropertyName("emailSettings")]
-    public required EmailWithAttachmentsSendingOptionsExt Settings { get; init; }
+    public required ComposedEmailSendingOptionsExt Settings { get; init; }
 }

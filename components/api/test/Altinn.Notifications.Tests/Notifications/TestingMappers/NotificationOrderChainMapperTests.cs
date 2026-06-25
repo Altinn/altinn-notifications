@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 
@@ -2332,20 +2333,20 @@ public class NotificationOrderChainMapperTests
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision notice",
                     Body = "Please review the attached document.",
                     SenderEmailAddress = "sender@agency.no",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "decision.pdf",
                             MimeType = "application/pdf",
                             SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1"
                         },
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "appendix.docx",
                             MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2409,13 +2410,13 @@ public class NotificationOrderChainMapperTests
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Body = "Body text.",
                     Subject = "Line one\r\nLine two\rLine three\nLine four",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "file.pdf",
                             MimeType = "application/pdf",
@@ -2449,13 +2450,13 @@ public class NotificationOrderChainMapperTests
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Notice",
                     Body = "See attached.",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "notice.pdf",
                             MimeType = "application/pdf",

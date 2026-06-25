@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -2831,7 +2832,7 @@ public class OrderRequestServiceTests
                 RecipientEmailWithAttachments = new RecipientEmailWithAttachments
                 {
                     EmailAddress = recipientEmail,
-                    Settings = new EmailWithAttachmentsSendingOptions
+                    Settings = new ComposedEmailSendingOptions
                     {
                         Subject = "Decision document",
                         Body = "Please review the attached decision.",
@@ -2840,8 +2841,8 @@ public class OrderRequestServiceTests
                         SendingTimePolicy = SendingTimePolicy.Anytime,
                         Attachments =
                         [
-                            new EmailAttachment { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
-                            new EmailAttachment { Filename = "appendix.docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", SasUrl = sasUrl2 }
+                            new SasFileReference { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
+                            new SasFileReference { Filename = "appendix.docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", SasUrl = sasUrl2 }
                         ]
                     }
                 }
@@ -2903,11 +2904,11 @@ public class OrderRequestServiceTests
                 RecipientEmailWithAttachments = new RecipientEmailWithAttachments
                 {
                     EmailAddress = "recipient@agency.no",
-                    Settings = new EmailWithAttachmentsSendingOptions
+                    Settings = new ComposedEmailSendingOptions
                     {
                         Subject = "Contract",
                         Body = "See attached contract.",
-                        Attachments = [new EmailAttachment { Filename = "contract.pdf", MimeType = "application/pdf", SasUrl = sasUrl }]
+                        Attachments = [new SasFileReference { Filename = "contract.pdf", MimeType = "application/pdf", SasUrl = sasUrl }]
                     }
                 }
             })

@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Recipients;
 
@@ -65,7 +66,7 @@ public class NotificationOrder : IBaseNotificationOrder
     /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.NotificationWithAttachments"/>.
     /// </summary>
     [JsonInclude]
-    public List<EmailAttachment>? EmailAttachments { get; internal set; }
+    public List<SasFileReference>? EmailAttachments { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.

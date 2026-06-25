@@ -1,4 +1,5 @@
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Validators.Email;
 
@@ -16,10 +17,10 @@ public class RecipientEmailWithAttachmentsValidatorTests
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
 
-    private static RecipientEmailWithAttachmentsExt RecipientWith(EmailAttachmentExt attachment) => new()
+    private static RecipientEmailWithAttachmentsExt RecipientWith(SasFileReferenceExt attachment) => new()
     {
         EmailAddress = "recipient@agency.no",
-        Settings = new EmailWithAttachmentsSendingOptionsExt
+        Settings = new ComposedEmailSendingOptionsExt
         {
             Subject = "Decision from Altinn",
             Body = "Please see the attached document.",
@@ -30,13 +31,13 @@ public class RecipientEmailWithAttachmentsValidatorTests
     private static RecipientEmailWithAttachmentsExt ValidRecipient() => new()
     {
         EmailAddress = "recipient@agency.no",
-        Settings = new EmailWithAttachmentsSendingOptionsExt
+        Settings = new ComposedEmailSendingOptionsExt
         {
             Subject = "Decision from Altinn",
             Body = "Please see the attached document.",
             Attachments =
             [
-                new EmailAttachmentExt
+                new SasFileReferenceExt
                 {
                     Filename = "decision.pdf",
                     MimeType = "application/pdf",
@@ -117,7 +118,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
         var recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
@@ -133,7 +134,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [Fact]
     public void Validate_AttachmentWithInvalidFilename_HasError()
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "../../etc/passwd",
             MimeType = "application/pdf",
@@ -147,7 +148,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [Fact]
     public void Validate_AttachmentWithUnsupportedMimeType_HasError()
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "script.sh",
             MimeType = "application/x-sh",
@@ -165,7 +166,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("   ")]
     public void Validate_AttachmentEmptyOrWhitespaceSasUrl_HasError(string sasUrl)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -185,7 +186,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("http://localhost:10000/devstoreaccount1/attachments/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
     public void Validate_AttachmentInvalidSasUrlSchemeOrFormat_HasError(string sasUrl)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -201,7 +202,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     public void Validate_AttachmentValidAbsoluteHttpsSasUrl_NoSasUrlError(string sasUrl)
     {
         // This validator only checks format; expiry is the order-level validator's responsibility
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -219,7 +220,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("\t")]
     public void Validate_AttachmentEmptyOrWhitespaceFilename_HasError(string filename)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = filename,
             MimeType = "application/pdf",
@@ -240,7 +241,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("subfolder\\contract.pdf")]
     public void Validate_AttachmentFilenameWithPathSeparatorOrTraversal_HasError(string filename)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = filename,
             MimeType = "application/pdf",
@@ -258,7 +259,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("   ")]
     public void Validate_AttachmentEmptyOrWhitespaceMimeType_HasError(string mimeType)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = mimeType,
@@ -279,7 +280,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("application/octet-stream")]
     public void Validate_AttachmentUnsupportedMimeType_HasError(string mimeType)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "file.bin",
             MimeType = mimeType,
@@ -297,7 +298,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("Application/Pdf")]
     public void Validate_AttachmentMimeTypeCaseVariants_NoError(string mimeType)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "file.pdf",
             MimeType = mimeType,
@@ -315,7 +316,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
         var recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
@@ -332,7 +333,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     public void Validate_AttachmentSasUrlMissingRequiredParameters_HasError()
     {
         // HTTPS URL missing 'se' and 'sig'
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -347,7 +348,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     public void Validate_AttachmentSasUrlMalformedSeParameter_HasError()
     {
         // All required params present but 'se' is not a valid ISO 8601 date
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -362,7 +363,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     public void Validate_AttachmentSasUrlMissingReadPermission_HasError()
     {
         // All required params valid, but 'sp' does not contain 'r'
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
@@ -388,7 +389,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     [InlineData("presentasjon.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation")]
     public void Validate_AttachmentAllCommonAcsSupportedTypes_NoErrors(string filename, string mimeType)
     {
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = filename,
             MimeType = mimeType,
@@ -402,7 +403,7 @@ public class RecipientEmailWithAttachmentsValidatorTests
     public void Validate_AttachmentServiceOwnerPdfContractForCitizen_NoErrors()
     {
         // Typical Altinn use case: org attaches a signed contract
-        var result = _validator.TestValidate(RecipientWith(new EmailAttachmentExt
+        var result = _validator.TestValidate(RecipientWith(new SasFileReferenceExt
         {
             Filename = "vedtak_2025_123456.pdf",
             MimeType = "application/pdf",

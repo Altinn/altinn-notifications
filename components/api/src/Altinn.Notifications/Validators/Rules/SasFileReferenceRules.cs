@@ -6,9 +6,9 @@ using Altinn.Notifications.Models.Email;
 namespace Altinn.Notifications.Validators.Rules;
 
 /// <summary>
-/// Provides helpers for validating <see cref="EmailAttachmentExt"/> properties.
+/// Provides helpers for validating <see cref="SasFileReferenceExt"/> properties.
 /// </summary>
-internal static class EmailAttachmentRules
+internal static class SasFileReferenceRules
 {
     /// <summary>
     /// MIME types accepted by Azure Communication Services for email attachments.

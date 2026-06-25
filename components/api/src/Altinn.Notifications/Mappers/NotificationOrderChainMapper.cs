@@ -2,10 +2,12 @@ using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 
@@ -31,7 +33,7 @@ public static partial class NotificationOrderChainMapper
             RecipientEmailWithAttachments = new RecipientEmailWithAttachments
             {
                 EmailAddress = request.Recipient.EmailAddress,
-                Settings = request.Recipient.Settings.MapToEmailWithAttachmentsSendingOptions()
+                Settings = request.Recipient.Settings.MapToComposedEmailSendingOptions()
             }
         };
 
@@ -135,24 +137,24 @@ public static partial class NotificationOrderChainMapper
     }
 
     /// <summary>
-    /// Maps an <see cref="EmailAttachmentExt"/> to an <see cref="EmailAttachment"/>.
+    /// Maps a <see cref="SasFileReferenceExt"/> to a <see cref="SasFileReference"/>.
     /// </summary>
-    private static EmailAttachment MapToEmailAttachment(EmailAttachmentExt emailAttachmentExt)
+    private static SasFileReference MapToSasFileReference(SasFileReferenceExt ext)
     {
-        return new EmailAttachment
+        return new SasFileReference
         {
-            SasUrl = emailAttachmentExt.SasUrl,
-            Filename = emailAttachmentExt.Filename,
-            MimeType = emailAttachmentExt.MimeType
+            SasUrl = ext.SasUrl,
+            Filename = ext.Filename,
+            MimeType = ext.MimeType
         };
     }
 
     /// <summary>
-    /// Maps a <see cref="EmailWithAttachmentsSendingOptionsExt"/> to a <see cref="EmailWithAttachmentsSendingOptions"/>.
+    /// Maps a <see cref="ComposedEmailSendingOptionsExt"/> to a <see cref="ComposedEmailSendingOptions"/>.
     /// </summary>
-    private static EmailWithAttachmentsSendingOptions MapToEmailWithAttachmentsSendingOptions(this EmailWithAttachmentsSendingOptionsExt ext)
+    private static ComposedEmailSendingOptions MapToComposedEmailSendingOptions(this ComposedEmailSendingOptionsExt ext)
     {
-        return new EmailWithAttachmentsSendingOptions
+        return new ComposedEmailSendingOptions
         {
             Body = ext.Body,
             ContentType = (EmailContentType)ext.ContentType,

@@ -14,11 +14,7 @@ public class RecipientEmailWithAttachments
     public required string EmailAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the configuration options and file attachments for the email message.
+    /// Gets or sets the email sending options, including the SAS-referenced files to include.
     /// </summary>
-    /// <remarks>
-    /// These settings control how and when the email will be composed and delivered to the recipient,
-    /// and include the SAS-referenced file attachments to be fetched at send time.
-    /// </remarks>
-    public required EmailWithAttachmentsSendingOptions Settings { get; set; }
+    public required ComposedEmailSendingOptions Settings { get; set; }
 }

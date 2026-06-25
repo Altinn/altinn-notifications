@@ -10,6 +10,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
@@ -101,13 +102,13 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
                     Body = "Please see the attached document.",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
@@ -143,13 +144,13 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
                     Body = "Please see the attached document.",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
@@ -184,13 +185,13 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
             Recipient = new RecipientEmailWithAttachmentsExt
             {
                 EmailAddress = "recipient@agency.no",
-                Settings = new EmailWithAttachmentsSendingOptionsExt
+                Settings = new ComposedEmailSendingOptionsExt
                 {
                     Subject = "Decision from Altinn",
                     Body = "Please see the attached document.",
                     Attachments =
                     [
-                        new EmailAttachmentExt
+                        new SasFileReferenceExt
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
@@ -262,13 +263,13 @@ public class NotificationOrderWithAttachmentsControllerTests : IClassFixture<Int
         Recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
                 Attachments =
                 [
-                    new EmailAttachmentExt
+                    new SasFileReferenceExt
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",

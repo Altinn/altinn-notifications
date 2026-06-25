@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Validators;
 
@@ -20,13 +21,13 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
     private static RecipientEmailWithAttachmentsExt ValidRecipient(string emailAddress = "recipient@agency.no") => new()
     {
         EmailAddress = emailAddress,
-        Settings = new EmailWithAttachmentsSendingOptionsExt
+        Settings = new ComposedEmailSendingOptionsExt
         {
             Subject = "Decision from Altinn",
             Body = "Please see the attached document.",
             Attachments =
             [
-                new EmailAttachmentExt
+                new SasFileReferenceExt
                 {
                     Filename = "contract.pdf",
                     MimeType = "application/pdf",
@@ -88,13 +89,13 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
         var recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
                 Attachments =
                 [
-                    new EmailAttachmentExt
+                    new SasFileReferenceExt
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
@@ -116,13 +117,13 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
         var recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
                 Attachments =
                 [
-                    new EmailAttachmentExt
+                    new SasFileReferenceExt
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
@@ -144,13 +145,13 @@ public class NotificationOrderWithAttachmentsRequestValidatorTests
         var recipient = new RecipientEmailWithAttachmentsExt
         {
             EmailAddress = "recipient@agency.no",
-            Settings = new EmailWithAttachmentsSendingOptionsExt
+            Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
                 Body = "Please see the attached document.",
                 Attachments =
                 [
-                    new EmailAttachmentExt
+                    new SasFileReferenceExt
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
