@@ -8,5 +8,5 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// handed to the repository layer for atomic persistence.
 /// </summary>
 public sealed record SmsOrderProcessingResult(
-    List<SmsNotification> Notifications, 
+    IReadOnlyList<SmsNotification> Notifications, 
     DateTime? ExpirationDateTime);
