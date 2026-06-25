@@ -18,11 +18,6 @@ public record DashboardNotification
     public string CreatorName { get; init; }
 
     /// <summary>
-    /// Th type of notification for the order (e.g. "notification", "reminder", "instant")
-    /// </summary>
-    public string NotificationType { get; init; }
-
-    /// <summary>
     /// The Altinn resource the notification is related to.
     /// </summary>
     public string? ResourceId { get; init; }
@@ -41,6 +36,11 @@ public record DashboardNotification
     /// The requested notification channel from the order.
     /// </summary>
     public NotificationChannel? NotificationChannel { get; init; }
+
+    /// <summary>
+    /// The type of notification for the order (e.g. "notification", "reminder", "instant")
+    /// </summary>
+    public string NotificationType { get; init; }
 
     /// <summary>
     /// The delivery attempts for this notification, one per channel.
