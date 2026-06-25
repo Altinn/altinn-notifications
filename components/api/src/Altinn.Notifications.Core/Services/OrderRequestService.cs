@@ -63,12 +63,12 @@ public class OrderRequestService : IOrderRequestService
             Templates = templates,
             Created = currentTime,
             Creator = orderRequest.Creator,
+            UseStaleContactInformation = false,
             Recipients = orderRequest.Recipients,
             ResourceId = orderRequest.ResourceId,
             ResourceAction = orderRequest.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             IgnoreReservation = orderRequest.IgnoreReservation,
-            UseStaleContactInformation = false,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             NotificationChannel = orderRequest.NotificationChannel,
             RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
@@ -214,6 +214,7 @@ public class OrderRequestService : IOrderRequestService
         return new RecipientDeliveryDetails
         {
             Channel = NotificationChannel.Email,
+            Attachments = recipientEmail.Settings?.Attachments,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
         };
@@ -412,15 +413,16 @@ public class OrderRequestService : IOrderRequestService
             Id = orderRequest.OrderId,
             Creator = orderRequest.Creator,
             ResourceId = deliveryDetails.ResourceId,
-            ResourceAction = deliveryDetails.ResourceAction,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
+            EmailAttachments = deliveryDetails.Attachments,
+            ResourceAction = deliveryDetails.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
-            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
+            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation
         };
     }
 
@@ -593,14 +595,14 @@ public class OrderRequestService : IOrderRequestService
                 Id = notificationReminder.OrderId,
                 Recipients = deliveryDetails.Recipients,
                 ResourceId = deliveryDetails.ResourceId,
-                ResourceAction = deliveryDetails.ResourceAction,
                 NotificationChannel = deliveryDetails.Channel,
+                ResourceAction = deliveryDetails.ResourceAction,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
-                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
                 SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
-                ConditionEndpoint = notificationReminder.ConditionEndpoint
+                ConditionEndpoint = notificationReminder.ConditionEndpoint,
+                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation
             });
         }
 

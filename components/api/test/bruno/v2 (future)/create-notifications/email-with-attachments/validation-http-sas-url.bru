@@ -1,0 +1,42 @@
+meta {
+  name: Validation - HTTP sasUrl (not HTTPS)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/email-with-attachments
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "requestedSendTime": "{{process.env.TESTDATA_REQUESTED_SEND_TIME}}",
+    "recipient": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(TEST) Should fail - HTTP sasUrl",
+        "body": "(TEST) This should be rejected",
+        "contentType": "Plain",
+        "sendingTimePolicy": "Anytime",
+        "attachments": [
+          {
+            "filename": "document.pdf",
+            "mimeType": "application/pdf",
+            "sasUrl": "http://example.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+          }
+        ]
+      }
+    }
+  }
+}
+
+docs {
+  Validation: the sasUrl uses HTTP instead of HTTPS.
+  The request must be rejected with 400 Bad Request.
+
+  Expected: 400 Bad Request with a validation error referencing sasUrl.
+}
