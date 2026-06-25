@@ -230,71 +230,12 @@ public class EmailAttachmentValidatorTests
             .WithErrorMessage("Attachment sasUrl must be an absolute HTTPS URI.");
     }
 
-    [Fact]
-    public void Validate_SasUrlMissingSeParameter_HasError()
-    {
-        // Arrange — valid HTTPS URL but no 'se' query parameter
-        var attachment = new EmailAttachmentExt
-        {
-            Filename = "contract.pdf",
-            MimeType = "application/pdf",
-            SasUrl = "https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b&sig=fakesig"
-        };
-
-        // Act
-        var result = _validator.TestValidate(attachment);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(a => a.SasUrl)
-            .WithErrorMessage("Attachment sasUrl must contain a valid 'se' (signed expiry) query parameter.");
-    }
-
     [Theory]
-    [InlineData("")]
-    [InlineData("tomorrow")]
-    [InlineData("not-a-date")]
-    public void Validate_SasUrlWithUnparseableSeValue_HasError(string seValue)
+    [InlineData("https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b&sig=fakesig")]
+    [InlineData("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
+    public void Validate_SasUrlWithAnyValidAbsoluteHttpsUri_NoErrorFromThisValidator(string sasUrl)
     {
-        // Arrange
-        var attachment = new EmailAttachmentExt
-        {
-            Filename = "contract.pdf",
-            MimeType = "application/pdf",
-            SasUrl = $"https://account.blob.core.windows.net/container/file.pdf?se={Uri.EscapeDataString(seValue)}&sp=r&sr=b&sig=fakesig"
-        };
-
-        // Act
-        var result = _validator.TestValidate(attachment);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(a => a.SasUrl)
-            .WithErrorMessage("Attachment sasUrl must contain a valid 'se' (signed expiry) query parameter.");
-    }
-
-    [Fact]
-    public void Validate_SasUrlWithPastExpiry_NoErrorFromThisValidator()
-    {
-        // Arrange — expiry is 2020 (past), but this validator only checks parseability
-        var attachment = new EmailAttachmentExt
-        {
-            Filename = "contract.pdf",
-            MimeType = "application/pdf",
-            SasUrl = "https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig"
-        };
-
-        // Act
-        var result = _validator.TestValidate(attachment);
-
-        // Assert — expiry enforcement is the parent validator's responsibility
-        result.ShouldNotHaveValidationErrorFor(a => a.SasUrl);
-    }
-
-    [Theory]
-    [InlineData("https://account.blob.core.windows.net/c/f.pdf?se=2099-06-01T12%3A00%3A00Z&sig=x")]
-    [InlineData("https://account.blob.core.windows.net/c/f.pdf?se=2099-06-01T12%3A00%3A00%2B02%3A00&sig=x")]
-    public void Validate_SasUrlWithValidSeFormats_NoError(string sasUrl)
-    {
-        // Arrange
+        // Arrange — this validator only checks format; expiry and 'se' presence are the order-level validator's responsibility
         var attachment = new EmailAttachmentExt
         {
             Filename = "contract.pdf",

@@ -37,5 +37,14 @@ public enum OrderType : uint
     /// they are immediately saved to the database and directly forwarded to the appropriate 
     /// delivery service (SMS or Email) without waiting for cronjob processing.
     /// </remarks>
-    Instant = 2
+    Instant = 2,
+
+    /// <summary>
+    /// Represents a notification order that includes one or more file attachments delivered via SAS URL.
+    /// </summary>
+    /// <remarks>
+    /// Attachment orders are processed through a dedicated pipeline isolated from the standard email pipeline
+    /// to prevent head-of-line blocking. The email service downloads attachments from blob storage at send time.
+    /// </remarks>
+    NotificationWithAttachments = 3
 }

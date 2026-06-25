@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -60,6 +62,12 @@ public class NotificationOrder : IBaseNotificationOrder
     public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
 
     /// <summary>
+    /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.NotificationWithAttachments"/>.
+    /// </summary>
+    [JsonInclude]
+    public List<EmailAttachment>? EmailAttachments { get; internal set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
     public NotificationOrder(
@@ -90,10 +98,10 @@ public class NotificationOrder : IBaseNotificationOrder
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;
-        UseStaleContactInformation = useStaleContactInformation;
         ConditionEndpoint = conditionEndpoint;
         SendingTimePolicy = sendingTimePolicy;
         NotificationChannel = notificationChannel;
+        UseStaleContactInformation = useStaleContactInformation;
     }
 
     /// <summary>

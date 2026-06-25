@@ -293,6 +293,10 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         AddPolicy(AuthorizationConstants.POLICY_SUPPORT_DASHBOARD_ACCESS, policy =>
         {
             policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_SUPPORT_DASHBOARD_ACCESS));
+        })
+        .AddPolicy(AuthorizationConstants.POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_EMAIL_WITH_ATTACHMENTS_CREATE));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();

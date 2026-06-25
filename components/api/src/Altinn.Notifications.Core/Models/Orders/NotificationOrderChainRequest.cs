@@ -237,7 +237,7 @@ public class NotificationOrderChainRequest
                 throw new InvalidOperationException("OrderChainId must be set.");
             }
 
-            if (_type != OrderType.Notification)
+            if (_type != OrderType.Notification && _type != OrderType.NotificationWithAttachments)
             {
                 throw new InvalidOperationException("Invalid type used.");
             }

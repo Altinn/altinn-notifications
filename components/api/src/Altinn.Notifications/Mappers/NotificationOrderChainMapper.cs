@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -17,6 +17,39 @@ namespace Altinn.Notifications.Mappers;
 public static partial class NotificationOrderChainMapper
 {
     private const string SingleWhiteSpace = " ";
+
+    /// <summary>
+    /// Maps a <see cref="NotificationOrderWithAttachmentsRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
+    /// </summary>
+    /// <param name="request">The email-with-attachments order request.</param>
+    /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
+    /// <returns>A <see cref="NotificationOrderChainRequest"/> mapped from the provided request.</returns>
+    public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this NotificationOrderWithAttachmentsRequestExt request, string creatorName)
+    {
+        var recipient = new NotificationRecipient
+        {
+            RecipientEmail = new RecipientEmail
+            {
+                EmailAddress = request.Recipient.EmailAddress,
+                Settings = request.Recipient.Settings.MapToEmailWithAttachmentsSendingOptions()
+            }
+        };
+
+        DialogportenIdentifiers? dialogportenAssociation = request.DialogportenAssociation?.MapToDialogportenReference();
+
+        return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetRecipient(recipient)
+            .SetOrderId(Guid.NewGuid())
+            .SetOrderChainId(Guid.NewGuid())
+            .SetCreator(new Creator(creatorName))
+            .SetIdempotencyId(request.IdempotencyId)
+            .SetSendersReference(request.SendersReference)
+            .SetType(OrderType.NotificationWithAttachments)
+            .SetConditionEndpoint(request.ConditionEndpoint)
+            .SetDialogportenAssociation(dialogportenAssociation)
+            .SetRequestedSendTime(request.RequestedSendTime.ToUniversalTime())
+            .Build();
+    }
 
     /// <summary>
     /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
@@ -98,6 +131,35 @@ public static partial class NotificationOrderChainMapper
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy,
             Subject = NormalizeLineEndingsRegex().Replace(emailSendingOptionsExt.Subject, SingleWhiteSpace)
+        };
+    }
+
+    /// <summary>
+    /// Maps an <see cref="EmailAttachmentExt"/> to an <see cref="EmailAttachment"/>.
+    /// </summary>
+    private static EmailAttachment MapToEmailAttachment(EmailAttachmentExt emailAttachmentExt)
+    {
+        return new EmailAttachment
+        {
+            SasUrl = emailAttachmentExt.SasUrl,
+            Filename = emailAttachmentExt.Filename,
+            MimeType = emailAttachmentExt.MimeType
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="EmailWithAttachmentsSendingOptionsExt"/> to a <see cref="EmailSendingOptions"/>.
+    /// </summary>
+    private static EmailSendingOptions MapToEmailWithAttachmentsSendingOptions(this EmailWithAttachmentsSendingOptionsExt emailWithAttachmentsSendingOptionsExt)
+    {
+        return new EmailSendingOptions
+        {
+            Body = emailWithAttachmentsSendingOptionsExt.Body,
+            ContentType = (EmailContentType)emailWithAttachmentsSendingOptionsExt.ContentType,
+            SenderEmailAddress = emailWithAttachmentsSendingOptionsExt.SenderEmailAddress?.Trim(),
+            SendingTimePolicy = (SendingTimePolicy)emailWithAttachmentsSendingOptionsExt.SendingTimePolicy,
+            Attachments = [.. emailWithAttachmentsSendingOptionsExt.Attachments.Select(MapToEmailAttachment)],
+            Subject = NormalizeLineEndingsRegex().Replace(emailWithAttachmentsSendingOptionsExt.Subject, SingleWhiteSpace)
         };
     }
 

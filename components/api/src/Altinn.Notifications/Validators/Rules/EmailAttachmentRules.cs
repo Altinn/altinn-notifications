@@ -128,8 +128,7 @@ internal static class EmailAttachmentRules
     }
 
     /// <summary>
-    /// Adds validation rules for an attachment SAS URL: must be non-empty, must be an absolute
-    /// HTTPS URI, and must contain a parseable <c>se</c> (signed expiry) query parameter.
+    /// Adds validation rules for an attachment SAS URL: must be non-empty and must be an absolute HTTPS URI.
     /// </summary>
     /// <typeparam name="T">The type of the object being validated.</typeparam>
     /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
@@ -146,11 +145,6 @@ internal static class EmailAttachmentRules
                 .Must(IsAbsoluteHttpsUri)
                 .When(url => !string.IsNullOrEmpty(url))
                 .WithMessage("Attachment sasUrl must be an absolute HTTPS URI.");
-
-            rules.RuleFor(url => url)
-                .Must(url => ParseSasExpiry(url) != null)
-                .When(url => !string.IsNullOrEmpty(url) && IsAbsoluteHttpsUri(url))
-                .WithMessage("Attachment sasUrl must contain a valid 'se' (signed expiry) query parameter.");
         });
     }
 

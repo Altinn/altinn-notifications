@@ -1,0 +1,132 @@
+﻿using System;
+
+using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Validators;
+
+using FluentValidation.TestHelper;
+
+using Xunit;
+
+namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
+
+public class NotificationOrderWithAttachmentsRequestValidatorTests
+{
+    private const string _validSasUrl =
+        "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
+        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+
+    private static RecipientEmailWithAttachmentsExt ValidRecipient(string emailAddress = "recipient@agency.no") => new()
+    {
+        EmailAddress = emailAddress,
+        Settings = new EmailWithAttachmentsSendingOptionsExt
+        {
+            Subject = "Decision from Altinn",
+            Body = "Please see the attached document.",
+            Attachments =
+            [
+                new EmailAttachmentExt
+                {
+                    Filename = "contract.pdf",
+                    MimeType = "application/pdf",
+                    SasUrl = _validSasUrl
+                }
+            ]
+        }
+    };
+
+    private static NotificationOrderWithAttachmentsRequestExt ValidRequest(
+        string idempotencyId = "order-001",
+        DateTime? requestedSendTime = null,
+        RecipientEmailWithAttachmentsExt? recipient = null,
+        DialogportenIdentifiersExt? dialogportenAssociation = null) => new()
+        {
+            SendersReference = "ref-001",
+            IdempotencyId = idempotencyId,
+            Recipient = recipient ?? ValidRecipient(),
+            DialogportenAssociation = dialogportenAssociation,
+            RequestedSendTime = requestedSendTime ?? DateTime.UtcNow.AddHours(1)
+        };
+
+    private static readonly NotificationOrderWithAttachmentsRequestValidator _validator = new();
+
+    [Fact]
+    public void Validate_ValidRequest_NoErrors()
+    {
+        var result = _validator.TestValidate(ValidRequest());
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_EmptyIdempotencyId_HasError(string idempotencyId)
+    {
+        var result = _validator.TestValidate(ValidRequest(idempotencyId: idempotencyId));
+        result.ShouldHaveValidationErrorFor(r => r.IdempotencyId)
+            .WithErrorMessage("IdempotencyId cannot be null or empty.");
+    }
+
+    [Fact]
+    public void Validate_RequestedSendTimeInThePast_HasError()
+    {
+        var result = _validator.TestValidate(ValidRequest(requestedSendTime: DateTime.UtcNow.AddDays(-1)));
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
+    }
+
+    [Fact]
+    public void Validate_AttachmentSasExpiryTooCloseToSendTime_HasError()
+    {
+        var sendTime = DateTime.UtcNow.AddHours(2);
+        var expiryTooSoon = sendTime.AddMinutes(10).ToString("o");
+        var sasUrlWithShortExpiry =
+            "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
+            $"?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature";
+
+        var recipient = new RecipientEmailWithAttachmentsExt
+        {
+            EmailAddress = "recipient@agency.no",
+            Settings = new EmailWithAttachmentsSendingOptionsExt
+            {
+                Subject = "Decision from Altinn",
+                Body = "Please see the attached document.",
+                Attachments =
+                [
+                    new EmailAttachmentExt
+                    {
+                        Filename = "contract.pdf",
+                        MimeType = "application/pdf",
+                        SasUrl = sasUrlWithShortExpiry
+                    }
+                ]
+            }
+        };
+
+        var result = _validator.TestValidate(ValidRequest(requestedSendTime: sendTime, recipient: recipient));
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl must be valid for at least 15 minutes after requestedSendTime.");
+    }
+
+    [Fact]
+    public void Validate_InvalidRecipientEmailAddress_HasError()
+    {
+        var result = _validator.TestValidate(ValidRequest(recipient: ValidRecipient(emailAddress: "not-an-email")));
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Invalid email address format.");
+    }
+
+    [Fact]
+    public void Validate_ValidDialogportenAssociation_NoErrors()
+    {
+        var association = new DialogportenIdentifiersExt
+        {
+            DialogId = "dialog-001",
+            TransmissionId = "transmission-001"
+        };
+
+        var result = _validator.TestValidate(ValidRequest(dialogportenAssociation: association));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+}

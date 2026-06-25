@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models;
 
@@ -47,6 +48,12 @@ internal sealed record RecipientDeliveryDetails
     /// Gets the sending time policy associated with the SMS configuration.
     /// </summary>
     public SendingTimePolicy? SmsSendingTimePolicy { get; init; }
+
+    /// <summary>
+    /// Gets the file attachments for <see cref="OrderType.NotificationWithAttachments"/> orders.
+    /// <c>null</c> for all other order types.
+    /// </summary>
+    public List<EmailAttachment>? Attachments { get; init; }
 
     /// <summary>
     /// Gets an empty <see cref="RecipientDeliveryDetails"/> instance with default values.

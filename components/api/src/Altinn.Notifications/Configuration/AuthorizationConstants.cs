@@ -24,5 +24,15 @@
         /// Policy for allowing access to endpoints used in Altinn support dashboard
         /// </summary>
         public const string POLICY_SUPPORT_DASHBOARD_ACCESS = "SupportDashboardAccess";
+
+        /// <summary>
+        /// Scope for allowing access to creating email notification orders with file attachments
+        /// </summary>
+        public const string SCOPE_NOTIFICATIONS_EMAIL_WITH_ATTACHMENTS_CREATE = "altinn:serviceowner/notifications.emailwithattachments.create";
+
+        /// <summary>
+        /// Id for the policy requiring the email-with-attachments create scope
+        /// </summary>
+        public const string POLICY_EMAIL_WITH_ATTACHMENTS_CREATE_SCOPE = "EmailWithAttachmentsCreateScope";
     }
 }
