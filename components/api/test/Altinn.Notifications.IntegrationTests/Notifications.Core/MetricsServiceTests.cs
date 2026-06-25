@@ -53,7 +53,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(year, actual.Year);
             Assert.NotEmpty(actual.Metrics);
             Assert.True(actual.Metrics.First(m => m.Org == "ttd").OrdersCreated >= 2);
-            Assert.True(actual.Metrics.First(m => m.Org == "ttd").SmsNotificationsCreated >= 1);
+            Assert.Equal(0, actual.Metrics.First(m => m.Org == "ttd").SmsNotificationsCreated); // smscount column is no longer populated (#1661)
             Assert.True(actual.Metrics.First(m => m.Org == "ttd").EmailNotificationsCreated >= 1);
         }
 
