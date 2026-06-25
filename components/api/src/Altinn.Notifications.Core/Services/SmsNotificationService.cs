@@ -42,7 +42,7 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, bool ignoreReservation = false)
     {
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
@@ -59,7 +59,7 @@ public class SmsNotificationService : ISmsNotificationService
         foreach (SmsAddressPoint addressPoint in addressPoints)
         {
             recipient.MobileNumber = addressPoint.MobileNumber;
-            await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.New, count);
+            await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.New);
         }
     }
 
@@ -128,9 +128,8 @@ public class SmsNotificationService : ISmsNotificationService
     /// <param name="expiryDateTime">The date and time when the notification expires and should no longer be sent.</param>
     /// <param name="recipient">The recipient details for the SMS notification.</param>
     /// <param name="resultType">The result type indicating the status of the notification.</param>
-    /// <param name="count">The number of attempts made to send the notification. Defaults to 0.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, SmsRecipient recipient, SmsNotificationResultType resultType, int count = 0)
+    private async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, SmsRecipient recipient, SmsNotificationResultType resultType)
     {
         var smsNotification = new SmsNotification()
         {
@@ -141,7 +140,7 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(resultType, _dateTimeService.UtcNow())
         };
 
-        await _repository.AddNotification(smsNotification, expiryDateTime, count);
+        await _repository.AddNotification(smsNotification, expiryDateTime);
     }
 
     /// <summary>
