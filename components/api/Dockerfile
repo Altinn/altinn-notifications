@@ -16,7 +16,7 @@ COPY components/shared/src ./components/shared/src
 RUN dotnet publish -c Release -o out ./components/api/src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:72ba73e4bec80e6791a022454b2dda2d6f6f77bdf48d89afb35186deebf73eb9 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:ccc91cce4939ae4524b8389780c783cd8b9a5f093c93b3398d5f98f3dc660591 AS final
 WORKDIR /app
 EXPOSE 5090
 
