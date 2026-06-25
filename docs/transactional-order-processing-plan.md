@@ -165,24 +165,20 @@ Per-channel sub-results returned by the channel processing services:
 
 ```csharp
 public sealed record SmsOrderProcessingResult(
-	OrderProcessingStatus StatusToSet,
-	IReadOnlyList<SmsNotification> SmsNotifications);
+	IReadOnlyList<SmsNotification> SmsNotifications,
+  DateTime? ExpirationDateTime);
 
 public sealed record EmailOrderProcessingResult(
-	OrderProcessingStatus StatusToSet,
-	IReadOnlyList<EmailNotification> EmailNotifications);
+	IReadOnlyList<EmailNotification> EmailNotifications,
+  DateTime? ExpirationDateTime);
 ```
 
 Combined aggregate wrapping both sub-results, handed to the single repository persist call:
 
 ```csharp
 public sealed record OrderProcessingResult(
-	OrderProcessingStatus StatusToSet,
-	IReadOnlyList<EmailNotification> EmailNotifications,
-	IReadOnlyList<SmsNotification> SmsNotifications,
-	bool CompletesOrder,
-	StatusFeedEntry? StatusFeed,          // populated iff CompletesOrder
-	NotificationLogEntry? NotificationLog); // populated iff CompletesOrder
+ EmailOrderProcessingResult EmailOrderProcessingResult,
+ SmsOrderProcessingResult SmsOrderProcessingResult);
 ```
 
 This mirrors how `OrderRequestService` builds a `NotificationOrder` graph before
