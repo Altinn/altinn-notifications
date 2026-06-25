@@ -219,7 +219,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <param name="order">The notification order containing the optional condition endpoint to evaluate.</param>
     /// <param name="isRetry">
     /// Indicates whether this evaluation is part of a retry attempt.
-    /// If <c>false</c>, a failed or inconclusive condition check will smsResult in a retry recommendation.
+    /// If <c>false</c>, a failed or inconclusive condition check will result in a retry recommendation.
     /// If <c>true</c>, the order will be processed even if the condition check fails.
     /// </param>
     /// <returns>
