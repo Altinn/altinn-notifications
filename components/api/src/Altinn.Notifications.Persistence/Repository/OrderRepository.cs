@@ -43,7 +43,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
-    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
+    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
     private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
@@ -202,7 +202,7 @@ public class OrderRepository : IOrderRepository
             getOrderChainId: () => instantNotificationOrder.OrderChainId,
             insertInstantOrderAction: (connection, transaction, token) => InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, token),
             insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, connection, transaction, token),
             cancellationToken: cancellationToken);
     }
 
@@ -216,7 +216,7 @@ public class OrderRepository : IOrderRepository
             getOrderChainId: () => instantSmsNotificationOrder.OrderChainId,
             insertInstantOrderAction: (connection, transaction, token) => InsertInstantSmsNotificationOrderAsync(instantSmsNotificationOrder, connection, transaction, token),
             insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, connection, transaction, token),
             cancellationToken: cancellationToken);
     }
 
@@ -708,7 +708,6 @@ public class OrderRepository : IOrderRepository
     /// </summary>
     /// <param name="notification">The SMS notification to persist.</param>
     /// <param name="smsExpiryDateTime">The expiry date and time for the SMS.</param>
-    /// <param name="smsMessageCount">The number of SMS messages to send.</param>
     /// <param name="connection">
     /// The active <see cref="NpgsqlConnection"/> to the PostgreSQL database.
     /// </param>
@@ -721,7 +720,7 @@ public class OrderRepository : IOrderRepository
     /// <returns>
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
-    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryDateTime, int smsMessageCount, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertSmsNotificationSql, connection, transaction);
 
@@ -732,7 +731,6 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.CustomizedBody) ? (object)DBNull.Value : notification.Recipient.CustomizedBody);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsMessageCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, smsExpiryDateTime);
 

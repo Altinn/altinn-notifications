@@ -34,7 +34,7 @@ jobs:
       sms: ${{ steps.filter.outputs.sms }}
       email: ${{ steps.filter.outputs.email }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
@@ -66,7 +66,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Build the Docker image
         run: docker build . -f components/api/Dockerfile --tag altinn-notifications-api:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
@@ -92,7 +92,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Build the Docker image
         run: docker build . -f components/email-service/Dockerfile --tag altinn-notifications-email:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
@@ -118,7 +118,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Build the Docker image
         run: docker build . -f components/sms-service/Dockerfile --tag altinn-notifications-sms:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
