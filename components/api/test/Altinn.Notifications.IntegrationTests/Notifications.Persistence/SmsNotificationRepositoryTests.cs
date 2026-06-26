@@ -90,7 +90,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             SendResult = new NotificationResult<SmsNotificationResultType>(SmsNotificationResultType.New, DateTime.UtcNow)
         };
 
-        await repo.AddNotification(smsNotification, requestedSendTime.AddHours(50), 1);
+        await repo.AddNotification(smsNotification, requestedSendTime.AddHours(50));
 
         // Assert
         string sql = $@"SELECT count(1) FROM notifications.smsnotifications s WHERE s.alternateid = '{smsNotificationId}'";
