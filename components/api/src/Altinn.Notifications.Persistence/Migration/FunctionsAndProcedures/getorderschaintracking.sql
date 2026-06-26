@@ -1,5 +1,5 @@
 ﻿-- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
-CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking
+CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking_v2
 (
     _creatorname text,
     _idempotencyid text
@@ -9,34 +9,31 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text,
     reminders jsonb
-) 
+)
 LANGUAGE 'plpgsql'
 STABLE
 AS $BODY$
 DECLARE
     v_record_exists boolean;
 BEGIN
-    -- Check if record exists first to provide better error handling
     SELECT EXISTS (
-        SELECT 1 
-        FROM notifications.orderschain 
+        SELECT 1
+        FROM notifications.orderschain
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
-        -- exclude type 'Instant' from results
-		AND (orderchain->>'Type' <> '2' OR orderchain->>'Type' IS NULL) 
+        -- include only type 'Notification' (0) and legacy records without a type
+        AND (orderchain->>'Type' = '0' OR orderchain->>'Type' IS NULL)
     ) INTO v_record_exists;
-    
+
     IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
         RETURN;
     END IF;
 
     RETURN QUERY
-    SELECT 
+    SELECT
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
         orders_chain.orderchain->>'SendersReference' AS senders_reference,
-        -- Extract only OrderId and SendersReference from each reminder
         COALESCE(
             (SELECT jsonb_agg(
                 jsonb_build_object(
@@ -45,8 +42,8 @@ BEGIN
                 )
             )
             FROM jsonb_array_elements(
-                CASE 
-                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND 
+                CASE
+                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND
                          (orders_chain.orderchain->'Reminders') IS NOT NULL AND
                          (orders_chain.orderchain->'Reminders') <> 'null'::jsonb
                     THEN orders_chain.orderchain->'Reminders'
@@ -55,21 +52,22 @@ BEGIN
             ) AS reminder),
             '[]'::jsonb
         ) AS reminders
-    FROM 
+    FROM
         notifications.orderschain orders_chain
-    WHERE 
+    WHERE
         orders_chain.creatorname = _creatorname
         AND orders_chain.idempotencyid = _idempotencyid
-        -- Exclude type 'Instant' from results
-        AND (orders_chain.orderchain->>'Type' <> '2' OR orders_chain.orderchain->>'Type' IS NULL);
+        -- include only type 'Notification' (0) and legacy records without a type
+        AND (orders_chain.orderchain->>'Type' = '0' OR orders_chain.orderchain->>'Type' IS NULL);
 END;
 $BODY$;
 
-COMMENT ON FUNCTION notifications.get_orders_chain_tracking IS 
+COMMENT ON FUNCTION notifications.get_orders_chain_tracking_v2 IS
 'Retrieves tracking information for a notification order chain using the creator''s short name and idempotency identifier.
 
-This function enables idempotent operations by allowing clients to retrieve previously submitted
-notification chain information without creating duplicates. It specifically excludes order chains where the type is ''Instant'' (i.e., where the ''Type'' field in the orderchain data is ''2'').
+This function is scoped to standard notification orders (OrderType = 0) to ensure idempotency
+identifiers are isolated per order type. Legacy records without a Type field are also included
+for backwards compatibility. Use dedicated functions for other order types (e.g. Instant, Composed).
 
 Parameters:
 - _creatorname: The short name of the creator that originally submitted the notification order chain
@@ -82,5 +80,5 @@ Returns a table with the following columns:
 - reminders: A JSON array containing tracking information for any reminder notifications
 
 The reminders JSON array contains objects with the following structure:
-- OrderId: The unique identifier for the reminder notification order
+- ShipmentId: The unique identifier for the reminder notification order
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
