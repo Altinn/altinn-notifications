@@ -42,6 +42,7 @@ public class OrderRepository : IOrderRepository
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
     private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking_v2($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _getComposedOrderChainTrackingSql = "SELECT * FROM notifications.get_composed_order_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
@@ -387,6 +388,52 @@ public class OrderRepository : IOrderRepository
         var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
 
         return CreateNotificationOrderChainResponse(ordersChainId, mainShipmentId, mainSendersReference, reminderShipments, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrderChainResponse?> GetComposedOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_getComposedOrderChainTrackingSql);
+
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        await reader.ReadAsync(cancellationToken);
+
+        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
+        if (ordersChainId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
+        if (shipmentId == Guid.Empty)
+        {
+            return null;
+        }
+
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
+            null :
+            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
+
+        return new NotificationOrderChainResponse
+        {
+            OrderChainId = ordersChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = shipmentId,
+                SendersReference = sendersReference,
+                Reminders = null
+            }
+        };
     }
 
     /// <inheritdoc/>

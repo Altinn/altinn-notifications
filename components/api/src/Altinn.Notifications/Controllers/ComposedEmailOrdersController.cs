@@ -1,7 +1,6 @@
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Errors;
-using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -27,18 +26,18 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE)]
 public class ComposedEmailOrdersController : ControllerBase
 {
-    private readonly IOrderRequestService _orderRequestService;
+    private readonly IComposedEmailOrderRequestService _service;
     private readonly IValidator<ComposedEmailRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComposedEmailOrdersController"/> class.
     /// </summary>
     public ComposedEmailOrdersController(
-        IOrderRequestService orderRequestService,
+        IComposedEmailOrderRequestService service,
         IValidator<ComposedEmailRequestExt> validator)
     {
+        _service = service;
         _validator = validator;
-        _orderRequestService = orderRequestService;
     }
 
     /// <summary>
@@ -57,7 +56,6 @@ public class ComposedEmailOrdersController : ControllerBase
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid.", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(422, "Missing contact information for one or more recipients", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(ComposedEmailRequestExt orderRequest, CancellationToken cancellationToken = default)
     {
@@ -76,7 +74,7 @@ public class ComposedEmailOrdersController : ControllerBase
                 return Forbid();
             }
 
-            var orderChainTracking = await _orderRequestService.RetrieveOrderChainTracking(creator, orderRequest.IdempotencyId, cancellationToken);
+            var orderChainTracking = await _service.RetrieveOrderChainTracking(creator, orderRequest.IdempotencyId, cancellationToken);
             if (orderChainTracking != null)
             {
                 return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());
@@ -84,15 +82,9 @@ public class ComposedEmailOrdersController : ControllerBase
 
             var notificationOrderChainRequest = orderRequest.MapToNotificationOrderChainRequest(creator);
 
-            Result<NotificationOrderChainResponse> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
+            var response = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
 
-            if (result.IsProblem)
-            {
-                var problemDetails = result.Problem!.ToProblemDetails();
-                return StatusCode(problemDetails.Status!.Value, problemDetails);
-            }
-
-            return Created(result.Value!.OrderChainId.GetSelfLinkFromOrderChainId(), result.Value.MapToNotificationOrderChainResponseExt());
+            return Created(response.OrderChainId.GetSelfLinkFromOrderChainId(), response.MapToNotificationOrderChainResponseExt());
         }
         catch (OperationCanceledException)
         {

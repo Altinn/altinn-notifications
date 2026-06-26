@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -40,32 +39,39 @@ public class ComposedEmailOrdersControllerTests
     [Fact]
     public async Task Post_InvalidRequest_ReturnsBadRequest()
     {
-        var serviceMock = new Mock<IOrderRequestService>();
+        // Arrange
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         var controller = CreateController(serviceMock.Object, ValidatorThatFails().Object);
 
+        // Act
         var result = await controller.Post(ValidRequest(), TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<ObjectResult>(result.Result);
         var objectResult = (ObjectResult)result.Result!;
         Assert.IsType<ValidationProblemDetails>(objectResult.Value);
-        serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Post_MissingOrg_ReturnsForbid()
     {
-        var serviceMock = new Mock<IOrderRequestService>();
+        // Arrange
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object, org: null);
 
+        // Act
         var result = await controller.Post(ValidRequest(), TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<ForbidResult>(result.Result);
-        serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Post_ExistingOrder_ReturnsOkWithExistingOrderDetails()
     {
+        // Arrange
         var request = ValidRequest();
         var existingResponse = new NotificationOrderChainResponse
         {
@@ -73,23 +79,26 @@ public class ComposedEmailOrdersControllerTests
             OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = Guid.NewGuid() }
         };
 
-        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
 
+        // Act
         var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
+        // Assert
         var result200 = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<NotificationOrderChainResponseExt>(result200.Value);
         Assert.Equal(existingResponse.OrderChainId, response.OrderChainId);
-        serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Post_NewOrder_ReturnsCreatedWithSelfLink()
     {
+        // Arrange
         var request = ValidRequest();
         var newResponse = new NotificationOrderChainResponse
         {
@@ -98,16 +107,18 @@ public class ComposedEmailOrdersControllerTests
         };
         var expectedUrl = newResponse.OrderChainId.GetSelfLinkFromOrderChainId();
 
-        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
-        serviceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newResponse);
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
 
+        // Act
         var result = await controller.Post(request, TestContext.Current.CancellationToken);
 
+        // Assert
         var createdResult = Assert.IsType<CreatedResult>(result.Result);
         Assert.Equal(expectedUrl, createdResult.Location);
         var response = Assert.IsType<NotificationOrderChainResponseExt>(createdResult.Value);
@@ -115,37 +126,19 @@ public class ComposedEmailOrdersControllerTests
     }
 
     [Fact]
-    public async Task Post_ServiceReturnsProblem_Returns422()
-    {
-        var request = ValidRequest();
-
-        var serviceMock = new Mock<IOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
-        serviceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Problems.MissingContactInformation);
-
-        var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
-
-        var result = await controller.Post(request, TestContext.Current.CancellationToken);
-
-        var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
-        Assert.Equal(422, objectResult.StatusCode);
-        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString());
-    }
-
-    [Fact]
     public async Task Post_OperationCanceled_Returns499()
     {
-        var serviceMock = new Mock<IOrderRequestService>();
+        // Arrange
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
 
+        // Act
         var result = await controller.Post(ValidRequest(), TestContext.Current.CancellationToken);
 
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
         Assert.Equal(499, objectResult.StatusCode);
@@ -155,14 +148,15 @@ public class ComposedEmailOrdersControllerTests
     [Fact]
     public async Task Post_CancellationTokenForwardedToAllServiceMethods()
     {
+        // Arrange
         var request = ValidRequest();
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
             .ReturnsAsync((NotificationOrderChainResponse?)null)
             .Verifiable();
-        serviceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken))
             .ReturnsAsync(new NotificationOrderChainResponse
             {
                 OrderChainId = Guid.NewGuid(),
@@ -172,22 +166,25 @@ public class ComposedEmailOrdersControllerTests
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
 
+        // Act
         await controller.Post(request, cancellationToken);
 
+        // Assert
         serviceMock.Verify(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
-        serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
+        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
     }
 
     [Fact]
     public async Task Post_MapsAttachmentsAndOrderTypeCorrectly()
     {
+        // Arrange
         var request = ValidRequest();
         NotificationOrderChainRequest? captured = null;
 
-        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
-        serviceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, CancellationToken>((r, _) => captured = r)
             .ReturnsAsync(new NotificationOrderChainResponse
             {
@@ -197,8 +194,10 @@ public class ComposedEmailOrdersControllerTests
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
 
+        // Act
         await controller.Post(request, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.NotNull(captured);
         Assert.Equal("ttd", captured.Creator.ShortName);
         Assert.Equal(request.IdempotencyId, captured.IdempotencyId);
@@ -235,14 +234,14 @@ public class ComposedEmailOrdersControllerTests
     };
 
     private static ComposedEmailOrdersController CreateController(
-        IOrderRequestService orderRequestService,
+        IComposedEmailOrderRequestService service,
         IValidator<ComposedEmailRequestExt> validator,
         string? org = "ttd")
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = org;
 
-        return new ComposedEmailOrdersController(orderRequestService, validator)
+        return new ComposedEmailOrdersController(service, validator)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };

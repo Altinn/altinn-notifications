@@ -327,6 +327,96 @@ COMMENT ON FUNCTION notifications.claim_email_batch(integer)
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
+-- claimemailbatchv2.sql:
+CREATE OR REPLACE FUNCTION notifications.claim_email_batch_v2(
+    _batchsize integer DEFAULT NULL::integer)
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE
+    v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
+    latest_email_timeout timestamp;
+    v_limitlog_id integer;
+BEGIN
+    SELECT id, emaillimittimeout
+    INTO v_limitlog_id, latest_email_timeout
+    FROM notifications.resourcelimitlog
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
+    FOR UPDATE;
+
+    -- Check for active email timeout.
+    IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
+        RETURN QUERY
+        SELECT NULL::uuid AS alternateid,
+               NULL::text AS subject,
+               NULL::text AS body,
+               NULL::text AS fromaddress,
+               NULL::text AS toaddress,
+               NULL::text AS contenttype
+        WHERE FALSE;
+        RETURN;
+    ELSE
+        UPDATE notifications.resourcelimitlog
+        SET emaillimittimeout = NULL
+        WHERE id = v_limitlog_id;
+    END IF;
+
+    RETURN QUERY
+    WITH claimed_new_rows AS (
+        SELECT
+            email._id,
+            email.alternateid,
+            email.customizedsubject,
+            email.customizedbody,
+            email.toaddress,
+            email._orderid
+        FROM notifications.emailnotifications email
+        JOIN notifications.orders o ON o._id = email._orderid
+        WHERE email.result = 'New'::emailnotificationresulttype
+            AND email.expirytime >= now()
+            -- exclude Composed orders — they are processed through a dedicated pipeline
+            AND o.type <> 'Composed'
+        ORDER BY email._id
+        FOR UPDATE OF email SKIP LOCKED
+        LIMIT v_batchsize
+    ),
+    updated_rows AS (
+        UPDATE notifications.emailnotifications email
+        SET resulttime = now(),
+            result = 'Sending'::emailnotificationresulttype
+        FROM claimed_new_rows claimed
+        WHERE email._id = claimed._id
+        RETURNING
+            claimed.alternateid,
+            claimed.customizedsubject,
+            claimed.customizedbody,
+            claimed.toaddress,
+            claimed._orderid
+    )
+    -- Join with large text data AFTER releasing locks
+    SELECT
+        updated.alternateid,
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
+        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
+        txt.fromaddress,
+        updated.toaddress,
+        txt.contenttype
+    FROM updated_rows updated
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
+END;
+$BODY$;
+
+ALTER FUNCTION notifications.claim_email_batch_v2(integer)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
+    IS 'Claims and returns batches of email notifications, excluding Composed orders (OrderType = 3).
+Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
+_batchsize: requested batch size (defaults to 500 if NULL or <1).';
+
+
 -- deleteoldstatusfeedrecords.sql:
 -- Creates or replaces a function to delete statusfeed records older than 90 days
 CREATE OR REPLACE FUNCTION notifications.delete_old_status_feed_records()
@@ -459,6 +549,70 @@ COMMENT ON FUNCTION notifications.delete_old_test_data()
     IS 'This function performs cleanup of test-specific data based on hard-coded criteria used in use case tests. 
 	It removes records from notifications.orders, notifications.emailnotifications (cascading delete), and notifications.smsnotifications (cascading delete), 
 	using email addresses, mobile numbers, and synthetic organizations used only for testing. This ensures test data does not accumulate.';
+
+
+-- getcomposedorderchaintracking.sql:
+-- Retrieves tracking information for a composed email order chain using the creator's short name and idempotency identifier.
+CREATE OR REPLACE FUNCTION notifications.get_composed_order_chain_tracking
+(
+    _creatorname text,
+    _idempotencyid text
+)
+RETURNS TABLE (
+    orders_chain_id uuid,
+    shipment_id uuid,
+    senders_reference text
+)
+LANGUAGE 'plpgsql'
+STABLE
+AS $BODY$
+DECLARE
+    v_record_exists boolean;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1
+        FROM notifications.orderschain
+        WHERE creatorname = _creatorname
+        AND idempotencyid = _idempotencyid
+        -- include only type 'Composed' (3)
+        AND orderchain->>'Type' = '3'
+    ) INTO v_record_exists;
+
+    IF NOT v_record_exists THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        orders_chain.orderid AS orders_chain_id,
+        (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
+        orders_chain.orderchain->>'SendersReference' AS senders_reference
+    FROM
+        notifications.orderschain orders_chain
+    WHERE
+        orders_chain.creatorname = _creatorname
+        AND orders_chain.idempotencyid = _idempotencyid
+        -- include only type 'Composed' (3)
+        AND orders_chain.orderchain->>'Type' = '3';
+END;
+$BODY$;
+
+COMMENT ON FUNCTION notifications.get_composed_order_chain_tracking IS
+'Retrieves tracking information for a composed email order chain using the creator''s short name and idempotency identifier.
+
+This function is scoped exclusively to composed email orders (OrderType = 3) to ensure idempotency
+identifiers are isolated per order type. Composed email orders do not support reminders, so no
+reminders column is returned. Use get_orders_chain_tracking_v2 for standard notification orders
+and get_instant_order_tracking for instant orders.
+
+Parameters:
+- _creatorname: The short name of the creator that originally submitted the composed email order chain
+- _idempotencyid: The idempotency identifier that was defined when the order chain was created
+
+Returns a table with the following columns:
+- orders_chain_id: The unique identifier for the entire order chain
+- shipment_id: The unique identifier for the main notification order
+- senders_reference: The sender''s reference for the main notification order (may be null).';
 
 
 -- getemailmetrics.sql:
@@ -1007,7 +1161,7 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text,
     reminders jsonb
-) 
+)
 LANGUAGE 'plpgsql'
 STABLE
 AS $BODY$
@@ -1015,19 +1169,20 @@ DECLARE
     v_record_exists boolean;
 BEGIN
     SELECT EXISTS (
-        SELECT 1 
-        FROM notifications.orderschain 
+        SELECT 1
+        FROM notifications.orderschain
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
+        -- include only type 'Notification' (0) and legacy records without a type
         AND (orderchain->>'Type' = '0' OR orderchain->>'Type' IS NULL)
     ) INTO v_record_exists;
-    
+
     IF NOT v_record_exists THEN
         RETURN;
     END IF;
 
     RETURN QUERY
-    SELECT 
+    SELECT
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
         orders_chain.orderchain->>'SendersReference' AS senders_reference,
@@ -1039,8 +1194,8 @@ BEGIN
                 )
             )
             FROM jsonb_array_elements(
-                CASE 
-                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND 
+                CASE
+                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND
                          (orders_chain.orderchain->'Reminders') IS NOT NULL AND
                          (orders_chain.orderchain->'Reminders') <> 'null'::jsonb
                     THEN orders_chain.orderchain->'Reminders'
@@ -1049,9 +1204,9 @@ BEGIN
             ) AS reminder),
             '[]'::jsonb
         ) AS reminders
-    FROM 
+    FROM
         notifications.orderschain orders_chain
-    WHERE 
+    WHERE
         orders_chain.creatorname = _creatorname
         AND orders_chain.idempotencyid = _idempotencyid
         -- include only type 'Notification' (0) and legacy records without a type
@@ -1059,7 +1214,7 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION notifications.get_orders_chain_tracking_v2 IS 
+COMMENT ON FUNCTION notifications.get_orders_chain_tracking_v2 IS
 'Retrieves tracking information for a notification order chain using the creator''s short name and idempotency identifier.
 
 This function is scoped to standard notification orders (OrderType = 0) to ensure idempotency
