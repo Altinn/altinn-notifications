@@ -62,12 +62,11 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
-        var singleResult = result.FirstOrDefault();
 
         // Assert
-        Assert.NotNull(singleResult);
+        Assert.NotNull(result[0]);
         Assert.Single(result);
-        Assert.Equivalent(expected, singleResult);
+        Assert.Equivalent(expected, result[0]);
     }
 
     [Fact]
