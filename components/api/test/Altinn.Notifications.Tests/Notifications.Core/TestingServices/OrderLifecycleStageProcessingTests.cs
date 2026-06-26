@@ -260,7 +260,7 @@ public class OrderLifecycleStageProcessingTests
             .Returns((DateTime dt) => dt.AddHours(48));
 
         var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
-        smsNotificationServiceMock.Setup(x => x.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>())).ReturnsAsync([]);
+        smsNotificationServiceMock.Setup(x => x.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
 
         return new SmsOrderProcessingService(
             keywordsServiceMock.Object,
