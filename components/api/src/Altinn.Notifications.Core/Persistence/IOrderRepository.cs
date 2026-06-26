@@ -234,4 +234,26 @@ public interface IOrderRepository
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
     Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically inserts all notifications produced during order processing and transitions the order
+    /// to either <see cref="OrderProcessingStatus.Completed"/> or <see cref="OrderProcessingStatus.Processed"/>
+    /// within a single database transaction. If all notifications are immediately terminal (recipient not
+    /// identified or reserved), the order is completed and a status feed entry is written in the same transaction.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the order was transitioned to <see cref="OrderProcessingStatus.Completed"/>;
+    /// <c>false</c> if any notifications are still pending delivery.
+    /// </returns>
+    Task<bool> PersistProcessingResultAsync(
+        NotificationOrder order,
+        EmailOrderProcessingResult emailOrderProcessingResult,
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
+    /// inserts the corresponding status feed entry within a single database transaction.
+    /// </summary>
+    Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default);
 }
