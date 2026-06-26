@@ -14,7 +14,7 @@ public class DashboardRepository : IDashboardRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
+    private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
