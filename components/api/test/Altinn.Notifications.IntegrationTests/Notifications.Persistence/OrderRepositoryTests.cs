@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
@@ -3266,9 +3268,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             ExpirationDateTime: DateTime.UtcNow.AddDays(1));
         var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
 
-        // Act & Assert - constraint violation must propagate
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        // Act & Assert - duplicate alternateid triggers a unique constraint violation
+        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(() =>
             repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken));
+        Assert.Equal("23505", ex.SqlState);
 
         // Verify: no notifications were persisted (first insert rolled back)
         string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
@@ -3318,8 +3321,9 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
             JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
         string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
-        Assert.Contains("\"Recipients\": []", statusJson);
-        Assert.Contains("\"Status\": \"Order_SendConditionNotMet\"", statusJson);
+        using var doc = JsonDocument.Parse(statusJson);
+        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
+        Assert.Equal("Order_SendConditionNotMet", doc.RootElement.GetProperty("Status").GetString());
     }
 
     [Fact]
@@ -3584,7 +3588,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
             JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
         string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
-        Assert.Contains("\"Recipients\": []", statusJson);
+        using var doc = JsonDocument.Parse(statusJson);
+        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
     }
 
     [Fact]
