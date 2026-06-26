@@ -104,7 +104,7 @@ public class OrderProcessingService : IOrderProcessingService
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetOrderSendConditionNotMetAsync(order.Id);
+                await _orderRepository.SetOrderSendConditionNotMetAsync(order);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -175,7 +175,7 @@ public class OrderProcessingService : IOrderProcessingService
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetOrderSendConditionNotMetAsync(order.Id);
+                await _orderRepository.SetOrderSendConditionNotMetAsync(order);
                 break;
 
             case { IsSendConditionMet: true }:

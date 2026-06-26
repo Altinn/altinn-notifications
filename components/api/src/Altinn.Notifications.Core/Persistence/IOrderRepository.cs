@@ -241,5 +241,5 @@ public interface IOrderRepository
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
     /// inserts the corresponding status feed entry and notification log entry within a single database transaction.
     /// </summary>
-    Task SetOrderSendConditionNotMetAsync(Guid orderId);
+    Task SetOrderSendConditionNotMetAsync(NotificationOrder order);
 }

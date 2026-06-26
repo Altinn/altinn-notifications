@@ -822,7 +822,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public Task SetOrderSendConditionNotMetAsync(Guid orderId)
+    public Task SetOrderSendConditionNotMetAsync(NotificationOrder order)
     {
         throw new NotImplementedException();
     }
