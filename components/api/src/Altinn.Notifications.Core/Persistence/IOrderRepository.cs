@@ -224,22 +224,24 @@ public interface IOrderRepository
     Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically persists all notifications produced during order processing and, if all notifications
-    /// have reached terminal states, transitions the order to <see cref="OrderProcessingStatus.Completed"/>
-    /// while also inserting the status feed entry and notification log entry — all in one database transaction.
+    /// Atomically inserts all notifications produced during order processing and transitions the order
+    /// to either <see cref="OrderProcessingStatus.Completed"/> or <see cref="OrderProcessingStatus.Processed"/>
+    /// within a single database transaction. If all notifications are immediately terminal (recipient not
+    /// identified or reserved), the order is completed and a status feed entry is written in the same transaction.
     /// </summary>
     /// <returns>
     /// <c>true</c> if the order was transitioned to <see cref="OrderProcessingStatus.Completed"/>;
-    /// <c>false</c> if some notifications are still pending or the order was already completed.
+    /// <c>false</c> if any notifications are still pending delivery.
     /// </returns>
     Task<bool> PersistProcessingResultAsync(
         NotificationOrder order,
         EmailOrderProcessingResult emailOrderProcessingResult,
-        SmsOrderProcessingResult smsOrderProcessingResult);
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
-    /// inserts the corresponding status feed entry and notification log entry within a single database transaction.
+    /// inserts the corresponding status feed entry within a single database transaction.
     /// </summary>
-    Task SetOrderSendConditionNotMetAsync(NotificationOrder order);
+    Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default);
 }

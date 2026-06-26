@@ -1553,6 +1553,7 @@ public class OrderProcessingServiceTests
                 It.IsAny<SmsOrderProcessingResult>()),
             Times.Never);
     }
+
     [Fact]
     public async Task ProcessOrderRetry_SmsOrderWithInvalidConditionResult_ProcessedSuccessfully()
     {
