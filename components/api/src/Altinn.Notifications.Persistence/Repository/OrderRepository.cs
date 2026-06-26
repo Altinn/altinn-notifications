@@ -888,10 +888,11 @@ public class OrderRepository : IOrderRepository
     public async Task<bool> PersistProcessingResultAsync(
         NotificationOrder order,
         EmailOrderProcessingResult emailOrderProcessingResult,
-        SmsOrderProcessingResult smsOrderProcessingResult)
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -903,7 +904,7 @@ public class OrderRepository : IOrderRepository
                 var emailExpiry = emailOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
                 foreach (var notification in emailNotifications)
                 {
-                    await InsertEmailNotificationAsync(notification, emailExpiry, connection, transaction);
+                    await InsertEmailNotificationAsync(notification, emailExpiry, connection, transaction, cancellationToken);
                 }
             }
 
@@ -912,45 +913,45 @@ public class OrderRepository : IOrderRepository
                 var smsExpiry = smsOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
                 foreach (var notification in smsNotifications)
                 {
-                    await InsertSmsNotificationAsync(notification, smsExpiry, connection, transaction);
+                    await InsertSmsNotificationAsync(notification, smsExpiry, connection, transaction, cancellationToken);
                 }
             }
 
             bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
 
             var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
-            await SetProcessingStatusAsync(order.Id, status, connection, transaction);
+            await SetProcessingStatusAsync(order.Id, status, connection, transaction, cancellationToken);
 
             if (isCompleted)
             {
                 await InsertStatusFeedForOrderAsync(order, status, emailNotifications, smsNotifications, connection, transaction);
             }
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
             return isCompleted;
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }
 
     /// <inheritdoc/>
-    public async Task SetOrderSendConditionNotMetAsync(NotificationOrder order)
+    public async Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            await SetProcessingStatusAsync(order.Id, OrderProcessingStatus.SendConditionNotMet, connection, transaction);
+            await SetProcessingStatusAsync(order.Id, OrderProcessingStatus.SendConditionNotMet, connection, transaction, cancellationToken);
             await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }

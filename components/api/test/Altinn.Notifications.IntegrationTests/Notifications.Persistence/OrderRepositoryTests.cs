@@ -3153,7 +3153,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
 
         // Act
-        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult);
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(isCompleted);
@@ -3206,7 +3206,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
 
         // Act
-        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult);
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(isCompleted);
@@ -3268,7 +3268,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert - constraint violation must propagate
         await Assert.ThrowsAnyAsync<Exception>(() =>
-            repo.PersistProcessingResultAsync(order, emailResult, smsResult));
+            repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken));
 
         // Verify: no notifications were persisted (first insert rolled back)
         string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
@@ -3305,7 +3305,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
-        await repo.SetOrderSendConditionNotMetAsync(order);
+        await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
 
         // Assert
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3344,7 +3344,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            repo.SetOrderSendConditionNotMetAsync(ghostOrder));
+            repo.SetOrderSendConditionNotMetAsync(ghostOrder, TestContext.Current.CancellationToken));
 
         string orderCountSql = $"SELECT count(1) FROM notifications.orders WHERE alternateid = '{ghostOrder.Id}'";
         int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderCountSql);
@@ -3394,7 +3394,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var emailResult = new EmailOrderProcessingResult([], ExpirationDateTime: null);
 
         // Act
-        await repo.PersistProcessingResultAsync(order, emailResult, smsResult);
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
         // Assert each persisted field
         string baseQuery = $"FROM notifications.smsnotifications WHERE alternateid = '{notificationId}'";
@@ -3462,7 +3462,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
 
         // Act
-        await repo.PersistProcessingResultAsync(order, emailResult, smsResult);
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
         // Assert each persisted field
         string baseQuery = $"FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
@@ -3530,7 +3530,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var smsResult = new SmsOrderProcessingResult(smsNotifications, ExpirationDateTime: DateTime.UtcNow.AddDays(2));
 
         // Act
-        await repo.PersistProcessingResultAsync(order, emailResult, smsResult);
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
         // Assert counts for both channels
         string emailCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
@@ -3542,5 +3542,133 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             JOIN notifications.orders o ON s._orderid = o._id WHERE o.alternateid = '{order.Id}'";
         int smsCount = await PostgreUtil.RunSqlReturnOutput<int>(smsCountSql);
         Assert.Equal(2, smsCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenBothNotificationListsAreEmpty_CompletesOrderAndWritesEmptyStatusFeed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailResult = new EmailOrderProcessingResult([], ExpirationDateTime: null);
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert: vacuously completed — no notifications, but order finalised and status feed written
+        Assert.True(isCompleted);
+
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
+            JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        Assert.Contains("\"Recipients\": []", statusJson);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenOrderNotInProcessingState_ThrowsAndRollsBack()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Order stays in Registered — never advanced to Processing
+        var emailNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult([emailNotification], ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken));
+
+        // Verify: notification insert rolled back
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(0, notificationCount);
+
+        // Verify: status unchanged (still Registered)
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+    }
+
+    [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_WhenOrderNotInProcessingState_ThrowsAndRollsBack()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Order stays in Registered — never advanced to Processing
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken));
+
+        // Verify: status unchanged (still Registered)
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+
+        // Verify: no status feed entry written
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
     }
 }

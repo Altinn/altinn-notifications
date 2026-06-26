@@ -248,11 +248,12 @@ public interface IOrderRepository
     Task<bool> PersistProcessingResultAsync(
         NotificationOrder order,
         EmailOrderProcessingResult emailOrderProcessingResult,
-        SmsOrderProcessingResult smsOrderProcessingResult);
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
     /// inserts the corresponding status feed entry within a single database transaction.
     /// </summary>
-    Task SetOrderSendConditionNotMetAsync(NotificationOrder order);
+    Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default);
 }
