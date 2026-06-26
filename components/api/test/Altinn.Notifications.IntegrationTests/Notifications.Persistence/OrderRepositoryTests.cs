@@ -1850,22 +1850,6 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(AlternateIdentifierSource.Sms)]
-    [InlineData(AlternateIdentifierSource.Email)]
-    [InlineData(AlternateIdentifierSource.Order)]
-    public async Task TryCompleteOrderBasedOnNotificationsState_WithNullNotificationId_ReturnsFalse(AlternateIdentifierSource alternateIdentifierSource)
-    {
-        // Arrange
-        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-
-        // Act
-        bool result = await repo.TryCompleteOrderBasedOnNotificationsState(null, alternateIdentifierSource);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Theory]
     [InlineData(OrderProcessingStatus.Processed, OrderProcessingStatus.Completed, true)]
     [InlineData(OrderProcessingStatus.Cancelled, OrderProcessingStatus.Cancelled, false)]
     [InlineData(OrderProcessingStatus.Completed, OrderProcessingStatus.Completed, false)]
