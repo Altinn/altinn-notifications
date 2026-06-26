@@ -40,7 +40,6 @@ public class EmailNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(48);
         var emailRecipient = new EmailRecipient() { OrganizationNumber = "skd-orgno" };
         var emailAddressPoints = new List<EmailAddressPoint>() { new("skd@norge.no") };
 
@@ -58,15 +57,17 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        var singleResult = result.FirstOrDefault();
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+        Assert.NotNull(singleResult);
+        Assert.Single(result);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
@@ -99,18 +100,12 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
-        var singleResult = result.FirstOrDefault();
+        var singleResult = result[0];
 
         // Assert
         Assert.NotNull(singleResult);
         Assert.Single(result);
-        Assert.Equal(expected.Id, singleResult.Id);
-        Assert.Equal(expected.OrderId, singleResult.OrderId);
-        Assert.Equal(expected.RequestedSendTime, singleResult.RequestedSendTime);
-        Assert.Equal(expected.Recipient.IsReserved, singleResult.Recipient.IsReserved);
-        Assert.Equal(expected.Recipient.ToAddress, singleResult.Recipient.ToAddress);
-        Assert.Equal(expected.SendResult.Result, singleResult.SendResult.Result);
-        Assert.Equal(expected.SendResult.ResultTime, singleResult.SendResult.ResultTime);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
@@ -145,18 +140,12 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient, true);
-        var singleResult = result.FirstOrDefault();
+        var singleResult = result[0];
 
         // Assert
         Assert.Single(result);
         Assert.NotNull(singleResult);
-        Assert.Equal(expected.Id, singleResult.Id);
-        Assert.Equal(expected.OrderId, singleResult.OrderId);
-        Assert.Equal(expected.RequestedSendTime, singleResult.RequestedSendTime);
-        Assert.Equal(expected.Recipient.IsReserved, singleResult.Recipient.IsReserved);
-        Assert.Equal(expected.Recipient.ToAddress, singleResult.Recipient.ToAddress);
-        Assert.Equal(expected.SendResult.Result, singleResult.SendResult.Result);
-        Assert.Equal(expected.SendResult.ResultTime, singleResult.SendResult.ResultTime);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
@@ -167,7 +156,6 @@ public class EmailNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = dateTimeOutput;
         var emailAddressPoints = new List<EmailAddressPoint>();
         var emailRecipient = new EmailRecipient() { OrganizationNumber = "skd-orgno" };
 
@@ -184,15 +172,17 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
+        var singleResult = result[0];
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+        Assert.Single(result);
+        Assert.NotNull(singleResult);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
