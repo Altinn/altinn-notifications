@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -244,7 +245,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task InsertStatusFeedForOrder(Guid orderId)
+    public async Task InsertStatusFeedAndNotificationLogForOrder(Guid orderId)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
@@ -298,6 +299,9 @@ public class OrderRepository : IOrderRepository
 
                 // Insert status feed entry
                 await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+
+                // Insert notification log entry
+                await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
             }
 
             await transaction.CommitAsync();

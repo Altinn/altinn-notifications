@@ -211,7 +211,7 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <summary>
-    /// Attempts to insert a status feed entry for a completed order.
+    /// Attempts to insert a status feed entry and a notification log entry for a completed order.
     /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
     /// </summary>
     /// <param name="orderId">The unique identifier of the completed order.</param>
@@ -219,12 +219,12 @@ public class OrderProcessingService : IOrderProcessingService
     {
         try
         {
-            await _orderRepository.InsertStatusFeedForOrder(orderId);
+            await _orderRepository.InsertStatusFeedAndNotificationLogForOrder(orderId);
         }
         catch (Exception ex)
         {
             var maskedOrderId = string.Concat(orderId.ToString().AsSpan(0, 8), "****");
-            _logger.LogWarning(ex, "Failed to insert status feed for completed order {OrderId}.", maskedOrderId);
+            _logger.LogWarning(ex, "Failed to insert status feed and notification log for completed order {OrderId}.", maskedOrderId);
         }
     }
 
