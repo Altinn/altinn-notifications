@@ -48,7 +48,15 @@ public class SmsNotificationService : ISmsNotificationService
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
-            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientReserved));
+            var reservedRecipient = new SmsRecipient
+                {
+                    IsReserved = recipient.IsReserved,
+                    OrganizationNumber = recipient.OrganizationNumber,
+                    NationalIdentityNumber = recipient.NationalIdentityNumber,
+                    CustomizedBody = recipient.CustomizedBody,
+                    MobileNumber = string.Empty
+                };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, reservedRecipient, SmsNotificationResultType.Failed_RecipientReserved));
             return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
         }
 
