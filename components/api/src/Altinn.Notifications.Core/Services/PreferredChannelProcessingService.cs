@@ -41,6 +41,14 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
     private async Task<OrderProcessingResult> ProcessOrderInternal(NotificationOrder order, bool isRetry)
     {
+        if (order.NotificationChannel is not (NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(order),
+                order.NotificationChannel,
+                $"Preferred channel processing only supports {NotificationChannel.EmailPreferred} and {NotificationChannel.SmsPreferred}.");
+        }
+
         List<Recipient> recipients = order.Recipients;
         List<Recipient> recipientsWithoutContactPoint =
             [.. recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))];
@@ -53,8 +61,8 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         List<Recipient> preferredChannelRecipients;
         List<Recipient> fallBackChannelRecipients;
 
-        EmailOrderProcessingResult emailResult;
-        SmsOrderProcessingResult smsResult;
+        EmailOrderProcessingResult emailResult = new([], null);
+        SmsOrderProcessingResult smsResult = new([], null);
 
         switch (order.NotificationChannel)
         {
@@ -91,11 +99,6 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 }
 
                 break;
-
-            default:
-                throw new ArgumentOutOfRangeException(
-                    nameof(order),
-                    $"Preferred channel processing only supports {NotificationChannel.EmailPreferred} and {NotificationChannel.SmsPreferred}. Got: {order.NotificationChannel}.");
         }
 
         return new OrderProcessingResult(
