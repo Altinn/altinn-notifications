@@ -255,6 +255,62 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Post_MultipleFileReferences_ReturnsCreated()
+    {
+        // Arrange
+        var request = new ComposedEmailRequestExt
+        {
+            SendersReference = "ref-multi-001",
+            IdempotencyId = Guid.NewGuid().ToString(),
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new RecipientComposedEmailExt
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptionsExt
+                {
+                    Subject = "Decision with supporting documents",
+                    Body = "Please review all attached documents.",
+                    Attachments =
+                    [
+                        new SasFileReferenceExt
+                        {
+                            Filename = "decision.pdf",
+                            MimeType = "application/pdf",
+                            SasUrl = _validSasUrl
+                        },
+                        new SasFileReferenceExt
+                        {
+                            Filename = "appendix.docx",
+                            MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2"
+                        },
+                        new SasFileReferenceExt
+                        {
+                            Filename = "evidence.xlsx",
+                            MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3"
+                        }
+                    ]
+                }
+            }
+        };
+
+        var expectedResponse = CreateOrderChainResponse();
+        var client = GetTestClient(expectedResponse);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
+
+        // Act
+        var response = await SendPostRequest(client, request);
+        var responseObject = await DeserializeResponse(response);
+
+        // Assert
+        Assert.NotNull(responseObject);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+    }
+
     private static ComposedEmailRequestExt ValidRequest() => new()
     {
         IdempotencyId = Guid.NewGuid().ToString(),

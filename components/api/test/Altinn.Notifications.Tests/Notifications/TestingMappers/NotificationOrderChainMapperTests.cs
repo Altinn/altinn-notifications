@@ -2409,6 +2409,57 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithAttachmentsRequest_AllFileReferencesMapCorrectly()
+    {
+        // Arrange
+        var sasUrl1 = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1";
+        var sasUrl2 = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2";
+        var sasUrl3 = "https://altinnstorageaccount.blob.core.windows.net/attachments/signature.png?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3";
+
+        var requestExt = new ComposedEmailRequestExt
+        {
+            IdempotencyId = "D4E5F6A7-B8C9-0123-DEFA-234567890123",
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            Recipient = new RecipientComposedEmailExt
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptionsExt
+                {
+                    Subject = "Multi-document notification",
+                    Body = "Please see the attached documents.",
+                    Attachments =
+                    [
+                        new SasFileReferenceExt { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
+                        new SasFileReferenceExt { Filename = "appendix.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = sasUrl2 },
+                        new SasFileReferenceExt { Filename = "signature.png", MimeType = "image/png", SasUrl = sasUrl3 }
+                    ]
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientComposedEmail);
+        var attachments = result.Recipient.RecipientComposedEmail.Settings.Attachments;
+        Assert.Equal(3, attachments.Count);
+        Assert.Null(result.Reminders);
+
+        Assert.Equal(sasUrl1, attachments[0].SasUrl);
+        Assert.Equal("decision.pdf", attachments[0].Filename);
+        Assert.Equal("application/pdf", attachments[0].MimeType);
+
+        Assert.Equal(sasUrl2, attachments[1].SasUrl);
+        Assert.Equal("appendix.xlsx", attachments[1].Filename);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", attachments[1].MimeType);
+
+        Assert.Equal(sasUrl3, attachments[2].SasUrl);
+        Assert.Equal("image/png", attachments[2].MimeType);
+        Assert.Equal("signature.png", attachments[2].Filename);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithAttachmentsRequestContainingNewlinesInSubject_ReplacesNewlinesWithSingleWhiteSpace()
     {
         // Arrange

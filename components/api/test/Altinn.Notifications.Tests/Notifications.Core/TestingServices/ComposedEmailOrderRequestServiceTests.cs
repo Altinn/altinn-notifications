@@ -247,6 +247,77 @@ public class ComposedEmailOrderRequestServiceTests
             service.RegisterComposedEmailOrderChain(request, cts.Token));
     }
 
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_WithMultipleFileReferences_PersistsAllAttachments()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid chainId = Guid.NewGuid();
+
+        var sasUrl1 = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig1";
+        var sasUrl2 = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig2";
+        var sasUrl3 = "https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig3";
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientComposedEmail = new RecipientComposedEmail
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptions
+                {
+                    Subject = "Decision with supporting documents",
+                    Body = "Please review all attached documents.",
+                    Attachments =
+                    [
+                        new SasFileReference { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
+                        new SasFileReference { Filename = "appendix.docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", SasUrl = sasUrl2 },
+                        new SasFileReference { Filename = "evidence.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = sasUrl3 }
+                    ]
+                }
+            }
+        };
+
+        var request = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId).SetOrderChainId(chainId).SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd")).SetIdempotencyId("multi-attach-001")
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1)).SetRecipient(recipient).Build();
+
+        NotificationOrder? capturedOrder = null;
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.EmailAttachments != null && o.EmailAttachments.Count == 3),
+                null,
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var service = GetTestService(repoMock.Object);
+
+        // Act
+        await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedOrder);
+        Assert.NotNull(capturedOrder.EmailAttachments);
+        Assert.Equal(3, capturedOrder.EmailAttachments.Count);
+
+        Assert.Equal(sasUrl1, capturedOrder.EmailAttachments[0].SasUrl);
+        Assert.Equal("decision.pdf", capturedOrder.EmailAttachments[0].Filename);
+        Assert.Equal("application/pdf", capturedOrder.EmailAttachments[0].MimeType);
+
+        Assert.Equal(sasUrl2, capturedOrder.EmailAttachments[1].SasUrl);
+        Assert.Equal("appendix.docx", capturedOrder.EmailAttachments[1].Filename);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.wordprocessingml.document", capturedOrder.EmailAttachments[1].MimeType);
+
+        Assert.Equal(sasUrl3, capturedOrder.EmailAttachments[2].SasUrl);
+        Assert.Equal("evidence.xlsx", capturedOrder.EmailAttachments[2].Filename);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", capturedOrder.EmailAttachments[2].MimeType);
+
+        repoMock.VerifyAll();
+    }
+
     private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId, DateTime requestedSendTime, string? sendersReference = null)
     {
         var recipient = new NotificationRecipient
