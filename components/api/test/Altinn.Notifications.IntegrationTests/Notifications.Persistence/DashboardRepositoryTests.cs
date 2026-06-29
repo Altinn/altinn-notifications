@@ -209,7 +209,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         };
 
         await emailRepo.AddNotification(emailNotification, requestedSendTime.AddDays(1));
-        await smsRepo.AddNotification(smsNotification, requestedSendTime.AddDays(1), 1);
+        await smsRepo.AddNotification(smsNotification, requestedSendTime.AddDays(1));
 
         _orderIdsToDelete.Add(order.Id);
         return order.Id;
@@ -243,7 +243,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
             SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
         };
 
-        await smsRepo.AddNotification(notification, requestedSendTime.AddDays(1), 1);
+        await smsRepo.AddNotification(notification, requestedSendTime.AddDays(1));
 
         _orderIdsToDelete.Add(order.Id);
         return order.Id;
