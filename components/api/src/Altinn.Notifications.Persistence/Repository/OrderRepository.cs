@@ -13,7 +13,6 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
-using Altinn.Notifications.Persistence.Utils;
 
 using Npgsql;
 using NpgsqlTypes;
@@ -48,8 +47,6 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
-    private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
-    private const string _getShipmentTrackingSql = "SELECT * FROM notifications.get_shipment_tracking_v3(@alternateid, @creatorname)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
