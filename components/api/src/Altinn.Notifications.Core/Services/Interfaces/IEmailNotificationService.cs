@@ -10,28 +10,24 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IEmailNotificationService : INotificationService
 {
     /// <summary>
-    /// Creates a new email notification.
+    /// Builds in-memory email notifications for the given recipient and address points.
+    /// Does not persist. Expiry time is computed internally.
     /// </summary>
     /// <param name="orderId">The unique identifier for the order associated with the notification.</param>
     /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
     /// <param name="emailAddresses">The list of email addresses to send the notification to.</param>
     /// <param name="emailRecipient">The email recipient to send the notification to.</param>
     /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
+    /// <returns>A read-only list of the materialized <see cref="EmailNotification"/> instances, not yet persisted.</returns>
+    Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
     /// Sends pending email notifications.
     /// </summary>
-    /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
     Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Updates the send status of a notification.
+    /// Updates the send status of an email notification based on the provided send operation result.
     /// </summary>
-    /// <param name="sendOperationResult">The result of the send operation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
     Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 }

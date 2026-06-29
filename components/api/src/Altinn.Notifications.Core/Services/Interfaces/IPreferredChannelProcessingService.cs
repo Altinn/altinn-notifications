@@ -3,17 +3,23 @@
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the order processing service speficic to email or sms preferred orders
+/// Interface for the order processing service specific to email or SMS preferred orders.
 /// </summary>
 public interface IPreferredChannelProcessingService
 {
     /// <summary>
-    /// Processes a notification order
+    /// Processes a notification order using the preferred channel strategy.
+    /// Returns an in-memory result containing all materialized notifications; does not persist.
     /// </summary>
-    public Task ProcessOrder(NotificationOrder order);
+    /// <param name="order">The notification order to process.</param>
+    /// <returns>The materialized <see cref="OrderProcessingResult"/>, not yet persisted.</returns>
+    Task<OrderProcessingResult> ProcessOrder(NotificationOrder order);
 
     /// <summary>
-    /// Retry processing of an order
+    /// Retries processing of a notification order using the preferred channel strategy.
+    /// Returns an in-memory result containing all materialized notifications; does not persist.
     /// </summary>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    /// <param name="order">The notification order to retry processing.</param>
+    /// <returns>The materialized <see cref="OrderProcessingResult"/>, not yet persisted.</returns>
+    Task<OrderProcessingResult> ProcessOrderRetry(NotificationOrder order);
 }
