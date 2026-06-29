@@ -212,9 +212,6 @@ public static class ServiceUtil
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
         services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
-        services.AddSingleton<NotificationLogRepository>();
-        services.AddSingleton<INotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>());
-        services.AddSingleton<ITransactionalNotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>());
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment

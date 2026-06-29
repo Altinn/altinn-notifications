@@ -35,25 +35,20 @@ public abstract class NotificationRepositoryBase
     private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
 
-    private readonly ITransactionalNotificationLogRepository _notificationLogRepository;
-
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
     /// </summary>
     /// <param name="dataSource">The datasource used to integrate with the database</param>
     /// <param name="logger">The logger associated with the above implementation</param>
     /// <param name="config">The notification configuration</param>
-    /// <param name="notificationLogRepository">The notification log repository.</param>
     protected NotificationRepositoryBase(
         NpgsqlDataSource dataSource,
         ILogger logger,
-        IOptions<NotificationConfig> config,
-        ITransactionalNotificationLogRepository notificationLogRepository)
+        IOptions<NotificationConfig> config)
     {
         _dataSource = dataSource;
         _logger = logger;
         _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
-        _notificationLogRepository = notificationLogRepository;
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -168,10 +163,7 @@ public abstract class NotificationRepositoryBase
         if (orderStatus != null)
         {
             await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
-            await _notificationLogRepository.InsertAsync(
-                orderStatus.ShipmentId,
-                connection,
-                transaction);
+            await NotificationLogRepository.InsertNotificationLogEntry(orderStatus.ShipmentId, connection, transaction);
         }
         else
         {

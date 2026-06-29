@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -49,12 +49,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
-           .GetServices([typeof(INotificationLogRepository)])
-           .First(i => i.GetType() == typeof(NotificationLogRepository));
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act
-        int rowsInserted = await repo.InsertAsync(orderId);
+        int rowsInserted = await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert — row count
         Assert.Equal(1, rowsInserted);
@@ -99,12 +100,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
-            .GetServices([typeof(INotificationLogRepository)])
-            .First(i => i.GetType() == typeof(NotificationLogRepository));
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act
-        int rowsInserted = await repo.InsertAsync(orderId);
+        int rowsInserted = await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert — row count
         Assert.Equal(1, rowsInserted);
@@ -136,12 +138,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 
         _orderIdsToCleanup.Add(order.Id);
 
-        NotificationLogRepository repo = (NotificationLogRepository)ServiceUtil
-            .GetServices([typeof(INotificationLogRepository)])
-            .First(i => i.GetType() == typeof(NotificationLogRepository));
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act
-        int rowsInserted = await repo.InsertAsync(order.Id);
+        int rowsInserted = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert — one log row was created
         Assert.Equal(1, rowsInserted);

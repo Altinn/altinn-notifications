@@ -38,13 +38,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
     /// <param name="config">The notification configuration</param>
-    /// <param name="notificationLogRepository">The transactional notification log repository.</param>
     public EmailNotificationRepository(
         NpgsqlDataSource dataSource,
         ILogger<EmailNotificationRepository> logger,
-        ITransactionalNotificationLogRepository notificationLogRepository,
         IOptions<NotificationConfig> config)
-    : base(dataSource, logger, config, notificationLogRepository)
+    : base(dataSource, logger, config)
     {
         _dataSource = dataSource;
     }

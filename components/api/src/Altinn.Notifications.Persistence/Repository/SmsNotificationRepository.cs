@@ -39,13 +39,11 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the ISmsNotificationRepository</param>
     /// <param name="config">The notification configuration</param>
-    /// <param name="notificationLogRepository">The transactional notification log repository.</param>
     public SmsNotificationRepository(
         NpgsqlDataSource dataSource,
         ILogger<SmsNotificationRepository> logger,
-        ITransactionalNotificationLogRepository notificationLogRepository,
         IOptions<NotificationConfig> config)
-        : base(dataSource, logger, config, notificationLogRepository)
+        : base(dataSource, logger, config)
     {
         _dataSource = dataSource;
     }
