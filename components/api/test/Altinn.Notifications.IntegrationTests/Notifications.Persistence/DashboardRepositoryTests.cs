@@ -102,9 +102,9 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(OrderType.Reminder, "reminder")]
-    [InlineData(OrderType.Instant, "instant")]
-    [InlineData(OrderType.Notification, "notification")]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
     public async Task GetDashboardNotificationsByNinAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
     {
         // Arrange

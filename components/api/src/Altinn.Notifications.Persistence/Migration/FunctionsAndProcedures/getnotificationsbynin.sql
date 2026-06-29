@@ -164,7 +164,7 @@ Returns a table with the following columns:
 - shipmentid: The unique identifier for the shipment order
 - sendersreference: The sender''s reference for the order
 - creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''notification'',''reminder'')
+- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
 - resourceid: The Altinn resource the notification is related to (may be null)
 - notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
 - requestedsendtime: When the notification was requested to be sent

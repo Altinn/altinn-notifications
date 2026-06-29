@@ -38,7 +38,7 @@ public record DashboardNotification
     public NotificationChannel? NotificationChannel { get; init; }
 
     /// <summary>
-    /// The type of notification for the order (e.g. "notification", "reminder", "instant")
+    /// The type of notification for the order (e.g. "Notification", "Reminder", "Instant")
     /// </summary>
     public string NotificationType { get; init; }
 
