@@ -226,10 +226,13 @@ public class SmsNotificationServiceTests
     public async Task CreateNotification_RecipientHasTwoMobileNumbers_RepositoryCalledOnceForEachNumber()
     {
         // Arrange        
+        var expectedMobileNumber1 = "+4748123456";
+        var expectedMobileNumber2 = "+4799123456";
+
         Recipient recipient = new()
         {
             OrganizationNumber = "org",
-            AddressInfo = new List<IAddressPoint> { new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4799123456") }
+            AddressInfo = new List<IAddressPoint> { new SmsAddressPoint(expectedMobileNumber1), new SmsAddressPoint(expectedMobileNumber2) }
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
@@ -241,6 +244,8 @@ public class SmsNotificationServiceTests
 
         // Assert
         Assert.Equal(2, result.Count(x => x.Recipient.OrganizationNumber == "org"));
+        Assert.Equal(expectedMobileNumber1, result[0].Recipient.MobileNumber);
+        Assert.Equal(expectedMobileNumber2, result[1].Recipient.MobileNumber);
     }
 
     [Fact]
