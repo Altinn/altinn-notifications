@@ -9,7 +9,7 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text
 )
-LANGUAGE 'plpgsql'
+LANGUAGE sql
 STABLE
 AS $BODY$
     SELECT

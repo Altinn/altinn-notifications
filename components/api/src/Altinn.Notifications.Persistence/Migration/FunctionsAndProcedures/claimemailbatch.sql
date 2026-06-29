@@ -131,7 +131,7 @@ BEGIN
         JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type <> 'Composed'::orderprocessingstate
+            AND o.type <> 'Composed'::notificationordertype
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
