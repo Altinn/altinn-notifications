@@ -186,19 +186,19 @@ public static class PostgreUtil
         {
             await OrderRepo.Create(order);
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
         }
         else if (simulateCronJob && !simulateConsumers)
         {
             await OrderRepo.Create(order);
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
         else
         {
             await OrderRepo.Create(order);
-            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
 
         return (order, smsNotification);
@@ -253,8 +253,8 @@ public static class PostgreUtil
 
         await OrderRepo.Create(order);
         await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await SmsNotificationRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1), 1);
-        await SmsNotificationRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1), 1);
+        await SmsNotificationRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1));
+        await SmsNotificationRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1));
         await EmailNotificationRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
         await EmailNotificationRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
 

@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -22,10 +23,6 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailOrderProcessingService"/> class.
     /// </summary>
-    /// <param name="emailNotificationRepository">The email notification repository.</param>
-    /// <param name="emailService">The email notification service.</param>
-    /// <param name="contactPointService">The contact point service.</param>
-    /// <param name="keywordsService">The keywords service.</param>
     public EmailOrderProcessingService(
         IEmailNotificationRepository emailNotificationRepository,
         IEmailNotificationService emailService,
@@ -39,30 +36,33 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrder(NotificationOrder order)
+    public async Task<EmailOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
         ArgumentNullException.ThrowIfNull(order);
 
         var recipients = await UpdateRecipientsWithContactPointsAsync(order);
 
-        await ProcessOrderWithoutAddressLookup(order, recipients);
+        return await ProcessOrderWithoutAddressLookup(order, recipients);
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetry(NotificationOrder order)
+    public async Task<EmailOrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
     {
         ArgumentNullException.ThrowIfNull(order);
 
         var recipients = await UpdateRecipientsWithContactPointsAsync(order);
 
-        await ProcessOrderRetryWithoutAddressLookup(order, recipients);
+        return await ProcessOrderRetryWithoutAddressLookup(order, recipients);
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    public async Task<EmailOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
         var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
+        var expiryTime = order.RequestedSendTime.AddHours(48);
+
+        var notifications = new List<EmailNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -81,19 +81,25 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
             List<EmailAddressPoint> emailAddresses = addressPoint != null ? [addressPoint] : [];
 
-            await _emailService.CreateNotification(
+            var created = await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 emailAddresses,
                 emailRecipient,
                 order.IgnoreReservation ?? false);
+
+            notifications.AddRange(created);
         }
+
+        return new EmailOrderProcessingResult(notifications, expiryTime);
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    public async Task<EmailOrderProcessingResult> ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
+        var expiryTime = order.RequestedSendTime.AddHours(48);
+        var notifications = new List<EmailNotification>();
 
         foreach (var recipient in recipients)
         {
@@ -105,13 +111,17 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             var matchedEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
             var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
 
-            await _emailService.CreateNotification(
+            var created = await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 emailAddresses,
                 emailRecipient,
                 order.IgnoreReservation ?? false);
+
+            notifications.AddRange(created);
         }
+
+        return new EmailOrderProcessingResult(notifications, expiryTime);
     }
 
     /// <summary>
@@ -155,7 +165,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// </summary>
     /// <param name="emailRecipients">The list of email recipients.</param>
     /// <param name="recipient">The recipient to match.</param>
-    /// <returns>The matching email recipient, or null if no match is found.</returns>
+    /// <returns>The matching email recipient, or <c>null</c> if no match is found.</returns>
     private static EmailRecipient? FindEmailRecipient(IEnumerable<EmailRecipient> emailRecipients, Recipient recipient)
     {
         return emailRecipients.FirstOrDefault(er =>

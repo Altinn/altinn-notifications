@@ -2030,7 +2030,7 @@ $BODY$;
 
 
 -- insertsmsnotification.sql:
-CREATE OR REPLACE PROCEDURE notifications.insertsmsnotification(
+CREATE OR REPLACE PROCEDURE notifications.insertsmsnotification_v2(
     _orderid uuid,
     _alternateid uuid,
     _recipientorgno TEXT,
@@ -2038,7 +2038,6 @@ CREATE OR REPLACE PROCEDURE notifications.insertsmsnotification(
     _mobilenumber TEXT,
     _customizedbody TEXT,
     _result TEXT,
-    _smscount integer,
     _resulttime timestamptz,
     _expirytime timestamptz
 )
@@ -2047,7 +2046,7 @@ AS $BODY$
 DECLARE
     __orderid BIGINT;
 BEGIN
-    SELECT _id INTO __orderid 
+    SELECT _id INTO __orderid
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -2059,7 +2058,6 @@ BEGIN
         mobilenumber,
         customizedbody,
         result,
-        smscount,
         resulttime,
         expirytime
     )
@@ -2071,7 +2069,6 @@ BEGIN
         _mobilenumber,
         _customizedbody,
         _result::smsnotificationresulttype,
-        _smscount,
         _resulttime,
         _expirytime
     );
