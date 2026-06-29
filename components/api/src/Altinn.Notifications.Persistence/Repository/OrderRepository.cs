@@ -431,8 +431,7 @@ public class OrderRepository : IOrderRepository
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 ShipmentId = shipmentId,
-                SendersReference = sendersReference,
-                Reminders = null
+                SendersReference = sendersReference
             }
         };
     }

@@ -2327,9 +2327,15 @@ public class NotificationOrderChainMapperTests
         var sendTime = DateTime.UtcNow.AddHours(2);
         var requestExt = new ComposedEmailRequestExt
         {
+            RequestedSendTime = sendTime,
             SendersReference = "ref-attach-001",
             IdempotencyId = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
-            RequestedSendTime = sendTime,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            DialogportenAssociation = new DialogportenIdentifiersExt
+            {
+                DialogId = "dialog-123",
+                TransmissionId = "transmission-456"
+            },
             Recipient = new RecipientComposedEmailExt
             {
                 EmailAddress = "recipient@agency.no",
@@ -2363,8 +2369,8 @@ public class NotificationOrderChainMapperTests
         // Assert — order-level properties
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
-        Assert.NotEqual(Guid.Empty, result.OrderChainId);
         Assert.Equal(OrderType.Composed, result.Type);
+        Assert.NotEqual(Guid.Empty, result.OrderChainId);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-attach-001", result.SendersReference);
@@ -2394,9 +2400,12 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(requestExt.Recipient.Settings.Attachments[1].SasUrl, secondAttachment.SasUrl);
         Assert.Equal("application/vnd.openxmlformats-officedocument.wordprocessingml.document", secondAttachment.MimeType);
 
-        // Assert — no reminders, no dialogporten association
+        // Assert — no reminders; condition endpoint and dialogporten association mapped correctly
         Assert.Null(result.Reminders);
-        Assert.Null(result.DialogportenAssociation);
+        Assert.NotNull(result.DialogportenAssociation);
+        Assert.Equal("dialog-123", result.DialogportenAssociation.DialogId);
+        Assert.Equal(new Uri("https://vg.no/condition"), result.ConditionEndpoint);
+        Assert.Equal("transmission-456", result.DialogportenAssociation.TransmissionId);
     }
 
     [Fact]
@@ -2440,8 +2449,8 @@ public class NotificationOrderChainMapperTests
         // Arrange
         var requestExt = new ComposedEmailRequestExt
         {
-            IdempotencyId = "C3D4E5F6-A7B8-9012-CDEF-123456789012",
             RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            IdempotencyId = "C3D4E5F6-A7B8-9012-CDEF-123456789012",
             DialogportenAssociation = new DialogportenIdentifiersExt
             {
                 DialogId = "dialog-abc",

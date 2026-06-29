@@ -1,6 +1,5 @@
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
@@ -15,27 +14,17 @@ namespace Altinn.Notifications.Core.Services;
 /// Implements <see cref="IComposedEmailOrderRequestService"/> to handle registration
 /// and tracking of composed email notification orders.
 /// </summary>
-public class ComposedEmailOrderRequestService : IComposedEmailOrderRequestService
+/// <remarks>
+/// Initializes a new instance of the <see cref="ComposedEmailOrderRequestService"/> class.
+/// </remarks>
+public class ComposedEmailOrderRequestService(
+    IDateTimeService dateTime,
+    IOrderRepository repository,
+    IOptions<NotificationConfig> config) : IComposedEmailOrderRequestService
 {
-    private readonly string _defaultEmailFromAddress;
-    private readonly IDateTimeService _dateTime;
-    private readonly IGuidService _guid;
-    private readonly IOrderRepository _repository;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ComposedEmailOrderRequestService"/> class.
-    /// </summary>
-    public ComposedEmailOrderRequestService(
-        IOrderRepository repository,
-        IGuidService guid,
-        IDateTimeService dateTime,
-        IOptions<NotificationConfig> config)
-    {
-        _guid = guid;
-        _dateTime = dateTime;
-        _repository = repository;
-        _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
-    }
+    private readonly IDateTimeService _dateTime = dateTime;
+    private readonly IOrderRepository _repository = repository;
+    private readonly string _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
 
     /// <inheritdoc/>
     public async Task<NotificationOrderChainResponse?> RetrieveOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
@@ -51,11 +40,11 @@ public class ComposedEmailOrderRequestService : IComposedEmailOrderRequestServic
         DateTime currentTime = _dateTime.UtcNow();
 
         var composedEmail = orderRequest.Recipient.RecipientComposedEmail!;
-        var settings = composedEmail.Settings;
+        var composedEmailSettings = composedEmail.Settings;
 
-        var fromAddress = string.IsNullOrWhiteSpace(settings.SenderEmailAddress)
+        var fromAddress = string.IsNullOrWhiteSpace(composedEmailSettings.SenderEmailAddress)
             ? _defaultEmailFromAddress
-            : settings.SenderEmailAddress;
+            : composedEmailSettings.SenderEmailAddress;
 
         var mainOrder = new NotificationOrder
         {
@@ -63,13 +52,13 @@ public class ComposedEmailOrderRequestService : IComposedEmailOrderRequestServic
             Id = orderRequest.OrderId,
             Type = OrderType.Composed,
             Creator = orderRequest.Creator,
-            EmailAttachments = settings.Attachments,
             NotificationChannel = NotificationChannel.Email,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
+            EmailAttachments = composedEmailSettings.Attachments,
             Recipients = [new([new EmailAddressPoint(composedEmail.EmailAddress)])],
-            Templates = [new EmailTemplate(fromAddress, settings.Subject, settings.Body, settings.ContentType)]
+            Templates = [new EmailTemplate(fromAddress, composedEmailSettings.Subject, composedEmailSettings.Body, composedEmailSettings.ContentType)]
         };
 
         var savedOrders = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);

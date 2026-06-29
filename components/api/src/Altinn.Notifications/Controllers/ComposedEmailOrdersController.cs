@@ -19,26 +19,20 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for submitting composed email notification orders.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ComposedEmailOrdersController"/> class.
+/// </remarks>
 [ApiController]
 [Route("notifications/api/v1/future/orders/composed-email")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE)]
-public class ComposedEmailOrdersController : ControllerBase
+public class ComposedEmailOrdersController(
+    IComposedEmailOrderRequestService service,
+    IValidator<ComposedEmailRequestExt> validator) : ControllerBase
 {
-    private readonly IComposedEmailOrderRequestService _service;
-    private readonly IValidator<ComposedEmailRequestExt> _validator;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ComposedEmailOrdersController"/> class.
-    /// </summary>
-    public ComposedEmailOrdersController(
-        IComposedEmailOrderRequestService service,
-        IValidator<ComposedEmailRequestExt> validator)
-    {
-        _service = service;
-        _validator = validator;
-    }
+    private readonly IComposedEmailOrderRequestService _service = service;
+    private readonly IValidator<ComposedEmailRequestExt> _validator = validator;
 
     /// <summary>
     /// Creates a new composed email notification order.

@@ -1,3 +1,4 @@
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
@@ -39,8 +40,8 @@ public interface IComposedEmailOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderChainResponse"/> with
-    /// the generated order chain identifier and receipt information for the registered composed email order.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with a <see cref="NotificationOrderChainResponse"/>
+    /// on success, or a <see cref="ProblemInstance"/> if the request is invalid.
     /// </returns>
     /// <remarks>
     /// Composed email orders do not support reminders. The returned receipt always has
@@ -49,5 +50,5 @@ public interface IComposedEmailOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<NotificationOrderChainResponse> RegisterComposedEmailOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
+    Task<Result<NotificationOrderChainResponse>> RegisterComposedEmailOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
 }

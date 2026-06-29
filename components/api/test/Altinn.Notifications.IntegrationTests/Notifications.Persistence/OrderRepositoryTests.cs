@@ -3164,8 +3164,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Guid orderChainId = Guid.NewGuid();
 
         string creator = "ttd";
-        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
         string sendersReference = $"ref-{Guid.NewGuid():N}";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
 
         DateTime creationDateTime = DateTime.UtcNow;
         DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
@@ -3175,9 +3175,9 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
+            .SetType(OrderType.Composed)
             .SetOrderChainId(orderChainId)
             .SetIdempotencyId(idempotencyId)
-            .SetType(OrderType.Composed)
             .SetCreator(new Creator(creator))
             .SetSendersReference(sendersReference)
             .SetRequestedSendTime(requestedSendTime)
@@ -3188,8 +3188,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                     EmailAddress = "recipient@altinnxyz.no",
                     Settings = new ComposedEmailSendingOptions
                     {
-                        Subject = "Test subject",
                         Body = "Test body",
+                        Subject = "Test subject",
                         Attachments =
                         [
                             new SasFileReference
@@ -3207,8 +3207,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         NotificationOrder notificationOrder = new()
         {
             Id = orderId,
-            Type = OrderType.Composed,
             Creator = new(creator),
+            Type = OrderType.Composed,
             Created = creationDateTime,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
@@ -3224,10 +3224,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(result);
+        Assert.Null(result.OrderChainReceipt.Reminders);
         Assert.Equal(orderChainId, result.OrderChainId);
         Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
         Assert.Equal(sendersReference, result.OrderChainReceipt.SendersReference);
-        Assert.Null(result.OrderChainReceipt.Reminders);
     }
 
     [Fact]
@@ -3271,9 +3271,9 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         NotificationOrder notificationOrder = new()
         {
             Id = orderId,
-            Type = OrderType.Notification,
             Creator = new(creator),
             Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
             RequestedSendTime = DateTime.UtcNow.AddHours(1),
             NotificationChannel = NotificationChannel.Email,
             Templates = [new EmailTemplate("noreply@altinn.no", "Test subject", "Test body", EmailContentType.Plain)],
