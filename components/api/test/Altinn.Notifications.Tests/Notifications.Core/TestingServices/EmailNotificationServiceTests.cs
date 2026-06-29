@@ -188,8 +188,11 @@ public class EmailNotificationServiceTests
     public async Task CreateNotification_RecipientHasTwoEmailAddresses_ResultHasOneItemForEachAddress()
     {
         // Arrange
+        var expectedEmailAddress1 = "user_1@domain.com";
+        var expectedEmailAddress2 = "user_2@domain.com";
+
         var emailRecipient = new EmailRecipient() { OrganizationNumber = "org" };
-        var emailAddressPoints = new List<EmailAddressPoint>() { new("user_1@domain.com"), new("user_2@domain.com") };
+        var emailAddressPoints = new List<EmailAddressPoint>() { new(expectedEmailAddress1), new(expectedEmailAddress2) };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         var service = GetTestService(repo: repoMock.Object);
@@ -199,6 +202,8 @@ public class EmailNotificationServiceTests
 
         // Assert
         Assert.Equal(2, result.Count(x => x.Recipient.OrganizationNumber == "org"));
+        Assert.Equal(expectedEmailAddress1, result[0].Recipient.ToAddress);
+        Assert.Equal(expectedEmailAddress2, result[1].Recipient.ToAddress);
     }
 
     [Fact]

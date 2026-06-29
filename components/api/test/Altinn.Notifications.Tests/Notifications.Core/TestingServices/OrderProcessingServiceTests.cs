@@ -361,9 +361,12 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<ISmsOrderProcessingService>();
+
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
+
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new SmsOrderProcessingResult([], null));
+            .ReturnsAsync(expectedSmsOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             smsOrderProcessingService: processingServiceMock.Object,
@@ -385,7 +388,7 @@ public class OrderProcessingServiceTests
             e => e.PersistProcessingResultAsync(
                 order,
                 It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
