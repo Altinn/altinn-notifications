@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Dashboard;
@@ -97,6 +98,7 @@ public class DashboardMapperTests
         Assert.Equal("ref-123", ext.SendersReference);
         Assert.Equal(sendTime, ext.RequestedSendTime);
         Assert.Equal("EmailPreferred", ext.NotificationChannel);
+        Assert.Equal("notification", ext.NotificationType);
     }
 
     [Fact]
@@ -139,6 +141,7 @@ public class DashboardMapperTests
                 null,
                 DateTime.UtcNow,
                 null,
+                "notification",
                 recipients),
         ];
     }

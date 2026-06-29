@@ -101,6 +101,29 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
     }
 
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByNinAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(_recipientNin, requestedSendTime: new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), orderType: orderType);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
     [Fact]
     public async Task GetDashboardNotificationsByNinAsync_SingleOrderWithEmailAndSms_GroupedUnderOneShipment()
     {
@@ -130,7 +153,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
             .OfType<DashboardRepository>()
             .First();
 
-    private async Task<Guid> SeedOrderWithEmailNotification(string recipientNin, DateTime requestedSendTime)
+    private async Task<Guid> SeedOrderWithEmailNotification(string recipientNin, DateTime requestedSendTime, OrderType orderType = OrderType.Notification)
     {
         var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)])
             .OfType<OrderRepository>()
@@ -142,6 +165,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         NotificationOrder order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
         order.RequestedSendTime = requestedSendTime;
+        order.Type = orderType;
 
         await orderRepo.Create(order);
 

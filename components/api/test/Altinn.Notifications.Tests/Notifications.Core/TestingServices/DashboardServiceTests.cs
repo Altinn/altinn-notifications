@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
