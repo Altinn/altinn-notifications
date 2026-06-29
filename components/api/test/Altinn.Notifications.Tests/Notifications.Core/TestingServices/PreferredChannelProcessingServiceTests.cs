@@ -1022,17 +1022,33 @@ public class PreferredChannelProcessingServiceTests
             NotificationChannel = channel,
             Recipients = []
         };
+
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var contactPointServiceMock = new Mock<IContactPointService>();
+
         var service = new PreferredChannelProcessingService(
             emailProcessingServiceMock.Object,
             smsProcessingServiceMock.Object,
             contactPointServiceMock.Object);
-        
-        // Act & Assert
-        var result = await service.ProcessOrder(order); // Should not throw
 
+        // Act
+        var result = await service.ProcessOrder(order);
+
+        // Assert
         Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
     }
 }

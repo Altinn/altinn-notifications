@@ -45,7 +45,7 @@ public class SmsNotificationServiceTests
             GatewayReference = Guid.NewGuid().ToString()
         };
 
-        var mockRepo = new Mock<SmsNotificationRepository>(null!, null!, null!, Options.Create(new NotificationConfig()))
+        var mockRepo = new Mock<SmsNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
         {
             CallBase = true
         };
@@ -226,7 +226,6 @@ public class SmsNotificationServiceTests
     public async Task CreateNotification_RecipientHasTwoMobileNumbers_RepositoryCalledOnceForEachNumber()
     {
         // Arrange        
-
         var expectedMobileNumber1 = "+4748123456";
         var expectedMobileNumber2 = "+4799123456";
 
