@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -77,66 +78,176 @@ public class ComposedEmailOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterComposedEmailOrderChain_MapsOrderCorrectly()
+    public async Task RegisterComposedEmailOrderChain_PersistsOrderWithCorrectProperties()
     {
         // Arrange
-        var orderId = Guid.NewGuid();
-        var chainId = Guid.NewGuid();
-        NotificationOrder? captured = null;
+        Guid orderId = Guid.NewGuid();
+        Guid chainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        DateTime requestedSendTime = currentTime.AddHours(2);
+
+        var request = ValidComposedEmailRequest(orderId, chainId, requestedSendTime, "ref-001");
+
+        var expectedOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Created = currentTime,
+            Creator = new Creator("ttd"),
+            SendersReference = "ref-001",
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments =
+            [
+                new SasFileReference { Filename = "contract.pdf", MimeType = "application/pdf", SasUrl = _validSasUrl }
+            ],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Decision from Altinn", "Please see the attached document.", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
 
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => captured = o)
-            .ReturnsAsync((NotificationOrderChainRequest _, NotificationOrder o, List<NotificationOrder>? _, CancellationToken _) =>
-                [new NotificationOrder { Id = o.Id, SendersReference = o.SendersReference }]);
+            .Setup(r => r.Create(
+                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == chainId && e.Type == OrderType.Composed),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.Type == OrderType.Composed &&
+                    o.NotificationChannel == NotificationChannel.Email &&
+                    o.EmailAttachments != null &&
+                    o.EmailAttachments.Count == 1 &&
+                    o.Recipients.Any(r => r.AddressInfo.OfType<EmailAddressPoint>().Any(ep => ep.EmailAddress == "recipient@altinnxyz.no"))),
+                null,
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) =>
+                Assert.Equivalent(expectedOrder, o))
+            .ReturnsAsync([new NotificationOrder { Id = orderId, SendersReference = "ref-001" }]);
 
-        var service = GetTestService(repoMock.Object);
-        var request = ValidComposedEmailRequest(orderId, chainId);
+        var dateTimeMock = new Mock<IDateTimeService>();
+        dateTimeMock.Setup(d => d.UtcNow()).Returns(currentTime);
 
-        // Act
-        await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(captured);
-        Assert.Equal(OrderType.Composed, captured.Type);
-        Assert.Equal(NotificationChannel.Email, captured.NotificationChannel);
-        Assert.NotNull(captured.EmailAttachments);
-        Assert.Single(captured.EmailAttachments);
-        Assert.Equal("contract.pdf", captured.EmailAttachments[0].Filename);
-        Assert.Single(captured.Templates);
-        Assert.IsType<EmailTemplate>(captured.Templates[0]);
-        Assert.Null(captured.Recipients[0].NationalIdentityNumber);
-        Assert.Equal("recipient@altinnxyz.no", ((EmailAddressPoint)captured.Recipients[0].AddressInfo[0]).EmailAddress);
-    }
-
-    [Fact]
-    public async Task RegisterComposedEmailOrderChain_ReturnsResponse_WithCorrectIds()
-    {
-        // Arrange
-        var orderId = Guid.NewGuid();
-        var chainId = Guid.NewGuid();
-        var savedOrderId = Guid.NewGuid();
-
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new NotificationOrder { Id = savedOrderId, SendersReference = "ref-001" }]);
-
-        var service = GetTestService(repoMock.Object);
-        var request = ValidComposedEmailRequest(orderId, chainId);
+        var service = GetTestService(repoMock.Object, dateTimeMock.Object);
 
         // Act
         var result = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal(chainId, result.OrderChainId);
-        Assert.Equal(savedOrderId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
         Assert.Equal("ref-001", result.OrderChainReceipt.SendersReference);
         Assert.Null(result.OrderChainReceipt.Reminders);
+
+        repoMock.VerifyAll();
+        dateTimeMock.Verify(d => d.UtcNow(), Times.Once);
     }
 
-    private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId)
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_UsesSenderEmailAddress_WhenProvided()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid chainId = Guid.NewGuid();
+        const string customSender = "custom@agency.no";
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientComposedEmail = new RecipientComposedEmail
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptions
+                {
+                    Subject = "Subject",
+                    Body = "Body",
+                    SenderEmailAddress = customSender,
+                    Attachments = [new SasFileReference { Filename = "doc.pdf", MimeType = "application/pdf", SasUrl = _validSasUrl }]
+                }
+            }
+        };
+
+        var request = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId).SetOrderChainId(chainId).SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd")).SetIdempotencyId("idem-001")
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1)).SetRecipient(recipient).Build();
+
+        NotificationOrder? capturedOrder = null;
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var service = GetTestService(repoMock.Object);
+
+        // Act
+        await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedOrder);
+        var template = Assert.IsType<EmailTemplate>(capturedOrder.Templates[0]);
+        Assert.Equal(customSender, template.FromAddress);
+    }
+
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_UsesDefaultFromAddress_WhenSenderEmailAddressIsEmpty()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid chainId = Guid.NewGuid();
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientComposedEmail = new RecipientComposedEmail
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptions
+                {
+                    Subject = "Subject",
+                    Body = "Body",
+                    SenderEmailAddress = null,
+                    Attachments = [new SasFileReference { Filename = "doc.pdf", MimeType = "application/pdf", SasUrl = _validSasUrl }]
+                }
+            }
+        };
+
+        var request = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId).SetOrderChainId(chainId).SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd")).SetIdempotencyId("idem-002")
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1)).SetRecipient(recipient).Build();
+
+        NotificationOrder? capturedOrder = null;
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var service = GetTestService(repoMock.Object);
+
+        // Act
+        await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedOrder);
+        var template = Assert.IsType<EmailTemplate>(capturedOrder.Templates[0]);
+        Assert.Equal("noreply@altinn.no", template.FromAddress);
+    }
+
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_ThrowsOperationCanceledException_WhenCanceled()
+    {
+        // Arrange
+        var request = ValidComposedEmailRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(1));
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var service = GetTestService();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            service.RegisterComposedEmailOrderChain(request, cts.Token));
+    }
+
+    private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId, DateTime requestedSendTime, string? sendersReference = null)
     {
         var recipient = new NotificationRecipient
         {
@@ -160,25 +271,28 @@ public class ComposedEmailOrderRequestServiceTests
             }
         };
 
-        return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(chainId)
             .SetType(OrderType.Composed)
             .SetCreator(new Creator("ttd"))
             .SetIdempotencyId("idempotency-001")
-            .SetSendersReference("ref-001")
-            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
-            .SetRecipient(recipient)
-            .Build();
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(recipient);
+
+        if (sendersReference != null)
+        {
+            builder.SetSendersReference(sendersReference);
+        }
+
+        return builder.Build();
     }
 
     private static ComposedEmailOrderRequestService GetTestService(
         IOrderRepository? orderRepository = null,
-        IGuidService? guidService = null,
         IDateTimeService? dateTimeService = null)
     {
         orderRepository ??= Mock.Of<IOrderRepository>();
-        guidService ??= Mock.Of<IGuidService>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
 
         var config = Options.Create(new NotificationConfig
@@ -187,6 +301,6 @@ public class ComposedEmailOrderRequestServiceTests
             DefaultSmsSenderNumber = "Altinn"
         });
 
-        return new ComposedEmailOrderRequestService(orderRepository, guidService, dateTimeService, config);
+        return new ComposedEmailOrderRequestService(dateTimeService, orderRepository, config);
     }
 }

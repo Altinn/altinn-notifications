@@ -432,7 +432,6 @@ public class OrderRequestService : IOrderRequestService
             ResourceId = deliveryDetails.ResourceId,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
-            EmailAttachments = orderRequest.Recipient.RecipientComposedEmail?.Settings.Attachments,
             ResourceAction = deliveryDetails.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
@@ -619,7 +618,7 @@ public class OrderRequestService : IOrderRequestService
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
                 ConditionEndpoint = notificationReminder.ConditionEndpoint,
-                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation
+                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
             });
         }
 

@@ -304,7 +304,7 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedNotificationOrder]);
@@ -423,7 +423,7 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -599,7 +599,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.ResourceId == resourceId &&
                     o.NotificationChannel == NotificationChannel.Email &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedNotificationOrder]);
@@ -723,7 +724,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.SmsPreferred &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -848,7 +850,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.EmailAndSms &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -1110,11 +1113,12 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == mainOrderId && o.NotificationChannel == NotificationChannel.Email),
+                It.Is<NotificationOrder>(o => o.Id == mainOrderId && o.NotificationChannel == NotificationChannel.Email && o.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 1 &&
                     list[0].Id == reminderId &&
-                    list[0].NotificationChannel == NotificationChannel.Sms),
+                    list[0].NotificationChannel == NotificationChannel.Sms &&
+                    list[0].EmailAttachments == null),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedReminder]);
 
@@ -1941,11 +1945,12 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(chain => chain.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(mainOrder => mainOrder.Id == mainOrderId),
+                It.Is<NotificationOrder>(mainOrder => mainOrder.Id == mainOrderId && mainOrder.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(reminders =>
                 reminders.Count == 2 &&
                 reminders.Any(o => o.Id == firstReminderId) &&
-                reminders.Any(o => o.Id == secondReminderId)),
+                reminders.Any(o => o.Id == secondReminderId) &&
+                reminders.All(o => o.EmailAttachments == null)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
 
@@ -2018,7 +2023,8 @@ public class OrderRequestServiceTests
                     o.ResourceId == resourceId &&
                     o.ResourceAction == resourceAction &&
                     o.NotificationChannel == NotificationChannel.EmailPreferred &&
-                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746")),
+                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746") &&
+                    o.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 2 &&
                     list[0].Id == firstReminderId &&
@@ -2122,7 +2128,7 @@ public class OrderRequestServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
             It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "REF-42DBDAB8281C"),
-            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729") && o.EmailAttachments == null),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
             It.IsAny<CancellationToken>())).ReturnsAsync([expectedOrder]);
 
@@ -2165,7 +2171,8 @@ public class OrderRequestServiceTests
                 o.SendersReference == "REF-42DBDAB8281C" &&
                 o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                 o.NotificationChannel == NotificationChannel.EmailAndSms &&
-                o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+                o.Recipients.Any(r => r.OrganizationNumber == "312508729") &&
+                o.EmailAttachments == null),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
             It.IsAny<CancellationToken>()),
             Times.Once);
@@ -2373,7 +2380,8 @@ public class OrderRequestServiceTests
                     o.IgnoreReservation == false &&
                     o.ResourceAction == "sign" &&
                     o.NotificationChannel == NotificationChannel.Email &&
-                    o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber)),
+                    o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedOrder]);
@@ -2805,139 +2813,6 @@ public class OrderRequestServiceTests
             r => r.Create(
                 It.Is<NotificationOrder>(o => o.SendingTimePolicy == null)),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task RegisterNotificationOrderChain_WithRecipientComposedEmail_CreatesOrderWithCorrectPropertiesAndSkipsContactPointLookup()
-    {
-        // Arrange
-        Guid orderId = Guid.NewGuid();
-        Guid orderChainId = Guid.NewGuid();
-        DateTime currentTime = DateTime.UtcNow;
-        const string recipientEmail = "recipient@agency.no";
-
-        var sasUrl1 = "https://storage.example.com/doc1.pdf?se=2099-01-01T00%3A00%3A00Z&sig=abc";
-        var sasUrl2 = "https://storage.example.com/doc2.docx?se=2099-01-01T00%3A00%3A00Z&sig=xyz";
-
-        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(orderId)
-            .SetOrderChainId(orderChainId)
-            .SetCreator(new Creator("ttd"))
-            .SetType(OrderType.Composed)
-            .SetIdempotencyId("attach-idempotency-001")
-            .SetSendersReference("attach-ref-001")
-            .SetRequestedSendTime(currentTime.AddMinutes(30))
-            .SetRecipient(new NotificationRecipient
-            {
-                RecipientComposedEmail = new RecipientComposedEmail
-                {
-                    EmailAddress = recipientEmail,
-                    Settings = new ComposedEmailSendingOptions
-                    {
-                        Subject = "Decision document",
-                        Body = "Please review the attached decision.",
-                        ContentType = EmailContentType.Plain,
-                        SenderEmailAddress = "noreply@agency.no",
-                        SendingTimePolicy = SendingTimePolicy.Anytime,
-                        Attachments =
-                        [
-                            new SasFileReference { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl1 },
-                            new SasFileReference { Filename = "appendix.docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", SasUrl = sasUrl2 }
-                        ]
-                    }
-                }
-            })
-            .Build();
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock
-            .Setup(r => r.Create(
-                It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o =>
-                    o.Id == orderId &&
-                    o.Type == OrderType.Composed &&
-                    o.NotificationChannel == NotificationChannel.Email &&
-                    o.Recipients.Any(r => r.AddressInfo.OfType<EmailAddressPoint>().Any(ep => ep.EmailAddress == recipientEmail))),
-                It.IsAny<List<NotificationOrder>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
-
-        var contactPointServiceMock = new Mock<IContactPointService>();
-
-        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
-
-        // Act
-        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.Equal(orderChainId, result.Value.OrderChainId);
-
-        contactPointServiceMock.Verify(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
-        contactPointServiceMock.Verify(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
-        contactPointServiceMock.Verify(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
-        contactPointServiceMock.Verify(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
-
-        orderRepositoryMock.VerifyAll();
-    }
-
-    [Fact]
-    public async Task RegisterNotificationOrderChain_WithRecipientComposedEmail_EmailAttachmentsPopulatedOnPersistedOrder()
-    {
-        // Arrange
-        Guid orderId = Guid.NewGuid();
-        Guid orderChainId = Guid.NewGuid();
-        DateTime currentTime = DateTime.UtcNow;
-
-        var sasUrl = "https://storage.example.com/contract.pdf?se=2099-01-01T00%3A00%3A00Z&sig=abc";
-
-        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(orderId)
-            .SetOrderChainId(orderChainId)
-            .SetCreator(new Creator("ttd"))
-            .SetType(OrderType.Composed)
-            .SetIdempotencyId("attach-idempotency-002")
-            .SetRequestedSendTime(currentTime.AddHours(1))
-            .SetRecipient(new NotificationRecipient
-            {
-                RecipientComposedEmail = new RecipientComposedEmail
-                {
-                    EmailAddress = "recipient@agency.no",
-                    Settings = new ComposedEmailSendingOptions
-                    {
-                        Subject = "Contract",
-                        Body = "See attached contract.",
-                        Attachments = [new SasFileReference { Filename = "contract.pdf", MimeType = "application/pdf", SasUrl = sasUrl }]
-                    }
-                }
-            })
-            .Build();
-
-        NotificationOrder? capturedOrder = null;
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock
-            .Setup(r => r.Create(
-                It.IsAny<NotificationOrderChainRequest>(),
-                It.IsAny<NotificationOrder>(),
-                It.IsAny<List<NotificationOrder>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, order, _, _) => capturedOrder = order)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
-
-        var service = GetTestService(orderRepositoryMock.Object, null, orderId, currentTime);
-
-        // Act
-        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(capturedOrder);
-        Assert.NotNull(capturedOrder.EmailAttachments);
-        Assert.Single(capturedOrder.EmailAttachments);
-        Assert.Equal("contract.pdf", capturedOrder.EmailAttachments[0].Filename);
-        Assert.Equal("application/pdf", capturedOrder.EmailAttachments[0].MimeType);
-        Assert.Equal(sasUrl, capturedOrder.EmailAttachments[0].SasUrl);
     }
 
     private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)

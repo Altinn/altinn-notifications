@@ -70,8 +70,7 @@ public class ComposedEmailOrderRequestService(
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 ShipmentId = savedMain.Id,
-                SendersReference = savedMain.SendersReference,
-                Reminders = null
+                SendersReference = savedMain.SendersReference
             }
         };
     }

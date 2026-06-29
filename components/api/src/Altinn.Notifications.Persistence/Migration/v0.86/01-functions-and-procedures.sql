@@ -566,23 +566,6 @@ RETURNS TABLE (
 LANGUAGE 'plpgsql'
 STABLE
 AS $BODY$
-DECLARE
-    v_record_exists boolean;
-BEGIN
-    SELECT EXISTS (
-        SELECT 1
-        FROM notifications.orderschain
-        WHERE creatorname = _creatorname
-        AND idempotencyid = _idempotencyid
-        -- include only type 'Composed' (3)
-        AND orderchain->>'Type' = '3'
-    ) INTO v_record_exists;
-
-    IF NOT v_record_exists THEN
-        RETURN;
-    END IF;
-
-    RETURN QUERY
     SELECT
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
@@ -594,7 +577,6 @@ BEGIN
         AND orders_chain.idempotencyid = _idempotencyid
         -- include only type 'Composed' (3)
         AND orders_chain.orderchain->>'Type' = '3';
-END;
 $BODY$;
 
 COMMENT ON FUNCTION notifications.get_composed_order_chain_tracking IS
