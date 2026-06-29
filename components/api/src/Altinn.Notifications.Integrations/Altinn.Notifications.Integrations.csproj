@@ -16,7 +16,7 @@
     <PackageReference Include="OpenTelemetry.Api" Version="1.16.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
-    <PackageReference Include="WolverineFx" Version="5.39.5" />
+    <PackageReference Include="WolverineFx" Version="6.15.0" />
     <PackageReference Include="WolverineFx.AzureServiceBus" Version="5.39.5" />
   </ItemGroup>
 
