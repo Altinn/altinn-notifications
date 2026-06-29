@@ -96,11 +96,20 @@ internal static class SasFileReferenceRules
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> if <paramref name="url"/> is an absolute URI using the HTTPS scheme.
+    /// Returns <see langword="true"/> if <paramref name="url"/> is an absolute URI using the HTTPS scheme
+    /// with a host in the Azure Blob Storage domain (<c>*.blob.core.windows.net</c>).
     /// </summary>
     internal static bool IsAbsoluteHttpsUri(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the host of <paramref name="url"/> is within
+    /// the Azure Blob Storage domain (<c>*.blob.core.windows.net</c>).
+    /// </summary>
+    internal static bool IsAzureBlobStorageHost(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+        uri.Host.EndsWith(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Parses the <c>se</c> (signed expiry) query parameter from a SAS URL.

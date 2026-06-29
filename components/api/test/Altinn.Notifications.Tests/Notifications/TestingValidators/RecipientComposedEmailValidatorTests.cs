@@ -246,6 +246,28 @@ public class RecipientComposedEmailValidatorTests
     }
 
     [Theory]
+    [InlineData("https://evil.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
+    [InlineData("https://attacker.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
+    [InlineData("https://notazure.blob.example.com/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
+    public void Validate_AttachmentSasUrlNonAzureBlobHost_HasError(string sasUrl)
+    {
+        // Arrange
+        var recipient = RecipientWithFileReference(new SasFileReferenceExt
+        {
+            SasUrl = sasUrl,
+            Filename = "contract.pdf",
+            MimeType = "application/pdf"
+        });
+
+        // Act
+        var result = _validator.TestValidate(recipient);
+
+        // Assert
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).");
+    }
+
+    [Theory]
     [InlineData("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
     public void Validate_AttachmentWithValidSasUrl_NoSasUrlErrors(string sasUrl)
     {

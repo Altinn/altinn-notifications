@@ -68,18 +68,23 @@ internal sealed class RecipientComposedEmailValidator : AbstractValidator<Recipi
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must be an absolute HTTPS URI.");
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(SasFileReferenceRules.HasRequiredSasParameters)
+                                .Must(SasFileReferenceRules.IsAzureBlobStorageHost)
                                 .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl))
+                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).");
+
+                            rules.RuleFor(a => a.SasUrl)
+                                .Must(SasFileReferenceRules.HasRequiredSasParameters)
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl is missing required SAS parameters (se, sig, sp, sr).");
 
                             rules.RuleFor(a => a.SasUrl)
                                 .Must(url => SasFileReferenceRules.ParseSasExpiry(url) != null)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl has an invalid 'se' (signed expiry) value.");
 
                             rules.RuleFor(a => a.SasUrl)
                                 .Must(SasFileReferenceRules.HasReadPermission)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
+                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
                                 .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl does not grant read permission ('r' must be present in 'sp').");
 
                             rules.RuleFor(a => a.MimeType)
