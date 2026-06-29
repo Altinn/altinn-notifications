@@ -146,7 +146,6 @@ internal static class SasFileReferenceRules
     internal static bool IsValidFilename(string filename) =>
         !filename.Contains('/')
         && !filename.Contains('\\')
-        && !filename.Contains("..")
         && Path.GetExtension(filename).Length > 1;
 
     /// <summary>

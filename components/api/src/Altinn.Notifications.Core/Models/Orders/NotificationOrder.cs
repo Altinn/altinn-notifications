@@ -65,7 +65,6 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <summary>
     /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.Composed"/>.
     /// </summary>
-    [JsonInclude]
     public List<SasFileReference>? EmailAttachments { get; internal set; }
 
     /// <summary>

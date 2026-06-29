@@ -63,12 +63,12 @@ public class OrderRequestService : IOrderRequestService
             Templates = templates,
             Created = currentTime,
             Creator = orderRequest.Creator,
-            UseStaleContactInformation = false,
             Recipients = orderRequest.Recipients,
             ResourceId = orderRequest.ResourceId,
             ResourceAction = orderRequest.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             IgnoreReservation = orderRequest.IgnoreReservation,
+            UseStaleContactInformation = false,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             NotificationChannel = orderRequest.NotificationChannel,
             RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
@@ -169,11 +169,6 @@ public class OrderRequestService : IOrderRequestService
             return ExtractSmsRecipientComponents(recipient.RecipientSms);
         }
 
-        if (recipient.RecipientComposedEmail?.Settings != null)
-        {
-            return ExtractComposedEmailRecipientComponents(recipient.RecipientComposedEmail);
-        }
-
         if (recipient.RecipientEmail?.Settings != null)
         {
             return ExtractEmailRecipientComponents(recipient.RecipientEmail);
@@ -221,19 +216,6 @@ public class OrderRequestService : IOrderRequestService
             Channel = NotificationChannel.Email,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
-        };
-    }
-
-    /// <summary>
-    /// Extracts delivery components for a composed email recipient.
-    /// </summary>
-    private static RecipientDeliveryDetails ExtractComposedEmailRecipientComponents(RecipientComposedEmail recipient)
-    {
-        return new RecipientDeliveryDetails
-        {
-            Channel = NotificationChannel.Email,
-            Templates = [CreateEmailTemplate(recipient.Settings)],
-            Recipients = [new([new EmailAddressPoint(recipient.EmailAddress)])]
         };
     }
 
@@ -430,15 +412,15 @@ public class OrderRequestService : IOrderRequestService
             Id = orderRequest.OrderId,
             Creator = orderRequest.Creator,
             ResourceId = deliveryDetails.ResourceId,
+            ResourceAction = deliveryDetails.ResourceAction,
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
-            ResourceAction = deliveryDetails.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
-            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation
+            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
         };
     }
 
@@ -611,14 +593,14 @@ public class OrderRequestService : IOrderRequestService
                 Id = notificationReminder.OrderId,
                 Recipients = deliveryDetails.Recipients,
                 ResourceId = deliveryDetails.ResourceId,
-                NotificationChannel = deliveryDetails.Channel,
                 ResourceAction = deliveryDetails.ResourceAction,
+                NotificationChannel = deliveryDetails.Channel,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
+                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
                 SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
-                ConditionEndpoint = notificationReminder.ConditionEndpoint,
-                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+                ConditionEndpoint = notificationReminder.ConditionEndpoint
             });
         }
 

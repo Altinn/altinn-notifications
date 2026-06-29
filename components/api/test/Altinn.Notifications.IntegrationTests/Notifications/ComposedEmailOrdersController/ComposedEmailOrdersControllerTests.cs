@@ -238,11 +238,11 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         var request = ValidRequest();
         var existingResponse = CreateOrderChainResponse();
 
-        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceMock = new Mock<IComposedEmailOrderRequestService>();
         serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
-        var client = GetTestClient(orderRequestService: serviceMock.Object);
+        var client = GetTestClient(composedEmailService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
 
@@ -252,7 +252,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(existingResponse.OrderChainId, responseObject.OrderChainId);
-        serviceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static ComposedEmailRequestExt ValidRequest() => new()
@@ -302,17 +302,17 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         return JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(body, _options);
     }
 
-    private HttpClient GetTestClient(NotificationOrderChainResponse? expectedResponse = null, IOrderRequestService? orderRequestService = null)
+    private HttpClient GetTestClient(NotificationOrderChainResponse? expectedResponse = null, IComposedEmailOrderRequestService? composedEmailService = null)
     {
-        if (orderRequestService == null)
+        if (composedEmailService == null)
         {
             var response = expectedResponse ?? CreateOrderChainResponse();
-            var mock = new Mock<IOrderRequestService>();
+            var mock = new Mock<IComposedEmailOrderRequestService>();
             mock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((NotificationOrderChainResponse?)null);
-            mock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+            mock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(response);
-            orderRequestService = mock.Object;
+            composedEmailService = mock.Object;
         }
 
         return _factory.WithWebHostBuilder(builder =>
@@ -320,7 +320,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             IdentityModelEventSource.ShowPII = true;
             builder.ConfigureTestServices(services =>
             {
-                services.AddSingleton(orderRequestService);
+                services.AddSingleton(composedEmailService);
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });

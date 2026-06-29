@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
-using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models;
 
