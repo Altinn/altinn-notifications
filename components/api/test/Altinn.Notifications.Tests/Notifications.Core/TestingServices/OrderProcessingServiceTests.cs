@@ -411,9 +411,11 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new EmailOrderProcessingResult([], null));
+            .ReturnsAsync(expectedEmailOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             emailOrderProcessingService: processingServiceMock.Object,
@@ -434,7 +436,7 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
+                expectedEmailOrderProcessingResult,
                 It.IsAny<SmsOrderProcessingResult>()),
             Times.Once);
 
@@ -459,11 +461,14 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailAndSmsOrderProcessingService>();
+
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderAsync(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                EmailOrderProcessingResult: expectedEmailOrderProcessingResult,
+                SmsOrderProcessingResult: expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             emailAndSmsOrderProcessingService: processingServiceMock.Object,
@@ -484,8 +489,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -510,11 +515,14 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IPreferredChannelProcessingService>();
+
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                EmailOrderProcessingResult: expectedEmailOrderProcessingResult,
+                SmsOrderProcessingResult: expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             preferredChannelProcessingService: processingServiceMock.Object,
@@ -535,8 +543,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 It.Is<NotificationOrder>(o => o.Id == order.Id),
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -563,9 +571,10 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var smsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new SmsOrderProcessingResult([], null));
+            .ReturnsAsync(smsOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             smsOrderProcessingService: processingServiceMock.Object,
@@ -587,7 +596,7 @@ public class OrderProcessingServiceTests
             e => e.PersistProcessingResultAsync(
                 order,
                 It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                smsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -613,10 +622,11 @@ public class OrderProcessingServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
         var processingServiceMock = new Mock<IEmailOrderProcessingService>();
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new EmailOrderProcessingResult([], null));
+            .ReturnsAsync(expectedEmailOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             emailOrderProcessingService: processingServiceMock.Object,
@@ -637,7 +647,7 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
+                expectedEmailOrderProcessingResult,
                 It.IsAny<SmsOrderProcessingResult>()),
             Times.Once);
 
@@ -665,12 +675,14 @@ public class OrderProcessingServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         var processingServiceMock = new Mock<IEmailAndSmsOrderProcessingService>();
         processingServiceMock
             .Setup(s => s.ProcessOrderAsync(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                EmailOrderProcessingResult: expectedEmailOrderProcessingResult,
+                SmsOrderProcessingResult: expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             emailAndSmsOrderProcessingService: processingServiceMock.Object,
@@ -691,8 +703,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -721,11 +733,13 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IPreferredChannelProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             preferredChannelProcessingService: processingServiceMock.Object,
@@ -746,8 +760,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 It.Is<NotificationOrder>(o => o.Id == order.Id),
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -1255,9 +1269,10 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new SmsOrderProcessingResult([], null));
+            .ReturnsAsync(expectedSmsOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             smsOrderProcessingService: processingServiceMock.Object,
@@ -1276,7 +1291,7 @@ public class OrderProcessingServiceTests
             e => e.PersistProcessingResultAsync(
                 order,
                 It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -1303,9 +1318,10 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailOrderProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
-            .ReturnsAsync(new EmailOrderProcessingResult([], null));
+            .ReturnsAsync(expectedEmailOrderProcessingResult);
 
         var orderProcessingService = GetTestService(
             emailOrderProcessingService: processingServiceMock.Object,
@@ -1323,7 +1339,7 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
+                expectedEmailOrderProcessingResult,
                 It.IsAny<SmsOrderProcessingResult>()),
             Times.Once);
 
@@ -1351,11 +1367,13 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailAndSmsOrderProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                EmailOrderProcessingResult: expectedEmailOrderProcessingResult,
+                SmsOrderProcessingResult: expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             emailAndSmsOrderProcessingService: processingServiceMock.Object,
@@ -1373,8 +1391,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 It.Is<NotificationOrder>(o => o.Id == order.Id),
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -1403,11 +1421,13 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IPreferredChannelProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                EmailOrderProcessingResult: expectedEmailOrderProcessingResult,
+                SmsOrderProcessingResult: expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             preferredChannelProcessingService: processingServiceMock.Object,
@@ -1425,8 +1445,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 order,
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -1740,11 +1760,13 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailAndSmsOrderProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             emailAndSmsOrderProcessingService: processingServiceMock.Object,
@@ -1762,8 +1784,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 It.Is<NotificationOrder>(o => o.Id == order.Id),
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
@@ -1792,11 +1814,13 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IPreferredChannelProcessingService>();
+        var expectedEmailOrderProcessingResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsOrderProcessingResult = new SmsOrderProcessingResult([], null);
         processingServiceMock
             .Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
             .ReturnsAsync(new OrderProcessingResult(
-                EmailOrderProcessingResult: new([], null),
-                SmsOrderProcessingResult: new([], null)));
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult));
 
         var orderProcessingService = GetTestService(
             preferredChannelProcessingService: processingServiceMock.Object,
@@ -1814,8 +1838,8 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(
             e => e.PersistProcessingResultAsync(
                 It.Is<NotificationOrder>(o => o.Id == order.Id),
-                It.IsAny<EmailOrderProcessingResult>(),
-                It.IsAny<SmsOrderProcessingResult>()),
+                expectedEmailOrderProcessingResult,
+                expectedSmsOrderProcessingResult),
             Times.Once);
 
         orderRepositoryMock.Verify(
