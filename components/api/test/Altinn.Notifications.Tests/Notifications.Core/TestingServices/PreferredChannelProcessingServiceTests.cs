@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -10,7 +11,6 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Moq;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
@@ -965,6 +965,32 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var emailAddress = capturedEmailRecipients[0].AddressInfo.OfType<EmailAddressPoint>().First();
             Assert.Equal("second@altinn.xyz", emailAddress.EmailAddress);
+        }
+
+        [Theory]
+        [InlineData(NotificationChannel.Email)]
+        [InlineData(NotificationChannel.Sms)]
+        public async Task ProcessOrder_WithUnsupportedChannel_ThrowsArgumentOutOfRangeException(NotificationChannel channel)
+        {
+            // Arrange
+            var order = new NotificationOrder
+            {
+                Id = Guid.NewGuid(),
+                NotificationChannel = channel,
+                Recipients = []
+            };
+
+            var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+            var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+            var contactPointServiceMock = new Mock<IContactPointService>();
+
+            var service = new PreferredChannelProcessingService(
+                emailProcessingServiceMock.Object,
+                smsProcessingServiceMock.Object,
+                contactPointServiceMock.Object);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.ProcessOrder(order));
         }
     }
 }
