@@ -44,6 +44,12 @@ public record DashboardNotificationExt
     public string? NotificationChannel { get; init; }
 
     /// <summary>
+    /// The notification type from the order (e.g. "notification", "reminder", "instant").
+    /// </summary>
+    [JsonPropertyName("notificationType")]
+    public string? NotificationType { get; init; }
+
+    /// <summary>
     /// The delivery attempts for this notification, one per channel.
     /// </summary>
     [JsonPropertyName("deliveryAttempts")]
