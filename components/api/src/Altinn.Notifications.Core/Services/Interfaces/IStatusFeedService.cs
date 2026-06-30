@@ -11,7 +11,7 @@ public interface IStatusFeedService
     /// <summary>
     /// Get status feed
     /// </summary>
-    /// <param name="seq">The exclusive sequence number starting point of the status feed. Sequence ids after this point will be returned. Value 0 with descending order will return the latest entries.</param>
+    /// <param name="seq">Cursor for pagination. Ascending order returns sequence ids greater than this value; descending order returns sequence ids less than this value. Value 0 with descending order will return the latest entries.</param>
     /// <param name="pageSize">Number of items returned per request</param>
     /// <param name="creatorName">Name of the service owner</param>
     /// <param name="orderBy">The order in which the status feed entries should be returned. The default value is "asc" for ascending order</param>
