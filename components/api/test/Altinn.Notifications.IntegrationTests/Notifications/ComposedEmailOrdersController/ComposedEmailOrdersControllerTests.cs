@@ -195,7 +195,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = $"https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se={Uri.EscapeDataString(expiryTooSoon)}&sig=x"
+                            SasUrl = $"https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature"
                         }
                     ]
                 }
