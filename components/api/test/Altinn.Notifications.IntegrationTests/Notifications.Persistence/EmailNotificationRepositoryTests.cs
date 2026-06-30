@@ -21,12 +21,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly List<Guid> _orderIdsToDelete;
     private readonly int _publishBatchSize = 500;
+    private readonly List<Guid> _orderIdsToDelete;
+    private readonly List<Guid> _orderChainIdsToDelete;
 
     public EmailNotificationRepositoryTests()
     {
         _orderIdsToDelete = [];
+        _orderChainIdsToDelete = [];
     }
 
     public ValueTask InitializeAsync()
@@ -36,17 +38,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (_orderIdsToDelete.Count == 0)
-        {
-            return;
-        }
-
         foreach (Guid orderId in _orderIdsToDelete)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
         }
-        
+
         await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+        await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
     }
 
     [Fact]
@@ -623,6 +621,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Guid notificationId = Guid.NewGuid();
 
         _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
 
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
