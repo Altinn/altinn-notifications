@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace Altinn.Notifications.Models.Dashboard;
 
 /// <summary>
-/// Request model for fetching notifications by national identity number.
+/// Request model for fetching notifications by Organization Number.
 /// </summary>
 public class NotificationsByOrgNumberRequestExt
 {
