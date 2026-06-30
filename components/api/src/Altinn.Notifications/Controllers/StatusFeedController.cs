@@ -53,7 +53,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
                 return Forbid();
             }
 
-            var statusFeed = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
+            var statusFeed = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, GetStringRepresentationLowerCase(statusFeedRequest.OrderBy), HttpContext.RequestAborted);
 
             return Ok(statusFeed.MapToStatusFeedExtList());
         }
@@ -62,5 +62,10 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
+    }
+
+    private static string GetStringRepresentationLowerCase(OrderByDirection orderBy)
+    {
+        return orderBy.ToString().ToLower();
     }
 }
