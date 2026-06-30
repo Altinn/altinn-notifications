@@ -149,8 +149,8 @@ internal static class SasFileReferenceRules
         && Path.GetExtension(filename).Length > 1;
 
     /// <summary>
-    /// Returns <see langword="true"/> if <paramref name="url"/> contains all required SAS query parameters
-    /// (<c>se</c>, <c>sig</c>, <c>sp</c>, <c>sr</c>) with non-empty values.
+    /// Returns <see langword="true"/> if <paramref name="url"/> contains all required
+    /// blob SAS query parameters and targets a blob resource (<c>sr=b</c>).
     /// </summary>
     internal static bool HasRequiredSasParameters(string url)
     {
@@ -160,9 +160,10 @@ internal static class SasFileReferenceRules
         }
 
         var query = HttpUtility.ParseQueryString(uri.Query);
+
         return !string.IsNullOrWhiteSpace(query["se"])
             && !string.IsNullOrWhiteSpace(query["sp"])
-            && !string.IsNullOrWhiteSpace(query["sr"])
+            && string.Equals(query["sr"], "b", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(query["sig"]);
     }
 
