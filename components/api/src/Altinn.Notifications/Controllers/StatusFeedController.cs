@@ -66,6 +66,6 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
 
     private static string GetStringRepresentationLowerCase(OrderByDirection orderBy)
     {
-        return orderBy.ToString().ToLower();
+        return orderBy.ToString().ToLowerInvariant();
     }
 }
