@@ -1,10 +1,8 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
-using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -55,12 +53,12 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
+    public List<INotificationTemplate> Templates { get; internal set; } = [];
 
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
+    public List<Recipient> Recipients { get; internal set; } = [];
 
     /// <summary>
     /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.Composed"/>.
@@ -85,7 +83,8 @@ public class NotificationOrder : IBaseNotificationOrder
         SendingTimePolicy? sendingTimePolicy,
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
-        string? resourceAction)
+        string? resourceAction,
+        List<SasFileReference>? emailAttachments)
     {
         Id = id;
         Type = type;
@@ -95,6 +94,7 @@ public class NotificationOrder : IBaseNotificationOrder
         Recipients = recipients;
         ResourceId = resourceId;
         ResourceAction = resourceAction;
+        EmailAttachments = emailAttachments;
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;

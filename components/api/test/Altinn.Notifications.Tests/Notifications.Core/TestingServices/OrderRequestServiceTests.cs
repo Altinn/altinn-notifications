@@ -1161,10 +1161,11 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
+
         Assert.Equal(orderChainId, result.Value.OrderChainId);
-        Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
         Assert.NotNull(result.Value.OrderChainReceipt.Reminders);
         Assert.Single(result.Value.OrderChainReceipt.Reminders);
+        Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
         Assert.Equal(reminderId, result.Value.OrderChainReceipt.Reminders[0].ShipmentId);
         Assert.Equal("reminder-ref", result.Value.OrderChainReceipt.Reminders[0].SendersReference);
 
@@ -1897,7 +1898,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -1917,7 +1919,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Reminder: Tax 2025", "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -1937,7 +1940,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Final Reminder: Tax 2025", "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>", EmailContentType.Html)
             ],
             NotificationChannel.SmsPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -2123,7 +2127,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailAndSms,
-            resourceAction: null);
+            resourceAction: null,
+            emailAttachments: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
