@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace Altinn.Notifications.Models.Dashboard;
 
 /// <summary>
-/// Request model for fetching notifications by Organization Number.
+/// Request model for fetching notifications by organization number.
 /// </summary>
-public class NotificationsByOrgNumberRequestExt
+public class NotificationsByOrgNumberRequestExt : DashboardNotificationRequestExt
 {
     /// <summary>
     /// The organization number of the recipient.
@@ -14,16 +14,4 @@ public class NotificationsByOrgNumberRequestExt
     [BindRequired]
     [FromHeader(Name = "OrganizationNumber")]
     public required string OrganizationNumber { get; set; }
-
-    /// <summary>
-    /// Start of the date range (inclusive). Defaults to 7 days ago if not provided.
-    /// </summary>
-    [FromQuery]
-    public DateTime? From { get; set; }
-
-    /// <summary>
-    /// End of the date range (exclusive). Defaults to now if not provided.
-    /// </summary>
-    [FromQuery]
-    public DateTime? To { get; set; }
 }
