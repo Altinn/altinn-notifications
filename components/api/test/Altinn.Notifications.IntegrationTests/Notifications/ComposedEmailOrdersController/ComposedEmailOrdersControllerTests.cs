@@ -373,7 +373,6 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
 
         return _factory.WithWebHostBuilder(builder =>
         {
-            IdentityModelEventSource.ShowPII = true;
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton(composedEmailService);
