@@ -861,6 +861,14 @@ public class PreferredChannelProcessingServiceTests
             Recipients = []
         };
 
+        _emailProcessingMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
+        
+        _smsProcessingMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
+
         var service = new PreferredChannelProcessingService(
             _emailProcessingMock.Object,
             _smsProcessingMock.Object,
