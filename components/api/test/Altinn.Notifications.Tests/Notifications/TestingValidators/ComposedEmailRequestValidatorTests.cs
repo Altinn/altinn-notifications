@@ -228,4 +228,35 @@ public class ComposedEmailRequestValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
+
+    [Fact]
+    public void Validate_AttachmentWithValidSasUrlAndSufficientExpiry_NoExpiryError()
+    {
+        // Arrange
+        var sendTime = DateTime.UtcNow.AddHours(1);
+        var recipient = new RecipientComposedEmailExt
+        {
+            EmailAddress = "recipient@altinnxyz.no",
+            Settings = new ComposedEmailSendingOptionsExt
+            {
+                Subject = "Decision from Altinn",
+                Body = "Please see the attached document.",
+                Attachments =
+                [
+                    new SasFileReferenceExt
+                    {
+                        Filename = "contract.pdf",
+                        MimeType = "application/pdf",
+                        SasUrl = string.Empty
+                    }
+                ]
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(requestedSendTime: sendTime, recipient: recipient));
+
+        // Assert
+        result.ShouldNotHaveValidationErrorFor(order => order.Recipient);
+    }
 }

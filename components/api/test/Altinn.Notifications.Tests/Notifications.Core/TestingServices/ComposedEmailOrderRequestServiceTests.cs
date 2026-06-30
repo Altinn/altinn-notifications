@@ -318,6 +318,66 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock.VerifyAll();
     }
 
+    [Fact]
+    public void SasFileReference_ToString_DoesNotExposesSasUrl()
+    {
+        // Arrange
+        var sasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=supersecret";
+        var fileReference = new SasFileReference
+        {
+            Filename = "contract.pdf",
+            MimeType = "application/pdf",
+            SasUrl = sasUrl
+        };
+
+        // Act
+        var result = fileReference.ToString();
+
+        // Assert
+        Assert.DoesNotContain(sasUrl, result, StringComparison.Ordinal);
+        Assert.Contains("[redacted]", result, StringComparison.Ordinal);
+        Assert.Contains("contract.pdf", result, StringComparison.Ordinal);
+        Assert.Contains("application/pdf", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("supersecret", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotificationOrder_WithEmailAttachments_RoundTripsCorrectly()
+    {
+        // Arrange
+        var orderId = Guid.NewGuid();
+        var sasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig";
+
+        var notificationOrder = new NotificationOrder
+        {
+            Id = orderId,
+            Created = DateTime.UtcNow,
+            Type = OrderType.Composed,
+            Creator = new Creator("ttd"),
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments =
+            [
+                new SasFileReference { Filename = "decision.pdf", MimeType = "application/pdf", SasUrl = sasUrl }
+            ],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        // Act
+        var json = notificationOrder.Serialize();
+        var deserialized = NotificationOrder.Deserialize(json);
+
+        // Assert
+        Assert.NotNull(deserialized);
+        Assert.NotNull(deserialized.EmailAttachments);
+
+        Assert.Single(deserialized.EmailAttachments);
+        Assert.Equal(sasUrl, deserialized.EmailAttachments[0].SasUrl);
+        Assert.Equal("decision.pdf", deserialized.EmailAttachments[0].Filename);
+        Assert.Equal("application/pdf", deserialized.EmailAttachments[0].MimeType);
+    }
+
     private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId, DateTime requestedSendTime, string? sendersReference = null)
     {
         var recipient = new NotificationRecipient

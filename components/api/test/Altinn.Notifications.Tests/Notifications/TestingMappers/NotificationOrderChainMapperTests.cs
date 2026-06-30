@@ -2,6 +2,7 @@ using System;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Mappers;
@@ -2317,6 +2318,63 @@ public class NotificationOrderChainMapperTests
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_ComposedType_WithoutRecipientComposedEmail_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetOrderChainId(Guid.NewGuid())
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId("B1C2D3E4-F5A6-7890-BCDE-F12345678901")
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(builder.Build);
+        Assert.Equal("RecipientComposedEmail must be set for composed orders.", ex.Message);
+    }
+
+    [Fact]
+    public void Build_ComposedType_WithReminders_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetOrderChainId(Guid.NewGuid())
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId("C2D3E4F5-A6B7-8901-CDEF-123456789012")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Test",
+                        Body = "Test",
+                        Attachments = [new SasFileReference { Filename = "f.pdf", MimeType = "application/pdf", SasUrl = "https://x.blob.core.windows.net/c/f.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=x" }]
+                    }
+                }
+            })
+            .SetReminders(
+            [
+                new NotificationReminder
+                {
+                    DelayDays = 3,
+                    OrderId = Guid.NewGuid(),
+                    Type = OrderType.Reminder,
+                    RequestedSendTime = DateTime.UtcNow.AddDays(3),
+                    Recipient = new NotificationRecipient()
+                }
+            ]);
+
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(builder.Build);
+        Assert.Equal("Reminders are not supported for composed orders.", ex.Message);
     }
 
     [Fact]
