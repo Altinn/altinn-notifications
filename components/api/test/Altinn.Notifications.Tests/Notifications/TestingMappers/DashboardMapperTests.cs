@@ -85,7 +85,8 @@ public class DashboardMapperTests
                 "urn:altinn:resource:app-ttd-test",
                 "ref-123",
                 sendTime,
-                "EmailPreferred",
+                NotificationChannel.EmailPreferred,
+                "notification",
                 [new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]),
         };
 

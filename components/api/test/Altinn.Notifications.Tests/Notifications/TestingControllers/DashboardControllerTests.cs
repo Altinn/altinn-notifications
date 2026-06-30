@@ -326,7 +326,7 @@ public class DashboardControllerTests
         var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, null, It.IsAny<CancellationToken>()))
@@ -349,7 +349,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, "EmailPreferred", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, to, It.IsAny<CancellationToken>()))

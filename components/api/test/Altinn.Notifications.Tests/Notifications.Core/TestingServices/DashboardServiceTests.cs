@@ -30,7 +30,8 @@ public class DashboardServiceTests
                 null,
                 null,
                 DateTime.UtcNow,
-                "EmailPreferred",
+                NotificationChannel.EmailPreferred,
+                "notification",
                 [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)]),
         };
 
@@ -129,7 +130,8 @@ public class DashboardServiceTests
                 null,
                 null,
                 DateTime.UtcNow,
-                "EmailPreferred",
+                NotificationChannel.EmailPreferred,
+                "notification",
                 [new DashboardDeliveryAttempt(null, _recipientOrgNo, "email", null, null, "Succeeded", null)]),
         };
 
