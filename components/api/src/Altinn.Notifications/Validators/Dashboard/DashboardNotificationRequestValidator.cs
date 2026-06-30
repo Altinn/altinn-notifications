@@ -14,7 +14,7 @@ internal class DashboardNotificationRequestValidator : AbstractValidator<Dashboa
     public DashboardNotificationRequestValidator()
     {
         RuleFor(x => x.From)
-            .Must(from => from!.Value.Kind != DateTimeKind.Unspecified).When(x => x.From.HasValue).WithMessage("The 'from' value must have specified a time zone.");
+            .Must(from => from!.Value.Kind == DateTimeKind.Utc).When(x => x.From.HasValue).WithMessage("The 'from' value must be UTC.");
 
         RuleFor(x => x.From)
             .Must((request, from) => from < request.To).When(x => x.From.HasValue && x.To.HasValue).WithMessage("'from' must be earlier than 'to'.");
@@ -26,7 +26,7 @@ internal class DashboardNotificationRequestValidator : AbstractValidator<Dashboa
             .Must(from => from >= DateTime.UtcNow.AddYears(-10)).When(x => x.From.HasValue).WithMessage("'from' must not be earlier than 10 years ago.");
 
         RuleFor(x => x.To)
-            .Must(to => to!.Value.Kind != DateTimeKind.Unspecified).When(x => x.To.HasValue).WithMessage("The 'to' value must have specified a time zone.");
+            .Must(to => to!.Value.Kind == DateTimeKind.Utc).When(x => x.To.HasValue).WithMessage("The 'to' value must be UTC.");
 
         RuleFor(x => x.To)
             .Must(to => to <= DateTime.UtcNow).When(x => x.To.HasValue).WithMessage("'to' must not be in the future.");
