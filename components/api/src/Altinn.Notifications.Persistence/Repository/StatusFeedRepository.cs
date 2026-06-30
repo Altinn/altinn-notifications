@@ -29,7 +29,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
             : throw new InvalidOperationException("NotificationConfig:StatusFeedCleanupBatchSize must be greater than 0.");
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
-    private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed_v2(@seq, @creatorname, @orderBy, @limit)";
+    private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed_v2(@seq, @creatorname, @order, @limit)";
     private const string _deleteOldStatusFeedRecordsSql =
         "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
     
@@ -49,7 +49,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
         command.Parameters.AddWithValue("seq", NpgsqlDbType.Bigint, seq);
         command.Parameters.AddWithValue("creatorName", NpgsqlDbType.Varchar, creatorName);
-        command.Parameters.AddWithValue("orderBy", NpgsqlDbType.Varchar, orderBy);
+        command.Parameters.AddWithValue("order", NpgsqlDbType.Varchar, orderBy);
         command.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, pageSize);
 
         List<StatusFeed> statusFeedEntries = [];

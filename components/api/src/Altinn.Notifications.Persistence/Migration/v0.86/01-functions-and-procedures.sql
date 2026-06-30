@@ -1836,7 +1836,7 @@ BEGIN
      * RETURNS:
      * A table with two columns: _id (BIGINT) and orderstatus (JSONB).
      */
-    IF _order NOT IN ('asc', 'desc') THEN
+    IF _order IS NULL OR _order NOT IN ('asc', 'desc') THEN
         RAISE EXCEPTION 'Invalid value for _order: %. Must be ''asc'' or ''desc''.', _order;
     END IF;
 
