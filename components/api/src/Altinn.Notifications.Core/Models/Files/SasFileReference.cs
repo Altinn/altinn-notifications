@@ -27,4 +27,11 @@ public record SasFileReference
     /// Must never be logged or included in error responses.
     /// </remarks>
     public required string SasUrl { get; init; }
+
+    /// <summary>
+    /// Returns a safe string representation that excludes <see cref="SasUrl"/> to prevent
+    /// accidental exposure of live SAS tokens in logs, exception messages, or debugger output.
+    /// </summary>
+    public override string ToString() =>
+        $"SasFileReference {{ Filename = {Filename}, MimeType = {MimeType}, SasUrl = [redacted] }}";
 }
