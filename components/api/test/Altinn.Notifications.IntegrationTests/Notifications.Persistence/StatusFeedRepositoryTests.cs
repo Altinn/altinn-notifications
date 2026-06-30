@@ -25,6 +25,7 @@ public sealed class StatusFeedRepositoryTests : IAsyncLifetime
         foreach (var orderId in _ordersToDelete)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
 

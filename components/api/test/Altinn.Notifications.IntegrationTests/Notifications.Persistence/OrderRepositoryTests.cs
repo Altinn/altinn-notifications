@@ -39,6 +39,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             foreach (Guid orderId in _orderIdsToDelete)
             {
                 await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+                await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             }
 
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
@@ -241,7 +242,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedButNoNotificationLogEntries()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -266,11 +267,16 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
-        // Assert
+        // Assert - status feed entry is inserted
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        // Assert - no notification log entries, since SendConditionNotMet orders have no
+        // email or SMS notifications in the database for the function's join to match on
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
 
         // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
         string jsonSql = $@"select sf.orderstatus
@@ -310,7 +316,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
         // Act
-        await repo.InsertStatusFeedForOrder(order.Id);
+        await repo.InsertStatusFeedAndNotificationLogForOrder(order.Id);
 
         // Assert
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -340,7 +346,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await repo.InsertStatusFeedForOrder(nonExistentOrderId));
+            async () => await repo.InsertStatusFeedAndNotificationLogForOrder(nonExistentOrderId));
 
         Assert.Contains("Order with ID", exception.Message);
         Assert.Contains("not found", exception.Message);

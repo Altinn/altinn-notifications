@@ -76,6 +76,9 @@ public static class TestServiceUtil
             services.AddSingleton<OrderRepository>(); // Also register concrete type for StatusFeedBackfillService
             services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
             services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
+            services.AddSingleton<NotificationLogRepository>();
+            services.AddSingleton<INotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>());
+            services.AddSingleton<ITransactionalNotificationLogRepository>(sp => sp.GetRequiredService<NotificationLogRepository>());
 
             _serviceProvider = services.BuildServiceProvider();
         }
