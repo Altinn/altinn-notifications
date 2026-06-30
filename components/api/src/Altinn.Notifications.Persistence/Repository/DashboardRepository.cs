@@ -29,6 +29,7 @@ public class DashboardRepository : IDashboardRepository
     /// <inheritdoc/>
     public async Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
+        // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
 
@@ -90,6 +91,7 @@ public class DashboardRepository : IDashboardRepository
     /// <inheritdoc/>
     public async Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
+        // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
 
