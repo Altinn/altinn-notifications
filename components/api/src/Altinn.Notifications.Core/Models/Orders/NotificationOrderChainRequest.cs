@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -237,9 +237,22 @@ public class NotificationOrderChainRequest
                 throw new InvalidOperationException("OrderChainId must be set.");
             }
 
-            if (_type != OrderType.Notification)
+            if (_type != OrderType.Notification && _type != OrderType.Composed)
             {
                 throw new InvalidOperationException("Invalid type used.");
+            }
+
+            if (_type == OrderType.Composed)
+            {
+                if (_recipient.RecipientComposedEmail is null)
+                {
+                    throw new InvalidOperationException("RecipientComposedEmail must be set for composed orders.");
+                }
+
+                if (_reminders is { Count: > 0 })
+                {
+                    throw new InvalidOperationException("Reminders are not supported for composed orders.");
+                }
             }
 
             if (string.IsNullOrEmpty(_idempotencyId))

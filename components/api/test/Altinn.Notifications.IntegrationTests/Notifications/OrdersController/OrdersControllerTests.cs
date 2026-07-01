@@ -8,7 +8,6 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
@@ -60,7 +59,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             SendingTimePolicy.Daytime,
             [],
             NotificationChannel.Email,
-            null);
+            resourceAction: null,
+            emailAttachments: null);
 
         _orderWithStatus = new(
             _orderId,

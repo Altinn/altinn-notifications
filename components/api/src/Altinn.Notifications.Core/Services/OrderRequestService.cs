@@ -1,4 +1,4 @@
-﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;

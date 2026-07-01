@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -303,7 +304,7 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedNotificationOrder]);
@@ -422,7 +423,7 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -598,7 +599,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.ResourceId == resourceId &&
                     o.NotificationChannel == NotificationChannel.Email &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedNotificationOrder]);
@@ -722,7 +724,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.SmsPreferred &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -847,7 +850,8 @@ public class OrderRequestServiceTests
                     o.Id == orderId &&
                     o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.EmailAndSms &&
-                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity)),
+                    o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedSavedOrder]);
@@ -1109,11 +1113,12 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(o => o.Id == mainOrderId && o.NotificationChannel == NotificationChannel.Email),
+                It.Is<NotificationOrder>(o => o.Id == mainOrderId && o.NotificationChannel == NotificationChannel.Email && o.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 1 &&
                     list[0].Id == reminderId &&
-                    list[0].NotificationChannel == NotificationChannel.Sms),
+                    list[0].NotificationChannel == NotificationChannel.Sms &&
+                    list[0].EmailAttachments == null),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedReminder]);
 
@@ -1156,10 +1161,11 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
+
         Assert.Equal(orderChainId, result.Value.OrderChainId);
-        Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
         Assert.NotNull(result.Value.OrderChainReceipt.Reminders);
         Assert.Single(result.Value.OrderChainReceipt.Reminders);
+        Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
         Assert.Equal(reminderId, result.Value.OrderChainReceipt.Reminders[0].ShipmentId);
         Assert.Equal("reminder-ref", result.Value.OrderChainReceipt.Reminders[0].SendersReference);
 
@@ -1892,7 +1898,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -1912,7 +1919,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Reminder: Tax 2025", "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -1932,7 +1940,8 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@skatteetaten.no", "Final Reminder: Tax 2025", "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>", EmailContentType.Html)
             ],
             NotificationChannel.SmsPreferred,
-            resourceAction);
+            resourceAction,
+            emailAttachments: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -1940,11 +1949,12 @@ public class OrderRequestServiceTests
         orderRepositoryMock
             .Setup(r => r.Create(
                 It.Is<NotificationOrderChainRequest>(chain => chain.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(mainOrder => mainOrder.Id == mainOrderId),
+                It.Is<NotificationOrder>(mainOrder => mainOrder.Id == mainOrderId && mainOrder.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(reminders =>
                 reminders.Count == 2 &&
                 reminders.Any(o => o.Id == firstReminderId) &&
-                reminders.Any(o => o.Id == secondReminderId)),
+                reminders.Any(o => o.Id == secondReminderId) &&
+                reminders.All(o => o.EmailAttachments == null)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
 
@@ -2017,7 +2027,8 @@ public class OrderRequestServiceTests
                     o.ResourceId == resourceId &&
                     o.ResourceAction == resourceAction &&
                     o.NotificationChannel == NotificationChannel.EmailPreferred &&
-                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746")),
+                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746") &&
+                    o.EmailAttachments == null),
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 2 &&
                     list[0].Id == firstReminderId &&
@@ -2116,12 +2127,13 @@ public class OrderRequestServiceTests
                 new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
             NotificationChannel.EmailAndSms,
-            resourceAction: null);
+            resourceAction: null,
+            emailAttachments: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
             It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "REF-42DBDAB8281C"),
-            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729") && o.EmailAttachments == null),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
             It.IsAny<CancellationToken>())).ReturnsAsync([expectedOrder]);
 
@@ -2164,7 +2176,8 @@ public class OrderRequestServiceTests
                 o.SendersReference == "REF-42DBDAB8281C" &&
                 o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                 o.NotificationChannel == NotificationChannel.EmailAndSms &&
-                o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+                o.Recipients.Any(r => r.OrganizationNumber == "312508729") &&
+                o.EmailAttachments == null),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
             It.IsAny<CancellationToken>()),
             Times.Once);
@@ -2372,7 +2385,8 @@ public class OrderRequestServiceTests
                     o.IgnoreReservation == false &&
                     o.ResourceAction == "sign" &&
                     o.NotificationChannel == NotificationChannel.Email &&
-                    o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber)),
+                    o.Recipients.Any(r => r.NationalIdentityNumber == nationalIdentityNumber) &&
+                    o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedOrder]);
