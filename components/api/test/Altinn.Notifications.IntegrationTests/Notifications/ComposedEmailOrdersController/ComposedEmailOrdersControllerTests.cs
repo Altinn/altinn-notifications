@@ -43,9 +43,9 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private static readonly string _validSasUrl =
-        "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+    private static readonly Uri _validSasUrl =
+        new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
+        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
     private readonly IntegrationTestWebApplicationFactory<ComposedEmailOrdersController> _factory;
 
@@ -154,7 +154,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = "http://not-https.example.com/file.pdf"
+                            SasUrl = new Uri("http://not-https.example.com/file.pdf")
                         }
                     ]
                 }
@@ -195,7 +195,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
                         {
                             Filename = "contract.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = $"https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature"
+                            SasUrl = new Uri($"https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature")
                         }
                     ]
                 }
@@ -283,13 +283,13 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
                         {
                             Filename = "appendix.docx",
                             MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2"
+                            SasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2")
                         },
                         new SasFileReferenceExt
                         {
                             Filename = "evidence.xlsx",
                             MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3"
+                            SasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3")
                         }
                     ]
                 }

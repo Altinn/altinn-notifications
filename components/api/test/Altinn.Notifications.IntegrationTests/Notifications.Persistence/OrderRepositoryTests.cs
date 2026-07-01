@@ -3975,7 +3975,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                 {
                     Filename = "decision.pdf",
                     MimeType = "application/pdf",
-                    SasUrl = "https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+                    SasUrl = new Uri("https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
                 }
             ],
             Templates = [new EmailTemplate("noreply@altinn.no", "Decision from Altinn", "Please review the attached document.", EmailContentType.Plain)],
