@@ -14,19 +14,10 @@ internal sealed class NotificationsByNinRequestValidator : AbstractValidator<Not
     /// </summary>
     public NotificationsByNinRequestValidator()
     {
+        Include(new DashboardNotificationRequestValidator());
+
         RuleFor(x => x.NationalIdentityNumber)
             .NotEmpty().WithMessage("'NationalIdentityNumber' is required and cannot be empty")
             .MustBeValidNationalIdentityNumber();
-
-        RuleFor(x => x.From)
-            .Must(from => from!.Value.Kind != DateTimeKind.Unspecified).When(x => x.From.HasValue).WithMessage("The 'from' value must have specified a time zone.")
-            .Must((request, from) => from < request.To).When(x => x.From.HasValue && x.To.HasValue).WithMessage("'from' must be earlier than 'to'.")
-            .Must(from => from <= DateTime.UtcNow).When(x => x.From.HasValue).WithMessage("'from' must not be in the future.")
-            .Must(from => from >= DateTime.UtcNow.AddYears(-10)).When(x => x.From.HasValue).WithMessage("'from' must not be earlier than 10 years ago.");
-
-        RuleFor(x => x.To)
-            .Must(to => to!.Value.Kind != DateTimeKind.Unspecified).When(x => x.To.HasValue).WithMessage("The 'to' value must have specified a time zone.")
-            .Must(to => to <= DateTime.UtcNow).When(x => x.To.HasValue).WithMessage("'to' must not be in the future.")
-            .Must(to => to > DateTime.UtcNow.AddDays(-7)).When(x => x.To.HasValue && !x.From.HasValue).WithMessage("'to' must be later than the default 'from' (7 days ago).");
     }
 }

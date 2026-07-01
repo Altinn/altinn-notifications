@@ -15,6 +15,13 @@ public record DashboardDeliveryAttemptExt
     public string? NationalIdentityNumber { get; init; }
 
     /// <summary>
+    /// The organization number of the recipient.
+    /// </summary>
+    [JsonPropertyName("organizationNumber")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OrganizationNumber { get; init; }
+
+    /// <summary>
     /// The delivery channel: "email" or "sms".
     /// </summary>
     [JsonPropertyName("channel")]

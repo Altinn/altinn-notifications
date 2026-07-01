@@ -14,6 +14,7 @@ public class DashboardMapperTests
 {
     private static readonly Guid _shipmentId = Guid.NewGuid();
     private const string _nin = "16069412345";
+    private const string _orgNo = "123456789";
 
     [Fact]
     public void MapToDashboardNotificationExtList_EmptyList_ReturnsEmptyList()
@@ -26,7 +27,7 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_EmailRecipient_MapsEmailAddressAndNullMobile()
     {
-        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, "email", "test@example.com", null, null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
@@ -38,7 +39,7 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_SmsRecipient_MapsMobileNumberAndNullEmail()
     {
-        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, "sms", null, "+4712345678", null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "sms", null, "+4712345678", null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
@@ -50,12 +51,25 @@ public class DashboardMapperTests
     [Fact]
     public void MapToDashboardNotificationExtList_RecipientNinIsMapped()
     {
-        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, "email", "test@example.com", null, null, null)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "test@example.com", null, null, null)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
         var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
         Assert.Equal(_nin, recipient.NationalIdentityNumber);
+        Assert.Null(recipient.OrganizationNumber);
+    }
+
+    [Fact]
+    public void MapToDashboardNotificationExtList_RecipientOrgNoIsMapped()
+    {
+        var notification = BuildNotification([new DashboardDeliveryAttempt(null, _orgNo, "email", "test@example.com", null, null, null)]);
+
+        var result = notification.MapToDashboardNotificationExtList();
+
+        var recipient = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_orgNo, recipient.OrganizationNumber);
+        Assert.Null(recipient.NationalIdentityNumber);
     }
 
     [Fact]
@@ -73,7 +87,7 @@ public class DashboardMapperTests
                 sendTime,
                 NotificationChannel.EmailPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(_nin, "email", "a@b.com", null, "Succeeded", resultTime)]),
+                [new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]),
         };
 
         var result = notifications.MapToDashboardNotificationExtList();
@@ -92,7 +106,7 @@ public class DashboardMapperTests
     public void MapToDashboardNotificationExtList_RecipientResultFieldsMapped()
     {
         var resultTime = new DateTime(2026, 5, 1, 12, 5, 0, DateTimeKind.Utc);
-        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, "email", "a@b.com", null, "Succeeded", resultTime)]);
+        var notification = BuildNotification([new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)]);
 
         var result = notification.MapToDashboardNotificationExtList();
 
@@ -105,8 +119,8 @@ public class DashboardMapperTests
     public void MapToDashboardNotificationExtList_MultipleDeliveryAttempts_AllMapped()
     {
         var notification = BuildNotification([
-            new DashboardDeliveryAttempt(_nin, "email", "a@b.com", null, null, null),
-            new DashboardDeliveryAttempt(_nin, "sms", null, "+4700000001", null, null),
+            new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, null, null),
+            new DashboardDeliveryAttempt(_nin, null, "sms", null, "+4700000001", null, null),
         ]);
 
         var result = notification.MapToDashboardNotificationExtList();
