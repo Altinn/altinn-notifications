@@ -530,26 +530,11 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
-  select 
-    -- references and correlation
-    email._id as email_id --unique recipient/"functional email"
-,   email.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
-,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
-,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
-,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
-,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
+ SELECT e.email_id, e.shipmentid, e.senders_reference, e.requestedsendtime, e.creatorname, e.resourceid, e.result, e.operationid
+    FROM notifications.email_metrics_recent e
+    WHERE e.resulttime >= start_date
+      AND e.resulttime < start_date + INTERVAL '1 day';
 
-     -- operator status
-,   email.result::text as result -- status of the delivery (error, but with an operationid may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
-,   email.operationid -- reference at ACS (a reference likely means that ACS bills for this - but not necessarily)
-
-from notifications.emailnotifications as email
-         inner join notifications.orders orders on orders._id = email._orderid
-         WHERE email.resulttime >= start_date
-			AND email.resulttime < start_date + INTERVAL '1 day'
-            AND email.result NOT IN ('New',
-                           'Sending',
-                           'Succeeded');
 END;
 $BODY$;
 
@@ -1155,7 +1140,6 @@ AS $BODY$
 DECLARE
     v_record_exists boolean;
 BEGIN
-    -- Check if record exists first to provide better error handling
     SELECT EXISTS (
         SELECT 1
         FROM notifications.orderschain
@@ -1166,7 +1150,6 @@ BEGIN
     ) INTO v_record_exists;
 
     IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
         RETURN;
     END IF;
 
@@ -1175,7 +1158,6 @@ BEGIN
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
         orders_chain.orderchain->>'SendersReference' AS senders_reference,
-        -- Extract only OrderId and SendersReference from each reminder
         COALESCE(
             (SELECT jsonb_agg(
                 jsonb_build_object(
@@ -1693,39 +1675,10 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
-  select 
-    -- references and correlation
-    sms._id as sms_id --unique per number/"functional SMS"
-,   sms.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
-,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
-,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
-,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
-,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
-
-     -- operator status
-,   sms.result::text as result -- status of the delivery (error, but with a GW reference may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
-,   sms.gatewayreference -- reference at Link Mobility (a reference likely means that Link Mobility bills for this - but not necessarily)
-
-     -- tariffing (price group + message splitting by the operator)
-,   CASE 
-        WHEN sms.mobilenumber IS NULL OR sms.mobilenumber = '' THEN 'n/a'
-        WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland' 
-        ELSE 'utland' 
-    END as rate  -- all numbers that are not Norwegian are defined in the international rate group.  
-,   left(sms.mobilenumber, 4) as mobilenumber_prefix --temporary field to verify the rate field
-,   sms.smscount as altinn_sms_count -- internal counting logic to split messages over 160 characters
-,   length(sms.customizedbody) as altinn_sms_custom_body_length --number of characters in the text (for messages with keywords)
-,   length(sms_text.body) as altinn_sms_body_length --number of characters in the text received from the  
-     
---,  sms.*, sms_text.*, orders.*, order_chain.*
-from notifications.smsnotifications as sms
-         inner join notifications.orders orders on orders._id = sms._orderid
-         left join notifications.smstexts sms_text on orders._id = sms_text._orderid
-         WHERE sms.resulttime >= start_date
-			AND sms.resulttime < start_date + INTERVAL '1 day'
-            AND sms.result NOT IN ('New',
-                           'Sending',
-                           'Accepted');
+   SELECT s.sms_id, s.shipmentid, s.senders_reference, s.requestedsendtime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.rate, s.mobilenumber_prefix, s.altinn_sms_count, s.altinn_sms_custom_body_length, s.altinn_sms_body_length
+     FROM notifications.sms_metrics_recent s
+     WHERE s.resulttime >= start_date
+       AND s.resulttime < start_date + INTERVAL '1 day';
    
 END;
 $BODY$;

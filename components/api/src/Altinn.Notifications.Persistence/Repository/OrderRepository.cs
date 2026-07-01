@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -42,7 +43,8 @@ public class OrderRepository : IOrderRepository
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
     private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
-    private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking_v2($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _getComposedOrderChainTrackingSql = "SELECT * FROM notifications.get_composed_order_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
@@ -279,7 +281,7 @@ public class OrderRepository : IOrderRepository
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
-                
+
                 // Attempt to read recipients
                 await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
@@ -357,11 +359,57 @@ public class OrderRepository : IOrderRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getOrdersChainTrackingSql);
-
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
+        {
+            return null;
+        }
+
+        var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
+
+        return CreateNotificationOrderChainResponse(header.Value.OrderChainId, header.Value.ShipmentId, header.Value.SendersReference, reminderShipments, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrderChainResponse?> GetComposedOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_getComposedOrderChainTrackingSql);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
+        {
+            return null;
+        }
+
+        return new NotificationOrderChainResponse
+        {
+            OrderChainId = header.Value.OrderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = header.Value.ShipmentId,
+                SendersReference = header.Value.SendersReference
+            }
+        };
+    }
+
+    /// <summary>
+    /// Reads the common order chain header columns (chain ID, shipment ID, sender's reference) from
+    /// an already-executed <paramref name="reader"/>. Returns <see langword="null"/> when no rows are
+    /// present or either GUID column is empty.
+    /// </summary>
+    private static async Task<(Guid OrderChainId, Guid ShipmentId, string? SendersReference)?> ReadOrderChainHeaderAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    {
         if (!reader.HasRows)
         {
             return null;
@@ -375,19 +423,17 @@ public class OrderRepository : IOrderRepository
             return null;
         }
 
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
-        if (mainShipmentId == Guid.Empty)
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
+        if (shipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
-            null :
-            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken)
+            ? null
+            : reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
-        var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
-
-        return CreateNotificationOrderChainResponse(ordersChainId, mainShipmentId, mainSendersReference, reminderShipments, cancellationToken);
+        return (ordersChainId, shipmentId, sendersReference);
     }
 
     /// <inheritdoc/>
