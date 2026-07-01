@@ -30,17 +30,6 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     /// <inheritdoc/>
     public async Task<OrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
-        return await ProcessOrderInternal(order, false);
-    }
-
-    /// <inheritdoc/>
-    public async Task<OrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
-    {
-        return await ProcessOrderInternal(order, true);
-    }
-
-    private async Task<OrderProcessingResult> ProcessOrderInternal(NotificationOrder order, bool isRetry)
-    {
         if (order.NotificationChannel is not (NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred))
         {
             throw new ArgumentOutOfRangeException(
@@ -58,66 +47,46 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
             await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId, OrderLifecycleStage.Processing, order.UseStaleContactInformation, order.ResourceAction);
         }
 
-        List<Recipient> preferredChannelRecipients;
-        List<Recipient> fallBackChannelRecipients;
+        AddressType preferredAddressType = order.NotificationChannel == NotificationChannel.EmailPreferred
+            ? AddressType.Email
+            : AddressType.Sms;
 
-        EmailOrderProcessingResult emailResult = new([], null);
-        SmsOrderProcessingResult smsResult = new([], null);
+        AddressType fallbackAddressType = order.NotificationChannel == NotificationChannel.EmailPreferred
+            ? AddressType.Sms
+            : AddressType.Email;
 
-        switch (order.NotificationChannel)
-        {
-            case NotificationChannel.EmailPreferred:
-                (preferredChannelRecipients, fallBackChannelRecipients) =
-                    GenerateRecipientLists(recipients, AddressType.Email, AddressType.Sms);
+        var (preferredRecipients, fallbackRecipients) = GenerateRecipientLists(recipients, preferredAddressType, fallbackAddressType);
 
-                if (isRetry)
-                {
-                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
-                }
-                else
-                {
-                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
-                }
+        Task<EmailOrderProcessingResult> emailResultTask = order.NotificationChannel == NotificationChannel.EmailPreferred
+            ? _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredRecipients)
+            : _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallbackRecipients);
 
-                break;
+        Task<SmsOrderProcessingResult> smsResultTask = order.NotificationChannel == NotificationChannel.SmsPreferred
+            ? _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredRecipients)
+            : _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallbackRecipients);
 
-            case NotificationChannel.SmsPreferred:
-                (preferredChannelRecipients, fallBackChannelRecipients) =
-                     GenerateRecipientLists(recipients, AddressType.Sms, AddressType.Email);
-
-                if (isRetry)
-                {
-                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
-                }
-                else
-                {
-                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
-                }
-
-                break;
-        }
+        await Task.WhenAll(emailResultTask, smsResultTask);
 
         return new OrderProcessingResult(
-            EmailOrderProcessingResult: emailResult,
-            SmsOrderProcessingResult: smsResult);
+            EmailOrderProcessingResult: await emailResultTask,
+            SmsOrderProcessingResult: await smsResultTask);
+    }
+
+    /// <inheritdoc/>
+    public Task<OrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
+    {
+        return ProcessOrder(order);
     }
 
     private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)
     {
-        // Initialize dictionaries to hold recipients for preferred and fallback channels
         var fallbackChannelRecipients = new Dictionary<string, Recipient>();
         var preferredChannelRecipients = new Dictionary<string, Recipient>();
 
         foreach (var recipient in recipients)
         {
-            // Generate a unique identifier for the recipient
             string recipientIdentifier = recipient.ExternalIdentity ?? recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? Guid.NewGuid().ToString();
 
-            // Process recipients with fallback addresses.
             int fallbackAddressCount = recipient.AddressInfo.Count(a => a.AddressType == fallbackAddressType);
             if (fallbackAddressCount > 0)
             {
@@ -131,7 +100,6 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 };
             }
 
-            // Process recipients with preferred addresses
             int preferredAddressCount = recipient.AddressInfo.Count(a => a.AddressType == preferredAddressType);
             if (preferredAddressCount > 0)
             {
@@ -145,7 +113,6 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
                 };
             }
 
-            // Handle recipients with neither a preferred nor a fallback address.
             if (fallbackAddressCount == 0 && preferredAddressCount == 0)
             {
                 preferredChannelRecipients[recipientIdentifier] = recipient;
