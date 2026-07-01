@@ -111,6 +111,8 @@ public static class ServiceUtil
             _sharedServiceProvider = null;
             _sharedDataSource?.Dispose();
             _sharedDataSource = null;
+            _sharedAdminDataSource?.Dispose();
+            _sharedAdminDataSource = null;
             _postgreSqlInitialized = false;
         }
     }
