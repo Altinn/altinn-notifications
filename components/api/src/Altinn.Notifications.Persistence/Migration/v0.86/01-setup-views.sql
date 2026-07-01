@@ -61,10 +61,6 @@ CREATE INDEX IF NOT EXISTS sms_metrics_recent_resulttime_idx
 GRANT SELECT ON notifications.email_metrics_recent TO platform_notifications;
 GRANT SELECT ON notifications.sms_metrics_recent TO platform_notifications;
 
--- Initial populate
-REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
-REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;
-
 -- Add a cron job to refresh the materialized views manually in the postgres database
 -- Schedule refresh jobs (idempotent: unschedule existing job with the same name first)
 /*
@@ -83,4 +79,8 @@ SELECT cron.schedule_in_database(
     $$REFRESH MATERIALIZED VIEW CONCURRENTLY notifications.sms_metrics_recent$$,
     'notificationsdb'
 );
+
+-- Initial populate
+REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
+REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;
 */
