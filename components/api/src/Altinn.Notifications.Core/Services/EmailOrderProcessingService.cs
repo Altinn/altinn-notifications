@@ -54,10 +54,6 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public Task<EmailOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        // All notifications are persisted atomically in a single transaction via PersistProcessingResultAsync.
-        // On retry, either the entire previous attempt committed (no duplicate guard needed) or it was fully
-        // rolled back (all recipients must be re-processed). GetRecipients always returns an empty list,
-        // making the old duplicate-guard loop a no-op. Delegate directly to the non-retry path.
         return ProcessOrderWithoutAddressLookup(order, recipients);
     }
 
