@@ -5,7 +5,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 namespace Altinn.Notifications.Core.Services;
@@ -16,7 +15,6 @@ namespace Altinn.Notifications.Core.Services;
 public class EmailOrderProcessingService : IEmailOrderProcessingService
 {
     private readonly IContactPointService _contactPointService;
-    private readonly IEmailNotificationRepository _emailNotificationRepository;
     private readonly IEmailNotificationService _emailService;
     private readonly IKeywordsService _keywordsService;
 
@@ -24,12 +22,10 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// Initializes a new instance of the <see cref="EmailOrderProcessingService"/> class.
     /// </summary>
     public EmailOrderProcessingService(
-        IEmailNotificationRepository emailNotificationRepository,
         IEmailNotificationService emailService,
         IContactPointService contactPointService,
         IKeywordsService keywordsService)
     {
-        _emailNotificationRepository = emailNotificationRepository;
         _emailService = emailService;
         _contactPointService = contactPointService;
         _keywordsService = keywordsService;
@@ -56,42 +52,13 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task<EmailOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    public Task<EmailOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
-        var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
-        var expiryTime = order.RequestedSendTime.AddHours(48);
-
-        var notifications = new List<EmailNotification>();
-
-        foreach (var recipient in recipients)
-        {
-            var addressPoint = recipient.AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
-
-            var isEmailRecipientRegistered =
-                registeredEmailRecipients.Exists(er => er.ToAddress == addressPoint?.EmailAddress &&
-                                                 er.OrganizationNumber == recipient.OrganizationNumber &&
-                                                 er.NationalIdentityNumber == recipient.NationalIdentityNumber);
-            if (isEmailRecipientRegistered)
-            {
-                continue;
-            }
-
-            var matchedEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
-            var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
-            List<EmailAddressPoint> emailAddresses = addressPoint != null ? [addressPoint] : [];
-
-            var created = await _emailService.CreateNotification(
-                order.Id,
-                order.RequestedSendTime,
-                emailAddresses,
-                emailRecipient,
-                order.IgnoreReservation ?? false);
-
-            notifications.AddRange(created);
-        }
-
-        return new EmailOrderProcessingResult(notifications, expiryTime);
+        // All notifications are persisted atomically in a single transaction via PersistProcessingResultAsync.
+        // On retry, either the entire previous attempt committed (no duplicate guard needed) or it was fully
+        // rolled back (all recipients must be re-processed). GetRecipients always returns an empty list,
+        // making the old duplicate-guard loop a no-op. Delegate directly to the non-retry path.
+        return ProcessOrderWithoutAddressLookup(order, recipients);
     }
 
     /// <inheritdoc/>

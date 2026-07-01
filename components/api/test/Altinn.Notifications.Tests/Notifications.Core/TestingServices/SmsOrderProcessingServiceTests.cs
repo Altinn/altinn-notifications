@@ -253,7 +253,7 @@ public class SmsOrderProcessingServiceTests
             new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" }
         ]);
 
-        var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);
+        var service = GetTestService(smsService: notificationServiceMock.Object);
 
         // Act
         await service.ProcessOrderRetry(order);
@@ -354,7 +354,7 @@ public class SmsOrderProcessingServiceTests
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync([]);
 
-        var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);
+        var service = GetTestService(smsService: notificationServiceMock.Object);
 
         // Act
         await service.ProcessOrderRetry(order);
@@ -365,17 +365,10 @@ public class SmsOrderProcessingServiceTests
 
     private static SmsOrderProcessingService GetTestService(
         IKeywordsService? keywordsService = null,
-        ISmsNotificationRepository? smsRepo = null,
         ISmsNotificationService? smsService = null,
         IContactPointService? contactPointService = null,
         INotificationScheduleService? notificationScheduleService = null)
     {
-        if (smsRepo == null)
-        {
-            var smsRepoMock = new Mock<ISmsNotificationRepository>();
-            smsRepo = smsRepoMock.Object;
-        }
-
         if (smsService == null)
         {
             var smsServiceMock = new Mock<ISmsNotificationService>();
@@ -404,6 +397,6 @@ public class SmsOrderProcessingServiceTests
             notificationScheduleService = notificationScheduleServiceMock.Object;
         }
 
-        return new SmsOrderProcessingService(keywordsService, smsService, contactPointService, smsRepo, notificationScheduleService);
+        return new SmsOrderProcessingService(keywordsService, smsService, contactPointService, notificationScheduleService);
     }
 }

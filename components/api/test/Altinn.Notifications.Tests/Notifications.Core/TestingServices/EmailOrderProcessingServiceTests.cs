@@ -191,7 +191,7 @@ public class EmailOrderProcessingServiceTests
             new() { NationalIdentityNumber = "enduser-nin", ToAddress = "test@test.com" }
         });
 
-        var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
+        var service = GetTestService(emailService: serviceMock.Object);
 
         // Act
         await service.ProcessOrderRetry(order);
@@ -202,17 +202,10 @@ public class EmailOrderProcessingServiceTests
     }
 
     private static EmailOrderProcessingService GetTestService(
-         IEmailNotificationRepository? emailRepo = null,
          IEmailNotificationService? emailService = null,
          IContactPointService? contactPointService = null,
          IKeywordsService? keywordsService = null)
     {
-        if (emailRepo == null)
-        {
-            var emailRepoMock = new Mock<IEmailNotificationRepository>();
-            emailRepo = emailRepoMock.Object;
-        }
-
         if (emailService == null)
         {
             var emailServiceMock = new Mock<IEmailNotificationService>();
@@ -234,6 +227,6 @@ public class EmailOrderProcessingServiceTests
             keywordsService = keywordsServiceMock.Object;
         }
 
-        return new EmailOrderProcessingService(emailRepo, emailService, contactPointService, keywordsService);
+        return new EmailOrderProcessingService(emailService, contactPointService, keywordsService);
     }
 }

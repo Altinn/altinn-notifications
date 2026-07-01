@@ -7,7 +7,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 namespace Altinn.Notifications.Core.Services;
@@ -20,7 +19,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     private readonly IKeywordsService _keywordsService;
     private readonly ISmsNotificationService _smsService;
     private readonly IContactPointService _contactPointService;
-    private readonly ISmsNotificationRepository _smsNotificationRepository;
     private readonly INotificationScheduleService _notificationScheduleService;
 
     /// <summary>
@@ -30,13 +28,11 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         IKeywordsService keywordsService,
         ISmsNotificationService smsService,
         IContactPointService contactPointService,
-        ISmsNotificationRepository smsNotificationRepository,
         INotificationScheduleService notificationScheduleService)
     {
         _smsService = smsService;
         _keywordsService = keywordsService;
         _contactPointService = contactPointService;
-        _smsNotificationRepository = smsNotificationRepository;
         _notificationScheduleService = notificationScheduleService;
     }
 
@@ -61,47 +57,13 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task<SmsOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    public Task<SmsOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        var smsTemplate = GetValidatedSmsTemplate(order);
-        var expirationDateTime = GetExpirationDateTime(order);
-
-        var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
-        var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
-
-        var notifications = new List<SmsNotification>();
-
-        foreach (var recipient in recipients)
-        {
-            var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
-
-            var isSmsRecipientRegistered =
-                registeredSmsRecipients.Exists(er =>
-                    er.MobileNumber == smsAddress?.MobileNumber &&
-                    er.OrganizationNumber == recipient.OrganizationNumber &&
-                    er.NationalIdentityNumber == recipient.NationalIdentityNumber);
-
-            if (isSmsRecipientRegistered)
-            {
-                continue;
-            }
-
-            var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
-            var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
-            var smsAddresses = smsAddress != null ? [smsAddress] : new List<SmsAddressPoint>();
-
-            var created = await _smsService.CreateNotification(
-                order.Id,
-                order.RequestedSendTime,
-                expirationDateTime,
-                smsAddresses,
-                smsRecipient,
-                order.IgnoreReservation ?? false);
-
-            notifications.AddRange(created);
-        }
-
-        return new SmsOrderProcessingResult(notifications, expirationDateTime);
+        // All notifications are persisted atomically in a single transaction via PersistProcessingResultAsync.
+        // On retry, either the entire previous attempt committed (no duplicate guard needed) or it was fully
+        // rolled back (all recipients must be re-processed). GetRecipients always returns an empty list,
+        // making the old duplicate-guard loop a no-op. Delegate directly to the non-retry path.
+        return ProcessOrderWithoutAddressLookup(order, recipients);
     }
 
     /// <inheritdoc/>
