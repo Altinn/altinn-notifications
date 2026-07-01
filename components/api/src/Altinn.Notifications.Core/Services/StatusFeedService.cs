@@ -36,13 +36,14 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public Task<List<StatusFeed>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
+    public Task<List<StatusFeed>> GetStatusFeed(long seq, int? pageSize, string creatorName, string orderBy, CancellationToken cancellationToken)
     {
         var pageSizeFound = FindPageSize(pageSize);
 
         return _statusFeedRepository.GetStatusFeed(
             seq: seq,
             pageSize: pageSizeFound,
+            orderBy: orderBy,
             creatorName: creatorName,
             cancellationToken: cancellationToken);
     }
