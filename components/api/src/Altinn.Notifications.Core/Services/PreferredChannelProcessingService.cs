@@ -61,8 +61,8 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         List<Recipient> preferredChannelRecipients;
         List<Recipient> fallBackChannelRecipients;
 
-        EmailOrderProcessingResult emailResult = new([], null);
-        SmsOrderProcessingResult smsResult = new([], null);
+        Task<EmailOrderProcessingResult> emailResult = Task.FromResult<EmailOrderProcessingResult>(new EmailOrderProcessingResult([], null));
+        Task<SmsOrderProcessingResult> smsResult = Task.FromResult<SmsOrderProcessingResult>(new SmsOrderProcessingResult([], null));
 
         switch (order.NotificationChannel)
         {
@@ -72,13 +72,13 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
                 if (isRetry)
                 {
-                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
+                    emailResult = _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
+                    smsResult = _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
                 else
                 {
-                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
+                    emailResult = _emailProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
+                    smsResult = _smsProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
 
                 break;
@@ -89,21 +89,23 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
 
                 if (isRetry)
                 {
-                    smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
-                    emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
+                    smsResult = _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, preferredChannelRecipients);
+                    emailResult = _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
                 else
                 {
-                    smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
-                    emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
+                    smsResult = _smsProcessingService.ProcessOrderWithoutAddressLookup(order, preferredChannelRecipients);
+                    emailResult = _emailProcessingService.ProcessOrderWithoutAddressLookup(order, fallBackChannelRecipients);
                 }
 
                 break;
         }
 
+        await Task.WhenAll(emailResult, smsResult);
+
         return new OrderProcessingResult(
-            EmailOrderProcessingResult: emailResult,
-            SmsOrderProcessingResult: smsResult);
+            EmailOrderProcessingResult: await emailResult,
+            SmsOrderProcessingResult: await smsResult);
     }
 
     private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)
