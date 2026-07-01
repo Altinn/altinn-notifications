@@ -33,9 +33,9 @@ public class DashboardRepository : IDashboardRepository
     }
 
     /// <inheritdoc/>
-    public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
-        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNumber, nin: null, orgNo: recipientOrgNumber, dateTimeFrom, dateTimeTo, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, nin: null, orgNo: recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
