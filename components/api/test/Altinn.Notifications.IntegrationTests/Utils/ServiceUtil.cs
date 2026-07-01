@@ -20,6 +20,7 @@ public static class ServiceUtil
     private static readonly object _lock = new();
     private static volatile bool _postgreSqlInitialized;
     private static NpgsqlDataSource? _sharedDataSource;
+    private static NpgsqlDataSource? _sharedAdminDataSource;
     private static ServiceProvider? _sharedServiceProvider;
 
     // Tracks every custom config ServiceProvider created for env-variable overrides.
@@ -41,13 +42,30 @@ public static class ServiceUtil
         }
     }
 
-    private static NpgsqlDataSource CreateDataSource(IConfiguration config)
+    public static NpgsqlDataSource GetSharedAdminDataSource()
+    {
+        lock (_lock)
+        {
+            if (_sharedAdminDataSource != null)
+            {
+                return _sharedAdminDataSource;
+            }
+
+            var config = BuildConfiguration();
+            _sharedAdminDataSource = CreateDataSource(config, useAdminConnectionString: true);
+            return _sharedAdminDataSource;
+        }
+    }
+
+    private static NpgsqlDataSource CreateDataSource(IConfiguration config, bool useAdminConnectionString = false)
     {
         PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
             .Get<PostgreSqlSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
 
-        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+        string connectionString = useAdminConnectionString
+            ? string.Format(settings.AdminConnectionString, settings.NotificationsDbPwd)
+            : string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
 
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
         dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
