@@ -42,25 +42,44 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, bool ignoreReservation = false)
+    public Task<IReadOnlyList<SmsNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, bool ignoreReservation = false)
     {
+        var notifications = new List<SmsNotification>();
+
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
-            await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.Failed_RecipientReserved);
-            return;
+            var reservedRecipient = new SmsRecipient
+                {
+                    IsReserved = recipient.IsReserved,
+                    OrganizationNumber = recipient.OrganizationNumber,
+                    NationalIdentityNumber = recipient.NationalIdentityNumber,
+                    CustomizedBody = recipient.CustomizedBody,
+                    MobileNumber = string.Empty
+                };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, reservedRecipient, SmsNotificationResultType.Failed_RecipientReserved));
+            return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
         }
 
         if (addressPoints.Count == 0)
         {
-            await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
-            return;
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipient, SmsNotificationResultType.Failed_RecipientNotIdentified));
+            return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
         }
 
         foreach (SmsAddressPoint addressPoint in addressPoints)
         {
-            recipient.MobileNumber = addressPoint.MobileNumber;
-            await CreateNotification(orderId, requestedSendTime, expiryDateTime, recipient, SmsNotificationResultType.New);
+            var recipientForAddress = new SmsRecipient
+            {
+                IsReserved = recipient.IsReserved,
+                OrganizationNumber = recipient.OrganizationNumber,
+                NationalIdentityNumber = recipient.NationalIdentityNumber,
+                CustomizedBody = recipient.CustomizedBody,
+                MobileNumber = addressPoint.MobileNumber
+            };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipientForAddress, SmsNotificationResultType.New));
         }
+
+        return Task.FromResult<IReadOnlyList<SmsNotification>>(notifications);
     }
 
     /// <inheritdoc/>
@@ -121,29 +140,6 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <summary>
-    /// Creates a new SMS notification and adds it to the repository.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the order associated with the notification.</param>
-    /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
-    /// <param name="expiryDateTime">The date and time when the notification expires and should no longer be sent.</param>
-    /// <param name="recipient">The recipient details for the SMS notification.</param>
-    /// <param name="resultType">The result type indicating the status of the notification.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, SmsRecipient recipient, SmsNotificationResultType resultType)
-    {
-        var smsNotification = new SmsNotification()
-        {
-            OrderId = orderId,
-            Id = _guidService.NewGuid(),
-            Recipient = recipient,
-            RequestedSendTime = requestedSendTime,
-            SendResult = new(resultType, _dateTimeService.UtcNow())
-        };
-
-        await _repository.AddNotification(smsNotification, expiryDateTime);
-    }
-
-    /// <summary>
     /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
     /// </summary>
     /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
@@ -158,5 +154,20 @@ public class SmsNotificationService : ISmsNotificationService
         {
             await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
         }
+    }
+
+    /// <summary>
+    /// Builds an in-memory SMS notification for a single recipient. Does not persist.
+    /// </summary>
+    private SmsNotification CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, SmsNotificationResultType resultType)
+    {
+        return new SmsNotification()
+        {
+            OrderId = orderId,
+            Id = _guidService.NewGuid(),
+            Recipient = recipient,
+            RequestedSendTime = requestedSendTime,
+            SendResult = new(resultType, _dateTimeService.UtcNow())
+        };
     }
 }
