@@ -2356,7 +2356,7 @@ public class NotificationOrderChainMapperTests
                     {
                         Subject = "Test",
                         Body = "Test",
-                        Attachments = [new SasFileReference { Filename = "f.pdf", MimeType = "application/pdf", SasUrl = "https://x.blob.core.windows.net/c/f.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=x" }]
+                        Attachments = [new SasFileReference { Filename = "f.pdf", MimeType = "application/pdf", SasUrl = new Uri("https://x.blob.core.windows.net/c/f.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=x") }]
                     }
                 }
             })
@@ -2408,13 +2408,13 @@ public class NotificationOrderChainMapperTests
                         {
                             Filename = "decision.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1"
+                            SasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1")
                         },
                         new SasFileReferenceExt
                         {
                             Filename = "appendix.docx",
                             MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            SasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2"
+                            SasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2")
                         }
                     ]
                 }
@@ -2470,9 +2470,9 @@ public class NotificationOrderChainMapperTests
     public void MapToNotificationOrderChainRequest_WithAttachmentsRequest_AllFileReferencesMapCorrectly()
     {
         // Arrange
-        var sasUrl1 = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1";
-        var sasUrl2 = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2";
-        var sasUrl3 = "https://altinnstorageaccount.blob.core.windows.net/attachments/signature.png?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3";
+        var sasUrl1 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig1");
+        var sasUrl2 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig2");
+        var sasUrl3 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/signature.png?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesig3");
 
         var requestExt = new ComposedEmailRequestExt
         {
@@ -2501,6 +2501,7 @@ public class NotificationOrderChainMapperTests
         // Assert
         Assert.NotNull(result.Recipient.RecipientComposedEmail);
         var attachments = result.Recipient.RecipientComposedEmail.Settings.Attachments;
+        Assert.NotNull(attachments);
         Assert.Equal(3, attachments.Count);
         Assert.Null(result.Reminders);
 
@@ -2538,7 +2539,7 @@ public class NotificationOrderChainMapperTests
                         {
                             Filename = "file.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = "https://storage.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x"
+                            SasUrl = new Uri("https://storage.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")
                         }
                     ]
                 }
@@ -2578,7 +2579,7 @@ public class NotificationOrderChainMapperTests
                         {
                             Filename = "notice.pdf",
                             MimeType = "application/pdf",
-                            SasUrl = "https://storage.example.com/notice.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x"
+                            SasUrl = new Uri("https://storage.example.com/notice.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")
                         }
                     ]
                 }
@@ -2592,5 +2593,61 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.DialogportenAssociation);
         Assert.Equal("dialog-abc", result.DialogportenAssociation.DialogId);
         Assert.Equal("transmission-xyz", result.DialogportenAssociation.TransmissionId);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullAttachments_MapsAttachmentsToNull()
+    {
+        // Arrange
+        var requestExt = new ComposedEmailRequestExt
+        {
+            IdempotencyId = "CC815B33-D429-4762-850C-FFE8988E2034",
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            Recipient = new RecipientComposedEmailExt
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptionsExt
+                {
+                    Subject = "No attachments",
+                    Body = "This email has no files.",
+                    Attachments = null
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientComposedEmail);
+        Assert.Null(result.Recipient.RecipientComposedEmail.Settings.Attachments);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmptyAttachmentsList_MapsAttachmentsToNull()
+    {
+        // Arrange
+        var requestExt = new ComposedEmailRequestExt
+        {
+            IdempotencyId = "0273E75C-3967-451D-8BDE-41C8FC71A467",
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            Recipient = new RecipientComposedEmailExt
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptionsExt
+                {
+                    Subject = "No attachments",
+                    Body = "This email has no files.",
+                    Attachments = []
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientComposedEmail);
+        Assert.Null(result.Recipient.RecipientComposedEmail.Settings.Attachments);
     }
 }

@@ -27,9 +27,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 
 public class ComposedEmailOrdersControllerTests
 {
-    private const string _validSasUrl =
-        "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+    private static readonly Uri _validSasUrl =
+        new(
+            "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
+            "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
     public ComposedEmailOrdersControllerTests()
     {

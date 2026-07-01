@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
@@ -13,9 +16,9 @@ public class RecipientComposedEmailValidatorTests
 {
     private readonly RecipientComposedEmailValidator _validator = new();
 
-    private const string _validSasUrl =
+    private static readonly Uri _validSasUrl = new(
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
     private static RecipientComposedEmailExt RecipientWithFileReference(SasFileReferenceExt fileReference) => new()
     {
@@ -186,17 +189,15 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'script.sh': mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Validate_AttachmentEmptyOrWhitespaceSasUrl_HasError(string sasUrl)
+    [Fact]
+    public void Validate_AttachmentNullSasUrl_HasError()
     {
         // Arrange
         var recipient = RecipientWithFileReference(new SasFileReferenceExt
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
-            SasUrl = sasUrl
+            SasUrl = null!
         });
 
         // Act
@@ -204,17 +205,20 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage("Attachment 'contract.pdf': sasUrl must not be empty.");
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl must not be null.");
     }
 
+    public static IEnumerable<object[]> NonHttpsUris =>
+    [
+        [new Uri("relative/path/file.pdf", UriKind.Relative)],
+        [new Uri("ftp://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")],
+        [new Uri("http://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")],
+        [new Uri("http://localhost:10000/devstoreaccount1/attachments/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
+    ];
+
     [Theory]
-    [InlineData("not-a-url")]
-    [InlineData("relative/path/file.pdf")]
-    [InlineData("//account.blob.core.windows.net/container/file.pdf")]
-    [InlineData("ftp://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
-    [InlineData("http://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
-    [InlineData("http://localhost:10000/devstoreaccount1/attachments/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
-    public void Validate_AttachmentInvalidSasUrlSchemeOrFormat_HasError(string sasUrl)
+    [MemberData(nameof(NonHttpsUris))]
+    public void Validate_AttachmentInvalidSasUrlSchemeOrFormat_HasError(Uri sasUrl)
     {
         // Arrange
         var recipient = RecipientWithFileReference(new SasFileReferenceExt
@@ -232,11 +236,16 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl must be an absolute HTTPS URI.");
     }
 
+    public static IEnumerable<object[]> NonAzureBlobHostUris =>
+    [
+        [new Uri("https://evil.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")],
+        [new Uri("https://attacker.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")],
+        [new Uri("https://notazure.blob.example.com/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
+    ];
+
     [Theory]
-    [InlineData("https://evil.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
-    [InlineData("https://attacker.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
-    [InlineData("https://notazure.blob.example.com/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
-    public void Validate_AttachmentSasUrlNonAzureBlobHost_HasError(string sasUrl)
+    [MemberData(nameof(NonAzureBlobHostUris))]
+    public void Validate_AttachmentSasUrlNonAzureBlobHost_HasError(Uri sasUrl)
     {
         // Arrange
         var recipient = RecipientWithFileReference(new SasFileReferenceExt
@@ -254,9 +263,14 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).");
     }
 
+    public static IEnumerable<object[]> ValidSasUris =>
+    [
+        [new Uri("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
+    ];
+
     [Theory]
-    [InlineData("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
-    public void Validate_AttachmentWithValidSasUrl_NoSasUrlErrors(string sasUrl)
+    [MemberData(nameof(ValidSasUris))]
+    public void Validate_AttachmentWithValidSasUrl_NoSasUrlErrors(Uri sasUrl)
     {
         // Arrange
         // A URL that passes all SAS checks at the recipient level (HTTPS, required params,
@@ -425,7 +439,7 @@ public class RecipientComposedEmailValidatorTests
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
-            SasUrl = "https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b"
+            SasUrl = new Uri("https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b")
         });
 
         // Act
@@ -445,7 +459,7 @@ public class RecipientComposedEmailValidatorTests
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
-            SasUrl = "https://account.blob.core.windows.net/container/file.pdf?se=not-a-date&sp=r&sr=b&sig=fakesig"
+            SasUrl = new Uri("https://account.blob.core.windows.net/container/file.pdf?se=not-a-date&sp=r&sr=b&sig=fakesig")
         });
 
         // Act
@@ -465,7 +479,7 @@ public class RecipientComposedEmailValidatorTests
         {
             Filename = "contract.pdf",
             MimeType = "application/pdf",
-            SasUrl = "https://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=wdl&sr=b&sig=fakesig"
+            SasUrl = new Uri("https://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=wdl&sr=b&sig=fakesig")
         });
 
         // Act
@@ -514,8 +528,9 @@ public class RecipientComposedEmailValidatorTests
             Filename = "vedtak_2025_123456.pdf",
             MimeType = "application/pdf",
             SasUrl =
-                "https://org123storage.blob.core.windows.net/outgoing/vedtak_2025_123456.pdf" +
-                "?se=2025-12-31T23%3A59%3A59Z&sp=r&sr=b&spr=https&sv=2023-11-03&sig=abc123"
+                new Uri(
+                    "https://org123storage.blob.core.windows.net/outgoing/vedtak_2025_123456.pdf" +
+                    "?se=2025-12-31T23%3A59%3A59Z&sp=r&sr=b&spr=https&sv=2023-11-03&sig=abc123")
         });
 
         // Act

@@ -14,9 +14,9 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
 public class ComposedEmailRequestValidatorTests
 {
-    private const string _validSasUrl =
+    private static readonly Uri _validSasUrl = new(
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
     private static RecipientComposedEmailExt RecipientWithSingleFileReference(string emailAddress = "recipient@altinnxyz.no") => new()
     {
@@ -101,9 +101,9 @@ public class ComposedEmailRequestValidatorTests
         // Arrange
         var sendTime = DateTime.UtcNow.AddHours(2);
         var expiryTooSoon = sendTime.AddMinutes(10).ToString("o");
-        var sasUrlWithShortExpiry =
+        var sasUrlWithShortExpiry = new Uri(
             "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-            $"?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature";
+            $"?se={Uri.EscapeDataString(expiryTooSoon)}&sp=r&sr=b&spr=https&sig=fakesignature");
 
         var recipient = new RecipientComposedEmailExt
         {
@@ -150,7 +150,7 @@ public class ComposedEmailRequestValidatorTests
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
-                        SasUrl = "https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b&sig=fakesig"
+                        SasUrl = new Uri("https://account.blob.core.windows.net/container/file.pdf?sp=r&sr=b&sig=fakesig")
                     }
                 ]
             }
@@ -183,7 +183,7 @@ public class ComposedEmailRequestValidatorTests
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
-                        SasUrl = "https://account.blob.core.windows.net/container/file.pdf?se=not-a-date&sp=r&sr=b&sig=fakesig"
+                        SasUrl = new Uri("https://account.blob.core.windows.net/container/file.pdf?se=not-a-date&sp=r&sr=b&sig=fakesig")
                     }
                 ]
             }
@@ -247,7 +247,7 @@ public class ComposedEmailRequestValidatorTests
                     {
                         Filename = "contract.pdf",
                         MimeType = "application/pdf",
-                        SasUrl = string.Empty
+                        SasUrl = null!
                     }
                 ]
             }

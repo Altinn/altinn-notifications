@@ -26,9 +26,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class ComposedEmailOrderRequestServiceTests
 {
-    private const string _validSasUrl =
+    private static readonly Uri _validSasUrl = new(
         "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
-        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature";
+        "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
     [Fact]
     public async Task RetrieveOrderChainTracking_ReturnsNull_WhenNotFound()
@@ -233,6 +233,72 @@ public class ComposedEmailOrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterComposedEmailOrderChain_WithNullAttachments_SetsEmailAttachmentsToNull()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid chainId = Guid.NewGuid();
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientComposedEmail = new RecipientComposedEmail
+            {
+                EmailAddress = "recipient@altinnxyz.no",
+                Settings = new ComposedEmailSendingOptions
+                {
+                    Subject = "Subject",
+                    Body = "Body",
+                    Attachments = null
+                }
+            }
+        };
+
+        var request = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetRecipient(recipient)
+            .SetOrderChainId(chainId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId("idem-null-attach")
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .Build();
+
+        NotificationOrder? capturedOrder = null;
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
+            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+
+        var service = GetTestService(repoMock.Object);
+
+        // Act
+        await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedOrder);
+        Assert.Null(capturedOrder.EmailAttachments);
+    }
+
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_ThrowsInvalidOperationException_WhenRepositoryReturnsEmpty()
+    {
+        // Arrange
+        var request = ValidComposedEmailRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(1));
+
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = GetTestService(repoMock.Object);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task RegisterComposedEmailOrderChain_ThrowsOperationCanceledException_WhenCanceled()
     {
         // Arrange
@@ -254,9 +320,9 @@ public class ComposedEmailOrderRequestServiceTests
         Guid orderId = Guid.NewGuid();
         Guid chainId = Guid.NewGuid();
 
-        var sasUrl1 = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig1";
-        var sasUrl2 = "https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig2";
-        var sasUrl3 = "https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig3";
+        var sasUrl1 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig1");
+        var sasUrl2 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/appendix.docx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig2");
+        var sasUrl3 = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/evidence.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=sig3");
 
         var recipient = new NotificationRecipient
         {
@@ -322,7 +388,7 @@ public class ComposedEmailOrderRequestServiceTests
     public void SasFileReference_ToString_DoesNotExposesSasUrl()
     {
         // Arrange
-        var sasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=supersecret";
+        var sasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=supersecret");
         var fileReference = new SasFileReference
         {
             Filename = "contract.pdf",
@@ -334,7 +400,7 @@ public class ComposedEmailOrderRequestServiceTests
         var result = fileReference.ToString();
 
         // Assert
-        Assert.DoesNotContain(sasUrl, result, StringComparison.Ordinal);
+        Assert.DoesNotContain(sasUrl.AbsoluteUri, result, StringComparison.Ordinal);
         Assert.Contains("[redacted]", result, StringComparison.Ordinal);
         Assert.Contains("contract.pdf", result, StringComparison.Ordinal);
         Assert.Contains("application/pdf", result, StringComparison.Ordinal);
@@ -346,7 +412,7 @@ public class ComposedEmailOrderRequestServiceTests
     {
         // Arrange
         var orderId = Guid.NewGuid();
-        var sasUrl = "https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig";
+        var sasUrl = new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig");
 
         var notificationOrder = new NotificationOrder
         {

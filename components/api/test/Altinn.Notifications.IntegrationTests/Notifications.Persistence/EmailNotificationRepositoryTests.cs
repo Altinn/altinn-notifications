@@ -645,7 +645,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
                             {
                                 Filename = "document.pdf",
                                 MimeType = "application/pdf",
-                                SasUrl = "https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
                             }
                         ]
                     }

@@ -26,7 +26,7 @@ public record SasFileReference
     /// <remarks>
     /// Must never be logged or included in error responses.
     /// </remarks>
-    public required string SasUrl { get; init; }
+    public required Uri SasUrl { get; init; }
 
     /// <summary>
     /// Returns a safe string representation that excludes <see cref="SasUrl"/> to prevent

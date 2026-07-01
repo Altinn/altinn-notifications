@@ -39,55 +39,65 @@ internal sealed class RecipientComposedEmailValidator : AbstractValidator<Recipi
                 When(e => e!.Settings.Attachments is { Count: > 0 }, () =>
                 {
                     RuleForEach(e => e!.Settings.Attachments)
+                        .Must(a => a != null)
+                        .WithMessage("Attachment item must not be null.");
+
+                    RuleForEach(e => e!.Settings.Attachments)
                         .ChildRules(rules =>
                         {
                             rules.RuleFor(a => a.Filename)
                                 .NotEmpty()
-                                .WithMessage("Attachment filename must not be empty.");
-
-                            rules.RuleFor(a => a.Filename)
-                                .Must(SasFileReferenceRules.IsValidFilename)
-                                .When(a => !string.IsNullOrWhiteSpace(a.Filename))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
-
-                            rules.RuleFor(a => a.SasUrl)
-                                .NotEmpty()
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must not be empty.");
+                                .WithMessage("Attachment filename must not be empty.")
+                                .DependentRules(() =>
+                                {
+                                    rules.RuleFor(a => a.Filename)
+                                        .Must(SasFileReferenceRules.IsValidFilename)
+                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
+                                });
 
                             rules.RuleFor(a => a.SasUrl)
-                                .Must(SasFileReferenceRules.IsAbsoluteHttpsUri)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must be an absolute HTTPS URI.");
+                                .NotNull()
+                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must not be null.")
+                                .DependentRules(() =>
+                                {
+                                    rules.RuleFor(a => a.SasUrl)
+                                        .Must(SasFileReferenceRules.IsAbsoluteHttpsUri)
+                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl must be an absolute HTTPS URI.")
+                                        .DependentRules(() =>
+                                        {
+                                            rules.RuleFor(a => a.SasUrl)
+                                                .Must(SasFileReferenceRules.IsAzureBlobStorageHost)
+                                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).")
+                                                .DependentRules(() =>
+                                                {
+                                                    rules.RuleFor(a => a.SasUrl)
+                                                        .Must(SasFileReferenceRules.HasRequiredSasParameters)
+                                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl is missing required SAS parameters (se, sig, sp, sr).")
+                                                        .DependentRules(() =>
+                                                        {
+                                                            rules.RuleFor(a => a.SasUrl)
+                                                                .Must(url => SasFileReferenceRules.ParseSasExpiry(url) != null)
+                                                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl has an invalid 'se' (signed expiry) value.");
 
-                            rules.RuleFor(a => a.SasUrl)
-                                .Must(SasFileReferenceRules.IsAzureBlobStorageHost)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).");
-
-                            rules.RuleFor(a => a.SasUrl)
-                                .Must(SasFileReferenceRules.HasRequiredSasParameters)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl is missing required SAS parameters (se, sig, sp, sr).");
-
-                            rules.RuleFor(a => a.SasUrl)
-                                .Must(url => SasFileReferenceRules.ParseSasExpiry(url) != null)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl has an invalid 'se' (signed expiry) value.");
-
-                            rules.RuleFor(a => a.SasUrl)
-                                .Must(SasFileReferenceRules.HasReadPermission)
-                                .When(a => !string.IsNullOrWhiteSpace(a.SasUrl) && SasFileReferenceRules.IsAbsoluteHttpsUri(a.SasUrl) && SasFileReferenceRules.IsAzureBlobStorageHost(a.SasUrl) && SasFileReferenceRules.HasRequiredSasParameters(a.SasUrl))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl does not grant read permission ('r' must be present in 'sp').");
+                                                            rules.RuleFor(a => a.SasUrl)
+                                                                .Must(SasFileReferenceRules.HasReadPermission)
+                                                                .WithMessage((a, _) => $"Attachment '{a.Filename}': sasUrl does not grant read permission ('r' must be present in 'sp').");
+                                                        });
+                                                });
+                                        });
+                                });
 
                             rules.RuleFor(a => a.MimeType)
                                 .NotEmpty()
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType must not be empty.");
-
-                            rules.RuleFor(a => a.MimeType)
-                                .Must(SasFileReferenceRules.IsAllowedMimeType)
-                                .When(a => !string.IsNullOrWhiteSpace(a.MimeType))
-                                .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
-                        });
+                                .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType must not be empty.")
+                                .DependentRules(() =>
+                                {
+                                    rules.RuleFor(a => a.MimeType)
+                                        .Must(SasFileReferenceRules.IsAllowedMimeType)
+                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': mimeType is not supported. Refer to ACS documentation for the list of accepted MIME types.");
+                                });
+                        })
+                        .When((_, a) => a != null);
                 });
             });
         });

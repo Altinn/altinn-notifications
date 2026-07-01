@@ -81,51 +81,38 @@ internal static class SasFileReferenceRules
     };
 
     /// <summary>
-    /// Returns <see langword="true"/> if the <c>sp</c> (signed permissions) parameter of <paramref name="url"/>
+    /// Returns <see langword="true"/> if the <c>sp</c> (signed permissions) parameter of <paramref name="uri"/>
     /// contains the read (<c>r</c>) permission.
     /// </summary>
-    internal static bool HasReadPermission(string url)
+    internal static bool HasReadPermission(Uri uri)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
-
         var sp = HttpUtility.ParseQueryString(uri.Query)["sp"];
         return sp != null && sp.Contains('r', StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> if <paramref name="url"/> is an absolute URI using the HTTPS scheme
-    /// with a host in the Azure Blob Storage domain (<c>*.blob.core.windows.net</c>).
+    /// Returns <see langword="true"/> if <paramref name="uri"/> is an absolute URI using the HTTPS scheme.
     /// </summary>
-    internal static bool IsAbsoluteHttpsUri(string url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
-        uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+    internal static bool IsAbsoluteHttpsUri(Uri uri) =>
+        uri.IsAbsoluteUri && uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Returns <see langword="true"/> if the host of <paramref name="url"/> is within
+    /// Returns <see langword="true"/> if the host of <paramref name="uri"/> is within
     /// the Azure Blob Storage domain (<c>*.blob.core.windows.net</c>).
     /// </summary>
-    internal static bool IsAzureBlobStorageHost(string url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+    internal static bool IsAzureBlobStorageHost(Uri uri) =>
         uri.Host.EndsWith(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Parses the <c>se</c> (signed expiry) query parameter from a SAS URL.
+    /// Parses the <c>se</c> (signed expiry) query parameter from a SAS URI.
     /// </summary>
-    /// <param name="url">The SAS URL to parse.</param>
+    /// <param name="uri">The SAS URI to parse.</param>
     /// <returns>
-    /// The parsed <see cref="DateTime"/> expiry value, or <see langword="null"/> if the URL is
-    /// not a valid absolute URI, the <c>se</c> parameter is absent, or the value cannot be parsed.
+    /// The parsed <see cref="DateTime"/> expiry value, or <see langword="null"/> if the
+    /// <c>se</c> parameter is absent or its value cannot be parsed.
     /// </returns>
-    internal static DateTime? ParseSasExpiry(string url)
+    internal static DateTime? ParseSasExpiry(Uri uri)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
         var seValue = HttpUtility.ParseQueryString(uri.Query)["se"];
 
         if (string.IsNullOrWhiteSpace(seValue))
@@ -140,8 +127,7 @@ internal static class SasFileReferenceRules
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="filename"/> is safe to use as an attachment
-    /// filename: no forward or backward slashes, no <c>..</c> traversal sequences, and includes
-    /// a file extension of at least one character after the dot.
+    /// filename: no forward or backward slashes and includes a file extension of at least one character after the dot.
     /// </summary>
     internal static bool IsValidFilename(string filename) =>
         !filename.Contains('/')
@@ -149,16 +135,11 @@ internal static class SasFileReferenceRules
         && Path.GetExtension(filename).Length > 1;
 
     /// <summary>
-    /// Returns <see langword="true"/> if <paramref name="url"/> contains all required
+    /// Returns <see langword="true"/> if <paramref name="uri"/> contains all required
     /// blob SAS query parameters and targets a blob resource (<c>sr=b</c>).
     /// </summary>
-    internal static bool HasRequiredSasParameters(string url)
+    internal static bool HasRequiredSasParameters(Uri uri)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
-
         var query = HttpUtility.ParseQueryString(uri.Query);
 
         return !string.IsNullOrWhiteSpace(query["se"])

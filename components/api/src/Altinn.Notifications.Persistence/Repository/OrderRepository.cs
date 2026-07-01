@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -280,7 +281,7 @@ public class OrderRepository : IOrderRepository
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
-                
+
                 // Attempt to read recipients
                 await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
@@ -358,37 +359,20 @@ public class OrderRepository : IOrderRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getOrdersChainTrackingSql);
-
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!reader.HasRows)
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
         {
             return null;
         }
-
-        await reader.ReadAsync(cancellationToken);
-
-        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
-        if (ordersChainId == Guid.Empty)
-        {
-            return null;
-        }
-
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
-        if (mainShipmentId == Guid.Empty)
-        {
-            return null;
-        }
-
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
-            null :
-            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
         var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
 
-        return CreateNotificationOrderChainResponse(ordersChainId, mainShipmentId, mainSendersReference, reminderShipments, cancellationToken);
+        return CreateNotificationOrderChainResponse(header.Value.OrderChainId, header.Value.ShipmentId, header.Value.SendersReference, reminderShipments, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -397,11 +381,35 @@ public class OrderRepository : IOrderRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getComposedOrderChainTrackingSql);
-
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
+        {
+            return null;
+        }
+
+        return new NotificationOrderChainResponse
+        {
+            OrderChainId = header.Value.OrderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = header.Value.ShipmentId,
+                SendersReference = header.Value.SendersReference
+            }
+        };
+    }
+
+    /// <summary>
+    /// Reads the common order chain header columns (chain ID, shipment ID, sender's reference) from
+    /// an already-executed <paramref name="reader"/>. Returns <see langword="null"/> when no rows are
+    /// present or either GUID column is empty.
+    /// </summary>
+    private static async Task<(Guid OrderChainId, Guid ShipmentId, string? SendersReference)?> ReadOrderChainHeaderAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    {
         if (!reader.HasRows)
         {
             return null;
@@ -421,19 +429,11 @@ public class OrderRepository : IOrderRepository
             return null;
         }
 
-        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
-            null :
-            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken)
+            ? null
+            : reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
-        return new NotificationOrderChainResponse
-        {
-            OrderChainId = ordersChainId,
-            OrderChainReceipt = new NotificationOrderChainReceipt
-            {
-                ShipmentId = shipmentId,
-                SendersReference = sendersReference
-            }
-        };
+        return (ordersChainId, shipmentId, sendersReference);
     }
 
     /// <inheritdoc/>

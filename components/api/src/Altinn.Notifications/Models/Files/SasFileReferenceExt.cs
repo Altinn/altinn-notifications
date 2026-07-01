@@ -45,5 +45,5 @@ public record SasFileReferenceExt
     /// </remarks>
     [Required]
     [JsonPropertyName("sasUrl")]
-    public required string SasUrl { get; init; }
+    public required Uri SasUrl { get; init; }
 }

@@ -3196,7 +3196,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                             {
                                 Filename = "document.pdf",
                                 MimeType = "application/pdf",
-                                SasUrl = "https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
                             }
                         ]
                     }
@@ -3883,7 +3883,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                             {
                                 Filename = "document.pdf",
                                 MimeType = "application/pdf",
-                                SasUrl = "https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
                             }
                         ]
                     }
@@ -3952,7 +3952,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                             {
                                 Filename = "decision.pdf",
                                 MimeType = "application/pdf",
-                                SasUrl = "https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
                             }
                         ]
                     }
@@ -4030,8 +4030,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         var attachments = new List<SasFileReference>
         {
-            new() { Filename = "document.pdf", MimeType = "application/pdf", SasUrl = "https://example.blob.core.windows.net/container/doc.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake1" },
-            new() { Filename = "spreadsheet.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = "https://example.blob.core.windows.net/container/sheet.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake2" }
+            new() { Filename = "document.pdf", MimeType = "application/pdf", SasUrl = new Uri("https://example.blob.core.windows.net/container/doc.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake1") },
+            new() { Filename = "spreadsheet.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = new Uri("https://example.blob.core.windows.net/container/sheet.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake2") }
         };
 
         string idempotencyId = $"idempotency-{Guid.NewGuid():N}";

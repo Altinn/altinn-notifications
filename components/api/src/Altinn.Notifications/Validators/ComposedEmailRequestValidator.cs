@@ -32,13 +32,13 @@ internal sealed class ComposedEmailRequestValidator : AbstractValidator<Composed
             RuleForEach(order => order.Recipient.Settings.Attachments)
                 .Must((order, attachment) =>
                 {
-                    if (attachment == null || string.IsNullOrWhiteSpace(attachment.SasUrl))
+                    if (attachment == null || attachment.SasUrl == null)
                     {
                         return true;
                     }
 
                     var expiry = SasFileReferenceRules.ParseSasExpiry(attachment.SasUrl);
-                    return expiry == null || expiry >= order.RequestedSendTime.AddMinutes(15);
+                    return expiry == null || expiry.Value.ToUniversalTime() >= order.RequestedSendTime.ToUniversalTime().AddMinutes(15);
                 })
                 .WithMessage((_, attachment) => $"Attachment '{attachment.Filename}': sasUrl must be valid for at least 15 minutes after requestedSendTime.");
         });

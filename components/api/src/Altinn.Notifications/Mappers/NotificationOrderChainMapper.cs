@@ -160,7 +160,9 @@ public static partial class NotificationOrderChainMapper
             ContentType = (EmailContentType)composedEmailSendingOptions.ContentType,
             SenderEmailAddress = composedEmailSendingOptions.SenderEmailAddress?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)composedEmailSendingOptions.SendingTimePolicy,
-            Attachments = [.. composedEmailSendingOptions.Attachments.Select(MapToSasFileReference)],
+            Attachments = composedEmailSendingOptions.Attachments is { Count: > 0 }
+                ? [.. composedEmailSendingOptions.Attachments.Select(MapToSasFileReference)]
+                : null,
             Subject = NormalizeLineEndingsRegex().Replace(composedEmailSendingOptions.Subject, SingleWhiteSpace)
         };
     }

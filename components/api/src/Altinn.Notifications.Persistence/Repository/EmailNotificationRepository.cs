@@ -11,6 +11,7 @@ using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 using NpgsqlTypes;
 
