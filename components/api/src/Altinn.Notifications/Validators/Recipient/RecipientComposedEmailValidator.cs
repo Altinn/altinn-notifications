@@ -36,16 +36,8 @@ internal sealed class RecipientComposedEmailValidator : AbstractValidator<Recipi
                 RuleFor(e => e!.Settings)
                     .SetValidator(new EmailSendingOptionsValidator());
 
-                RuleFor(e => e!.Settings.Attachments)
-                    .NotEmpty()
-                    .WithMessage("At least one attachment is required.");
-
                 When(e => e!.Settings.Attachments is { Count: > 0 }, () =>
                 {
-                    RuleForEach(e => e!.Settings.Attachments)
-                        .NotNull()
-                        .WithMessage("Attachment item must not be null.");
-
                     RuleForEach(e => e!.Settings.Attachments)
                         .ChildRules(rules =>
                         {

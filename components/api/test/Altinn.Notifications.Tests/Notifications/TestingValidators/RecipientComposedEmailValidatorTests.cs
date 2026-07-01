@@ -28,6 +28,16 @@ public class RecipientComposedEmailValidatorTests
         }
     };
 
+    private static RecipientComposedEmailExt ValidRecipientWithoutFileReferences() => new()
+    {
+        EmailAddress = "recipient@altinnxyz.no",
+        Settings = new ComposedEmailSendingOptionsExt
+        {
+            Subject = "Decision from Altinn",
+            Body = "Please see the attached document."
+        }
+    };
+
     private static RecipientComposedEmailExt ValidRecipientWithSingleFileReference() => new()
     {
         EmailAddress = "recipient@altinnxyz.no",
@@ -51,7 +61,7 @@ public class RecipientComposedEmailValidatorTests
     public void Validate_ValidRecipient_NoErrors()
     {
         // Arrange
-        var recipient = ValidRecipientWithSingleFileReference();
+        var recipient = ValidRecipientWithoutFileReferences();
 
         // Act
         var result = _validator.TestValidate(recipient);
@@ -136,29 +146,6 @@ public class RecipientComposedEmailValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(r => r!.Settings)
             .WithErrorMessage("Recipient email settings cannot be null.");
-    }
-
-    [Fact]
-    public void Validate_EmptyAttachmentsList_HasError()
-    {
-        // Arrange
-        var recipient = new RecipientComposedEmailExt
-        {
-            EmailAddress = "recipient@altinnxyz.no",
-            Settings = new ComposedEmailSendingOptionsExt
-            {
-                Subject = "Decision from Altinn",
-                Body = "Please see the attached document.",
-                Attachments = []
-            }
-        };
-
-        // Act
-        var result = _validator.TestValidate(recipient);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(r => r!.Settings.Attachments)
-            .WithErrorMessage("At least one attachment is required.");
     }
 
     [Fact]

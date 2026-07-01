@@ -16,5 +16,5 @@ public class ComposedEmailSendingOptionsExt : EmailSendingOptionsExt
     /// </summary>
     [Required]
     [JsonPropertyName("attachments")]
-    public required List<SasFileReferenceExt> Attachments { get; init; }
+    public List<SasFileReferenceExt> Attachments { get; init; } = [];
 }
