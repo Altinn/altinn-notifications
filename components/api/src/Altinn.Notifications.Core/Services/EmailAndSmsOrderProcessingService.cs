@@ -55,14 +55,23 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
 
         var (smsRecipients, emailRecipients) = OrganizeRecipientsByChannel(recipients);
 
-        var smsResultTask = _smsProcessingService.ProcessOrderWithoutAddressLookup(order, smsRecipients);
-        var emailResultTask = _emailProcessingService.ProcessOrderWithoutAddressLookup(order, emailRecipients);
+        SmsOrderProcessingResult smsResult;
+        EmailOrderProcessingResult emailResult;
 
-        await Task.WhenAll(smsResultTask, emailResultTask);
+        if (isRetry)
+        {
+            smsResult = await _smsProcessingService.ProcessOrderRetryWithoutAddressLookup(order, smsRecipients);
+            emailResult = await _emailProcessingService.ProcessOrderRetryWithoutAddressLookup(order, emailRecipients);
+        }
+        else
+        {
+            smsResult = await _smsProcessingService.ProcessOrderWithoutAddressLookup(order, smsRecipients);
+            emailResult = await _emailProcessingService.ProcessOrderWithoutAddressLookup(order, emailRecipients);
+        }
 
         return new OrderProcessingResult(
-            EmailOrderProcessingResult: await emailResultTask,
-            SmsOrderProcessingResult: await smsResultTask);
+            EmailOrderProcessingResult: emailResult,
+            SmsOrderProcessingResult: smsResult);
     }
 
     /// <summary>
