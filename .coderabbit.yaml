@@ -1,0 +1,4 @@
+reviews:
+  path_filters:
+    - "!components/api/src/Altinn.Notifications.Persistence/Migration/**"
+    - "components/api/src/Altinn.Notifications.Persistence/Migration/FunctionsAndProcedures/**"
