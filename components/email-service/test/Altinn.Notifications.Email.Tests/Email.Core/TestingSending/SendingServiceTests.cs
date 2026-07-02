@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
@@ -179,6 +180,154 @@ public class SendingServiceTests
         checkDispatcherMock.VerifyNoOtherCalls();
         statusDispatcherMock.VerifyNoOtherCalls();
         emailServiceRateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendComposedAsync_Success_DispatchesStatusCheckWithOperationIdAndEncodedAttachmentsSize()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        const string operationId = "composed-op-id";
+        const long encodedSize = 204800L;
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+            .ReturnsAsync(new ComposedEmailSendResult { OperationId = operationId, EncodedAttachmentsSize = encodedSize });
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        checkDispatcherMock
+            .Setup(d => d.DispatchAsync(id, operationId, encodedSize))
+            .Returns(Task.CompletedTask);
+
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act
+        await sendingService.SendComposedAsync(email);
+
+        // Assert
+        checkDispatcherMock.Verify(d => d.DispatchAsync(id, operationId, encodedSize), Times.Once);
+
+        statusDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendComposedAsync_AcsNonTransientFailure_DispatchesStatusResult()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+            .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_PayloadTooLarge });
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act
+        await sendingService.SendComposedAsync(email);
+
+        // Assert
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.SendResult == EmailSendResult.Failed_PayloadTooLarge)),
+            Times.Once);
+
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendComposedAsync_AcsTransientFailure_DispatchesRateLimitAndStatusResult()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+            .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_TransientError, IntermittentErrorDelay = 60 });
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+        rateLimitDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<GenericServiceUpdate>()))
+            .Returns(Task.CompletedTask);
+
+        var testStart = DateTime.UtcNow;
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act
+        await sendingService.SendComposedAsync(email);
+        var testEnd = DateTime.UtcNow;
+
+        // Assert
+        rateLimitDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<GenericServiceUpdate>(u =>
+                u.Source == "platform-notifications-email" &&
+                u.Schema == AltinnServiceUpdateSchema.ResourceLimitExceeded &&
+                VerifyRateLimitData(u.Data, testStart, testEnd, delaySeconds: 60))),
+            Times.Once);
+
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.SendResult == EmailSendResult.Failed_TransientError)),
+            Times.Once);
+
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendComposedAsync_InvalidSasUrlException_DispatchesFailedInvalidSasUrlAndRethrows()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+            .ThrowsAsync(new InvalidSasUrlException("attachment.pdf", 403));
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidSasUrlException>(() => sendingService.SendComposedAsync(email));
+
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.SendResult == EmailSendResult.Failed_InvalidSasUrl)),
+            Times.Once);
+
+        checkDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
     }
 
     private static bool VerifyRateLimitData(string json, DateTime testStart, DateTime testEnd, int delaySeconds)

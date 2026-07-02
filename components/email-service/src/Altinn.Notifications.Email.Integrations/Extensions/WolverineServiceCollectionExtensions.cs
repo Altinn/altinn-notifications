@@ -44,6 +44,7 @@ public static class WolverineServiceCollectionExtensions
             // Listeners
             AddEmailSendQueueListener(wolverineSettings, opts);
             AddEmailStatusCheckListener(wolverineSettings, opts);
+            AddComposedEmailSendQueueListener(wolverineSettings, opts);
 
             // Publishers
             AddEmailSendResultPublisher(services, wolverineSettings, opts);
@@ -76,6 +77,36 @@ public static class WolverineServiceCollectionExtensions
                         .ListenerCount(wolverineSettings.EmailSendListenerCount);
 
         wolverineOptions.Policies.Add(new SendEmailCommandHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Registers the Wolverine listener for the Azure Service Bus composed email send queue, enabling
+    /// the email service to consume <see cref="SendComposedEmailCommand"/> messages.
+    /// </summary>
+    private static void AddComposedEmailSendQueueListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (wolverineSettings.ComposedEmailSendListenerCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.ComposedEmailSendListenerCount)} must be greater than 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.ComposedEmailSendQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.ComposedEmailSendQueueName)} must be configured.");
+        }
+
+        if (wolverineSettings.BlobDownloadConcurrency <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.BlobDownloadConcurrency)} must be greater than 0.");
+        }
+
+        wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.ComposedEmailSendQueueName)
+                        .ListenerCount(wolverineSettings.ComposedEmailSendListenerCount);
+
+        wolverineOptions.Policies.Add(new SendComposedEmailCommandHandlerPolicy(wolverineSettings));
     }
 
     /// <summary>

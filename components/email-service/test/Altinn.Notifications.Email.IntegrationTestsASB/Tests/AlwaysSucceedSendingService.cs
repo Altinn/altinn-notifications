@@ -17,12 +17,24 @@ internal sealed class AlwaysSucceedSendingService : ISendingService
     public Core.Sending.Email? CapturedEmail { get; private set; }
 
     /// <summary>
+    /// Gets the most recently sent composed email, or <see langword="null"/> if <see cref="SendComposedAsync"/> has not been called.
+    /// </summary>
+    public ComposedEmail? CapturedComposedEmail { get; private set; }
+
+    /// <summary>
     /// Captures <paramref name="email"/> and signals completion to any pending <see cref="WaitForEmailAsync"/> call.
     /// </summary>
-    /// <param name="email">The email to send.</param>
     public Task SendAsync(Core.Sending.Email email)
     {
         CapturedEmail = email;
+        _tcs.TrySetResult(email);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task SendComposedAsync(ComposedEmail email)
+    {
+        CapturedComposedEmail = email;
         _tcs.TrySetResult(email);
         return Task.CompletedTask;
     }
@@ -44,5 +56,17 @@ internal sealed class AlwaysSucceedSendingService : ISendingService
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Waits until <see cref="SendComposedAsync"/> is called and returns the captured composed email,
+    /// or returns <see langword="null"/> if the <paramref name="timeout"/> elapses first.
+    /// </summary>
+    /// <param name="timeout">The maximum time to wait for a successful send.</param>
+    /// <returns>The captured <see cref="ComposedEmail"/>, or <see langword="null"/> on timeout.</returns>
+    public async Task<ComposedEmail?> WaitForComposedEmailAsync(TimeSpan timeout)
+    {
+        var email = await WaitForEmailAsync(timeout);
+        return email as ComposedEmail;
     }
 }

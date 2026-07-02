@@ -47,6 +47,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             WolverineSettings.EmailSendQueueName,
             WolverineSettings.EmailSendResultQueueName,
             WolverineSettings.EmailStatusCheckQueueName,
+            WolverineSettings.ComposedEmailSendQueueName,
             WolverineSettings.EmailServiceRateLimitQueueName);
     }
 }

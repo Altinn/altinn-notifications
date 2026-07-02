@@ -6,6 +6,11 @@ namespace Altinn.Notifications.Email.Integrations.Clients.AzureCommunicationServ
 public static class ErrorTypes
 {
     /// <summary>
+    /// HTTP status code returned by ACS when the email message (including attachments) exceeds the allowed size limit
+    /// </summary>
+    public const int PayloadTooLargeStatusCode = 413;
+
+    /// <summary>
     /// The error code returned when the call volume has exceeded the assigned quota for our Azure subscription
     /// </summary>
     public const string ExcessiveCallVolumeErrorCode = "TooManyRequests";
@@ -14,7 +19,7 @@ public static class ErrorTypes
     /// The error code returned when the email recipient is found on the suppression list of ACS
     /// </summary>
     public const string RecipientsSuppressedErrorCode = "EmailDroppedAllRecipientsSuppressed";
-    
+
     /// <summary>
     /// The error message returned when the recipient email format is invalid
     /// </summary>

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
+CREATE OR REPLACE PROCEDURE notifications.insertemailnotification_v2(
     _orderid uuid,
     _alternateid uuid,
     _recipientorgno TEXT,
@@ -8,14 +8,15 @@ CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
     _customizedsubject TEXT,
     _result TEXT,
     _resulttime timestamptz,
-    _expirytime timestamptz
+    _expirytime timestamptz,
+    _encoded_attachments_size BIGINT
 )
 LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
 BEGIN
-    SELECT _id INTO __orderid 
+    SELECT _id INTO __orderid
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -29,7 +30,8 @@ BEGIN
         customizedsubject,
         result,
         resulttime,
-        expirytime
+        expirytime,
+        encoded_attachments_size
     )
     VALUES (
         __orderid,
@@ -41,7 +43,8 @@ BEGIN
         _customizedsubject,
         _result::emailnotificationresulttype,
         _resulttime,
-        _expirytime
+        _expirytime,
+        _encoded_attachments_size
     );
 END;
 $BODY$;

@@ -69,12 +69,13 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             Fixture.ServiceBusConnectionString,
             WolverineSettings.SendSmsQueueName,
             WolverineSettings.EmailSendQueueName,
-            WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.PastDueOrdersQueueName,
             WolverineSettings.SmsSendResultQueueName,
+            WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.ComposedEmailSendQueueName,
             WolverineSettings.SmsDeliveryReportQueueName,
             WolverineSettings.EmailDeliveryReportQueueName,
-            WolverineSettings.EmailServiceRateLimitQueueName,
-            WolverineSettings.PastDueOrdersQueueName);
+            WolverineSettings.EmailServiceRateLimitQueueName);
     }
 
     /// <inheritdoc/>

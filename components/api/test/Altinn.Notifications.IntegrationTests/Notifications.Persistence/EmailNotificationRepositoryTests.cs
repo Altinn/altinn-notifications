@@ -75,13 +75,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await repo.AddNotification(emailNotification, DateTime.UtcNow);
 
         // Assert
-        string sql = $@"SELECT count(1) 
+        string sql = $@"SELECT encoded_attachments_size 
               FROM notifications.emailnotifications o
               WHERE o.alternateid = '{notificationId}'";
 
-        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
 
-        Assert.Equal(1, actualCount);
+        Assert.Equal(0L, actualSize);
     }
 
     [Fact]
@@ -198,8 +198,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         string sql = $@"SELECT count(1) 
               FROM notifications.emailnotifications email
               WHERE email.alternateid = '{emailNotification.Id}' 
-              AND email.result  = '{EmailNotificationResultType.Succeeded}' 
-              AND email.operationid = '{operationId}'";
+              AND email.result = '{EmailNotificationResultType.Succeeded}' 
+              AND email.operationid = '{operationId}'
+              AND email.encoded_attachments_size = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -227,7 +228,8 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               FROM notifications.emailnotifications email
               WHERE email.alternateid = '{emailNotification.Id}' 
               AND email.result  = '{EmailNotificationResultType.Delivered}' 
-              AND email.operationid = '{operationId}'";
+              AND email.operationid = '{operationId}'
+              AND email.encoded_attachments_size = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -289,7 +291,8 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               FROM notifications.emailnotifications email
               WHERE email.alternateid = '{emailNotification.Id}'
               AND email.result = '{EmailNotificationResultType.Succeeded}'
-              AND email.operationid = '{operationId}'";
+              AND email.operationid = '{operationId}'
+              AND email.encoded_attachments_size = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -314,7 +317,8 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         string sql = $@"SELECT count(1) 
               FROM notifications.emailnotifications email
               WHERE email.alternateid = '{emailNotification.Id}' 
-              AND email.result  = '{EmailNotificationResultType.Failed}'";
+              AND email.result  = '{EmailNotificationResultType.Failed}'
+              AND email.encoded_attachments_size = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -490,7 +494,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         var result = await SelectEmailNotificationStatus(emailNotification.Id);
 
         Assert.NotNull(result);
-        
+
         if (markedAsTTL)
         {
             Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
@@ -599,7 +603,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         // Act & Assert
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
         var task = (Task)method!.Invoke(repo, [connection, transaction, nonExistentOrderId])!;
-        
+
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await task);
         Assert.Equal("Order status could not be retrieved for the specified alternate ID.", ex.Message);
     }
@@ -607,7 +611,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task GetNewNotificationsAsync_ComposedOrderNotification_IsExcludedFromBatch()
     {
-        // Arrange — a Composed order's email notification must not be picked up by the standard email batch
+        // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
             .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
@@ -685,6 +689,159 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Confirm the notification is still in 'New' state (not claimed)
         string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
+        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithEncodedAttachmentsSize_PersistsSizeToDatabase()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+        long expectedSize = 158304L;
+
+        // Act
+        await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Failed_PayloadTooLarge, operationId, deliveryReport: null, encodedAttachmentsSize: expectedSize);
+
+        // Assert
+        string sql = $@"
+            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            WHERE alternateid = '{emailNotification.Id}'";
+
+        long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+        Assert.Equal(expectedSize, actualSize);
+    }
+
+    [Fact]
+    public async Task GetNewComposedEmailNotificationsAsync_ReturnsComposedNotificationWithAttachments()
+    {
+        // Arrange
+        OrderRepository orderRepo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        const string expectedBody = "Composed body";
+        const string expectedSubject = "Composed subject";
+        const string expectedFrom = "noreply@altinn.no";
+        const string expectedFilename = "document.pdf";
+        const string expectedTo = "recipient@altinnxyz.no";
+        const string expectedMimeType = "application/pdf";
+        const string expectedSendersReference = "senders-reference";
+        var expectedRequestedSendTime = DateTime.UtcNow.AddMinutes(45);
+        var expectedSasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake");
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetType(OrderType.Composed)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetSendersReference(expectedSendersReference)
+            .SetRequestedSendTime(expectedRequestedSendTime)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = expectedTo,
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = expectedSubject,
+                        Body = expectedBody,
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = expectedFilename,
+                                MimeType = expectedMimeType,
+                                SasUrl = expectedSasUrl
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new("ttd"),
+            Type = OrderType.Composed,
+            SendersReference = expectedSendersReference,
+            RequestedSendTime = expectedRequestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = [new Recipient([new EmailAddressPoint(expectedTo)])],
+            Templates = [new EmailTemplate(expectedFrom, expectedSubject, expectedBody, EmailContentType.Plain)]
+        };
+
+        await orderRepo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        EmailNotification emailNotification = new()
+        {
+            OrderId = orderId,
+            Id = notificationId,
+            Recipient = new() { ToAddress = expectedTo },
+            RequestedSendTime = expectedRequestedSendTime,
+        };
+
+        await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
+
+        // Act
+        List<ComposedEmail> batch = await emailRepo.GetNewComposedEmailNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+
+        // Assert — notification is in the batch
+        ComposedEmail? result = batch.FirstOrDefault(e => e.NotificationId == notificationId);
+        Assert.NotNull(result);
+        Assert.Single(result.Attachments);
+        Assert.Equal(expectedBody, result.Body);
+        Assert.Equal(expectedTo, result.ToAddress);
+        Assert.Equal(expectedSubject, result.Subject);
+        Assert.Equal(expectedSasUrl, result.Attachments[0].SasUrl);
+        Assert.Equal(expectedFilename, result.Attachments[0].Filename);
+        Assert.Equal(expectedMimeType, result.Attachments[0].MimeType);
+
+        // Assert — notification is now claimed (status = Sending)
+        string statusSql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
+        string status = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(EmailNotificationResultType.Sending.ToString(), status);
+    }
+
+    [Fact]
+    public async Task GetNewComposedEmailNotificationsAsync_StandardOrderNotification_IsExcludedFromBatch()
+    {
+        // Arrange — a standard (non-Composed) order's email notification must not appear in the composed batch
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        List<ComposedEmail> batch = await emailRepo.GetNewComposedEmailNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+
+        // Assert — standard notification must not appear in the composed batch
+        Assert.DoesNotContain(batch, e => e.NotificationId == emailNotification.Id);
+
+        // Confirm the notification is still in 'New' state (not claimed by the composed batch)
+        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'";
         string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
         Assert.Equal(EmailNotificationResultType.New.ToString(), result);
     }

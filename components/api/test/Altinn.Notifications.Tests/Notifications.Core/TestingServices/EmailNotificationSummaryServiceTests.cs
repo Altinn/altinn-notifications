@@ -15,8 +15,18 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Sending, false)]
         [InlineData(EmailNotificationResultType.Succeeded, true)]
         [InlineData(EmailNotificationResultType.Delivered, true)]
+        [InlineData(EmailNotificationResultType.Failed, false)]
+        [InlineData(EmailNotificationResultType.Failed_RecipientReserved, false)]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, false)]
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, false)]
+        [InlineData(EmailNotificationResultType.Failed_SupressedRecipient, false)]
+        [InlineData(EmailNotificationResultType.Failed_TransientError, false)]
+        [InlineData(EmailNotificationResultType.Failed_Bounced, false)]
+        [InlineData(EmailNotificationResultType.Failed_FilteredSpam, false)]
+        [InlineData(EmailNotificationResultType.Failed_Quarantined, false)]
+        [InlineData(EmailNotificationResultType.Failed_TTL, false)]
+        [InlineData(EmailNotificationResultType.Failed_InvalidSasUrl, false)]
+        [InlineData(EmailNotificationResultType.Failed_PayloadTooLarge, false)]
         public void IsSuccessResult_CheckResultForAllEnums(EmailNotificationResultType result, bool expectedIsSuccess)
         {
             bool actualIsSuccess = EmailNotificationSummaryService.IsSuccessResult(result);
@@ -37,6 +47,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_Bounced, "The email hard bounced, which may have happened because the email address does not exist or the domain is invalid.")]
         [InlineData(EmailNotificationResultType.Failed_FilteredSpam, "The email was identified as spam, and was rejected or blocked (not quarantined).")]
         [InlineData(EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising).")]
+        [InlineData(EmailNotificationResultType.Failed_TTL, "The email was in indefinite state Succeeded for too long (TTL), and was subsequently set to failed.")]
+        [InlineData(EmailNotificationResultType.Failed_InvalidSasUrl, "The email was not sent because one or more attachment SAS URLs are invalid, expired, or inaccessible.")]
+        [InlineData(EmailNotificationResultType.Failed_PayloadTooLarge, "The email was not sent because the total size of the attachments exceeds the allowed limit.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
             string actual = EmailNotificationSummaryService.GetResultDescription(result);

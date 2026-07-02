@@ -23,13 +23,16 @@ public class EmailNotificationService(
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
     IOptions<NotificationConfig> notificationConfig,
-    IEmailNotificationRepository emailNotificationRepository) : IEmailNotificationService
+    IEmailNotificationRepository emailNotificationRepository,
+    IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
 {
     private readonly IGuidService _guidService = guidService;
-    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
+    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
+    private readonly int _composedEmailPublishBatchSize = notificationConfig.Value.ComposedEmailPublishBatchSize;
+    private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
     public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
@@ -82,10 +85,8 @@ public class EmailNotificationService(
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                foreach (var email in unpublishedEmails)
-                {
-                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-                }
+                
+                await ResetSendStatusToNewAsync(unpublishedEmails);
             }
             catch (OperationCanceledException)
             {
@@ -97,6 +98,42 @@ public class EmailNotificationService(
             {
                 await ResetSendStatusToNewAsync(newEmailNotifications);
 
+                throw;
+            }
+        }
+        while (newEmailNotifications.Count > 0);
+    }
+
+    /// <inheritdoc/>
+    public async Task SendComposedNotifications(CancellationToken cancellationToken)
+    {
+        List<ComposedEmail> newEmailNotifications;
+
+        do
+        {
+            newEmailNotifications = [];
+
+            try
+            {
+                newEmailNotifications = await _emailNotificationRepository.GetNewComposedEmailNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+                if (newEmailNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var unpublished = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
+                await ResetComposedSendStatusToNewAsync(unpublished);
+            }
+            catch (OperationCanceledException)
+            {
+                await ResetComposedSendStatusToNewAsync(newEmailNotifications);
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                await ResetComposedSendStatusToNewAsync(newEmailNotifications);
                 throw;
             }
         }
@@ -116,7 +153,8 @@ public class EmailNotificationService(
             sendOperationResult.NotificationId,
             (EmailNotificationResultType)sendOperationResult.SendResult!,
             sendOperationResult.OperationId,
-            sendOperationResult.DeliveryReport);
+            sendOperationResult.DeliveryReport,
+            sendOperationResult.EncodedAttachmentsSize);
     }
 
     /// <summary>
@@ -124,6 +162,22 @@ public class EmailNotificationService(
     /// </summary>
     /// <param name="emails">The collection of emails to reset the send status for.</param>
     private async Task ResetSendStatusToNewAsync(IEnumerable<Email> emails)
+    {
+        if (emails is null)
+        {
+            return;
+        }
+
+        foreach (var email in emails)
+        {
+            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+        }
+    }
+
+    /// <summary>
+    /// Resets the send status to <see cref="EmailNotificationResultType.New"/> for the given composed emails.
+    /// </summary>
+    private async Task ResetComposedSendStatusToNewAsync(IEnumerable<ComposedEmail> emails)
     {
         if (emails is null)
         {

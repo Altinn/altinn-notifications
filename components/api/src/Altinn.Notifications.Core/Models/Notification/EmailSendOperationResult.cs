@@ -30,6 +30,11 @@ public class EmailSendOperationResult
     public string? DeliveryReport { get; set; }
 
     /// <summary>
+    /// The total number of bytes consumed by base64-encoded attachments, populated for composed email results.
+    /// </summary>
+    public long EncodedAttachmentsSize { get; set; }
+
+    /// <summary>
     /// Json serializes the <see cref="EmailSendOperationResult"/>
     /// </summary>
     public string Serialize()

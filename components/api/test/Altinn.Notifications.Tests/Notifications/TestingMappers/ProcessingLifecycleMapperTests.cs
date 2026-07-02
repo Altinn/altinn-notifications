@@ -1,6 +1,8 @@
 ﻿using System;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Persistence.Mappers;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
@@ -51,11 +53,13 @@ public class ProcessingLifecycleMapperTests
     }
 
     [Theory]
+    [InlineData("failed", ProcessingLifecycle.Email_Failed)]
+    [InlineData("sending", ProcessingLifecycle.Email_Sending)]
+    [InlineData("succeeded", ProcessingLifecycle.Email_Succeeded)]
     [InlineData("delivered", ProcessingLifecycle.Email_Delivered)]
     [InlineData("failed_bounced", ProcessingLifecycle.Email_Failed_Bounced)]
-    [InlineData("failed", ProcessingLifecycle.Email_Failed)]
-    [InlineData("succeeded", ProcessingLifecycle.Email_Succeeded)]
-    [InlineData("sending", ProcessingLifecycle.Email_Sending)]
+    [InlineData("failed_invalidsasurl", ProcessingLifecycle.Email_Failed_InvalidSasUrl)]
+    [InlineData("failed_payloadtoolarge", ProcessingLifecycle.Email_Failed_PayloadTooLarge)]
     public void GetEmailLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
     {
         // Act

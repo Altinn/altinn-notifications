@@ -1,17 +1,20 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
+using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Clients.AzureCommunicationServices;
 using Altinn.Notifications.Email.Integrations.Configuration;
+using Altinn.Notifications.Shared.Commands;
 
 using Azure;
 using Azure.Communication.Email;
 using Azure.Core;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
 
@@ -23,20 +26,27 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
+    private readonly int _blobDownloadConcurrency;
     private readonly ILogger<EmailServiceClient> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
     /// </summary>
-    /// <param name="communicationServicesSettings">Settings for integration against Communication Services.</param>
-    /// <param name="emailServiceAdminSettings">Settings for email service administration and error handling.</param>
-    /// <param name="logger">A logger</param>
-    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
+    public EmailServiceClient(
+        CommunicationServicesSettings communicationServicesSettings,
+        EmailServiceAdminSettings emailServiceAdminSettings,
+        IHttpClientFactory httpClientFactory,
+        IOptions<WolverineSettings> wolverineSettings,
+        ILogger<EmailServiceClient> logger)
     {
         _logger = logger;
-        var emailClientOptions = new EmailClientOptions();
+        _httpClientFactory = httpClientFactory;
         _emailServiceAdminSettings = emailServiceAdminSettings;
+        _blobDownloadConcurrency = wolverineSettings.Value.BlobDownloadConcurrency;
+
+        var emailClientOptions = new EmailClientOptions();
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString, emailClientOptions);
     }
@@ -71,6 +81,66 @@ public class EmailServiceClient : IEmailServiceClient
         catch (RequestFailedException e)
         {
             _logger.LogError(e, "// EmailServiceClient // SendEmail // Failed to send email, NotificationId {NotificationId}", email.NotificationId);
+            EmailClientErrorResponse emailSendFailResponse = new()
+            {
+                SendResult = GetEmailSendResult(e)
+            };
+
+            if (emailSendFailResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
+            {
+                emailSendFailResponse.IntermittentErrorDelay = GetDelayFromString(e.Message);
+            }
+
+            return emailSendFailResponse;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email)
+    {
+        EmailContent emailContent = new(email.Subject);
+        switch (email.ContentType)
+        {
+            case EmailContentType.Plain:
+                emailContent.PlainText = email.Body;
+                break;
+            case EmailContentType.Html:
+                emailContent.Html = email.Body;
+                break;
+        }
+
+        EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
+
+        using var httpClient = _httpClientFactory.CreateClient();
+        using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
+
+        var downloadTasks = email.Attachments
+            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment))
+            .ToList();
+
+        (string Filename, string MimeType, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
+
+        long encodedAttachmentsSize = 0;
+        foreach (var (filename, mimeType, data) in downloaded)
+        {
+            encodedAttachmentsSize += (long)Math.Ceiling(data.Length / 3.0) * 4;
+            emailMessage.Attachments.Add(new EmailAttachment(filename, mimeType, BinaryData.FromBytes(data)));
+        }
+
+        try
+        {
+            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
+
+            return new ComposedEmailSendResult
+            {
+                OperationId = emailSendOperation.Id,
+                EncodedAttachmentsSize = encodedAttachmentsSize
+            };
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError(e, "// EmailServiceClient // SendComposedEmail // Failed to send composed email, NotificationId {NotificationId}", email.NotificationId);
+
             EmailClientErrorResponse emailSendFailResponse = new()
             {
                 SendResult = GetEmailSendResult(e)
@@ -151,6 +221,10 @@ public class EmailServiceClient : IEmailServiceClient
         {
             emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
         }
+        else if (e.Status == ErrorTypes.PayloadTooLargeStatusCode)
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_PayloadTooLarge;
+        }
         else if ((e.Status >= 500 && e.Status < 600) || e.Status == 0)
         {
             // Handle all 5xx errors and status 0 (network/no response) as transient errors
@@ -191,5 +265,53 @@ public class EmailServiceClient : IEmailServiceClient
                 .Value;
 
         return string.IsNullOrEmpty(secondsString) ? GetUnknownErrorDelay() : int.Parse(secondsString);
+    }
+
+    /// <summary>
+    /// Downloads a single attachment from a SAS URL with concurrency throttling.
+    /// </summary>
+    /// <param name="notificationId">The unique identifier of the notification the attachment belongs to.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> used to perform the download request.</param>
+    /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads.</param>
+    /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
+    /// <returns>A tuple containing the filename, MIME type, and raw byte data of the downloaded attachment.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a network error occurs during the download.</exception>
+    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a non-success HTTP status code.</exception>
+    private async Task<(string Filename, string MimeType, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment)
+    {
+        await semaphore.WaitAsync();
+
+        try
+        {
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await httpClient.GetAsync(attachment.SasUrl);
+            }
+            catch (Exception)
+            {
+                throw new InvalidOperationException(
+                    $"Network error downloading attachment '{attachment.Filename}' for notification {notificationId}.");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "EmailServiceClient received HTTP {StatusCode} for attachment '{Filename}' on NotificationId {NotificationId}. SAS URL may be expired or invalid.",
+                    (int)response.StatusCode,
+                    attachment.Filename,
+                    notificationId);
+
+                throw new InvalidSasUrlException(attachment.Filename, (int)response.StatusCode);
+            }
+
+            byte[] data = await response.Content.ReadAsByteArrayAsync();
+            return (attachment.Filename, attachment.MimeType, data);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 }

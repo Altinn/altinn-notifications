@@ -6,9 +6,14 @@
 public interface ISendingService
 {
     /// <summary>
-    /// Send an email
+    /// Sends a standard email via Azure Communication Services.
     /// </summary>
-    /// <param name="email">The details for an email to be sent.</param>
-    /// <returns>A task representing the asynchronous operation</returns>
+    /// <param name="email">The email to send.</param>
     Task SendAsync(Email email);
+
+    /// <summary>
+    /// Downloads attachments via SAS URL, encodes them as base64, and sends the composed email via ACS.
+    /// </summary>
+    /// <param name="email">The composed email with SAS-referenced attachments.</param>
+    Task SendComposedAsync(ComposedEmail email);
 }

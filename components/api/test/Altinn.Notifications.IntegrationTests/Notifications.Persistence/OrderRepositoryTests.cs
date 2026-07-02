@@ -3660,6 +3660,9 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         DateTime storedExpiry = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT expirytime {baseQuery}");
         Assert.Equal(expiry, storedExpiry, TimeSpan.FromSeconds(1));
+
+        long encodedAttachmentsSize = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT encoded_attachments_size {baseQuery}");
+        Assert.Equal(0L, encodedAttachmentsSize);
     }
 
     [Fact]
@@ -3849,7 +3852,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task GetOrderChainTracking_WhenComposedOrderExistsWithSameIdempotencyId_ReturnsNull()
     {
-        // Arrange — a Composed (type 3) order should NOT be returned by the Notification tracking function
+        // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         Guid orderId = Guid.NewGuid();
@@ -3924,17 +3927,16 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(orderId);
         _ordersChainIdsToDelete.Add(orderChainId);
 
-        var creationDateTime = DateTime.UtcNow;
         var requestedSendTime = DateTime.UtcNow.AddHours(1);
         string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
         string sendersReference = $"ref-{Guid.NewGuid():N}";
 
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
-            .SetOrderChainId(orderChainId)
-            .SetIdempotencyId(idempotencyId)
             .SetType(OrderType.Composed)
+            .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId(idempotencyId)
             .SetSendersReference(sendersReference)
             .SetRequestedSendTime(requestedSendTime)
             .SetRecipient(new NotificationRecipient
@@ -3963,9 +3965,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         NotificationOrder notificationOrder = new()
         {
             Id = orderId,
-            Type = OrderType.Composed,
             Creator = new("ttd"),
-            Created = creationDateTime,
+            Type = OrderType.Composed,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
             NotificationChannel = NotificationChannel.Email,
@@ -4034,6 +4035,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             new() { Filename = "spreadsheet.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = new Uri("https://example.blob.core.windows.net/container/sheet.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake2") }
         };
 
+        var requestedSendTime = DateTime.UtcNow.AddHours(1);
         string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
 
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
@@ -4042,7 +4044,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             .SetIdempotencyId(idempotencyId)
             .SetType(OrderType.Composed)
             .SetCreator(new Creator("ttd"))
-            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .SetRequestedSendTime(requestedSendTime)
             .SetRecipient(new NotificationRecipient
             {
                 RecipientComposedEmail = new RecipientComposedEmail
@@ -4061,12 +4063,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         NotificationOrder notificationOrder = new()
         {
             Id = orderId,
-            Type = OrderType.Composed,
             Creator = new("ttd"),
-            Created = DateTime.UtcNow,
-            RequestedSendTime = DateTime.UtcNow.AddHours(1),
-            NotificationChannel = NotificationChannel.Email,
+            Type = OrderType.Composed,
             EmailAttachments = attachments,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
             Templates = [new EmailTemplate("noreply@altinn.no", "Multiple files", "See attached files.", EmailContentType.Plain)],
             Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
         };
@@ -4082,5 +4083,256 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string attachmentSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND jsonb_array_length(notificationorder->'EmailAttachments') = 2";
         int attachmentCount = await PostgreUtil.RunSqlReturnOutput<int>(attachmentSql);
         Assert.Equal(1, attachmentCount);
+    }
+
+    [Fact]
+    public async Task GetComposedOrderChainTracking_ComposedOrderWithoutSendersReference_HandlesNullSendersReference()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        string creator = $"creator-{Guid.NewGuid():N}";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+
+        DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetType(OrderType.Composed)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetCreator(new Creator(creator))
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "No reference subject",
+                        Body = "No reference body",
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = "document.pdf",
+                                MimeType = "application/pdf",
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Type = OrderType.Composed,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "No reference subject", "No reference body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.OrderChainReceipt.Reminders);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+        Assert.Null(result.OrderChainReceipt.SendersReference);
+    }
+
+    [Fact]
+    public async Task Create_TwoComposedEmailOrdersWithSameIdempotencyId_ThrowsPostgresUniqueConstraintException()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid firstOrderId = Guid.NewGuid();
+        Guid secondOrderId = Guid.NewGuid();
+        Guid firstOrderChainId = Guid.NewGuid();
+        Guid secondOrderChainId = Guid.NewGuid();
+        string idempotencyId = Guid.NewGuid().ToString();
+        DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
+
+        _orderIdsToDelete.Add(firstOrderId);
+        _orderIdsToDelete.Add(secondOrderId);
+        _ordersChainIdsToDelete.Add(firstOrderChainId);
+        _ordersChainIdsToDelete.Add(secondOrderChainId);
+
+        var attachment = new SasFileReference
+        {
+            Filename = "document.pdf",
+            MimeType = "application/pdf",
+            SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+        };
+
+        var orderRequest1 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(firstOrderId)
+            .SetOrderChainId(firstOrderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "first@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "First subject",
+                        Body = "First body",
+                        Attachments = [attachment]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder1 = new()
+        {
+            Id = firstOrderId,
+            Creator = new("ttd"),
+            Type = OrderType.Composed,
+            EmailAttachments = [attachment],
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "First subject", "First body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("first@altinnxyz.no")])]
+        };
+
+        var orderRequest2 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(secondOrderId)
+            .SetOrderChainId(secondOrderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "second@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Second subject",
+                        Body = "Second body",
+                        Attachments = [attachment]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder2 = new()
+        {
+            Id = secondOrderId,
+            Type = OrderType.Composed,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments = [attachment],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Second subject", "Second body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("second@altinnxyz.no")])]
+        };
+
+        // Act
+        var result1 = await repo.Create(orderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
+
+        // Assert — second composed order with the same idempotency ID must violate unique constraint
+        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
+            await repo.Create(orderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken));
+
+        Assert.Equal("23505", ex.SqlState);
+        Assert.NotNull(result1);
+        Assert.Single(result1);
+        Assert.Equal(firstOrderId, result1[0].Id);
+    }
+
+    [Fact]
+    public async Task Create_ComposedEmailOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var attachment = new SasFileReference
+        {
+            Filename = "document.pdf",
+            MimeType = "application/pdf",
+            SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+        };
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId($"CANCEL-COMPOSED-{Guid.NewGuid():N}")
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Cancellation test",
+                        Body = "Should not be persisted.",
+                        Attachments = [attachment]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments = [attachment],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Cancellation test", "Should not be persisted.", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
+
+        // Verify nothing was persisted
+        string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+        int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
+        Assert.Equal(0, orderChainCount);
+
+        string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}'";
+        int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+        Assert.Equal(0, orderCount);
     }
 }

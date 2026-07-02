@@ -1,127 +1,9 @@
-CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
-    _result text,
-    _operationid text,
-    _alternateid uuid
-)
-RETURNS uuid
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    v_alternateid uuid;
-BEGIN
-    IF _alternateid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now(),
-            operationid = COALESCE(_operationid, operationid)
-        WHERE alternateid = _alternateid
-        RETURNING alternateid INTO v_alternateid;
-
-
-    ELSIF _operationid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now()
-        WHERE operationid = _operationid
-        RETURNING alternateid INTO v_alternateid;
-    END IF;
-
-    RETURN v_alternateid; -- null => not found
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.updateemailnotification IS
-'Updates an email notification''s result and resulttime by alternateid or by operationid.
-Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
-Null return: NULL when neither identifier is provided OR no matching row exists (no update performed).
-Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
-
--- v2 introduces expiry time validation and conditional updates
-CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v2(
-    _result text,
-    _operationid text,
-    _alternateid uuid
-)
-RETURNS TABLE (
-    alternateid uuid,
-    was_updated boolean,
-    is_expired boolean
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    -- Handle case where neither identifier is provided
-    IF _alternateid IS NULL AND _operationid IS NULL THEN
-        RETURN QUERY SELECT NULL::uuid, false, false;
-        RETURN;
-    END IF;
-
-    -- Single UPDATE with conditional logic based on expiry time
-    RETURN QUERY
-    UPDATE notifications.emailnotifications
-    SET
-        -- Update result only if not expired, otherwise keep existing value
-        result = CASE
-            WHEN expirytime > now() THEN _result::emailnotificationresulttype
-            ELSE result 
-        END,
-        -- Update resulttime only if not expired, otherwise keep existing value
-        resulttime = CASE
-            WHEN expirytime > now() THEN now()
-            ELSE resulttime
-        END,
-        -- Update operationid only if not expired and alternateid was provided
-        operationid = CASE
-            WHEN expirytime > now() AND _alternateid IS NOT NULL
-            THEN COALESCE(_operationid, operationid) 
-            ELSE operationid 
-        END
-    WHERE
-        -- Match by alternateid (takes priority) OR by operationid (fallback)
-        -- Strict precedence: if alternateid is provided, only use that
-        (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
-        (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
-    RETURNING
-        emailnotifications.alternateid,
-        -- was_updated is true only if the notification was not expired at UPDATE time
-        (expirytime > now()) AS was_updated,
-        -- is_expired is true if the notification was expired at UPDATE time
-        (expirytime <= now()) AS is_expired;
-
-    -- If RETURNING didn't return any rows, the notification was not found
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT NULL::uuid, false, false;
-    END IF;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.updateemailnotification_v2 IS
-'Updates an email notification''s result and resulttime by alternateid or by operationid, with expiry time validation.
-
-Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
-
-Return values:
-- alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if values were modified (notification not expired), false otherwise
-- is_expired: true if the notification has passed its expiry time (expirytime <= now())
-
-Behavior:
-- Single UPDATE operation with implicit row-level locking
-- CASE expressions conditionally modify fields only when expirytime > now()
-- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
-- If not found: returns (NULL, false, false)
-- If found and not expired: modifies values and returns (alternateid, true, false)
-
-Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are conditionally overwritten when not expired; operationid is only set when a non-null _operationid is supplied and notification is not expired.';
-
--- v3 adds deliveryreport jsonb persistence
-CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v3(
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v4(
     _result text,
     _operationid text,
     _alternateid uuid,
-    _deliveryreport jsonb
+    _deliveryreport jsonb,
+    _encoded_attachments_size BIGINT
 )
 RETURNS TABLE (
     alternateid uuid,
@@ -158,7 +40,9 @@ BEGIN
             ELSE operationid
         END,
         -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
-        deliveryreport = _deliveryreport
+        deliveryreport = _deliveryreport,
+        -- Always overwritten: 0 for standard emails, computed size for composed email orders
+        encoded_attachments_size = _encoded_attachments_size
     WHERE
         -- Match by alternateid (takes priority) OR by operationid (fallback)
         -- Strict precedence: if alternateid is provided, only use that
@@ -166,7 +50,7 @@ BEGIN
         (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
     RETURNING
         emailnotifications.alternateid,
-        -- was_updated reflects whether status fields were modified; deliveryreport writes do not affect this flag
+        -- was_updated reflects whether status fields were modified; deliveryreport and encoded_attachments_size writes do not affect this flag
         (expirytime > now()) AS was_updated,
         -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= now()) AS is_expired;
@@ -177,29 +61,16 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updateemailnotification_v3 IS
-'Updates an email notification''s result, resulttime, operationid, and deliveryreport
-by alternateid or by operationid, with expiry time validation.
-
-Precedence: If both _alternateid and _operationid are non-null, only alternateid is used
-for lookup; _operationid may still populate the row via COALESCE.
+COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
+'Updates an email notification result, resulttime, operationid, deliveryreport,
+and encoded_attachments_size by alternateid or operationid, with expiry validation.
+Extends v3 by adding _encoded_attachments_size (BIGINT).
+Standard email results pass 0; composed email results pass the computed value.
 
 Return values:
-- alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if status fields (result, resulttime, operationid) were modified (notification not expired), false otherwise
-             NOTE: deliveryreport is always written and does not affect this flag
-- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+- alternateid: UUID of the notification (NULL if not found)
+- was_updated: true if status fields were modified (notification not expired)
+- is_expired:  true if expirytime <= now()
 
-Behavior:
-- Single UPDATE operation with implicit row-level locking
-- CASE expressions conditionally modify status fields only when expirytime > now()
-- deliveryreport is always overwritten unconditionally, including with NULL (observational data, not subject to expiry)
-- If expired:   UPDATE executes, status fields unchanged, deliveryreport written; returns (alternateid, false, true)
-- If not found: returns (NULL, false, false); deliveryreport is not written
-- If found and not expired: all fields modified; returns (alternateid, true, false)
-
-Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies
-at most one row when non-null.
-Overwrite policy: result, resulttime, and operationid are conditionally overwritten when not expired;
-operationid is only set when a non-null _operationid is supplied and notification is not expired;
-deliveryreport is always overwritten regardless of expiry.';
+Precedence: alternateid takes priority over operationid when both are non-null.
+deliveryreport and encoded_attachments_size are always overwritten regardless of expiry.';

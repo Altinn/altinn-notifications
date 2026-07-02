@@ -14,6 +14,10 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
       <PrivateAssets>all</PrivateAssets>

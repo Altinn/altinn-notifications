@@ -14,11 +14,12 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations.Wolverine;
 
 public class CheckEmailSendStatusHandlerTests
 {
-    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123") =>
+    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123", long encodedAttachmentsSize = 0) =>
         new()
         {
             SendOperationId = operationId,
             LastCheckedAtUtc = DateTime.UtcNow,
+            EncodedAttachmentsSize = encodedAttachmentsSize,
             NotificationId = notificationId ?? Guid.NewGuid()
         };
 
@@ -62,13 +63,15 @@ public class CheckEmailSendStatusHandlerTests
     [InlineData(EmailSendResult.Failed_Bounced)]
     [InlineData(EmailSendResult.Failed_Quarantined)]
     [InlineData(EmailSendResult.Failed_FilteredSpam)]
+    [InlineData(EmailSendResult.Failed_InvalidSasUrl)]
     [InlineData(EmailSendResult.Failed_TransientError)]
+    [InlineData(EmailSendResult.Failed_PayloadTooLarge)]
     [InlineData(EmailSendResult.Failed_InvalidEmailFormat)]
     [InlineData(EmailSendResult.Failed_SupressedRecipient)]
     public async Task Handle_TerminalSendResult_DispatchesViaStatusDispatcher(EmailSendResult terminalResult)
     {
         // Arrange
-        var command = ValidCommand();
+        var command = ValidCommand(encodedAttachmentsSize: 12345);
 
         var clientMock = new Mock<IEmailServiceClient>();
         clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
@@ -92,9 +95,10 @@ public class CheckEmailSendStatusHandlerTests
         // Assert: terminal result dispatched with correct data
         dispatcherMock.Verify(d => d.DispatchAsync(It.IsAny<SendOperationResult>()), Times.Once);
         Assert.NotNull(capturedResult);
-        Assert.Equal(command.NotificationId, capturedResult.NotificationId);
-        Assert.Equal(command.SendOperationId, capturedResult.OperationId);
         Assert.Equal(terminalResult, capturedResult.SendResult);
+        Assert.Equal(command.SendOperationId, capturedResult.OperationId);
+        Assert.Equal(command.NotificationId, capturedResult.NotificationId);
+        Assert.Equal(command.EncodedAttachmentsSize, capturedResult.EncodedAttachmentsSize);
     }
 
     [Fact]
@@ -127,7 +131,7 @@ public class CheckEmailSendStatusHandlerTests
     public async Task Handle_SendResultIsSending_SchedulesRecheckAndDoesNotDispatch()
     {
         // Arrange
-        var command = ValidCommand();
+        var command = ValidCommand(encodedAttachmentsSize: 99999);
         var fixedTime = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         var clientMock = new Mock<IEmailServiceClient>();
@@ -156,7 +160,8 @@ public class CheckEmailSendStatusHandlerTests
                 It.Is<CheckEmailSendStatusCommand>(c =>
                     c.NotificationId == command.NotificationId &&
                     c.SendOperationId == command.SendOperationId &&
-                    c.LastCheckedAtUtc == fixedTime),
+                    c.LastCheckedAtUtc == fixedTime &&
+                    c.EncodedAttachmentsSize == command.EncodedAttachmentsSize),
                 It.Is<DeliveryOptions?>(o => o != null && o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
             Times.Once);
 

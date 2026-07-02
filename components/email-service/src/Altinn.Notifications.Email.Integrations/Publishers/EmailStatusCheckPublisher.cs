@@ -32,7 +32,7 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
     }
 
     /// <inheritdoc/>
-    public async Task DispatchAsync(Guid notificationId, string operationId)
+    public async Task DispatchAsync(Guid notificationId, string operationId, long encodedAttachmentsSize = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
         ArgumentOutOfRangeException.ThrowIfEqual(notificationId, Guid.Empty);
@@ -41,7 +41,8 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
         {
             SendOperationId = operationId,
             NotificationId = notificationId,
-            LastCheckedAtUtc = _dateTime.UtcNow()
+            LastCheckedAtUtc = _dateTime.UtcNow(),
+            EncodedAttachmentsSize = encodedAttachmentsSize
         };
 
         var deliveryOptions = new DeliveryOptions

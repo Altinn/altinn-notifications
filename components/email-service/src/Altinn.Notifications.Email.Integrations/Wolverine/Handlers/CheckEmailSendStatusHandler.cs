@@ -47,7 +47,8 @@ public static class CheckEmailSendStatusHandler
             {
                 SendResult = sendResult,
                 OperationId = checkEmailSendStatusCommand.SendOperationId,
-                NotificationId = checkEmailSendStatusCommand.NotificationId
+                NotificationId = checkEmailSendStatusCommand.NotificationId,
+                EncodedAttachmentsSize = checkEmailSendStatusCommand.EncodedAttachmentsSize
             };
 
             await sendResultDispatcher.DispatchAsync(operationResult);
@@ -58,7 +59,8 @@ public static class CheckEmailSendStatusHandler
             {
                 LastCheckedAtUtc = dateTime.UtcNow(),
                 NotificationId = checkEmailSendStatusCommand.NotificationId,
-                SendOperationId = checkEmailSendStatusCommand.SendOperationId
+                SendOperationId = checkEmailSendStatusCommand.SendOperationId,
+                EncodedAttachmentsSize = checkEmailSendStatusCommand.EncodedAttachmentsSize
             };
 
             await messageContext.ScheduleAsync(recheckEmailSendStatusCommand, TimeSpan.FromMilliseconds(_statusPollDelayMs));

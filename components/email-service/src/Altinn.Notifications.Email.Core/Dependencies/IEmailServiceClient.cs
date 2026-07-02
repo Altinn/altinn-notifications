@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Email.Core.Models;
+using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 
 namespace Altinn.Notifications.Email.Core.Dependencies;
@@ -9,16 +9,27 @@ namespace Altinn.Notifications.Email.Core.Dependencies;
 public interface IEmailServiceClient
 {
     /// <summary>
-    /// Method for requesting the sending of an email.
+    /// Sends a standard email to Azure Communication Services.
     /// </summary>
-    /// <param name="email">The email text</param>
-    /// <returns>An operation id for tracing the success of the task or EmailClientErrorResponse if fail</returns>
+    /// <param name="email">The email to send.</param>
+    /// <returns>The ACS operation ID on success, or an <see cref="EmailClientErrorResponse"/> on failure.</returns>
     Task<Result<string, EmailClientErrorResponse>> SendEmail(Sending.Email email);
 
     /// <summary>
-    /// Method for retrieving updated send status of an email.
+    /// Downloads the attachments in <paramref name="email"/> via SAS URL, encodes them as base64,
+    /// and submits the composed email to Azure Communication Services.
     /// </summary>
-    /// <param name="operationId">The operation id</param>
-    /// <returns>An email send result based that correlates to the operation status</returns>
+    /// <param name="email">The composed email with SAS-referenced attachments.</param>
+    /// <returns>
+    /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total encoded attachment size on success,
+    /// or an <see cref="EmailClientErrorResponse"/> on failure.
+    /// </returns>
+    Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(Sending.ComposedEmail email);
+
+    /// <summary>
+    /// Retrieves the current delivery status of a previously submitted email send operation.
+    /// </summary>
+    /// <param name="operationId">The ACS operation ID.</param>
+    /// <returns>The current send result for the operation.</returns>
     Task<EmailSendResult> GetOperationUpdate(string operationId);
 }

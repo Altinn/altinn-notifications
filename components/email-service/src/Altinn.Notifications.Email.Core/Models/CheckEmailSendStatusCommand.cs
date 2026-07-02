@@ -24,4 +24,10 @@ public class CheckEmailSendStatusCommand
     /// Used to enforce a minimum delay between consecutive polls.
     /// </summary>
     public required DateTime LastCheckedAtUtc { get; init; }
+
+    /// <summary>
+    /// Total base64-encoded attachment size in bytes. Carried through the polling loop
+    /// so it can be reported back once a terminal status is reached.
+    /// </summary>
+    public long EncodedAttachmentsSize { get; init; }
 }
