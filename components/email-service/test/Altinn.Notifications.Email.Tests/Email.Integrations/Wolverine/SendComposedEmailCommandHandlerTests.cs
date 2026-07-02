@@ -38,7 +38,7 @@ public class SendComposedEmailCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, Mock.Of<ILogger>());
+        await SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, Mock.Of<ILogger>(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedEmail);
@@ -68,7 +68,7 @@ public class SendComposedEmailCommandHandlerTests
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         // Act
-        await SendComposedEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object);
+        await SendComposedEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(
@@ -92,7 +92,7 @@ public class SendComposedEmailCommandHandlerTests
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>()))
+            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
@@ -100,7 +100,7 @@ public class SendComposedEmailCommandHandlerTests
 
         // Act & Assert
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         Assert.Same(exception, thrown);
 
@@ -122,7 +122,7 @@ public class SendComposedEmailCommandHandlerTests
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>()))
+            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
@@ -130,7 +130,7 @@ public class SendComposedEmailCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         loggerMock.Verify(
             l => l.Log(

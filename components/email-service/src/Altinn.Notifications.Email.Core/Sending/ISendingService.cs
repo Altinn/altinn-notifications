@@ -15,5 +15,6 @@ public interface ISendingService
     /// Downloads attachments via SAS URL, encodes them as base64, and sends the composed email via ACS.
     /// </summary>
     /// <param name="email">The composed email with SAS-referenced attachments.</param>
-    Task SendComposedAsync(ComposedEmail email);
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    Task SendComposedAsync(ComposedEmail email, CancellationToken cancellationToken = default);
 }

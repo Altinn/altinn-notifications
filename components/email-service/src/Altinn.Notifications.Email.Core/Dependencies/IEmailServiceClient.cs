@@ -24,7 +24,7 @@ public interface IEmailServiceClient
     /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total encoded attachment size on success,
     /// or an <see cref="EmailClientErrorResponse"/> on failure.
     /// </returns>
-    Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(Sending.ComposedEmail email);
+    Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(Sending.ComposedEmail email, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the current delivery status of a previously submitted email send operation.

@@ -192,7 +192,7 @@ public class SendingServiceTests
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ComposedEmailSendResult { OperationId = operationId, EncodedAttachmentsSize = encodedSize });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -206,7 +206,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendComposedAsync(email);
+        await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
         checkDispatcherMock.Verify(d => d.DispatchAsync(id, operationId, encodedSize), Times.Once);
@@ -223,7 +223,7 @@ public class SendingServiceTests
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_PayloadTooLarge });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -236,7 +236,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendComposedAsync(email);
+        await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
         statusDispatcherMock.Verify(
@@ -258,7 +258,7 @@ public class SendingServiceTests
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_TransientError, IntermittentErrorDelay = 60 });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -275,7 +275,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendComposedAsync(email);
+        await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
         var testEnd = DateTime.UtcNow;
 
         // Assert
@@ -305,7 +305,7 @@ public class SendingServiceTests
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>()))
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidSasUrlException("attachment.pdf", 403));
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -318,7 +318,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidSasUrlException>(() => sendingService.SendComposedAsync(email));
+        await Assert.ThrowsAsync<InvalidSasUrlException>(() => sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken));
 
         statusDispatcherMock.Verify(
             d => d.DispatchAsync(It.Is<SendOperationResult>(r =>

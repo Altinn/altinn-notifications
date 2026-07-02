@@ -39,11 +39,11 @@ public class SendingService(
     }
 
     /// <inheritdoc/>
-    public async Task SendComposedAsync(ComposedEmail email)
+    public async Task SendComposedAsync(ComposedEmail email, CancellationToken cancellationToken = default)
     {
         try
         {
-            Result<ComposedEmailSendResult, EmailClientErrorResponse> result = await _emailServiceClient.SendComposedEmail(email);
+            Result<ComposedEmailSendResult, EmailClientErrorResponse> result = await _emailServiceClient.SendComposedEmail(email, cancellationToken);
 
             await result.Match(
                 async composedResult =>
@@ -66,14 +66,7 @@ public class SendingService(
                 SendResult = EmailSendResult.Failed_InvalidSasUrl
             };
 
-            try
-            {
-                await _emailSendingStatusDispatcher.DispatchAsync(operationResult);
-            }
-            catch (Exception)
-            {
-                // Non-fatal: the outer rethrow ensures Wolverine moves the message to the error queue
-            }
+            await _emailSendingStatusDispatcher.DispatchAsync(operationResult);
 
             throw;
         }

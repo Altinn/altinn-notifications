@@ -23,16 +23,9 @@ public class ComposedEmailPublishBackgroundService(
     private readonly IComposedEmailPublishSignal _composedEmailPublishSignal = composedEmailPublishSignal;
 
     /// <inheritdoc/>
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        try
-        {
-            await RunPolicyLoopAsync(stoppingToken);
-        }
-        catch (OperationCanceledException)
-        {
-            // Graceful shutdown
-        }
+        return RunPolicyLoopAsync(stoppingToken);
     }
 
     private async Task RunPolicyLoopAsync(CancellationToken cancellationToken)

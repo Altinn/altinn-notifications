@@ -32,7 +32,7 @@ internal sealed class AlwaysSucceedSendingService : ISendingService
     }
 
     /// <inheritdoc/>
-    public Task SendComposedAsync(ComposedEmail email)
+    public Task SendComposedAsync(ComposedEmail email, CancellationToken cancellationToken = default)
     {
         CapturedComposedEmail = email;
         _tcs.TrySetResult(email);

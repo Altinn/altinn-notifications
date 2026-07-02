@@ -96,7 +96,7 @@ public class EmailServiceClient : IEmailServiceClient
     }
 
     /// <inheritdoc/>
-    public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email)
+    public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
     {
         EmailContent emailContent = new(email.Subject);
         switch (email.ContentType)
@@ -115,7 +115,7 @@ public class EmailServiceClient : IEmailServiceClient
         using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
 
         var downloadTasks = email.Attachments
-            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment))
+            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, cancellationToken))
             .ToList();
 
         (string Filename, string MimeType, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
@@ -274,12 +274,13 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="httpClient">The <see cref="HttpClient"/> used to perform the download request.</param>
     /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads.</param>
     /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>A tuple containing the filename, MIME type, and raw byte data of the downloaded attachment.</returns>
     /// <exception cref="InvalidOperationException">Thrown when a network error occurs during the download.</exception>
     /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a non-success HTTP status code.</exception>
-    private async Task<(string Filename, string MimeType, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment)
+    private async Task<(string Filename, string MimeType, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
     {
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync(cancellationToken);
 
         try
         {
@@ -287,7 +288,11 @@ public class EmailServiceClient : IEmailServiceClient
 
             try
             {
-                response = await httpClient.GetAsync(attachment.SasUrl);
+                response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception)
             {

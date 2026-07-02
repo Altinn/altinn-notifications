@@ -2083,6 +2083,7 @@ BEGIN
 END;
 $BODY$;
 
+
 -- insertemailtext.sql:
 CREATE OR REPLACE PROCEDURE notifications.insertemailtext(__orderid BIGINT, _fromaddress TEXT, _subject TEXT, _body TEXT, _contenttype TEXT)
 LANGUAGE 'plpgsql'

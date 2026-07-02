@@ -17,7 +17,8 @@ public static class SendComposedEmailCommandHandler
     /// <param name="command">The composed send-email command to process.</param>
     /// <param name="sendingService">The service responsible for downloading attachments and sending the email.</param>
     /// <param name="logger">The logger used to record processing events.</param>
-    public static async Task HandleAsync(SendComposedEmailCommand command, ISendingService sendingService, ILogger logger)
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    public static async Task HandleAsync(SendComposedEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
@@ -43,7 +44,7 @@ public static class SendComposedEmailCommandHandler
 
         try
         {
-            await sendingService.SendComposedAsync(email);
+            await sendingService.SendComposedAsync(email, cancellationToken);
 
             logger.LogInformation(
                 "Successfully dispatched composed email for NotificationId: {NotificationId}",
