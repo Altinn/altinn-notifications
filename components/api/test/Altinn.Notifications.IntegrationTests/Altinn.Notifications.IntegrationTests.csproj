@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Altinn.Authorization.ProblemDetails" Version="5.4.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
 	  <PackageReference Include="coverlet.collector" Version="10.0.1">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
