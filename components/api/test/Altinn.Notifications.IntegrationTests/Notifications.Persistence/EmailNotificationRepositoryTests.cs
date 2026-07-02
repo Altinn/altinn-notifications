@@ -720,6 +720,45 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_WithExistingEncodedAttachmentsSize_DeliveryReportUpdatePreservesSize()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+        long expectedSize = 158304L;
+        string deliveryReport = """{"messageId":"test-op","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        // Act
+        await repo.UpdateSendStatus(
+            emailNotification.Id,
+            EmailNotificationResultType.Succeeded,
+            operationId,
+            deliveryReport: null,
+            encodedAttachmentsSize: expectedSize);
+
+        await repo.UpdateSendStatus(
+            emailNotification.Id,
+            EmailNotificationResultType.Delivered,
+            operationId,
+            deliveryReport,
+            encodedAttachmentsSize: 0);
+
+        // Assert
+        string sql = $@"
+            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            WHERE alternateid = '{emailNotification.Id}'";
+
+        long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+        Assert.Equal(expectedSize, actualSize);
+    }
+
+    [Fact]
     public async Task GetNewComposedEmailNotificationsAsync_ReturnsComposedNotificationWithAttachments()
     {
         // Arrange
