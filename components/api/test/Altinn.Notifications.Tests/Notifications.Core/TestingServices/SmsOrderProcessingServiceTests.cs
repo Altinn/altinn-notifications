@@ -225,7 +225,7 @@ public class SmsOrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_WhenRecipientsNotInDatabase_NotificationServiceIsCalledForEach()
+    public async Task ProcessOrderRetry_NotificationServiceIsCalledForEach()
     {
         // Arrange
         var order = new NotificationOrder()
@@ -246,21 +246,13 @@ public class SmsOrderProcessingServiceTests
         var notificationServiceMock = new Mock<ISmsNotificationService>();
         notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
 
-        var smsRepoMock = new Mock<ISmsNotificationRepository>();
-        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
-        [
-            new SmsRecipient() { OrganizationNumber = "skd-orgNo", MobileNumber = "+4799999999" },
-            new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" }
-        ]);
-
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
         // Act
         await service.ProcessOrderRetry(order);
 
         // Assert
-        smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>()), Times.Exactly(order.Recipients.Count ));
     }
 
     [Fact]
@@ -350,9 +342,6 @@ public class SmsOrderProcessingServiceTests
                     capturedIgnoreReservation = ignoreRes;
                 })
             .ReturnsAsync([]);
-
-        var smsRepoMock = new Mock<ISmsNotificationRepository>();
-        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync([]);
 
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
