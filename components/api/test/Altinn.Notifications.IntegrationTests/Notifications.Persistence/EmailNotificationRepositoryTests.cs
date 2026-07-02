@@ -3,7 +3,10 @@ using System.Reflection;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -18,12 +21,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly List<Guid> _orderIdsToDelete;
     private readonly int _publishBatchSize = 500;
+    private readonly List<Guid> _orderIdsToDelete;
+    private readonly List<Guid> _orderChainIdsToDelete;
 
     public EmailNotificationRepositoryTests()
     {
         _orderIdsToDelete = [];
+        _orderChainIdsToDelete = [];
     }
 
     public ValueTask InitializeAsync()
@@ -33,17 +38,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (_orderIdsToDelete.Count == 0)
-        {
-            return;
-        }
-
         foreach (Guid orderId in _orderIdsToDelete)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
         }
-        
+
         await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+        await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
     }
 
     [Fact]
@@ -601,6 +602,91 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await task);
         Assert.Equal("Order status could not be retrieved for the specified alternate ID.", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetNewNotificationsAsync_ComposedOrderNotification_IsExcludedFromBatch()
+    {
+        // Arrange — a Composed order's email notification must not be picked up by the standard email batch
+        OrderRepository orderRepo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Test subject",
+                        Body = "Test body",
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = "document.pdf",
+                                MimeType = "application/pdf",
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test subject", "Test body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        await orderRepo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        EmailNotification emailNotification = new()
+        {
+            Id = notificationId,
+            OrderId = orderId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@altinnxyz.no" }
+        };
+
+        await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
+
+        // Act
+        List<Email> batch = await emailRepo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+
+        // Assert — the Composed order's notification must not appear in the standard email batch
+        Assert.DoesNotContain(batch, e => e.NotificationId == notificationId);
+
+        // Confirm the notification is still in 'New' state (not claimed)
+        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
+        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
