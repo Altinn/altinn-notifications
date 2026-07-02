@@ -1,11 +1,13 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 
@@ -17,6 +19,39 @@ namespace Altinn.Notifications.Mappers;
 public static partial class NotificationOrderChainMapper
 {
     private const string SingleWhiteSpace = " ";
+
+    /// <summary>
+    /// Maps a <see cref="ComposedEmailRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
+    /// </summary>
+    /// <param name="request">The composed email order request.</param>
+    /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
+    /// <returns>A <see cref="NotificationOrderChainRequest"/> mapped from the provided request.</returns>
+    public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this ComposedEmailRequestExt request, string creatorName)
+    {
+        var recipient = new NotificationRecipient
+        {
+            RecipientComposedEmail = new RecipientComposedEmail
+            {
+                EmailAddress = request.Recipient.EmailAddress,
+                Settings = request.Recipient.Settings.MapToComposedEmailSendingOptions()
+            }
+        };
+
+        DialogportenIdentifiers? dialogportenAssociation = request.DialogportenAssociation?.MapToDialogportenReference();
+
+        return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetRecipient(recipient)
+            .SetOrderId(Guid.NewGuid())
+            .SetType(OrderType.Composed)
+            .SetOrderChainId(Guid.NewGuid())
+            .SetCreator(new Creator(creatorName))
+            .SetIdempotencyId(request.IdempotencyId)
+            .SetSendersReference(request.SendersReference)
+            .SetConditionEndpoint(request.ConditionEndpoint)
+            .SetDialogportenAssociation(dialogportenAssociation)
+            .SetRequestedSendTime(request.RequestedSendTime.ToUniversalTime())
+            .Build();
+    }
 
     /// <summary>
     /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
@@ -98,6 +133,37 @@ public static partial class NotificationOrderChainMapper
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy,
             Subject = NormalizeLineEndingsRegex().Replace(emailSendingOptionsExt.Subject, SingleWhiteSpace)
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="SasFileReferenceExt"/> to a <see cref="SasFileReference"/>.
+    /// </summary>
+    private static SasFileReference MapToSasFileReference(SasFileReferenceExt ext)
+    {
+        return new SasFileReference
+        {
+            SasUrl = ext.SasUrl,
+            Filename = ext.Filename,
+            MimeType = ext.MimeType
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="ComposedEmailSendingOptionsExt"/> to a <see cref="ComposedEmailSendingOptions"/>.
+    /// </summary>
+    private static ComposedEmailSendingOptions MapToComposedEmailSendingOptions(this ComposedEmailSendingOptionsExt composedEmailSendingOptions)
+    {
+        return new ComposedEmailSendingOptions
+        {
+            Body = composedEmailSendingOptions.Body,
+            ContentType = (EmailContentType)composedEmailSendingOptions.ContentType,
+            SenderEmailAddress = composedEmailSendingOptions.SenderEmailAddress?.Trim(),
+            SendingTimePolicy = (SendingTimePolicy)composedEmailSendingOptions.SendingTimePolicy,
+            Attachments = composedEmailSendingOptions.Attachments is { Count: > 0 }
+                ? [.. composedEmailSendingOptions.Attachments.Select(MapToSasFileReference)]
+                : null,
+            Subject = NormalizeLineEndingsRegex().Replace(composedEmailSendingOptions.Subject, SingleWhiteSpace)
         };
     }
 
