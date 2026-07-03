@@ -1,0 +1,52 @@
+meta {
+  name: Happy path - multiple file references
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/composed-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "requestedSendTime": "{{process.env.TESTDATA_REQUESTED_SEND_TIME}}",
+    "recipient": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(TEST) Composed email - multiple file references",
+        "body": "(TEST) Composed email with multiple file references (Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
+        "contentType": "Plain",
+        "sendingTimePolicy": "Anytime",
+        "attachments": [
+          {
+            "filename": "document.pdf",
+            "mimeType": "application/pdf",
+            "sasUrl": "{{process.env.TESTDATA_ATTACHMENT_SAS_URL}}"
+          },
+          {
+            "filename": "spreadsheet.xlsx",
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "sasUrl": "{{process.env.TESTDATA_ATTACHMENT_SAS_URL_2}}"
+          }
+        ]
+      }
+    }
+  }
+}
+
+docs {
+  Happy path: registers a composed email order with multiple file references of different types.
+
+  Required environment variables:
+  - TESTDATA_MY_EMAIL: Recipient email address
+  - TESTDATA_ATTACHMENT_SAS_URL: Valid SAS URL to a PDF blob
+  - TESTDATA_ATTACHMENT_SAS_URL_2: Valid SAS URL to an XLSX blob
+  - TESTDATA_REQUESTED_SEND_TIME: ISO 8601 UTC datetime
+
+  Expected: 201 Created with order chain details in the response body.
+}
