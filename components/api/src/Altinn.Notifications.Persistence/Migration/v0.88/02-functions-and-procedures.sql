@@ -242,9 +242,9 @@ COMMENT ON FUNCTION notifications.claim_daytime_sms_batch(INTEGER) IS
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 -- claimemailbatch.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
+CREATE OR REPLACE FUNCTION notifications.claim_email_batch_v2(
     _batchsize integer DEFAULT NULL::integer)
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text) 
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
@@ -262,13 +262,13 @@ BEGIN
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
-        RETURN QUERY 
-        SELECT NULL::uuid AS alternateid, 
-               NULL::text AS subject, 
-               NULL::text AS body, 
-               NULL::text AS fromaddress, 
-               NULL::text AS toaddress, 
-               NULL::text AS contenttype 
+        RETURN QUERY
+        SELECT NULL::uuid AS alternateid,
+               NULL::text AS subject,
+               NULL::text AS body,
+               NULL::text AS fromaddress,
+               NULL::text AS toaddress,
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     ELSE
@@ -279,7 +279,7 @@ BEGIN
 
     RETURN QUERY
     WITH claimed_new_rows AS (
-        SELECT 
+        SELECT
             email._id,
             email.alternateid,
             email.customizedsubject,
@@ -287,8 +287,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
+        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
+            AND o.type <> 'Composed'::notificationordertype
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
@@ -307,9 +309,9 @@ BEGIN
             claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
-    SELECT 
+    SELECT
         updated.alternateid,
-        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
@@ -319,12 +321,14 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_email_batch(integer)
+ALTER FUNCTION notifications.claim_email_batch_v2(integer)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_email_batch(integer)
-    IS 'Claims and returns batches of email notifications.
+COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
+    IS 'Claims and returns batches of email notifications, excluding Composed orders (OrderType = 3).
+Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
+
 
 
 -- deleteoldstatusfeedrecords.sql:
@@ -459,6 +463,52 @@ COMMENT ON FUNCTION notifications.delete_old_test_data()
     IS 'This function performs cleanup of test-specific data based on hard-coded criteria used in use case tests. 
 	It removes records from notifications.orders, notifications.emailnotifications (cascading delete), and notifications.smsnotifications (cascading delete), 
 	using email addresses, mobile numbers, and synthetic organizations used only for testing. This ensures test data does not accumulate.';
+
+
+-- getcomposedorderchaintracking.sql:
+-- Retrieves tracking information for a composed email order chain using the creator's short name and idempotency identifier.
+CREATE OR REPLACE FUNCTION notifications.get_composed_order_chain_tracking
+(
+    _creatorname text,
+    _idempotencyid text
+)
+RETURNS TABLE (
+    orders_chain_id uuid,
+    shipment_id uuid,
+    senders_reference text
+)
+LANGUAGE sql
+STABLE
+AS $BODY$
+    SELECT
+        orders_chain.orderid AS orders_chain_id,
+        (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
+        orders_chain.orderchain->>'SendersReference' AS senders_reference
+    FROM
+        notifications.orderschain orders_chain
+    WHERE
+        orders_chain.creatorname = _creatorname
+        AND orders_chain.idempotencyid = _idempotencyid
+        -- include only type 'Composed' (3)
+        AND orders_chain.orderchain->>'Type' = '3';
+$BODY$;
+
+COMMENT ON FUNCTION notifications.get_composed_order_chain_tracking IS
+'Retrieves tracking information for a composed email order chain using the creator''s short name and idempotency identifier.
+
+This function is scoped exclusively to composed email orders (OrderType = 3) to ensure idempotency
+identifiers are isolated per order type. Composed email orders do not support reminders, so no
+reminders column is returned. Use get_orders_chain_tracking_v2 for standard notification orders
+and get_instant_order_tracking for instant orders.
+
+Parameters:
+- _creatorname: The short name of the creator that originally submitted the composed email order chain
+- _idempotencyid: The idempotency identifier that was defined when the order chain was created
+
+Returns a table with the following columns:
+- orders_chain_id: The unique identifier for the entire order chain
+- shipment_id: The unique identifier for the main notification order
+- senders_reference: The sender''s reference for the main notification order (may be null).';
 
 
 -- getemailmetrics.sql:
@@ -836,6 +886,97 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded';
 
+-- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1439
+
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin_v2
+(
+    _recipientnin text,
+    _from_date timestamptz,
+    _to_date timestamptz
+)
+RETURNS TABLE (
+    shipmentid uuid,
+    sendersreference text,
+    creatorname text,
+    notificationtype text,
+    resourceid text,
+    notificationchannel text,
+    requestedsendtime timestamptz,
+    recipientnin text,
+    address text,
+    channel text,
+    result text,
+    resulttime timestamptz
+)
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+AS $$
+    WITH combined AS (
+        SELECT
+            o.alternateid AS shipmentid,
+            o.sendersreference,
+            o.creatorname,
+            o.type AS notificationtype,
+            o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
+            o.requestedsendtime,
+            e.recipientnin,
+            e.toaddress AS address,
+            'email'::text AS channel,
+            e.result::text AS result,
+            e.resulttime
+        FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON o._id = e._orderid
+        WHERE e.recipientnin = _recipientnin
+          AND o.requestedsendtime >= _from_date
+          AND o.requestedsendtime <  _to_date
+
+        UNION ALL
+
+        SELECT
+            o.alternateid AS shipmentid,
+            o.sendersreference,
+            o.creatorname,
+            o.type AS notificationtype,
+            o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
+            o.requestedsendtime,
+            s.recipientnin,
+            s.mobilenumber AS address,
+            'sms'::text AS channel,
+            s.result::text AS result,
+            s.resulttime
+        FROM notifications.smsnotifications s
+        JOIN notifications.orders o ON o._id = s._orderid
+        WHERE s.recipientnin = _recipientnin
+          AND o.requestedsendtime >= _from_date
+          AND o.requestedsendtime <  _to_date
+    )
+    SELECT * FROM combined
+    ORDER BY requestedsendtime DESC;
+$$;
+
+COMMENT ON FUNCTION notifications.get_notifications_by_nin_v2 IS
+'Retrieves all email and SMS notifications sent to a recipient identified by their national identity number (NIN) within a given date range.
+Parameters:
+- _recipientnin: The national identity number of the recipient
+- _from_date: Start of the date range (inclusive) based on requestedsendtime
+- _to_date: End of the date range (exclusive) based on requestedsendtime
+Returns a table with the following columns:
+- shipmentid: The unique identifier for the shipment order
+- sendersreference: The sender''s reference for the order
+- creatorname: The short name of the organisation that created the order
+- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
+- resourceid: The Altinn resource the notification is related to (may be null)
+- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
+- requestedsendtime: When the notification was requested to be sent
+- recipientnin: The recipient''s national identity number
+- address: The address the notification was sent to (email address or mobile number)
+- channel: The delivery channel (''email'' or ''sms'')
+- result: The delivery result status
+- resulttime: When the result was recorded';
+
 
 -- getorderincludestatus.sql:
 CREATE OR REPLACE FUNCTION notifications.getorder_includestatus_v4(
@@ -997,7 +1138,7 @@ $BODY$;
 
 -- getorderschaintracking.sql:
 -- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
-CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking
+CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking_v2
 (
     _creatorname text,
     _idempotencyid text
@@ -1007,34 +1148,31 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text,
     reminders jsonb
-) 
+)
 LANGUAGE 'plpgsql'
 STABLE
 AS $BODY$
 DECLARE
     v_record_exists boolean;
 BEGIN
-    -- Check if record exists first to provide better error handling
     SELECT EXISTS (
-        SELECT 1 
-        FROM notifications.orderschain 
+        SELECT 1
+        FROM notifications.orderschain
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
-        -- exclude type 'Instant' from results
-		AND (orderchain->>'Type' <> '2' OR orderchain->>'Type' IS NULL) 
+        -- include only type 'Notification' (0) and legacy records without a type
+        AND (orderchain->>'Type' = '0' OR orderchain->>'Type' IS NULL)
     ) INTO v_record_exists;
-    
+
     IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
         RETURN;
     END IF;
 
     RETURN QUERY
-    SELECT 
+    SELECT
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
         orders_chain.orderchain->>'SendersReference' AS senders_reference,
-        -- Extract only OrderId and SendersReference from each reminder
         COALESCE(
             (SELECT jsonb_agg(
                 jsonb_build_object(
@@ -1043,8 +1181,8 @@ BEGIN
                 )
             )
             FROM jsonb_array_elements(
-                CASE 
-                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND 
+                CASE
+                    WHEN jsonb_typeof(orders_chain.orderchain->'Reminders') = 'array' AND
                          (orders_chain.orderchain->'Reminders') IS NOT NULL AND
                          (orders_chain.orderchain->'Reminders') <> 'null'::jsonb
                     THEN orders_chain.orderchain->'Reminders'
@@ -1053,21 +1191,22 @@ BEGIN
             ) AS reminder),
             '[]'::jsonb
         ) AS reminders
-    FROM 
+    FROM
         notifications.orderschain orders_chain
-    WHERE 
+    WHERE
         orders_chain.creatorname = _creatorname
         AND orders_chain.idempotencyid = _idempotencyid
-        -- Exclude type 'Instant' from results
-        AND (orders_chain.orderchain->>'Type' <> '2' OR orders_chain.orderchain->>'Type' IS NULL);
+        -- include only type 'Notification' (0) and legacy records without a type
+        AND (orders_chain.orderchain->>'Type' = '0' OR orders_chain.orderchain->>'Type' IS NULL);
 END;
 $BODY$;
 
-COMMENT ON FUNCTION notifications.get_orders_chain_tracking IS 
+COMMENT ON FUNCTION notifications.get_orders_chain_tracking_v2 IS
 'Retrieves tracking information for a notification order chain using the creator''s short name and idempotency identifier.
 
-This function enables idempotent operations by allowing clients to retrieve previously submitted
-notification chain information without creating duplicates. It specifically excludes order chains where the type is ''Instant'' (i.e., where the ''Type'' field in the orderchain data is ''2'').
+This function is scoped to standard notification orders (OrderType = 0) to ensure idempotency
+identifiers are isolated per order type. Legacy records without a Type field are also included
+for backwards compatibility. Use dedicated functions for other order types (e.g. Instant, Composed).
 
 Parameters:
 - _creatorname: The short name of the creator that originally submitted the notification order chain
@@ -1080,7 +1219,7 @@ Returns a table with the following columns:
 - reminders: A JSON array containing tracking information for any reminder notifications
 
 The reminders JSON array contains objects with the following structure:
-- OrderId: The unique identifier for the reminder notification order
+- ShipmentId: The unique identifier for the reminder notification order
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
 
 
