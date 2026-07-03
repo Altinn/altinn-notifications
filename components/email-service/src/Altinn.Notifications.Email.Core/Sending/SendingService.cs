@@ -67,8 +67,6 @@ public class SendingService(
             };
 
             await _emailSendingStatusDispatcher.DispatchAsync(operationResult);
-
-            throw;
         }
     }
 

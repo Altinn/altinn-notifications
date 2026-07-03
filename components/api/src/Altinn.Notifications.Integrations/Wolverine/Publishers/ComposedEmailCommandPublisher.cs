@@ -21,7 +21,7 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly ILogger<ComposedEmailCommandPublisher> _logger = logger;
-    private readonly int _publishConcurrency = options.Value.ComposedEmailPublishConcurrency <= 0 ? 5 : options.Value.ComposedEmailPublishConcurrency;
+    private readonly int _publishConcurrency = options.Value.ComposedEmailPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<ComposedEmail>> PublishAsync(IReadOnlyList<ComposedEmail> emails, CancellationToken cancellationToken)

@@ -33,8 +33,8 @@ public class SendComposedEmailCommandHandlerTests
         ComposedEmail? capturedEmail = null;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>()))
-            .Callback<ComposedEmail>(e => capturedEmail = e)
+            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+            .Callback<ComposedEmail, CancellationToken>((e, _) => capturedEmail = e)
             .Returns(Task.CompletedTask);
 
         // Act
@@ -60,8 +60,8 @@ public class SendComposedEmailCommandHandlerTests
         ComposedEmail? capturedEmail = null;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>()))
-            .Callback<ComposedEmail>(e => capturedEmail = e)
+            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+            .Callback<ComposedEmail, CancellationToken>((e, _) => capturedEmail = e)
             .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger>();

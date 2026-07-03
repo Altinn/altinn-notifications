@@ -30,10 +30,6 @@ internal sealed class SendComposedEmailCommandHandlerPolicy(WolverineSettings se
         var policy = settings.ComposedEmailSendQueuePolicy;
 
         chain
-            .OnException<InvalidSasUrlException>()
-            .MoveToErrorQueue();
-
-        chain
             .OnException<TimeoutException>()
             .Or<ServiceBusException>()
             .Or<TaskCanceledException>()

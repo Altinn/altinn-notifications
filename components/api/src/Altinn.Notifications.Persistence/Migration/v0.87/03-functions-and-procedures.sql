@@ -2446,8 +2446,11 @@ BEGIN
         END,
         -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
         deliveryreport = _deliveryreport,
-        -- Always overwritten: 0 for standard emails, computed size for composed email orders
-        encoded_attachments_size = _encoded_attachments_size
+        -- Preserve previously stored composed size when later updates pass 0 (e.g. delivery reports)
+        encoded_attachments_size = CASE
+            WHEN _encoded_attachments_size > 0 THEN _encoded_attachments_size
+            ELSE emailnotifications.encoded_attachments_size
+        END
     WHERE
         -- Match by alternateid (takes priority) OR by operationid (fallback)
         -- Strict precedence: if alternateid is provided, only use that
@@ -2471,6 +2474,7 @@ COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
 and encoded_attachments_size by alternateid or operationid, with expiry validation.
 Extends v3 by adding _encoded_attachments_size (BIGINT).
 Standard email results pass 0; composed email results pass the computed value.
+When _encoded_attachments_size is 0, the existing value is preserved.
 
 Return values:
 - alternateid: UUID of the notification (NULL if not found)
@@ -2478,7 +2482,8 @@ Return values:
 - is_expired:  true if expirytime <= now()
 
 Precedence: alternateid takes priority over operationid when both are non-null.
-deliveryreport and encoded_attachments_size are always overwritten regardless of expiry.';
+deliveryreport is always overwritten regardless of expiry.
+encoded_attachments_size is overwritten only when _encoded_attachments_size > 0; otherwise the existing value is preserved.';
 
 
 -- updateemailstatus.sql:

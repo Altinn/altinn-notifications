@@ -298,7 +298,7 @@ public class SendingServiceTests
     }
 
     [Fact]
-    public async Task SendComposedAsync_InvalidSasUrlException_DispatchesFailedInvalidSasUrlAndRethrows()
+    public async Task SendComposedAsync_InvalidSasUrlException_DispatchesFailedInvalidSasUrlAndCompletes()
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -317,9 +317,10 @@ public class SendingServiceTests
 
         var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidSasUrlException>(() => sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken));
+        // Act — must complete without throwing so the ASB message is acknowledged
+        await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
 
+        // Assert
         statusDispatcherMock.Verify(
             d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
                 r.NotificationId == id &&

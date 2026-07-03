@@ -113,9 +113,10 @@ public class EmailServiceClient : IEmailServiceClient
 
         using var httpClient = _httpClientFactory.CreateClient();
         using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var downloadTasks = email.Attachments
-            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, cancellationToken))
+            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token))
             .ToList();
 
         (string Filename, string MimeType, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
@@ -311,7 +312,7 @@ public class EmailServiceClient : IEmailServiceClient
                 throw new InvalidSasUrlException(attachment.Filename, (int)response.StatusCode);
             }
 
-            byte[] data = await response.Content.ReadAsByteArrayAsync();
+            byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             return (attachment.Filename, attachment.MimeType, data);
         }
         finally
