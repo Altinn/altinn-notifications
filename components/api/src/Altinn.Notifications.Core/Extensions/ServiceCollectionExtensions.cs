@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IKeywordsService, KeywordsService>()
             .AddSingleton<IDateTimeService, DateTimeService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
+            .AddSingleton<IDashboardService, DashboardService>()
             .AddSingleton<IStatusFeedService, StatusFeedService>()
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
@@ -55,9 +56,9 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
+            .AddSingleton<IComposedEmailOrderRequestService, ComposedEmailOrderRequestService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
-            .AddSingleton<IDashboardService, DashboardService>()
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>();
     }
