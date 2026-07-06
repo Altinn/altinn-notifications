@@ -20,6 +20,7 @@ public interface IEmailServiceClient
     /// and submits the composed email to Azure Communication Services.
     /// </summary>
     /// <param name="email">The composed email with SAS-referenced attachments.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>
     /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total encoded attachment size on success,
     /// or an <see cref="EmailClientErrorResponse"/> on failure.
