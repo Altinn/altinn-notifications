@@ -115,7 +115,7 @@ public class EmailServiceClient : IEmailServiceClient
 
         if (email.Attachments.Count > 0)
         {
-            using var httpClient = _httpClientFactory.CreateClient();
+            using var httpClient = _httpClientFactory.CreateClient(nameof(EmailServiceClient));
             using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 

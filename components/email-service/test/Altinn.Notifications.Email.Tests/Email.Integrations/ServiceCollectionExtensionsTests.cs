@@ -45,4 +45,23 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal("config", exception.ParamName);
         Assert.StartsWith("Required email service admin settings are missing from application configuration", exception.Message);
     }
+
+    [Fact]
+    public void AddIntegrationServices_BlobDownloadTimeoutInSecondsIsZero_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:BlobDownloadTimeoutInSeconds"] = "0"
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+        Assert.Contains(nameof(EmailServiceAdminSettings.BlobDownloadTimeoutInSeconds), exception.Message);
+    }
 }

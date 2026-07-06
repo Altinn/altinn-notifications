@@ -179,7 +179,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         {
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
             httpClientFactoryMock
-                .Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Setup(f => f.CreateClient(nameof(EmailServiceClient)))
                 .Returns(new HttpClient(new FakeBlobHandler(respond)));
 
             return new EmailServiceClient(

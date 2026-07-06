@@ -33,8 +33,17 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required email service admin settings are missing from application configuration");
         }
 
+        if (emailServiceAdminSettings.BlobDownloadTimeoutInSeconds <= 0)
+        {
+            throw new InvalidOperationException($"{nameof(EmailServiceAdminSettings.BlobDownloadTimeoutInSeconds)} must be greater than 0.");
+        }
+
         services
-            .AddHttpClient()
+            .AddHttpClient(nameof(EmailServiceClient), client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(emailServiceAdminSettings.BlobDownloadTimeoutInSeconds);
+            })
+            .Services
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
