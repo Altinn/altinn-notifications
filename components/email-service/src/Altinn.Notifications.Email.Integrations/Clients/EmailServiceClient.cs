@@ -130,7 +130,7 @@ public class EmailServiceClient : IEmailServiceClient
 
         try
         {
-            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
+            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cancellationToken);
 
             return new ComposedEmailSendResult
             {
