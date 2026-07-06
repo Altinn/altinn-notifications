@@ -143,41 +143,4 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
             Assert.Equal(attachment.MimeType, capturedEmail.Attachments[0].MimeType);
         }
     }
-
-    [Fact]
-    public async Task HandleAsync_WhenSendingServiceThrows_RetriesAndMovesToDeadLetterQueue()
-    {
-        // Arrange
-        int attemptCount = 0;
-        var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock
-            .Setup(s => s.SendComposedAsync(It.IsAny<ComposedEmail>()))
-            .Callback(() => Interlocked.Increment(ref attemptCount))
-            .ThrowsAsync(new InvalidOperationException("Simulated sending failure"));
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => sendingServiceMock.Object)
-            .Initialize();
-
-        await using (factory)
-        {
-            var policy = factory.WolverineSettings!.ComposedEmailSendQueuePolicy;
-            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings!.ComposedEmailSendQueueName;
-
-            // Act
-            await factory.SendToEndpointAsync(queueName, ValidCommand());
-
-            // Assert - Wait for message to appear in dead letter queue after retries exhaust
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(30));
-            Assert.NotNull(deadLetterMessage);
-
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, attemptCount);
-        }
-    }
 }

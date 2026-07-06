@@ -743,7 +743,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             encodedAttachmentsSize: expectedSize);
 
         await repo.UpdateSendStatus(
-            emailNotification.Id,
+            null,
             EmailNotificationResultType.Delivered,
             operationId,
             deliveryReport,
@@ -827,7 +827,16 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             RequestedSendTime = expectedRequestedSendTime,
             NotificationChannel = NotificationChannel.Email,
             Recipients = [new Recipient([new EmailAddressPoint(expectedTo)])],
-            Templates = [new EmailTemplate(expectedFrom, expectedSubject, expectedBody, EmailContentType.Plain)]
+            Templates = [new EmailTemplate(expectedFrom, expectedSubject, expectedBody, EmailContentType.Plain)],
+            EmailAttachments =
+            [
+                new SasFileReference
+                {
+                    Filename = expectedFilename,
+                    MimeType = expectedMimeType,
+                    SasUrl = expectedSasUrl
+                }
+            ]
         };
 
         await orderRepo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
