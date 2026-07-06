@@ -270,9 +270,8 @@ ALTER FUNCTION notifications.claim_composed_email_batch(integer)
 
 COMMENT ON FUNCTION notifications.claim_composed_email_batch(integer)
     IS 'Claims and returns batches of email notifications for Composed orders (OrderType = 3).
-Attachments are extracted from the order JSONB using the camelCase key ''EmailAttachments''
-(serialised with JsonNamingPolicy.CamelCase). Returns an empty JSON array when no
-attachments are present. _batchsize: requested batch size (defaults to 500 if NULL or <1).';
+Returns an empty JSON array when no attachments are present.
+_batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
 -- claimdaytimesmsbatch.sql:

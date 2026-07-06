@@ -130,13 +130,13 @@ public class EmailServiceClient : IEmailServiceClient
             })
             .ToList();
 
-        DownloadedAttachment[] downloaded = await Task.WhenAll(downloadTasks);
+        (SasFileAttachment Metadata, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
 
         long encodedAttachmentsSize = 0;
-        foreach (var attachment in downloaded)
+        foreach (var (metadata, data) in downloaded)
         {
-            encodedAttachmentsSize += (long)Math.Ceiling(attachment.Data.Length / 3.0) * 4;
-            emailMessage.Attachments.Add(new EmailAttachment(attachment.Filename, attachment.MimeType, BinaryData.FromBytes(attachment.Data)));
+            encodedAttachmentsSize += (long)Math.Ceiling(data.Length / 3.0) * 4;
+            emailMessage.Attachments.Add(new EmailAttachment(metadata.Filename, metadata.MimeType, BinaryData.FromBytes(data)));
         }
 
         try
@@ -287,10 +287,10 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads.</param>
     /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    /// <returns>A <see cref="DownloadedAttachment"/> containing the filename, MIME type, and raw byte data.</returns>
+    /// <returns>The original <see cref="SasFileAttachment"/> paired with its downloaded byte data.</returns>
     /// <exception cref="InvalidOperationException">Thrown when a network error or transient HTTP 5xx response occurs during the download.</exception>
     /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns an HTTP 4xx response.</exception>
-    private static async Task<DownloadedAttachment> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
+    private static async Task<(SasFileAttachment Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
 
@@ -301,7 +301,7 @@ public class EmailServiceClient : IEmailServiceClient
                 HttpResponseMessage response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
                 response.EnsureSuccessStatusCode();
                 byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                return new DownloadedAttachment(attachment.Filename, attachment.MimeType, data);
+                return (attachment, data);
             }
             catch (OperationCanceledException)
             {
@@ -325,6 +325,4 @@ public class EmailServiceClient : IEmailServiceClient
             semaphore.Release();
         }
     }
-
-    private sealed record DownloadedAttachment(string Filename, string MimeType, byte[] Data);
 }
