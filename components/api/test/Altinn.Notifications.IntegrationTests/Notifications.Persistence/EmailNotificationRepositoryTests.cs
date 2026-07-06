@@ -759,6 +759,42 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_ExpiredNotificationWithEncodedAttachmentsSize_ThrowsAndPreservesOriginalSize()
+    {
+        // Arrange
+        Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+        _orderIdsToDelete.Add(orderId);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid notificationId = Guid.NewGuid();
+        EmailNotification notification = new()
+        {
+            OrderId = orderId,
+            Id = notificationId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "test@example.com" }
+        };
+
+        // Add notification with expiry time already in the past
+        await repo.AddNotification(notification, DateTime.UtcNow.AddMinutes(-10));
+
+        // Act: attempt to update with a non-zero encodedAttachmentsSize
+        await Assert.ThrowsAsync<NotificationExpiredException>(() =>
+            repo.UpdateSendStatus(notificationId, EmailNotificationResultType.Succeeded, encodedAttachmentsSize: 204800L));
+
+        // Assert: transaction was rolled back — encoded_attachments_size is still 0 (never persisted)
+        string sql = $@"
+            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            WHERE alternateid = '{notificationId}'";
+
+        long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+        Assert.Equal(0L, actualSize);
+    }
+
+    [Fact]
     public async Task GetNewComposedEmailNotificationsAsync_ReturnsComposedNotificationWithAttachments()
     {
         // Arrange
