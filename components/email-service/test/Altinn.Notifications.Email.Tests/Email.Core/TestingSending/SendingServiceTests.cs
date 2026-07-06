@@ -6,6 +6,8 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
 
+using Microsoft.Extensions.Logging;
+
 using Moq;
 
 using Xunit;
@@ -35,7 +37,7 @@ public class SendingServiceTests
             .Returns(Task.CompletedTask);
         Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(email);
@@ -73,7 +75,7 @@ public class SendingServiceTests
         Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
         Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(email);
@@ -113,7 +115,7 @@ public class SendingServiceTests
 
         var testStart = DateTime.UtcNow;
 
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(email);
@@ -164,7 +166,7 @@ public class SendingServiceTests
             .Returns(Task.CompletedTask);
         Mock<IEmailServiceRateLimitDispatcher> emailServiceRateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendAsync(email);
@@ -203,7 +205,7 @@ public class SendingServiceTests
         Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
         Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
@@ -233,7 +235,7 @@ public class SendingServiceTests
             .Returns(Task.CompletedTask);
         Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
@@ -272,7 +274,7 @@ public class SendingServiceTests
             .Returns(Task.CompletedTask);
 
         var testStart = DateTime.UtcNow;
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act
         await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
@@ -298,15 +300,16 @@ public class SendingServiceTests
     }
 
     [Fact]
-    public async Task SendComposedAsync_InvalidSasUrlException_DispatchesFailedInvalidSasUrlAndCompletes()
+    public async Task SendComposedAsync_InvalidSasUrlException_LogsWarningAndDispatchesFailedInvalidSasUrl()
     {
         // Arrange
         Guid id = Guid.NewGuid();
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var exception = new InvalidSasUrlException("attachment.pdf", 403);
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidSasUrlException("attachment.pdf", 403));
+            .ThrowsAsync(exception);
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
         Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
@@ -315,12 +318,24 @@ public class SendingServiceTests
             .Returns(Task.CompletedTask);
         Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
 
-        var sendingService = new SendingService(clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+        Mock<ILogger<SendingService>> loggerMock = new();
+        loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var sendingService = new SendingService(loggerMock.Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
 
         // Act — must complete without throwing so the ASB message is acknowledged
         await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(id.ToString())),
+                exception,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
         statusDispatcherMock.Verify(
             d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
                 r.NotificationId == id &&

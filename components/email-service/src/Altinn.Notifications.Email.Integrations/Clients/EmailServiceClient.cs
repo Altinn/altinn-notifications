@@ -111,32 +111,36 @@ public class EmailServiceClient : IEmailServiceClient
 
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
 
-        using var httpClient = _httpClientFactory.CreateClient();
-        using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        var downloadTasks = email.Attachments
-            .Select(async attachment =>
-            {
-                try
-                {
-                    return await DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token);
-                }
-                catch
-                {
-                    await linkedCts.CancelAsync();
-                    throw;
-                }
-            })
-            .ToList();
-
-        (SasFileAttachment Metadata, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
-
         long encodedAttachmentsSize = 0;
-        foreach (var (metadata, data) in downloaded)
+
+        if (email.Attachments.Count > 0)
         {
-            encodedAttachmentsSize += (long)Math.Ceiling(data.Length / 3.0) * 4;
-            emailMessage.Attachments.Add(new EmailAttachment(metadata.Filename, metadata.MimeType, BinaryData.FromBytes(data)));
+            using var httpClient = _httpClientFactory.CreateClient();
+            using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            var downloadTasks = email.Attachments
+                .Select(async attachment =>
+                {
+                    try
+                    {
+                        return await DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token);
+                    }
+                    catch
+                    {
+                        await linkedCts.CancelAsync();
+                        throw;
+                    }
+                })
+                .ToList();
+
+            (SasFileAttachment Metadata, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
+
+            foreach (var (metadata, data) in downloaded)
+            {
+                encodedAttachmentsSize += (long)Math.Ceiling(data.Length / 3.0) * 4;
+                emailMessage.Attachments.Add(new EmailAttachment(metadata.Filename, metadata.MimeType, BinaryData.FromBytes(data)));
+            }
         }
 
         try

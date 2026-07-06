@@ -2,6 +2,8 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 
+using Microsoft.Extensions.Logging;
+
 namespace Altinn.Notifications.Email.Core.Sending;
 
 /// <summary>
@@ -12,11 +14,13 @@ namespace Altinn.Notifications.Email.Core.Sending;
 /// Initializes a new instance of the <see cref="SendingService"/> class.
 /// </remarks>
 public class SendingService(
+    ILogger<SendingService> logger,
     IEmailServiceClient emailServiceClient,
     IEmailStatusCheckDispatcher emailStatusCheckDispatcher,
     IEmailSendResultDispatcher emailSendingStatusDispatcher,
     IEmailServiceRateLimitDispatcher emailServiceRateLimitDispatcher) : ISendingService
 {
+    private readonly ILogger<SendingService> _logger = logger;
     private readonly IEmailServiceClient _emailServiceClient = emailServiceClient;
     private readonly IEmailStatusCheckDispatcher _emailStatusCheckDispatcher = emailStatusCheckDispatcher;
     private readonly IEmailSendResultDispatcher _emailSendingStatusDispatcher = emailSendingStatusDispatcher;
@@ -58,8 +62,10 @@ public class SendingService(
                     await HandleSendFailAsync(email.NotificationId, emailSendFailResponse);
                 });
         }
-        catch (InvalidSasUrlException)
+        catch (InvalidSasUrlException ex)
         {
+            _logger.LogWarning(ex, "// SendingService // SendComposedAsync // Attachment SAS URL invalid or expired, NotificationId {NotificationId}", email.NotificationId);
+
             var operationResult = new SendOperationResult
             {
                 NotificationId = email.NotificationId,
