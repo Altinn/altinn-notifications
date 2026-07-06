@@ -29,20 +29,18 @@ public class DashboardRepository : IDashboardRepository
     /// <inheritdoc/>
     public Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
-        return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, nin: recipientNin, orgNo: null, dateTimeFrom, dateTimeTo, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
-        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, nin: null, orgNo: recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
         string sqlCommand,
         string recipientValue,
-        string? nin,
-        string? orgNo,
         DateTime? dateTimeFrom,
         DateTime? dateTimeTo,
         CancellationToken cancellationToken)
@@ -62,15 +60,20 @@ public class DashboardRepository : IDashboardRepository
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
+            bool isNin = recipientValue.Length == 11;
+
             while (await reader.ReadAsync(cancellationToken))
             {
+                string? recipientNin = isNin ? reader.GetValue<string?>("recipientnin") : null;
+                string? recipientOrgNo = isNin ? null : reader.GetValue<string?>("recipientorgno");
+
                 var shipmentId = reader.GetValue<Guid>("shipmentid");
                 string channel = reader.GetValue<string>("channel");
                 string? address = reader.GetValue<string>("address");
 
                 var deliveryAttempt = new DashboardDeliveryAttempt(
-                    nationalIdentityNumber: nin,
-                    organizationNumber: orgNo,
+                    nationalIdentityNumber: recipientNin,
+                    organizationNumber: recipientOrgNo,
                     channel: channel,
                     emailAddress: channel == "email" ? address : null,
                     mobileNumber: channel == "sms" ? address : null,
