@@ -26,7 +26,7 @@ public class DashboardControllerTests
 
     public DashboardControllerTests()
     {
-        _controller = new DashboardController(_dashboardServiceMock.Object, new NotificationsByNinRequestValidator());
+        _controller = new DashboardController(_dashboardServiceMock.Object, new NotificationsByNinRequestValidator(), new NotificationsByOrgNumberRequestValidator());
     }
 
     [Theory]
@@ -244,6 +244,228 @@ public class DashboardControllerTests
         // Act
         var result = await _controller.GetNotificationsByNin(
             new NotificationsByNinRequestExt { NationalIdentityNumber = "16069412345" },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetNotificationsByOrgNumber_OrgNumberNullEmptyOrWhitespace_ReturnsValidationProblem(string? orgNumber)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = orgNumber! },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData("12345678")]
+    [InlineData("1234567890")]
+    public async Task GetNotificationsByOrgNumber_OrgNumberWrongLength_ReturnsValidationProblem(string orgNumber)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = orgNumber },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_FromEqualToTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = instant, To = instant },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_FromAfterTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_OnlyFromProvided_PassesValidationAndCallsService()
+    {
+        // Arrange — only one side of the range provided, so the from >= to check must not trigger
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = from },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_ValidInput_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+        _dashboardServiceMock.Verify(
+            x => x.GetNotificationsByOrgNumberAsync("123456789", from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_NoNotificationsFound_Returns200WithEmptyList()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByOrgNumberAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789" },
+            CancellationToken.None);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_ToInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var to = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_FromInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = from },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_FromMoreThan10YearsAgo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTime.UtcNow.AddYears(-10).AddDays(-1);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", From = from },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_OnlyToProvidedAndTooFarInPast_ReturnsValidationProblem()
+    {
+        // Arrange — To is more than 7 days in the past with no From, which the validator rejects
+        var to = DateTime.UtcNow.AddDays(-8);
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789", To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByOrgNumber_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByOrgNumberAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByOrgNumber(
+            new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789" },
             CancellationToken.None);
 
         // Assert
