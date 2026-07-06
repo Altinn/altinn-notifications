@@ -1,11 +1,11 @@
 meta {
-  name: Get notifications by NIN
+  name: Get notifications by org number
   type: http
-  seq: 1
+  seq: 2
 }
 
 get {
-  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/nin
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/orgnumber
   body: none
   auth: inherit
 }
@@ -16,20 +16,20 @@ params:query {
 }
 
 headers {
-  NationalIdentityNumber: {{nin}}
+  OrganizationNumber: {{orgNumber}}
 }
 
 vars:pre-request {
-  nin: 16035001577
+  orgNumber: 910493353
 }
 
 script:pre-request {
   const from = bru.getEnvVar("dateFrom");
   const to = bru.getEnvVar("dateTo");
-  
+
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
+
   bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
   bru.setVar("dateTo", to || new Date().toISOString());
 }

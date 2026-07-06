@@ -45,11 +45,22 @@ public static class FailureActionsExtensions
 
                 var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
 
+                var lastAttempt = DateTime.UtcNow;
+
+                // EnqueuedAt reflects the Service Bus send time and may be marginally ahead of
+                // the processing host clock due to clock skew, causing FirstSeen > LastAttempt
+                // on no-retry paths such as NOTIFICATION_EXPIRED. Clamp to preserve the invariant.
+                var firstSeen = innerEnvelope.EnqueuedAt().UtcDateTime;
+                if (firstSeen > lastAttempt)
+                {
+                    firstSeen = lastAttempt;
+                }
+
                 var deadDeliveryReport = new DeadDeliveryReport
                 {
                     Channel = channel,
-                    FirstSeen = innerEnvelope.EnqueuedAt().UtcDateTime,
-                    LastAttempt = DateTime.UtcNow,
+                    FirstSeen = firstSeen,
+                    LastAttempt = lastAttempt,
                     AttemptCount = Math.Max(1, innerEnvelope.Attempts),
                     Resolved = false,
                     DeliveryReport = payload,

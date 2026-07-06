@@ -11,6 +11,11 @@ public record DashboardDeliveryAttempt
     public string? NationalIdentityNumber { get; init; }
 
     /// <summary>
+    /// The Organization number of the recipient.
+    /// </summary>
+    public string? OrganizationNumber { get; init; }
+
+    /// <summary>
     /// The delivery channel: "email" or "sms".
     /// </summary>
     public string Channel { get; init; }
@@ -40,6 +45,7 @@ public record DashboardDeliveryAttempt
     /// </summary>
     public DashboardDeliveryAttempt(
         string? nationalIdentityNumber,
+        string? organizationNumber,
         string channel,
         string? emailAddress,
         string? mobileNumber,
@@ -47,6 +53,7 @@ public record DashboardDeliveryAttempt
         DateTime? resultTime)
     {
         NationalIdentityNumber = nationalIdentityNumber;
+        OrganizationNumber = organizationNumber;
         Channel = channel;
         EmailAddress = emailAddress;
         MobileNumber = mobileNumber;
