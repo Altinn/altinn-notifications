@@ -116,16 +116,27 @@ public class EmailServiceClient : IEmailServiceClient
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var downloadTasks = email.Attachments
-            .Select(attachment => DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token))
+            .Select(async attachment =>
+            {
+                try
+                {
+                    return await DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token);
+                }
+                catch
+                {
+                    await linkedCts.CancelAsync();
+                    throw;
+                }
+            })
             .ToList();
 
-        (string Filename, string MimeType, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
+        DownloadedAttachment[] downloaded = await Task.WhenAll(downloadTasks);
 
         long encodedAttachmentsSize = 0;
-        foreach (var (filename, mimeType, data) in downloaded)
+        foreach (var attachment in downloaded)
         {
-            encodedAttachmentsSize += (long)Math.Ceiling(data.Length / 3.0) * 4;
-            emailMessage.Attachments.Add(new EmailAttachment(filename, mimeType, BinaryData.FromBytes(data)));
+            encodedAttachmentsSize += (long)Math.Ceiling(attachment.Data.Length / 3.0) * 4;
+            emailMessage.Attachments.Add(new EmailAttachment(attachment.Filename, attachment.MimeType, BinaryData.FromBytes(attachment.Data)));
         }
 
         try
@@ -276,48 +287,44 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads.</param>
     /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    /// <returns>A tuple containing the filename, MIME type, and raw byte data of the downloaded attachment.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when a network error occurs during the download.</exception>
-    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a non-success HTTP status code.</exception>
-    private async Task<(string Filename, string MimeType, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
+    /// <returns>A <see cref="DownloadedAttachment"/> containing the filename, MIME type, and raw byte data.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a network error or transient HTTP 5xx response occurs during the download.</exception>
+    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns an HTTP 4xx response.</exception>
+    private static async Task<DownloadedAttachment> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
 
         try
         {
-            HttpResponseMessage response;
-
             try
             {
-                response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
+                HttpResponseMessage response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                return new DownloadedAttachment(attachment.Filename, attachment.MimeType, data);
             }
             catch (OperationCanceledException)
             {
                 throw;
             }
-            catch (Exception)
+            catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500)
             {
-                throw new InvalidOperationException(
-                    $"Network error downloading attachment '{attachment.Filename}' for notification {notificationId}.");
+                throw new InvalidOperationException($"Transient HTTP {(int)ex.StatusCode.Value} error downloading attachment '{attachment.Filename}' for notification {notificationId}.", ex);
             }
-
-            if (!response.IsSuccessStatusCode)
+            catch (HttpRequestException ex) when (ex.StatusCode.HasValue)
             {
-                _logger.LogError(
-                    "EmailServiceClient received HTTP {StatusCode} for attachment '{Filename}' on NotificationId {NotificationId}. SAS URL may be expired or invalid.",
-                    (int)response.StatusCode,
-                    attachment.Filename,
-                    notificationId);
-
-                throw new InvalidSasUrlException(attachment.Filename, (int)response.StatusCode);
+                throw new InvalidSasUrlException(attachment.Filename, (int)ex.StatusCode.Value);
             }
-
-            byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            return (attachment.Filename, attachment.MimeType, data);
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException($"Network error downloading attachment '{attachment.Filename}' for notification {notificationId}.", ex);
+            }
         }
         finally
         {
             semaphore.Release();
         }
     }
+
+    private sealed record DownloadedAttachment(string Filename, string MimeType, byte[] Data);
 }
