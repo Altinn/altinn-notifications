@@ -1155,7 +1155,6 @@ AS $BODY$
 DECLARE
     v_record_exists boolean;
 BEGIN
-    -- Check if record exists first to provide better error handling
     SELECT EXISTS (
         SELECT 1
         FROM notifications.orderschain
@@ -1166,7 +1165,6 @@ BEGIN
     ) INTO v_record_exists;
 
     IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
         RETURN;
     END IF;
 
@@ -1175,7 +1173,6 @@ BEGIN
         orders_chain.orderid AS orders_chain_id,
         (orders_chain.orderchain->>'OrderId')::uuid AS shipment_id,
         orders_chain.orderchain->>'SendersReference' AS senders_reference,
-        -- Extract only OrderId and SendersReference from each reminder
         COALESCE(
             (SELECT jsonb_agg(
                 jsonb_build_object(
