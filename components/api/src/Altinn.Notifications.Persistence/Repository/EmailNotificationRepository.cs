@@ -94,7 +94,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
     /// <inheritdoc/>
     /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long encodedAttachmentsSize = 0)
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? encodedAttachmentsSize = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
@@ -111,7 +111,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, encodedAttachmentsSize);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)encodedAttachmentsSize ?? DBNull.Value);
             },
             NotificationChannel.Email,
             notificationId,

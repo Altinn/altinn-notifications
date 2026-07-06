@@ -12,7 +12,7 @@ public class ComposedEmailSendResult
     public required string OperationId { get; init; }
 
     /// <summary>
-    /// Total base64-encoded attachment size in bytes.
+    /// Total base64-encoded attachment size in bytes. Null for standard emails without attachments.
     /// </summary>
-    public long EncodedAttachmentsSize { get; init; }
+    public long? EncodedAttachmentsSize { get; init; }
 }

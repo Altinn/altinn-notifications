@@ -68,8 +68,8 @@ COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
 'Updates an email notification result, resulttime, operationid, deliveryreport,
 and encoded_attachments_size by alternateid or operationid, with expiry validation.
 Extends v3 by adding _encoded_attachments_size (BIGINT).
-Standard email results pass 0; composed email results pass the computed value.
-When _encoded_attachments_size is 0, the existing value is preserved.
+Standard email results pass NULL; composed email results pass the computed value.
+When _encoded_attachments_size is NULL or 0, the existing value is preserved.
 
 Return values:
 - alternateid: UUID of the notification (NULL if not found)

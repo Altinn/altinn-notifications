@@ -32,7 +32,7 @@ public class EmailStatusCheckPublisher : WolverinePublisher, IEmailStatusCheckDi
     }
 
     /// <inheritdoc/>
-    public async Task DispatchAsync(Guid notificationId, string operationId, long encodedAttachmentsSize = 0)
+    public async Task DispatchAsync(Guid notificationId, string operationId, long? encodedAttachmentsSize = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
         ArgumentOutOfRangeException.ThrowIfEqual(notificationId, Guid.Empty);

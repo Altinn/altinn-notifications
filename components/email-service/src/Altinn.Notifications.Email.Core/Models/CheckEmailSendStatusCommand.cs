@@ -27,7 +27,7 @@ public class CheckEmailSendStatusCommand
 
     /// <summary>
     /// Total base64-encoded attachment size in bytes. Carried through the polling loop
-    /// so it can be reported back once a terminal status is reached.
+    /// so it can be reported back once a terminal status is reached. Null for standard emails.
     /// </summary>
-    public long EncodedAttachmentsSize { get; init; }
+    public long? EncodedAttachmentsSize { get; init; }
 }

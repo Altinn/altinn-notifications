@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations.Wolverine;
 
 public class CheckEmailSendStatusHandlerTests
 {
-    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123", long encodedAttachmentsSize = 0) =>
+    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123", long? encodedAttachmentsSize = null) =>
         new()
         {
             SendOperationId = operationId,

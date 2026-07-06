@@ -747,7 +747,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             EmailNotificationResultType.Delivered,
             operationId,
             deliveryReport,
-            encodedAttachmentsSize: 0);
+            encodedAttachmentsSize: null);
 
         // Assert
         string sql = $@"

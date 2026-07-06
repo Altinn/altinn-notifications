@@ -89,7 +89,8 @@ public sealed class EmailSendResultHandlerTests
             s => s.UpdateSendStatus(It.Is<EmailSendOperationResult>(r =>
                 r.NotificationId == notificationId &&
                 r.SendResult == resultType &&
-                r.OperationId == "op-456")),
+                r.OperationId == "op-456" &&
+                r.EncodedAttachmentsSize == null)),
             Times.Once);
     }
 

@@ -51,7 +51,7 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// <exception cref="Exceptions.InvalidNotificationIdentifierException">
     /// Thrown when both <paramref name="notificationId"/> and <paramref name="operationId"/> are null or empty.
     /// </exception>
-    public Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long encodedAttachmentsSize = 0);
+    public Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? encodedAttachmentsSize = null);
 
     /// <summary>
     /// Retrieves all processed email recipients for an order

@@ -31,10 +31,10 @@ namespace Altinn.Notifications.Email.Core.Status
         public EmailSendResult? SendResult { get; set; }
 
         /// <summary>
-        /// Total base64-encoded attachment size in bytes; 0 for standard emails.
+        /// Total base64-encoded attachment size in bytes; null for standard emails.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public long EncodedAttachmentsSize { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public long? EncodedAttachmentsSize { get; set; }
 
         /// <summary>
         /// Json serializes the <see cref="SendOperationResult"/>
