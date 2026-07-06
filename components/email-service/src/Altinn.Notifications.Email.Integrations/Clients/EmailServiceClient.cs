@@ -298,14 +298,10 @@ public class EmailServiceClient : IEmailServiceClient
         {
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
+                using HttpResponseMessage response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
                 response.EnsureSuccessStatusCode();
                 byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 return (attachment, data);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
             }
             catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500)
             {
