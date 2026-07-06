@@ -124,16 +124,16 @@ public class EmailNotificationService(
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var unpublished = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                await ResetComposedSendStatusToNewAsync(unpublished);
+                await ResetSendStatusToNewAsync(unpublished);
             }
             catch (OperationCanceledException)
             {
-                await ResetComposedSendStatusToNewAsync(newEmailNotifications);
+                await ResetSendStatusToNewAsync(newEmailNotifications);
                 throw;
             }
             catch (InvalidOperationException)
             {
-                await ResetComposedSendStatusToNewAsync(newEmailNotifications);
+                await ResetSendStatusToNewAsync(newEmailNotifications);
                 throw;
             }
         }
@@ -162,22 +162,6 @@ public class EmailNotificationService(
     /// </summary>
     /// <param name="emails">The collection of emails to reset the send status for.</param>
     private async Task ResetSendStatusToNewAsync(IEnumerable<Email> emails)
-    {
-        if (emails is null)
-        {
-            return;
-        }
-
-        foreach (var email in emails)
-        {
-            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-        }
-    }
-
-    /// <summary>
-    /// Resets the send status to <see cref="EmailNotificationResultType.New"/> for the given composed emails.
-    /// </summary>
-    private async Task ResetComposedSendStatusToNewAsync(IEnumerable<ComposedEmail> emails)
     {
         if (emails is null)
         {
