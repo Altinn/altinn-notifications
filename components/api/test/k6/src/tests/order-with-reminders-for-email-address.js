@@ -95,6 +95,8 @@ export function setup() {
         reminderSenderPrefix: "k6-reminder",
     });
 
+    console.log(`sendersReference for this run: ${orderChainPayload.sendersReference}`);
+
     return { orderChainPayload };
 }
 

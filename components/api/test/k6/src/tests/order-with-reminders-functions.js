@@ -81,12 +81,23 @@ export function buildOptions(extraThresholds = {}) {
         scenarios:
             performanceTestScenario === "userDefined"
                 ? {
-                      userDefined: {
-                          executor: "constant-vus",
-                          tags: { scenario: "custom" },
-                          duration: __ENV.duration || "30s",
-                          vus: Number.parseInt(__ENV.vus || "10", 10),
-                      },
+                      userDefined: __ENV.iterations
+                          ? {
+                                executor: "shared-iterations",
+                                tags: { scenario: "custom" },
+                                vus: Number.parseInt(__ENV.vus || "10", 10),
+                                iterations: Number.parseInt(
+                                    __ENV.iterations,
+                                    10
+                                ),
+                                maxDuration: __ENV.maxDuration || "2h",
+                            }
+                          : {
+                                executor: "constant-vus",
+                                tags: { scenario: "custom" },
+                                duration: __ENV.duration || "30s",
+                                vus: Number.parseInt(__ENV.vus || "10", 10),
+                            },
                   }
                 : {
                       smoke: {
@@ -426,6 +437,7 @@ export function validateStandardNotificationShape(
             typeof safeBody.notificationOrderId === "string" &&
             safeBody.notificationOrderId.length > 0,
         "Response includes reminders": () =>
+            expectedReminderCount === 0 ||
             Array.isArray(notificationObj.reminders),
         "Reminder count matches request": () =>
             reminderArray.length === expectedReminderCount,
