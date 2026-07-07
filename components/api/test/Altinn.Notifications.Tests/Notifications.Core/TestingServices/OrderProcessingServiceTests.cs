@@ -249,6 +249,44 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task StartProcessingPastDueOrders_ResetThrowsForOneOrder_ContinuesResettingRemainingOrders()
+    {
+        // Arrange
+        var batchOrders = CreateOrderBatch(3, "reset-failure");
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchOrders);
+
+        // Simulate a transient failure resetting the first order — the remaining orders in the
+        // batch must still be reset rather than being left stuck in Processing.
+        orderRepositoryMock
+            .Setup(e => e.ResetProcessingToRegistered(batchOrders[0].Id))
+            .ThrowsAsync(new InvalidOperationException("Transient database failure"));
+
+        var publisherMock = new Mock<IPastDueOrderPublisher>();
+        publisherMock
+            .Setup(e => e.PublishAsync(
+                It.Is<IReadOnlyList<NotificationOrder>>(orders => orders.Count == 3),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchOrders);
+
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, publisher: publisherMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        // Act
+        await service.StartProcessingPastDueOrders(cancellationTokenSource.Token);
+
+        // Assert: every order was attempted, including the ones after the one that threw.
+        foreach (var order in batchOrders)
+        {
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
+        }
+    }
+
+    [Fact]
     public async Task StartProcessingPastDueOrders_CancellationRequestedDuringSecondBatch_UnproducedOrdersRevertedToRegistered()
     {
         // Arrange
