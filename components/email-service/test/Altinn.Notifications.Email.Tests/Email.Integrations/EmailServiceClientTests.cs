@@ -25,7 +25,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         [InlineData("PerSubscriptionPerMinuteLimitExceeded - Please try again after 60 seconds.", 60)]
         [InlineData("PerSubscriptionPerHourLimitExceeded - Please try again after 3636 seconds.", 3636)]
         [InlineData("PerSubscriptionPerHourLimitExceeded - Please try again after 4000 seconds. Status: 429 (Too Many Requests) ErrorCode: TooManyRequests", 4000)]
-        public void GetDelayFromString_WithVariousMessages_ReturnsExpectedDelay(string input, int expectedDelay)
+        public void GetDelayFromString_ExtractsSecondsFromMessage_FallsBackToConfiguredDelayWhenAbsent(string input, int expectedDelay)
         {
             // Arrange
             var communicationServicesSettings = new CommunicationServicesSettings
@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         [InlineData(60)]
         [InlineData(120)]
         [InlineData(300)]
-        public void GetUnknownErrorDelay_WithConfiguredDelay_ReturnsConfiguredValue(int configuredDelay)
+        public void GetUnknownErrorDelay_ReturnsConfiguredIntermittentErrorDelay(int configuredDelay)
         {
             // Arrange
             var communicationServicesSettings = new CommunicationServicesSettings
@@ -88,7 +88,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         [InlineData(400, EmailSendResult.Failed)] // Bad Request - not transient
         [InlineData(404, EmailSendResult.Failed)] // Not Found - not transient
         [InlineData(429, EmailSendResult.Failed)] // Too Many Requests - handled separately by error code, not status
-        public void GetEmailSendResult_WithVariousStatusCodes_ReturnsExpectedResult(int statusCode, EmailSendResult expectedResult)
+        public void GetEmailSendResult_ClassifiesAcsStatusCodesAsExpectedSendResults(int statusCode, EmailSendResult expectedResult)
         {
             // Arrange
             var exception = new RequestFailedException(statusCode, "Test error message");
@@ -101,21 +101,11 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         }
 
         [Theory]
-        [InlineData(403)]
-        [InlineData(404)]
-        public async Task SendComposedEmail_BlobReturns4xx_ThrowsInvalidSasUrlException(int statusCode)
-        {
-            EmailServiceClient client = BuildClientWithHandler((_, _) =>
-                Task.FromResult(new HttpResponseMessage((HttpStatusCode)statusCode)));
-
-            await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
-                client.SendComposedEmail(MakeSingleAttachmentEmail(), TestContext.Current.CancellationToken));
-        }
-
-        [Theory]
         [InlineData(500)]
         [InlineData(503)]
-        public async Task SendComposedEmail_BlobReturns5xx_ThrowsInvalidOperationException(int statusCode)
+        [InlineData(429)]
+        [InlineData(408)]
+        public async Task SendComposedEmail_BlobReturnsTransientHttpError_ThrowsInvalidOperationException(int statusCode)
         {
             EmailServiceClient client = BuildClientWithHandler((_, _) =>
                 Task.FromResult(new HttpResponseMessage((HttpStatusCode)statusCode)));
@@ -124,8 +114,20 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 client.SendComposedEmail(MakeSingleAttachmentEmail(), TestContext.Current.CancellationToken));
         }
 
+        [Theory]
+        [InlineData(403)]
+        [InlineData(404)]
+        public async Task SendComposedEmail_BlobReturnsPermanentClientError_ThrowsInvalidSasUrlException(int statusCode)
+        {
+            EmailServiceClient client = BuildClientWithHandler((_, _) =>
+                Task.FromResult(new HttpResponseMessage((HttpStatusCode)statusCode)));
+
+            await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
+                client.SendComposedEmail(MakeSingleAttachmentEmail(), TestContext.Current.CancellationToken));
+        }
+
         [Fact]
-        public async Task SendComposedEmail_NetworkError_ThrowsInvalidOperationException()
+        public async Task SendComposedEmail_BlobRequestFailsWithNetworkError_ThrowsInvalidOperationException()
         {
             EmailServiceClient client = BuildClientWithHandler((_, _) =>
                 throw new HttpRequestException("simulated network error"));
@@ -135,7 +137,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         }
 
         [Fact]
-        public async Task SendComposedEmail_FirstAttachmentFails_CancelsRemainingDownloads()
+        public async Task SendComposedEmail_OneAttachmentFailure_CancelsRemainingParallelDownloads()
         {
             // Concurrency = 2 so both downloads start in parallel.
             // The second handler blocks indefinitely until its cancellation token fires.

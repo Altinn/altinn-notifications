@@ -218,6 +218,47 @@ public class SendingServiceTests
     }
 
     [Fact]
+    public async Task SendComposedAsync_PayloadTooLarge_DispatchesStatusResultWithEncodedAttachmentsSize()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        const long encodedSize = 1_048_576L;
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmailClientErrorResponse
+            {
+                SendResult = EmailSendResult.Failed_PayloadTooLarge,
+                EncodedAttachmentsSize = encodedSize
+            });
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        statusDispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
+            .Returns(Task.CompletedTask);
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act
+        await sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken);
+
+        // Assert
+        statusDispatcherMock.Verify(
+            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+                r.NotificationId == id &&
+                r.SendResult == EmailSendResult.Failed_PayloadTooLarge &&
+                r.EncodedAttachmentsSize == encodedSize)),
+            Times.Once);
+
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task SendComposedAsync_AcsNonTransientFailure_DispatchesStatusResult()
     {
         // Arrange

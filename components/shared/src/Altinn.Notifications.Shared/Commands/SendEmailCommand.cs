@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Shared.Commands;
 /// <summary>
 /// Represents a command to send an email notification from the Notifications API to the Email service.
 /// </summary>
-public record SendEmailCommand
+public sealed record SendEmailCommand
 {
     /// <summary>
     /// The identifier of the email notification.

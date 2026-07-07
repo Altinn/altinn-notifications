@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Email.Core;
@@ -159,7 +160,8 @@ public class EmailServiceClient : IEmailServiceClient
 
             EmailClientErrorResponse emailSendFailResponse = new()
             {
-                SendResult = GetEmailSendResult(e)
+                SendResult = GetEmailSendResult(e),
+                EncodedAttachmentsSize = encodedAttachmentsSize > 0 ? encodedAttachmentsSize : null
             };
 
             if (emailSendFailResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
@@ -292,8 +294,8 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>The original <see cref="SasFileAttachment"/> paired with its downloaded byte data.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when a network error or transient HTTP 5xx response occurs during the download.</exception>
-    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns an HTTP 4xx response.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
+    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
     private static async Task<(SasFileAttachment Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
@@ -307,7 +309,7 @@ public class EmailServiceClient : IEmailServiceClient
                 byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 return (attachment, data);
             }
-            catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500)
+            catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500 || ex.StatusCode == HttpStatusCode.TooManyRequests || ex.StatusCode == HttpStatusCode.RequestTimeout)
             {
                 throw new InvalidOperationException($"Transient HTTP {(int)ex.StatusCode.Value} error downloading attachment '{attachment.Filename}' for notification {notificationId}.", ex);
             }

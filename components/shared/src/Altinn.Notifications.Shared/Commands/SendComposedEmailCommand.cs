@@ -5,8 +5,44 @@ namespace Altinn.Notifications.Shared.Commands;
 /// <summary>
 /// Represents a command to send a composed email notification with file attachments.
 /// </summary>
-public sealed record SendComposedEmailCommand : SendEmailCommand
+public sealed record SendComposedEmailCommand
 {
+    /// <summary>
+    /// The identifier of the email notification.
+    /// </summary>
+    [JsonPropertyName("notificationId")]
+    public Guid NotificationId { get; init; }
+
+    /// <summary>
+    /// The subject of the email.
+    /// </summary>
+    [JsonPropertyName("subject")]
+    public string Subject { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The body of the email.
+    /// </summary>
+    [JsonPropertyName("body")]
+    public string Body { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The sender address.
+    /// </summary>
+    [JsonPropertyName("fromAddress")]
+    public string FromAddress { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The recipient address.
+    /// </summary>
+    [JsonPropertyName("toAddress")]
+    public string ToAddress { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The content type of the email (e.g. "Plain", "Html").
+    /// </summary>
+    [JsonPropertyName("contentType")]
+    public string ContentType { get; init; } = string.Empty;
+
     /// <summary>The file attachments to include in the email.</summary>
     [JsonPropertyName("attachments")]
     public IReadOnlyList<SasFileAttachment> Attachments { get; init; } = [];

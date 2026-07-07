@@ -105,7 +105,8 @@ public class SendingService(
         var operationResult = new SendOperationResult
         {
             NotificationId = notificationId,
-            SendResult = emailSendFailResponse.SendResult
+            SendResult = emailSendFailResponse.SendResult,
+            EncodedAttachmentsSize = emailSendFailResponse.EncodedAttachmentsSize
         };
 
         await _emailSendingStatusDispatcher.DispatchAsync(operationResult);
