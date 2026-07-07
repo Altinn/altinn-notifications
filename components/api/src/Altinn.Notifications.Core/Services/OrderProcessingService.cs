@@ -71,10 +71,7 @@ public class OrderProcessingService : IOrderProcessingService
                 cancellationToken.ThrowIfCancellationRequested();
 
                 failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
-                foreach (var order in failedOrders)
-                {
-                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
-                }
+                await ResetOrdersToRegistered(failedOrders);
             }
             catch (OperationCanceledException)
             {
@@ -82,10 +79,7 @@ public class OrderProcessingService : IOrderProcessingService
                 // must not be reset or they will be re-enqueued and processed twice.
                 // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
                 var ordersToReset = failedOrders ?? pastDueOrders;
-                foreach (var order in ordersToReset)
-                {
-                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
-                }
+                await ResetOrdersToRegistered(ordersToReset);
 
                 throw;
             }
@@ -93,6 +87,30 @@ public class OrderProcessingService : IOrderProcessingService
         while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
         stopwatch.Stop();
+    }
+
+    /// <summary>
+    /// Resets each of the given orders back to <see cref="OrderProcessingStatus.Registered"/>, one at a
+    /// time. A failure resetting one order is logged and does not stop the remaining orders from being
+    /// reset — without this, a single transient failure partway through the batch would silently leave
+    /// every subsequent order stuck in <see cref="OrderProcessingStatus.Processing"/> indefinitely.
+    /// </summary>
+    private async Task ResetOrdersToRegistered(IEnumerable<NotificationOrder> orders)
+    {
+        foreach (var order in orders)
+        {
+            try
+            {
+                await _orderRepository.ResetProcessingToRegistered(order.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to reset order {OrderId} back to Registered after a failed publish attempt. It may remain stuck in Processing until reconciled.",
+                    order.Id);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -162,7 +180,7 @@ public class OrderProcessingService : IOrderProcessingService
            order!.Id,
            e.IsTransient?.ToString() ?? "Not available");
 
-            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+            await _orderRepository.ResetProcessingToRegistered(order.Id);
         }
     }
 
