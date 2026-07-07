@@ -64,6 +64,15 @@ BEGIN
 END;
 $$;
 
+ALTER FUNCTION notifications.updateemailnotification_v4(
+    _result text,
+    _operationid text,
+    _alternateid uuid,
+    _deliveryreport jsonb,
+    _encoded_attachments_size BIGINT
+)
+    OWNER TO platform_notifications_admin;
+
 COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
 'Updates an email notification result, resulttime, operationid, deliveryreport,
 and encoded_attachments_size by alternateid or operationid, with expiry validation.
