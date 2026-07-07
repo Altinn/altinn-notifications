@@ -5,41 +5,41 @@ namespace Altinn.Notifications.Shared.Commands;
 /// <summary>
 /// Defines the common properties shared by all email send commands.
 /// </summary>
-public interface IEmailCommand
+public abstract record EmailCommandBase
 {
     /// <summary>
     /// The identifier of the email notification.
     /// </summary>
     [JsonPropertyName("notificationId")]
-    Guid NotificationId { get; init; }
+    public Guid NotificationId { get; init; }
 
     /// <summary>
     /// The subject of the email.
     /// </summary>
     [JsonPropertyName("subject")]
-    string Subject { get; init; }
+    public string Subject { get; init; } = string.Empty;
 
     /// <summary>
     /// The body of the email.
     /// </summary>
     [JsonPropertyName("body")]
-    string Body { get; init; }
+    public string Body { get; init; } = string.Empty;
 
     /// <summary>
     /// The sender address.
     /// </summary>
     [JsonPropertyName("fromAddress")]
-    string FromAddress { get; init; }
+    public string FromAddress { get; init; } = string.Empty;
 
     /// <summary>
     /// The recipient address.
     /// </summary>
     [JsonPropertyName("toAddress")]
-    string ToAddress { get; init; }
+    public string ToAddress { get; init; } = string.Empty;
 
     /// <summary>
     /// The content type of the email (e.g. "Plain", "Html").
     /// </summary>
     [JsonPropertyName("contentType")]
-    string ContentType { get; init; }
+    public string ContentType { get; init; } = string.Empty;
 }
