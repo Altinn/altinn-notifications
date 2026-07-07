@@ -88,13 +88,7 @@ public class EmailNotificationService(
                 
                 await ResetSendStatusToNewAsync(unpublishedEmails);
             }
-            catch (OperationCanceledException)
-            {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
-
-                throw;
-            }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
                 await ResetSendStatusToNewAsync(newEmailNotifications);
 
@@ -126,12 +120,7 @@ public class EmailNotificationService(
                 var unpublished = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
                 await ResetSendStatusToNewAsync(unpublished);
             }
-            catch (OperationCanceledException)
-            {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
-                throw;
-            }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
                 await ResetSendStatusToNewAsync(newEmailNotifications);
                 throw;

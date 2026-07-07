@@ -562,6 +562,28 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_PublisherThrowsUnexpectedException_ExceptionPropagatesAndStatusReset()
+    {
+        // Arrange
+        var emails = new List<Email> { _email, _email };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(emails);
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        publisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Email>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("Unexpected timeout"));
+
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TimeoutException>(() => service.SendNotifications(TestContext.Current.CancellationToken));
+
+        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
+    }
+
+    [Fact]
     public async Task SendComposedNotifications_EmptyBatch_PublisherNotCalled()
     {
         // Arrange
@@ -749,6 +771,28 @@ public class EmailNotificationServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.SendComposedNotifications(TestContext.Current.CancellationToken));
+
+        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
+    }
+
+    [Fact]
+    public async Task SendComposedNotifications_PublisherThrowsUnexpectedException_ExceptionPropagatesAndStatusReset()
+    {
+        // Arrange
+        var emails = new List<ComposedEmail> { _composedEmail, _composedEmail };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(emails);
+
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+        publisherMock.Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<ComposedEmail>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("Unexpected timeout"));
+
+        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TimeoutException>(() => service.SendComposedNotifications(TestContext.Current.CancellationToken));
 
         repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
     }
