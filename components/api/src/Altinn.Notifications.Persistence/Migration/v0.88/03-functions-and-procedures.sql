@@ -2173,6 +2173,14 @@ BEGIN
 END;
 $BODY$;
 
+ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    IS 'Inserts a new email notification linked to the given order.
+Raises an exception if no order with the specified alternateid exists.
+_encoded_attachments_size: base64-encoded size of all attachments in bytes (0 for standard emails with no attachments).';
+
 
 -- insertemailtext.sql:
 CREATE OR REPLACE PROCEDURE notifications.insertemailtext(__orderid BIGINT, _fromaddress TEXT, _subject TEXT, _body TEXT, _contenttype TEXT)
@@ -2507,8 +2515,10 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    v_now TIMESTAMPTZ := now();
 BEGIN
-    -- Handle case where neither identifier is provided
+    -- Sentinel row returned for both "no identifier provided" and "notification not found" cases.
     IF _alternateid IS NULL AND _operationid IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
@@ -2520,17 +2530,17 @@ BEGIN
     SET
         -- Update result only if not expired, otherwise keep existing value
         result = CASE
-            WHEN expirytime > now() THEN _result::emailnotificationresulttype
+            WHEN expirytime > v_now THEN _result::emailnotificationresulttype
             ELSE result
         END,
         -- Update resulttime only if not expired, otherwise keep existing value
         resulttime = CASE
-            WHEN expirytime > now() THEN now()
+            WHEN expirytime > v_now THEN v_now
             ELSE resulttime
         END,
         -- Update operationid only if not expired and alternateid was provided
         operationid = CASE
-            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            WHEN expirytime > v_now AND _alternateid IS NOT NULL
             THEN COALESCE(_operationid, operationid)
             ELSE operationid
         END,
@@ -2549,9 +2559,9 @@ BEGIN
     RETURNING
         emailnotifications.alternateid,
         -- was_updated reflects whether status fields were modified; deliveryreport and encoded_attachments_size writes do not affect this flag
-        (expirytime > now()) AS was_updated,
+        (expirytime > v_now) AS was_updated,
         -- is_expired is true if the notification was expired at UPDATE time
-        (expirytime <= now()) AS is_expired;
+        (expirytime <= v_now) AS is_expired;
 
     IF NOT FOUND THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
@@ -2559,11 +2569,20 @@ BEGIN
 END;
 $$;
 
+ALTER FUNCTION notifications.updateemailnotification_v4(
+    _result text,
+    _operationid text,
+    _alternateid uuid,
+    _deliveryreport jsonb,
+    _encoded_attachments_size BIGINT
+)
+    OWNER TO platform_notifications_admin;
+
 COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
 'Updates an email notification result, resulttime, operationid, deliveryreport,
 and encoded_attachments_size by alternateid or operationid, with expiry validation.
 Extends v3 by adding _encoded_attachments_size (BIGINT).
-Standard email results pass NULL; composed email results pass the computed value.
+Standard email results pass 0; composed email results pass the computed value.
 When _encoded_attachments_size is NULL or 0, the existing value is preserved.
 
 Return values:
