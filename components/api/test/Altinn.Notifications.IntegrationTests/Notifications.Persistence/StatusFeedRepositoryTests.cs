@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 using Altinn.Notifications.Core.Enums;
@@ -14,7 +14,7 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 [Collection(GlobalStateSerialCollection.Name)]
-public class StatusFeedRepositoryTests : IAsyncLifetime
+public sealed class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
     private readonly List<Guid> _ordersToDelete = [];
@@ -33,8 +33,6 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         {
             await PostgreUtil.RunSql($"DELETE FROM notifications.statusfeed WHERE orderid = {fakeOrderId}");
         }
-
-        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()
@@ -56,7 +54,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(StatusFeedRepository));
 
         // Act
-        var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
+        var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, _maxPageSize, TestContext.Current.CancellationToken);
         var filteredByShipmentId = results.Where(x => x.OrderStatus.ShipmentId == shipmentId);
 
         // Assert
@@ -74,7 +72,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(StatusFeedRepository));
         
         // Act
-        var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, _maxPageSize, CancellationToken.None);
+        var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, _maxPageSize, TestContext.Current.CancellationToken);
         
         // Assert
         Assert.Empty(results);
@@ -102,13 +100,13 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         _fakeOrderIdsToDelete.Add(recentOrderId);
         
         // Act
-        var rowsAffected = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+        var rowsAffected = await sut.DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, rowsAffected); // Only the old row should be deleted
 
         // Additional verification: ensure old record is gone, recent remains
-        var remaining = await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
+        var remaining = await sut.GetStatusFeed(0, _creatorName, _maxPageSize, TestContext.Current.CancellationToken);
         Assert.DoesNotContain(remaining, x => x.OrderStatus.ShipmentId == oldShipmentId);
         Assert.Contains(remaining, x => x.OrderStatus.ShipmentId == recentShipmentId);
     }
@@ -227,7 +225,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         StatusFeedRepository sut = BuildRepositoryWithBatchSize(batchSize);
 
         // Act — first invocation
-        var firstRun = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+        var firstRun = await sut.DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
 
         // Assert — batch limit was respected: at most batchSize rows deleted overall,
         // so at least one of *our* rows must still remain
@@ -238,7 +236,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         // Act — second invocation (and beyond, for safety)
         while (await CountRemainingRows(fakeOrderIds) > 0)
         {
-            await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
+            await sut.DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
         }
 
         // Assert — all owned rows eventually cleaned up
@@ -264,7 +262,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None));
+            async () => await sut.GetStatusFeed(0, _creatorName, _maxPageSize, TestContext.Current.CancellationToken));
 
         Assert.Contains("Deserialized OrderStatus is null for sequence number", exception.Message);
     }

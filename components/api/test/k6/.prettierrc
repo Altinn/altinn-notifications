@@ -1,0 +1,15 @@
+{
+  "overrides": [
+    {
+      "files": "*.js",
+      "options": {
+        "tabWidth": 4,
+        "semi": true,
+        "singleQuote": false,
+        "trailingComma": "es5",
+        "printWidth": 80,
+        "endOfLine": "auto"
+      }
+    }
+  ]
+}

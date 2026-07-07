@@ -17,16 +17,16 @@ namespace Altinn.Notifications.Tools.Tests.DlqManager;
 /// Each test seeds a minimal order + SMS notification row and cleans up after itself.
 /// </summary>
 [Collection(nameof(IntegrationContainersCollection))]
-public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
+public sealed class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture) : IAsyncLifetime
 {
     private readonly IntegrationContainersFixture _fixture = fixture;
     private readonly SmsNotificationRepository _repository = new(fixture.DataSource);
     private readonly List<Guid> _notificationIds = [];
     private readonly List<Guid> _orderIds = [];
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_notificationIds.Count == 0 && _orderIds.Count == 0)
         {
@@ -38,6 +38,7 @@ public class SmsNotificationRepositoryTests(IntegrationContainersFixture fixture
             "DELETE FROM notifications.orders WHERE alternateid = ANY(@orderIds);");
         cmd.Parameters.Add(new NpgsqlParameter("ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = _notificationIds.ToArray() });
         cmd.Parameters.Add(new NpgsqlParameter("orderIds", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = _orderIds.ToArray() });
+
         await cmd.ExecuteNonQueryAsync();
     }
 

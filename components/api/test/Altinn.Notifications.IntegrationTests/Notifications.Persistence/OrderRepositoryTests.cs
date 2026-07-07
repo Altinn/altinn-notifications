@@ -1,6 +1,9 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
@@ -14,7 +17,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class OrderRepositoryTests : IAsyncLifetime
+public sealed class OrderRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _ordersChainIdsToDelete;
@@ -25,9 +28,9 @@ public class OrderRepositoryTests : IAsyncLifetime
         _ordersChainIdsToDelete = [];
     }
 
-    public async ValueTask InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
@@ -47,8 +50,6 @@ public class OrderRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -56,7 +57,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -99,7 +100,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -133,7 +134,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -164,7 +165,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -205,7 +206,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -245,7 +246,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -289,7 +290,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -333,7 +334,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         Guid nonExistentOrderId = Guid.NewGuid();
@@ -352,7 +353,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         // Act
@@ -374,7 +375,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -411,7 +412,7 @@ public class OrderRepositoryTests : IAsyncLifetime
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
 
         NotificationOrder order = new()
@@ -524,6 +525,10 @@ public class OrderRepositoryTests : IAsyncLifetime
         string emailTextSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{orderId}'";
         int emailTextCount = await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql);
         Assert.Equal(1, emailTextCount);
+
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid = '{orderId}' AND oc.orderid = '{orderChainId}'";
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
+        Assert.Equal(1, chainLinkCount);
     }
 
     [Fact]
@@ -694,6 +699,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         string mainSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
         string firstReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
         string secondReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int mainSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(mainSmsTextSql);
@@ -702,6 +708,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainSmsCount);
         Assert.Equal(1, firstReminderSmsCount);
@@ -710,6 +717,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
     }
 
     [Fact]
@@ -926,16 +934,19 @@ public class OrderRepositoryTests : IAsyncLifetime
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
         string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}' and type = 'Reminder'";
         string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}' and type = 'Reminder'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainOrderCount);
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
 
         // Verify email and SMS templates were persisted correctly
         string mainSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
@@ -1174,16 +1185,19 @@ public class OrderRepositoryTests : IAsyncLifetime
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
         string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}' and type = 'Reminder'";
         string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}' and type = 'Reminder'";
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND oc.orderid = '{orderChainId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
 
         Assert.Equal(1, mainOrderCount);
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
         Assert.Equal(1, mainOrdersChainCount);
+        Assert.Equal(3, chainLinkCount);
 
         // Verify email and SMS templates were persisted correctly
         string mainSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
@@ -3105,5 +3119,968 @@ public class OrderRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetComposedOrderChainTracking_WhenNonExistentCreatorAndIdempotencyId_ReturnsNull()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        string creatorName = "non-existent-creator";
+        string idempotencyId = $"non-existent-id-{Guid.NewGuid():N}";
+
+        // Act
+        var result = await repo.GetComposedOrderChainTracking(creatorName, idempotencyId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetComposedOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        string creatorName = "test-creator";
+        string idempotencyId = $"test-idempotency-id-{Guid.NewGuid():N}";
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await repo.GetComposedOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+    }
+
+    [Fact]
+    public async Task GetComposedOrderChainTracking_WhenComposedOrderExists_ReturnsCorrectTrackingInformation()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        string creator = "ttd";
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+
+        DateTime creationDateTime = DateTime.UtcNow;
+        DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetType(OrderType.Composed)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetCreator(new Creator(creator))
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = "document.pdf",
+                                MimeType = "application/pdf",
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Type = OrderType.Composed,
+            Created = creationDateTime,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test subject", "Test body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.OrderChainReceipt.Reminders);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal(sendersReference, result.OrderChainReceipt.SendersReference);
+    }
+
+    [Fact]
+    public async Task GetComposedOrderChainTracking_WhenNotificationOrderExistsWithSameIdempotencyId_ReturnsNull()
+    {
+        // Arrange — a Notification (type 0) order should NOT be returned by the Composed tracking function
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        string creator = "ttd";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Notification)
+            .SetCreator(new Creator(creator))
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new EmailSendingOptions
+                    {
+                        Subject = "Test subject",
+                        Body = "Test body",
+                        ContentType = EmailContentType.Plain,
+                        SendingTimePolicy = SendingTimePolicy.Anytime
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test subject", "Test body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
+
+        // Assert — Composed tracking must not return a Notification order
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenAllNotificationsAreTerminal_CompletesOrderAndWritesStatusFeed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-completed",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult([emailNotification], ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(isCompleted);
+
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(1, notificationCount);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenNotificationsArePending_SetsOrderToProcessed_NoStatusFeed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-processed",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult([emailNotification], ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(isCompleted);
+
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), actualStatus);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenSecondNotificationInsertFails_RollsBackEntireTransaction()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-rollback",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        // Two notifications with the same Id triggers a unique constraint violation on the second insert,
+        // after the first has already been written within the transaction.
+        var sharedId = Guid.NewGuid();
+        var firstNotification = new EmailNotification
+        {
+            Id = sharedId,
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "first@example.com" },
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow)
+        };
+        var duplicateNotification = new EmailNotification
+        {
+            Id = sharedId,
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "second@example.com" },
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult(
+            [firstNotification, duplicateNotification],
+            ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act & Assert - duplicate alternateid triggers a unique constraint violation
+        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(() =>
+            repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken));
+        Assert.Equal("23505", ex.SqlState);
+
+        // Verify: no notifications were persisted (first insert rolled back)
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(0, notificationCount);
+
+        // Verify: order status unchanged (SetProcessingStatus also rolled back)
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Processing.ToString(), actualStatus);
+    }
+
+    [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_SetsStatusAndWritesStatusFeed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-condition-not-met",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        // Act
+        await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.SendConditionNotMet.ToString(), actualStatus);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
+            JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        using var doc = JsonDocument.Parse(statusJson);
+        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
+        Assert.Equal("Order_SendConditionNotMet", doc.RootElement.GetProperty("Status").GetString());
+    }
+
+    [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_WhenOrderDoesNotExistInDb_ThrowsAndRollsBack()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        // An order that is never persisted to the DB.
+        // SetProcessingStatusAsync updates 0 rows (no-op), then InsertStatusFeedEntry
+        // throws InvalidOperationException because insertstatusfeed finds no matching order.
+        NotificationOrder ghostOrder = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.SetOrderSendConditionNotMetAsync(ghostOrder, TestContext.Current.CancellationToken));
+
+        string orderCountSql = $"SELECT count(1) FROM notifications.orders WHERE alternateid = '{ghostOrder.Id}'";
+        int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderCountSql);
+        Assert.Equal(0, orderCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_SmsNotification_PersistsAllRecipientFields()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new SmsTemplate("Altinn", "sms-body")]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var notificationId = Guid.NewGuid();
+        var expiry = DateTime.UtcNow.AddHours(48);
+
+        var smsNotification = new SmsNotification
+        {
+            Id = notificationId,
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                MobileNumber = "+4799999999",
+                NationalIdentityNumber = "16069412345",
+                OrganizationNumber = "123456789",
+                CustomizedBody = "Custom SMS body for $recipientName"
+            },
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var smsResult = new SmsOrderProcessingResult([smsNotification], ExpirationDateTime: expiry);
+        var emailResult = new EmailOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert each persisted field
+        string baseQuery = $"FROM notifications.smsnotifications WHERE alternateid = '{notificationId}'";
+
+        string mobilenumber = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT mobilenumber {baseQuery}");
+        Assert.Equal("+4799999999", mobilenumber);
+
+        string nin = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT recipientnin {baseQuery}");
+        Assert.Equal("16069412345", nin);
+
+        string orgno = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT recipientorgno {baseQuery}");
+        Assert.Equal("123456789", orgno);
+
+        string customizedBody = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT customizedbody {baseQuery}");
+        Assert.Equal("Custom SMS body for $recipientName", customizedBody);
+
+        string result = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT result {baseQuery}");
+        Assert.Equal(SmsNotificationResultType.New.ToString(), result);
+
+        DateTime storedExpiry = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT expirytime {baseQuery}");
+        Assert.Equal(expiry, storedExpiry, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_EmailNotification_PersistsAllRecipientFields()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var notificationId = Guid.NewGuid();
+        var expiry = DateTime.UtcNow.AddHours(24);
+
+        var emailNotification = new EmailNotification
+        {
+            Id = notificationId,
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                ToAddress = "recipient@domain.com",
+                NationalIdentityNumber = "16069412345",
+                OrganizationNumber = "987654321",
+                CustomizedBody = "Custom email body",
+                CustomizedSubject = "Custom email subject"
+            },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult([emailNotification], ExpirationDateTime: expiry);
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert each persisted field
+        string baseQuery = $"FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
+
+        string toAddress = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT toaddress {baseQuery}");
+        Assert.Equal("recipient@domain.com", toAddress);
+
+        string nin = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT recipientnin {baseQuery}");
+        Assert.Equal("16069412345", nin);
+
+        string orgno = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT recipientorgno {baseQuery}");
+        Assert.Equal("987654321", orgno);
+
+        string customizedBody = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT customizedbody {baseQuery}");
+        Assert.Equal("Custom email body", customizedBody);
+
+        string customizedSubject = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT customizedsubject {baseQuery}");
+        Assert.Equal("Custom email subject", customizedSubject);
+
+        string result = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT result {baseQuery}");
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+
+        DateTime storedExpiry = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT expirytime {baseQuery}");
+        Assert.Equal(expiry, storedExpiry, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WithMultipleNotificationsPerChannel_AllArePersisted()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                new SmsTemplate("Altinn", "sms-body")
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailNotifications = new List<EmailNotification>
+        {
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "a@example.com" }, SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow) },
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "b@example.com" }, SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow) }
+        };
+
+        var smsNotifications = new List<SmsNotification>
+        {
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4791111111" }, SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow) },
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4792222222" }, SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow) }
+        };
+
+        var emailResult = new EmailOrderProcessingResult(emailNotifications, ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult(smsNotifications, ExpirationDateTime: DateTime.UtcNow.AddDays(2));
+
+        // Act
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert counts for both channels
+        string emailCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int emailCount = await PostgreUtil.RunSqlReturnOutput<int>(emailCountSql);
+        Assert.Equal(2, emailCount);
+
+        string smsCountSql = $@"SELECT count(1) FROM notifications.smsnotifications s
+            JOIN notifications.orders o ON s._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int smsCount = await PostgreUtil.RunSqlReturnOutput<int>(smsCountSql);
+        Assert.Equal(2, smsCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenBothNotificationListsAreEmpty_CompletesOrderAndWritesEmptyStatusFeed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailResult = new EmailOrderProcessingResult([], ExpirationDateTime: null);
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert: vacuously completed — no notifications, but order finalised and status feed written
+        Assert.True(isCompleted);
+
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
+            JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        using var doc = JsonDocument.Parse(statusJson);
+        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenOrderNotInProcessingState_ThrowsAndRollsBack()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Order stays in Registered — never advanced to Processing
+        var emailNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var emailResult = new EmailOrderProcessingResult([emailNotification], ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken));
+
+        // Verify: notification insert rolled back
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(0, notificationCount);
+
+        // Verify: status unchanged (still Registered)
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+    }
+
+    [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_WhenOrderNotInProcessingState_ThrowsAndRollsBack()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Order stays in Registered — never advanced to Processing
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken));
+
+        // Verify: status unchanged (still Registered)
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+
+        // Verify: no status feed entry written
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
+    }
+
+    [Fact]
+    public async Task GetOrderChainTracking_WhenComposedOrderExistsWithSameIdempotencyId_ReturnsNull()
+    {
+        // Arrange — a Composed (type 3) order should NOT be returned by the Notification tracking function
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        string creator = "ttd";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator(creator))
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Test subject",
+                        Body = "Test body",
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = "document.pdf",
+                                MimeType = "application/pdf",
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Creator = new(creator),
+            Created = DateTime.UtcNow,
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            NotificationChannel = NotificationChannel.Email,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Test subject", "Test body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
+
+        // Assert — Notification tracking must not return a Composed order
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Create_ComposedEmailOrderChain_NoReminders_VerifiesDatabasePersistence()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var creationDateTime = DateTime.UtcNow;
+        var requestedSendTime = DateTime.UtcNow.AddHours(1);
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Decision from Altinn",
+                        Body = "Please review the attached document.",
+                        Attachments =
+                        [
+                            new SasFileReference
+                            {
+                                Filename = "decision.pdf",
+                                MimeType = "application/pdf",
+                                SasUrl = new Uri("https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                            }
+                        ]
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Creator = new("ttd"),
+            Created = creationDateTime,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments =
+            [
+                new SasFileReference
+                {
+                    Filename = "decision.pdf",
+                    MimeType = "application/pdf",
+                    SasUrl = new Uri("https://example.blob.core.windows.net/container/decision.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
+                }
+            ],
+            Templates = [new EmailTemplate("noreply@altinn.no", "Decision from Altinn", "Please review the attached document.", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        // Act
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Assert — result contains only the main order, no reminders
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal(orderId, result[0].Id);
+
+        // Order chain record persisted
+        string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+        int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
+        Assert.Equal(1, orderChainCount);
+
+        // Order persisted with type 'Composed'
+        string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND type = 'Composed'";
+        int ordersCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+        Assert.Equal(1, ordersCount);
+
+        // Email text persisted
+        string emailTextSql = $@"SELECT count(*) FROM notifications.emailtexts et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{orderId}'";
+        int emailTextCount = await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql);
+        Assert.Equal(1, emailTextCount);
+
+        // Order linked to its chain
+        string chainLinkSql = $@"SELECT count(*) FROM notifications.orders o JOIN notifications.orderschain oc ON oc._id = o._orderchainid WHERE o.alternateid = '{orderId}' AND oc.orderid = '{orderChainId}'";
+        int chainLinkCount = await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql);
+        Assert.Equal(1, chainLinkCount);
+
+        // SasFileReference attachments stored in order JSONB
+        string attachmentSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND notificationorder->'EmailAttachments' IS NOT NULL AND jsonb_array_length(notificationorder->'EmailAttachments') = 1";
+        int attachmentCount = await PostgreUtil.RunSqlReturnOutput<int>(attachmentSql);
+        Assert.Equal(1, attachmentCount);
+    }
+
+    [Fact]
+    public async Task Create_ComposedEmailOrderChain_WithMultipleFileReferences_VerifiesAllAttachmentsPersisted()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
+
+        var attachments = new List<SasFileReference>
+        {
+            new() { Filename = "document.pdf", MimeType = "application/pdf", SasUrl = new Uri("https://example.blob.core.windows.net/container/doc.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake1") },
+            new() { Filename = "spreadsheet.xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", SasUrl = new Uri("https://example.blob.core.windows.net/container/sheet.xlsx?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake2") }
+        };
+
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetIdempotencyId(idempotencyId)
+            .SetType(OrderType.Composed)
+            .SetCreator(new Creator("ttd"))
+            .SetRequestedSendTime(DateTime.UtcNow.AddHours(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientComposedEmail = new RecipientComposedEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new ComposedEmailSendingOptions
+                    {
+                        Subject = "Multiple files",
+                        Body = "See attached files.",
+                        Attachments = attachments
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Type = OrderType.Composed,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            RequestedSendTime = DateTime.UtcNow.AddHours(1),
+            NotificationChannel = NotificationChannel.Email,
+            EmailAttachments = attachments,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Multiple files", "See attached files.", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
+        };
+
+        // Act
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+
+        // Both file references stored in JSONB
+        string attachmentSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND jsonb_array_length(notificationorder->'EmailAttachments') = 2";
+        int attachmentCount = await PostgreUtil.RunSqlReturnOutput<int>(attachmentSql);
+        Assert.Equal(1, attachmentCount);
     }
 }

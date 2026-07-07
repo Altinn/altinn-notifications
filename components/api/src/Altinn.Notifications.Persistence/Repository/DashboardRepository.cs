@@ -1,0 +1,111 @@
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Dashboard;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Persistence.Extensions;
+using Npgsql;
+using NpgsqlTypes;
+
+namespace Altinn.Notifications.Persistence.Repository;
+
+/// <summary>
+/// Implementation of dashboard repository logic
+/// </summary>
+public class DashboardRepository : IDashboardRepository
+{
+    private readonly NpgsqlDataSource _dataSource;
+
+    private const string _getNotificationsByOrgNo = "SELECT * from notifications.get_notifications_by_organization_number($1,$2,$3)"; // (_recipientorgno, _from_date,_to_date)
+    private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
+    /// </summary>
+    /// <param name="dataSource">The npgsql data source.</param>
+    public DashboardRepository(NpgsqlDataSource dataSource)
+    {
+        _dataSource = dataSource;
+    }
+
+    /// <inheritdoc/>
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
+        string sqlCommand,
+        string recipientValue,
+        DateTime? dateTimeFrom,
+        DateTime? dateTimeTo,
+        CancellationToken cancellationToken)
+    {
+        // default value is the past 7 days
+        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
+        DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
+
+        // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
+        var orderList = new List<Guid>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientValue);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, from);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, to);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        {
+            bool isNin = recipientValue.Length == 11;
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                string? recipientNin = isNin ? reader.GetValue<string?>("recipientnin") : null;
+                string? recipientOrgNo = isNin ? null : reader.GetValue<string?>("recipientorgno");
+
+                var shipmentId = reader.GetValue<Guid>("shipmentid");
+                string channel = reader.GetValue<string>("channel");
+                string? address = reader.GetValue<string>("address");
+
+                var deliveryAttempt = new DashboardDeliveryAttempt(
+                    nationalIdentityNumber: recipientNin,
+                    organizationNumber: recipientOrgNo,
+                    channel: channel,
+                    emailAddress: channel == "email" ? address : null,
+                    mobileNumber: channel == "sms" ? address : null,
+                    result: reader.GetValue<string>("result"),
+                    resultTime: reader.GetValue<DateTime?>("resulttime"));
+
+                if (groups.TryGetValue(shipmentId, out var entry))
+                {
+                    entry.DeliveryAttempts.Add(deliveryAttempt);
+                }
+                else
+                {
+                    var channelString = reader.GetValue<string>("notificationchannel");
+                    var newEntry = (
+                        CreatorName: reader.GetValue<string>("creatorname"),
+                        ResourceId: reader.GetValue<string>("resourceid"),
+                        SendersReference: reader.GetValue<string>("sendersreference"),
+                        RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
+                        NotificationChannel: Enum.TryParse<NotificationChannel>(channelString, out var notificationChannel) ? notificationChannel : (NotificationChannel?)null,
+                        NotificationType: reader.GetValue<string>("notificationtype"),
+                        DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt });
+
+                    groups[shipmentId] = newEntry;
+                    orderList.Add(shipmentId);
+                }
+            }
+        }
+
+        return [.. orderList.Select(id =>
+        {
+            var e = groups[id];
+            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
+        })];
+    }
+}

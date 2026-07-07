@@ -45,13 +45,15 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
         {
             // Act - publish order via the ASB publisher (end-to-end: publisher → ASB → handler)
             var publisher = factory.Services.GetRequiredService<IPastDueOrderPublisher>();
-            await publisher.PublishAsync([testOrder]);
+            await publisher.PublishAsync([testOrder], TestContext.Current.CancellationToken);
 
             // Assert - handler called exactly once, queue drained
             var processed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(processCallCount == 1),
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(processed, "Handler should have processed the order exactly once");
 
             var queueEmpty = await ServiceBusTestUtils.WaitForEmptyAsync(
@@ -101,7 +103,9 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
             var retryProcessed = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(processOrderRetryCallCount == 1),
                 maxAttempts: (settings.PastDueOrdersRetryDelayMs + 5000) / pollDelayMs,
-                delayMs: pollDelayMs);
+                delayMs: pollDelayMs,
+                cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.True(retryProcessed, "ProcessOrderRetry should be called once on the retry");
             Assert.Equal(1, processOrderCallCount);
 
@@ -215,7 +219,8 @@ public class PastDueOrderHandlerTests(IntegrationTestContainersFixture fixture)
                     return status == "Registered";
                 },
                 maxAttempts: (settings.PastDueOrdersRetryDelayMs + 10_000) / pollDelayMs,
-                delayMs: pollDelayMs);
+                delayMs: pollDelayMs,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(
                 orderResetToRegistered,

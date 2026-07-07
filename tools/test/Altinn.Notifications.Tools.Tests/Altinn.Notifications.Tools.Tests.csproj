@@ -11,10 +11,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
-    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -28,7 +28,6 @@
     <ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
-    <ProjectReference Include="..\..\src\Altinn.Notifications.Tools.StatusFeedBackfillTool\Altinn.Notifications.Tools.StatusFeedBackfillTool.csproj" />
   </ItemGroup>
 
   <ItemGroup>

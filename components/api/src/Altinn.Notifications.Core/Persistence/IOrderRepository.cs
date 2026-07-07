@@ -183,6 +183,29 @@ public interface IOrderRepository
     Task<NotificationOrderChainResponse?> GetOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves tracking information for a composed email order chain using the creator's name and idempotency identifier.
+    /// </summary>
+    /// <param name="creatorName">
+    /// The short name of the creator that originally submitted the composed email order chain.
+    /// </param>
+    /// <param name="idempotencyId">
+    /// The idempotency identifier that was defined when the order chain was created.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderChainResponse"/> with 
+    /// identifiers and sender reference for the composed email order chain, or 
+    /// <c>null</c> if no matching order chain is found with the provided parameters.
+    /// </returns>
+    /// <remarks>
+    /// Scoped exclusively to composed email orders (OrderType = 3). Composed orders do not support
+    /// reminders, so the returned receipt always has <see cref="NotificationOrderChainReceipt.Reminders"/> set to <c>null</c>.
+    /// </remarks>
+    Task<NotificationOrderChainResponse?> GetComposedOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets an order based on the provided senders reference within the provided creator scope
     /// </summary>
     /// <param name="sendersReference">The senders reference</param>
@@ -234,4 +257,26 @@ public interface IOrderRepository
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
     Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically inserts all notifications produced during order processing and transitions the order
+    /// to either <see cref="OrderProcessingStatus.Completed"/> or <see cref="OrderProcessingStatus.Processed"/>
+    /// within a single database transaction. If all notifications are immediately terminal (recipient not
+    /// identified or reserved), the order is completed and a status feed entry is written in the same transaction.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the order was transitioned to <see cref="OrderProcessingStatus.Completed"/>;
+    /// <c>false</c> if any notifications are still pending delivery.
+    /// </returns>
+    Task<bool> PersistProcessingResultAsync(
+        NotificationOrder order,
+        EmailOrderProcessingResult emailOrderProcessingResult,
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
+    /// inserts the corresponding status feed entry within a single database transaction.
+    /// </summary>
+    Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default);
 }

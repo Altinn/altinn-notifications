@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,7 +40,7 @@ public class EmailPublishTaskQueueTests
 
         // Act - First cycle
         Assert.True(queue.TryEnqueue());
-        await queue.WaitAsync(CancellationToken.None);
+        await queue.WaitAsync(TestContext.Current.CancellationToken);
 
         // Act - Second cycle
         Assert.True(queue.TryEnqueue());

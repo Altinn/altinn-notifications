@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tools.Tests.Infrastructure;
 /// emulator, then runs schema migrations so tests interact with the full database schema.
 /// Shared across all test collections that declare <see cref="IntegrationContainersCollection"/>.
 /// </summary>
-public class IntegrationContainersFixture : IAsyncLifetime
+public sealed class IntegrationContainersFixture : IAsyncLifetime
 {
     private readonly IntegrationTestContainersFixture _containers = new();
 
@@ -38,7 +38,7 @@ public class IntegrationContainersFixture : IAsyncLifetime
     public NpgsqlDataSource DataSource { get; private set; } = null!;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _containers.InitializeAsync();
 
@@ -55,7 +55,7 @@ public class IntegrationContainersFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (DataSource is not null)
         {

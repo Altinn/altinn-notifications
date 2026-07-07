@@ -9,7 +9,11 @@ import { environment } from "./shared/variables.js";
  * If no organization is specified, the default organization (TTD) will be used.
  * @returns An Altinn token with the specified scopes for the organization.
  */
-export async function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
+export async function getAltinnTokenForOrg(
+    scopes,
+    org = "ttd",
+    orgNo = "991825827"
+) {
     if (!environment) {
         throw new Error("Environment variable 'altinn_env' is not set");
     }

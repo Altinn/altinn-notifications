@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class MetricsRepositoryTests : IAsyncLifetime
+public sealed class MetricsRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete = [];
 
@@ -27,8 +27,6 @@ public class MetricsRepositoryTests : IAsyncLifetime
             await PostgreUtil.DeleteStatusFeedFromDb(id);
             await PostgreUtil.DeleteOrderFromDb(id);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -52,7 +50,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
 
         // Verify that we have the data we inserted
         Assert.Equal(1, metrics.OrdersCreated);
-        Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
+        Assert.Equal(0, metrics.SmsNotificationsCreated); // smscount column is no longer populated (#1661)
         Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
     }
 
@@ -71,7 +69,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
+        var result = await sut.GetDailySmsMetrics(date.Day, date.Month, date.Year, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.InRange(result.Metrics.Count, 2, int.MaxValue);
@@ -99,7 +97,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetDailyEmailMetrics(date.Day, date.Month, date.Year, CancellationToken.None);
+        var result = await sut.GetDailyEmailMetrics(date.Day, date.Month, date.Year, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.InRange(result.Metrics.Count, 2, int.MaxValue);

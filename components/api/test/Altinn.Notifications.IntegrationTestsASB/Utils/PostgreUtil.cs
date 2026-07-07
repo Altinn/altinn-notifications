@@ -125,7 +125,7 @@ public static class PostgreUtil
 
         await orderRepo.Create(order);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await smsRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1), 0);
+        await smsRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1));
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
         return (order, notification);

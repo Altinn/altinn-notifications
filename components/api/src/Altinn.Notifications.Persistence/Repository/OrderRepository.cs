@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -33,17 +34,19 @@ public class OrderRepository : IOrderRepository
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
-    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy, _type, _processingstatus)
+    private const string _insertOrderSql = "select notifications.insertorder_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy, _type, _processingstatus, _orderchainid)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
+    private const string _advanceStatusFromProcessingSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Processing'::orderprocessingstate";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
-    private const string _insertOrderChainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
-    private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
+    private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking_v2($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _getComposedOrderChainTrackingSql = "SELECT * FROM notifications.get_composed_order_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
-    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
+    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
     private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
@@ -136,10 +139,10 @@ public class OrderRepository : IOrderRepository
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+            long chainDbId = await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, cancellationToken);
+            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId, cancellationToken);
 
             if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
             {
@@ -159,7 +162,7 @@ public class OrderRepository : IOrderRepository
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, cancellationToken);
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {
@@ -202,7 +205,7 @@ public class OrderRepository : IOrderRepository
             getOrderChainId: () => instantNotificationOrder.OrderChainId,
             insertInstantOrderAction: (connection, transaction, token) => InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, token),
             insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, connection, transaction, token),
             cancellationToken: cancellationToken);
     }
 
@@ -216,7 +219,7 @@ public class OrderRepository : IOrderRepository
             getOrderChainId: () => instantSmsNotificationOrder.OrderChainId,
             insertInstantOrderAction: (connection, transaction, token) => InsertInstantSmsNotificationOrderAsync(instantSmsNotificationOrder, connection, transaction, token),
             insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, connection, transaction, token),
             cancellationToken: cancellationToken);
     }
 
@@ -278,7 +281,7 @@ public class OrderRepository : IOrderRepository
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
-                
+
                 // Attempt to read recipients
                 await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
@@ -356,11 +359,57 @@ public class OrderRepository : IOrderRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getOrdersChainTrackingSql);
-
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
+        {
+            return null;
+        }
+
+        var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
+
+        return CreateNotificationOrderChainResponse(header.Value.OrderChainId, header.Value.ShipmentId, header.Value.SendersReference, reminderShipments, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrderChainResponse?> GetComposedOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_getComposedOrderChainTrackingSql);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var header = await ReadOrderChainHeaderAsync(reader, cancellationToken);
+        if (header == null)
+        {
+            return null;
+        }
+
+        return new NotificationOrderChainResponse
+        {
+            OrderChainId = header.Value.OrderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = header.Value.ShipmentId,
+                SendersReference = header.Value.SendersReference
+            }
+        };
+    }
+
+    /// <summary>
+    /// Reads the common order chain header columns (chain ID, shipment ID, sender's reference) from
+    /// an already-executed <paramref name="reader"/>. Returns <see langword="null"/> when no rows are
+    /// present or either GUID column is empty.
+    /// </summary>
+    private static async Task<(Guid OrderChainId, Guid ShipmentId, string? SendersReference)?> ReadOrderChainHeaderAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    {
         if (!reader.HasRows)
         {
             return null;
@@ -374,19 +423,17 @@ public class OrderRepository : IOrderRepository
             return null;
         }
 
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
-        if (mainShipmentId == Guid.Empty)
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
+        if (shipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
-            null :
-            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken)
+            ? null
+            : reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
-        var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
-
-        return CreateNotificationOrderChainResponse(ordersChainId, mainShipmentId, mainSendersReference, reminderShipments, cancellationToken);
+        return (ordersChainId, shipmentId, sendersReference);
     }
 
     /// <inheritdoc/>
@@ -487,6 +534,7 @@ public class OrderRepository : IOrderRepository
              reader.GetValue<DateTime>("created"),
              reader.GetValue<NotificationChannel>("notificationchannel"),
              reader.GetValue<bool?>("ignorereservation"),
+             false,
              reader.GetValue<string?>("resourceid"),
              conditionEndpoint,
              new ProcessingStatus(reader.GetValue<OrderProcessingStatus>("processedstatus"), reader.GetValue<DateTime>("processed")),
@@ -571,7 +619,7 @@ public class OrderRepository : IOrderRepository
         return reminderShipments;
     }
 
-    private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction, OrderProcessingStatus processingStatus = default, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction, OrderProcessingStatus processingStatus = default, long? orderChainId = null, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderSql, connection, transaction);
 
@@ -584,6 +632,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SendingTimePolicy ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, processingStatus.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, orderChainId.HasValue ? (object)orderChainId.Value : DBNull.Value);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
@@ -626,7 +675,7 @@ public class OrderRepository : IOrderRepository
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
 
@@ -636,7 +685,11 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, creationDateTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, orderChain);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        long chainId = (long)reader.GetValue(0);
+        return chainId;
     }
 
     /// <summary>
@@ -680,7 +733,7 @@ public class OrderRepository : IOrderRepository
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task InsertInstantNotificationOrderAsync(InstantNotificationOrder instantNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertInstantNotificationOrderAsync(InstantNotificationOrder instantNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
 
@@ -690,7 +743,11 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantNotificationOrder.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantNotificationOrder);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        long chainId = (long)reader.GetValue(0);
+        return chainId;
     }
 
     /// <summary>
@@ -698,7 +755,6 @@ public class OrderRepository : IOrderRepository
     /// </summary>
     /// <param name="notification">The SMS notification to persist.</param>
     /// <param name="smsExpiryDateTime">The expiry date and time for the SMS.</param>
-    /// <param name="smsMessageCount">The number of SMS messages to send.</param>
     /// <param name="connection">
     /// The active <see cref="NpgsqlConnection"/> to the PostgreSQL database.
     /// </param>
@@ -711,7 +767,7 @@ public class OrderRepository : IOrderRepository
     /// <returns>
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
-    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryDateTime, int smsMessageCount, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertSmsNotificationSql, connection, transaction);
 
@@ -722,7 +778,6 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.CustomizedBody) ? (object)DBNull.Value : notification.Recipient.CustomizedBody);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsMessageCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, smsExpiryDateTime);
 
@@ -752,7 +807,7 @@ public class OrderRepository : IOrderRepository
     private async Task<InstantNotificationOrderTracking> CreateInstantOrderWithTransactionAsync(
         NotificationOrder notificationOrder,
         Func<Guid> getOrderChainId,
-        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertInstantOrderAction,
+        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task<long>> insertInstantOrderAction,
         Func<long, NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertTemplateAction,
         Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertNotificationAction,
         CancellationToken cancellationToken)
@@ -765,10 +820,10 @@ public class OrderRepository : IOrderRepository
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await insertInstantOrderAction(connection, transaction, cancellationToken);
+            long chainDbId = await insertInstantOrderAction(connection, transaction, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, cancellationToken);
+            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, chainDbId, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
             await insertTemplateAction(mainOrderId, connection, transaction, cancellationToken);
@@ -808,7 +863,7 @@ public class OrderRepository : IOrderRepository
     /// <param name="connection">The active database connection.</param>
     /// <param name="transaction">The active database transaction.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    private static async Task InsertInstantSmsNotificationOrderAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertInstantSmsNotificationOrderAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
 
@@ -818,7 +873,11 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantSmsNotificationOrder.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantSmsNotificationOrder);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        long chainId = (long)reader.GetValue(0);
+        return chainId;
     }
 
     /// <summary>
@@ -828,7 +887,7 @@ public class OrderRepository : IOrderRepository
     /// <param name="connection">The active database connection.</param>
     /// <param name="transaction">The active database transaction.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    private static async Task InsertInstantEmailNotificationOrderAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertInstantEmailNotificationOrderAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
 
@@ -838,7 +897,11 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantEmailNotificationOrder.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantEmailNotificationOrder);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        long chainId = (long)reader.GetValue(0);
+        return chainId;
     }
 
     /// <summary>
@@ -865,5 +928,147 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, emailExpiryDateTime);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> PersistProcessingResultAsync(
+        NotificationOrder order,
+        EmailOrderProcessingResult emailOrderProcessingResult,
+        SmsOrderProcessingResult smsOrderProcessingResult,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            IReadOnlyList<EmailNotification> emailNotifications = emailOrderProcessingResult?.EmailNotifications ?? [];
+            IReadOnlyList<SmsNotification> smsNotifications = smsOrderProcessingResult?.Notifications ?? [];
+
+            if (emailNotifications.Count > 0)
+            {
+                var emailExpiry = emailOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
+                foreach (var notification in emailNotifications)
+                {
+                    await InsertEmailNotificationAsync(notification, emailExpiry, connection, transaction, cancellationToken);
+                }
+            }
+
+            if (smsNotifications.Count > 0)
+            {
+                var smsExpiry = smsOrderProcessingResult!.ExpirationDateTime ?? DateTime.UtcNow;
+                foreach (var notification in smsNotifications)
+                {
+                    await InsertSmsNotificationAsync(notification, smsExpiry, connection, transaction, cancellationToken);
+                }
+            }
+
+            bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
+
+            var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
+            await SetProcessingStatusAsync(order.Id, status, connection, transaction, cancellationToken);
+
+            if (isCompleted)
+            {
+                await InsertStatusFeedForOrderAsync(order, status, emailNotifications, smsNotifications, connection, transaction);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return isCompleted;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await SetProcessingStatusAsync(order.Id, OrderProcessingStatus.SendConditionNotMet, connection, transaction, cancellationToken);
+            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    private static bool IsImmediatelyCompleted(
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications)
+    {
+        static bool IsEmailTerminal(EmailNotification n) =>
+            n.SendResult.Result is EmailNotificationResultType.Failed_RecipientNotIdentified
+                or EmailNotificationResultType.Failed_RecipientReserved;
+
+        static bool IsSmsTerminal(SmsNotification n) =>
+            n.SendResult.Result is SmsNotificationResultType.Failed_RecipientNotIdentified
+                or SmsNotificationResultType.Failed_RecipientReserved;
+
+        return emailNotifications.All(IsEmailTerminal) && smsNotifications.All(IsSmsTerminal);
+    }
+
+    private static async Task SetProcessingStatusAsync(Guid orderId, OrderProcessingStatus status, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        if (rowsAffected == 0)
+        {
+            throw new InvalidOperationException($"Order {orderId} was not in Processing state; transaction rolled back.");
+        }
+    }
+
+    private static async Task InsertStatusFeedForOrderAsync(
+        NotificationOrder order,
+        OrderProcessingStatus status,
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction)
+    {
+        var recipients = new List<Core.Models.Status.Recipient>(emailNotifications.Count + smsNotifications.Count);
+
+        foreach (var n in emailNotifications)
+        {
+            recipients.Add(new Core.Models.Status.Recipient
+            {
+                Destination = n.Recipient.ToAddress,
+                Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(n.SendResult.Result.ToString()),
+                LastUpdate = n.SendResult.ResultTime
+            });
+        }
+
+        foreach (var n in smsNotifications)
+        {
+            recipients.Add(new Core.Models.Status.Recipient
+            {
+                Destination = n.Recipient.MobileNumber,
+                Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(n.SendResult.Result.ToString()),
+                LastUpdate = n.SendResult.ResultTime
+            });
+        }
+
+        var orderStatus = new OrderStatus
+        {
+            ShipmentId = order.Id,
+            SendersReference = order.SendersReference,
+            Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status.ToString()),
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = order.Type.ToString(),
+            Recipients = recipients.ToImmutableArray()
+        };
+
+        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
     }
 }

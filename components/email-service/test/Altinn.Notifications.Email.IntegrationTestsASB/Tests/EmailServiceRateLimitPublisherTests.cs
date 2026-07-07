@@ -107,7 +107,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
             // Act
             await factory.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
 
-            await clientInvoked.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await clientInvoked.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
             // Assert
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
@@ -149,7 +149,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
             // Act
             await factory.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
 
-            await clientInvoked.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await clientInvoked.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
             // Assert
             var message = await ServiceBusTestUtils.WaitForMessageAsync(

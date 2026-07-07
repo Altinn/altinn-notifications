@@ -40,7 +40,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(_sms, CancellationToken.None);
+        var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -58,7 +58,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(_sms, CancellationToken.None);
+        var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(_sms, result);
@@ -77,7 +77,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock, loggerMock);
 
         // Act
-        await publisher.PublishAsync(_sms, CancellationToken.None);
+        await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(
@@ -122,7 +122,7 @@ public class SendSmsCommandPublisherTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(_sms, CancellationToken.None));
+            () => publisher.PublishAsync(_sms, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        await publisher.PublishAsync(sms, CancellationToken.None);
+        await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedCommand);
@@ -170,7 +170,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(smsList, CancellationToken.None);
+        var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -193,7 +193,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(smsList, CancellationToken.None);
+        var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -220,7 +220,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync(smsList, CancellationToken.None);
+        var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -236,7 +236,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishAsync([], CancellationToken.None);
+        var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -330,7 +330,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock, publishConcurrency: concurrency);
 
         // Act
-        await publisher.PublishAsync(smsList, CancellationToken.None);
+        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {smsCount} SMS were processed sequentially.");
@@ -354,7 +354,7 @@ public class SendSmsCommandPublisherTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(smsList, CancellationToken.None));
+            () => publisher.PublishAsync(smsList, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -374,7 +374,7 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusMock, loggerMock);
 
         // Act
-        await publisher.PublishAsync(smsList, CancellationToken.None);
+        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(

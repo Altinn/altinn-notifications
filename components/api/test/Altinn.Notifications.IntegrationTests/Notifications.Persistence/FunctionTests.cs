@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
@@ -44,7 +44,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) });
             EmailNotificationRepository repository = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-            await repository.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None);
+            await repository.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
 
             // Assert
             sql = @"SELECT emaillimittimeout

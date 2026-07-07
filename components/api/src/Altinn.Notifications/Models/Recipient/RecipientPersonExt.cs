@@ -52,4 +52,16 @@ public class RecipientPersonExt : RecipientBaseExt
     /// </remarks>
     [JsonPropertyName("ignoreReservation")]
     public bool IgnoreReservation { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to use potentially stale contact information from the Common Contact Register (KRR).
+    /// </summary>
+    /// <remarks>
+    /// The cut-off for stale contact information is 18 months. A person with older contact information is treated as having no
+    /// contact information.
+    /// Defaults to <c>false</c>.
+    /// </remarks>
+    [JsonPropertyName("useStaleContactInformation")]
+    [DefaultValue(false)]
+    public bool UseStaleContactInformation { get; set; } = false;
 }

@@ -4,7 +4,9 @@ using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
 using Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
@@ -55,7 +57,8 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             bool handled = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(Volatile.Read(ref sendAsyncCallCount) > 0),
                 maxAttempts: 20,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(handled, "ISendingService.SendAsync was not called within the expected time.");
 
@@ -110,7 +113,8 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             bool handled = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
             mockService.Verify(
@@ -164,7 +168,8 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             bool handled = await WaitForUtils.WaitForAsync(
                 () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
                 maxAttempts: 40,
-                delayMs: 500);
+                delayMs: 500,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(handled, "ISendingService.SendAsync was not retried as expected for gateway errors.");
             mockService.Verify(
@@ -205,7 +210,7 @@ public class SendSmsCommandHandlerTests(IntegrationTestContainersFixture fixture
             });
 
             // Allow time for the message to be processed
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
             // Assert - Message should NOT appear in the DLQ as it is discarded, not failed
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(

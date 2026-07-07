@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
+public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 {
     private const int _notificationExpiryHours = 48;
 
@@ -39,8 +39,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdentifiers)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     public ValueTask InitializeAsync()
@@ -60,7 +58,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(nonExistentOrderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(nonExistentOrderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(deliveryManifest);
@@ -106,7 +104,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, wrongCreator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, wrongCreator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(deliveryManifest);
@@ -184,7 +182,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         };
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
         await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4");
 
         // Add an Email notification to the order, and set its staus.
@@ -208,7 +206,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         NotificationDeliveryManifestRepository deliveryManifestRepository =
             (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)]).First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
-        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -285,7 +283,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -367,14 +365,14 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -469,7 +467,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
-        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -550,14 +548,14 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -661,7 +659,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Add an SMS notification to the order, and set its status.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
         await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "FEF0E7BF-686A-4A6A-A9A1-11B788AD7A95");
 
         // Act
@@ -669,7 +667,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(deliveryManifest);

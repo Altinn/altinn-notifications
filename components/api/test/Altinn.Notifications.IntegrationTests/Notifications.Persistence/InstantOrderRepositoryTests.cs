@@ -16,7 +16,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 /// <summary>
 /// Integration tests for OrderRepository focusing on instant notification functionality with flattened structures.
 /// </summary>
-public class InstantOrderRepositoryTests : IAsyncLifetime
+public sealed class InstantOrderRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _ordersChainIdsToDelete;
@@ -27,9 +27,9 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         _ordersChainIdsToDelete = [];
     }
 
-    public async ValueTask InitializeAsync()
+    public ValueTask InitializeAsync()
     {
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
@@ -45,8 +45,6 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
-
-        GC.SuppressFinalize(this);
     }
 
     [Fact]

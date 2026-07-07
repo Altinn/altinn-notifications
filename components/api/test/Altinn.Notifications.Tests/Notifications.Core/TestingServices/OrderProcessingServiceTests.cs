@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -1727,15 +1727,17 @@ public class OrderProcessingServiceTests
                 creator: new Creator("ttd"),
                 created: DateTime.UtcNow.AddMinutes(-10),
                 resourceId: "urn:altinn:resource:app_ttd_test",
+                resourceAction: null,
                 conditionEndpoint: null,
                 ignoreReservation: false,
                 sendersReference: $"{batchPrefix}-ref-{i:D3}",
                 requestedSendTime: DateTime.UtcNow.AddMinutes(-5),
                 recipients: [new Recipient([], nationalIdentityNumber: $"1234567890{i % 10}")],
+                useStaleContactInformation: false,
                 sendingTimePolicy: SendingTimePolicy.Daytime,
                 templates: isEvenIndex ? [new SmsTemplate("TestSender", "Test SMS body")] : [new EmailTemplate("noreply@ttd.no", "Test Subject", "Test email body", EmailContentType.Plain)],
                 notificationChannel: isEvenIndex ? NotificationChannel.Sms : NotificationChannel.Email,
-                resourceAction: null));
+                emailAttachments: null));
         }
 
         return orders;

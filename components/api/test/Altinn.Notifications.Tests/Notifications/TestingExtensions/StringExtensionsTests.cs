@@ -27,7 +27,7 @@ public class StringExtensionsTests
     [InlineData("For immediate action, visit http%3A%2F%2F192.168.1.1%2Fsecurity%2Fupdate to secure your account.", false)]
     [InlineData("https://example.com/very-long-url-with-many-segments/that-are-really-long-and-may-cause-performance-issues", false)]
     [InlineData("Dear user, your account has been compromised. Please verify your details at http%3A%2F%2Fexample.com%2Flogin to avoid suspension.", false)]
-    public void Validate_BodyMustNotContainUrl(string testString, bool expectedResult)
+    public void Validate_BodyMustNotContainUrl(string testString, bool expectedResult)      
     {
         var result = testString.DoesNotContainUrl();
         Assert.Equal(expectedResult, result);
