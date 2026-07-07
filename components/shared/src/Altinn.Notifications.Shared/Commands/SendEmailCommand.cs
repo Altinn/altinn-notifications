@@ -5,41 +5,29 @@ namespace Altinn.Notifications.Shared.Commands;
 /// <summary>
 /// Represents a command to send an email notification from the Notifications API to the Email service.
 /// </summary>
-public sealed record SendEmailCommand
+public sealed record SendEmailCommand : IEmailCommand
 {
-    /// <summary>
-    /// The identifier of the email notification.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; }
 
-    /// <summary>
-    /// The subject of the email.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("subject")]
     public string Subject { get; init; } = string.Empty;
 
-    /// <summary>
-    /// The body of the email.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("body")]
     public string Body { get; init; } = string.Empty;
 
-    /// <summary>
-    /// The sender address.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("fromAddress")]
     public string FromAddress { get; init; } = string.Empty;
 
-    /// <summary>
-    /// The recipient address.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("toAddress")]
     public string ToAddress { get; init; } = string.Empty;
 
-    /// <summary>
-    /// The content type of the email (e.g. "Plain", "Html").
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("contentType")]
     public string ContentType { get; init; } = string.Empty;
 }
