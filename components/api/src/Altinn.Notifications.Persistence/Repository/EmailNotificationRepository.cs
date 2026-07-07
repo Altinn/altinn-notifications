@@ -28,11 +28,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2(@orderid, @alternateid, @recipientorgno, @recipientnin, @toaddress, @customizedbody, @customizedsubject, @result, @resulttime, @expirytime, @encoded_attachments_size)";
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)";
     private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch_v2(@batchsize)";
     private const string _getComposedEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_composed_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2(@orderid)";
-    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4(@result, @operationid, @alternateid, @deliveryreport, @encoded_attachments_size)";
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)";
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
