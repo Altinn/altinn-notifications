@@ -149,7 +149,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    public async Task<List<ComposedEmail>> GetNewComposedEmailNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    public async Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
     {
         var searchResult = new List<ComposedEmail>();
 

@@ -795,7 +795,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedEmailNotificationsAsync_ReturnsComposedNotificationWithAttachments()
+    public async Task GetNewComposedNotificationsAsync_ReturnsComposedNotificationWithAttachments()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -888,7 +888,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedEmailNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
 
         // Assert — notification is in the batch
         ComposedEmail? result = batch.FirstOrDefault(e => e.NotificationId == notificationId);
@@ -908,7 +908,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedEmailNotificationsAsync_StandardOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewComposedNotificationsAsync_StandardOrderNotification_IsExcludedFromBatch()
     {
         // Arrange — a standard (non-Composed) order's email notification must not appear in the composed batch
         EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
@@ -919,7 +919,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedEmailNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
 
         // Assert — standard notification must not appear in the composed batch
         Assert.DoesNotContain(batch, e => e.NotificationId == emailNotification.Id);

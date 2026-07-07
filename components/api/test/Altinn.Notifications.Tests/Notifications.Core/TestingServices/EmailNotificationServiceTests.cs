@@ -588,7 +588,7 @@ public class EmailNotificationServiceTests
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();
@@ -606,7 +606,7 @@ public class EmailNotificationServiceTests
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.SetupSequence(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_composedEmail, _composedEmail])
             .ReturnsAsync([]);
 
@@ -634,7 +634,7 @@ public class EmailNotificationServiceTests
         var batch = new List<ComposedEmail> { first, second, third };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.SetupSequence(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(batch)
             .ReturnsAsync([]);
 
@@ -663,7 +663,7 @@ public class EmailNotificationServiceTests
         var batch = new List<ComposedEmail> { first, second, third };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.SetupSequence(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(batch)
             .ReturnsAsync([]);
 
@@ -690,7 +690,7 @@ public class EmailNotificationServiceTests
         var secondBatch = new List<ComposedEmail> { _composedEmail };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.SetupSequence(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(firstBatch)
             .ReturnsAsync(secondBatch)
             .ReturnsAsync([]);
@@ -717,7 +717,7 @@ public class EmailNotificationServiceTests
         using var cts = new CancellationTokenSource();
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .Callback<int, CancellationToken>((_, _) => cts.Cancel())
             .ReturnsAsync(emails);
 
@@ -738,7 +738,7 @@ public class EmailNotificationServiceTests
         var emails = new List<ComposedEmail> { _composedEmail, _composedEmail, _composedEmail };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();
@@ -760,7 +760,7 @@ public class EmailNotificationServiceTests
         var emails = new List<ComposedEmail> { _composedEmail };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();
@@ -782,7 +782,7 @@ public class EmailNotificationServiceTests
         var emails = new List<ComposedEmail> { _composedEmail, _composedEmail };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedEmailNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();

@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -37,7 +37,7 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// A task that completes when retrieval finishes. The result contains up to
     /// <paramref name="publishBatchSize"/> composed email notifications. May return an empty list.
     /// </returns>
-    public Task<List<ComposedEmail>> GetNewComposedEmailNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sets result status of an email notification, updates the operation id, and persists the raw delivery report.

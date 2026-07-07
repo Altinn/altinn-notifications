@@ -109,7 +109,7 @@ public class EmailNotificationService(
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewComposedEmailNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+                newEmailNotifications = await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
                 if (newEmailNotifications.Count == 0)
                 {
                     break;
