@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Email.Core;
@@ -135,7 +136,28 @@ public class EmailServiceClient : IEmailServiceClient
                 })
                 .ToList();
 
-            (SasFileAttachment Metadata, byte[] Data)[] downloaded = await Task.WhenAll(downloadTasks);
+            (SasFileAttachment Metadata, byte[] Data)[] downloaded;
+            try
+            {
+                downloaded = await Task.WhenAll(downloadTasks);
+            }
+            catch (OperationCanceledException) when (linkedCts.IsCancellationRequested)
+            {
+                // Task.WhenAll unwraps to the first faulted task by index, which may be an
+                // OperationCanceledException from semaphore.WaitAsync when the linked token
+                // was cancelled by another failing task. Re-throw the underlying cause instead.
+                var causingException = downloadTasks
+                    .Where(t => t.IsFaulted)
+                    .SelectMany(t => t.Exception!.InnerExceptions)
+                    .FirstOrDefault(e => e is not OperationCanceledException);
+
+                if (causingException != null)
+                {
+                    ExceptionDispatchInfo.Capture(causingException).Throw();
+                }
+
+                throw;
+            }
 
             foreach (var (metadata, data) in downloaded)
             {

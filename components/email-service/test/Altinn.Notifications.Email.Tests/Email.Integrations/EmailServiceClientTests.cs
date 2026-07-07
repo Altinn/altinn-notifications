@@ -140,9 +140,10 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         public async Task SendComposedEmail_OneAttachmentFailure_CancelsRemainingParallelDownloads()
         {
             // Concurrency = 2 so both downloads start in parallel.
-            // The second handler blocks indefinitely until its cancellation token fires.
-            // If the first failure correctly cancels the linked CTS the second task unblocks
-            // and the whole call completes. Without cancellation it hangs and the WaitAsync timeout fires.
+            // url1 fails immediately with 403 (InvalidSasUrlException) and cancels the linked CTS.
+            // url2 blocks indefinitely until its cancellation token fires.
+            // Verifies that: (1) the linked CTS cancellation unblocks url2 so the call completes
+            // promptly, and (2) the InvalidSasUrlException (not a TimeoutException or OCE) propagates.
             const string url1 = "https://blob.test/a.pdf?sas=1";
             const string url2 = "https://blob.test/b.pdf?sas=2";
 
@@ -171,7 +172,48 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                     new SasFileAttachment { Filename = "b.pdf", MimeType = "application/pdf", SasUrl = url2 }
                 ]);
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
+            await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
+                client.SendComposedEmail(email, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        }
+
+        [Fact]
+        public async Task SendComposedEmail_FirstAttachmentSlowSecondAttachmentInvalidSasUrl_ThrowsInvalidSasUrlExceptionNotOperationCanceledException()
+        {
+            // Regression test for OCE masking: T0 (index 0) is in-flight when T1 (index 1)
+            // fails with InvalidSasUrlException and cancels the linked CTS.
+            // T0's ongoing download receives the cancellation and throws OperationCanceledException.
+            // Task.WhenAll unwraps to the first faulted task by index — T0 at index 0 — so without
+            // the ExceptionDispatchInfo fix the caller would see OCE instead of InvalidSasUrlException.
+            const string url1 = "https://blob.test/slow.pdf?sas=1";
+            const string url2 = "https://blob.test/bad.pdf?sas=2";
+
+            EmailServiceClient client = BuildClientWithHandler(
+                async (request, ct) =>
+                {
+                    if (request.RequestUri!.AbsoluteUri == url1)
+                    {
+                        // Block until the linked CTS fires (triggered by url2 failing).
+                        await Task.Delay(Timeout.Infinite, ct);
+                        return new HttpResponseMessage(HttpStatusCode.OK);
+                    }
+
+                    return new HttpResponseMessage(HttpStatusCode.Forbidden);
+                },
+                blobConcurrency: 2);
+
+            ComposedEmail email = new(
+                Guid.NewGuid(),
+                "s",
+                "b",
+                "from@test.no",
+                "to@test.no",
+                EmailContentType.Plain,
+                [
+                    new SasFileAttachment { Filename = "slow.pdf", MimeType = "application/pdf", SasUrl = url1 },
+                    new SasFileAttachment { Filename = "bad.pdf", MimeType = "application/pdf", SasUrl = url2 }
+                ]);
+
+            await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
                 client.SendComposedEmail(email, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
         }
 

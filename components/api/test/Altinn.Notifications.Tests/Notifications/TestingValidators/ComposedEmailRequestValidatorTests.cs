@@ -256,7 +256,7 @@ public class ComposedEmailRequestValidatorTests
         // Act
         var result = _validator.TestValidate(ValidComposedEmailRequest(requestedSendTime: sendTime, recipient: recipient));
 
-        // Assert
-        result.ShouldNotHaveValidationErrorFor(order => order.Recipient);
+        // Assert — the order-level expiry check must not have fired; other sasUrl errors are expected
+        Assert.DoesNotContain(result.Errors, e => e.ErrorMessage.Contains("at least 15 minutes"));
     }
 }

@@ -228,11 +228,11 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     {
         queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
 
-        try
-        {
-            await using var client = new ServiceBusClient(connectionString);
+        await using var client = new ServiceBusClient(connectionString);
 
-            foreach (var queueName in queueNames)
+        foreach (var queueName in queueNames)
+        {
+            try
             {
                 await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
 
@@ -247,10 +247,10 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
                     await receiver.CompleteMessageAsync(message);
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Factory] DLQ drain of '{queueName}' failed (non-fatal): {ex.Message}");
+            }
         }
     }
 
@@ -263,11 +263,11 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     {
         queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
 
-        try
-        {
-            await using var client = new ServiceBusClient(connectionString);
+        await using var client = new ServiceBusClient(connectionString);
 
-            foreach (var queueName in queueNames)
+        foreach (var queueName in queueNames)
+        {
+            try
             {
                 await using var receiver = client.CreateReceiver(queueName);
 
@@ -282,10 +282,10 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
                     await receiver.CompleteMessageAsync(message);
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Factory] Main queue drain failed (non-fatal): {ex.Message}");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Factory] Main queue drain of '{queueName}' failed (non-fatal): {ex.Message}");
+            }
         }
     }
 
