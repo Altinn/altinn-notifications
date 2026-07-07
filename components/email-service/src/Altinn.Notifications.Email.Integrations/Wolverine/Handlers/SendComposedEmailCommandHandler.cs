@@ -66,7 +66,7 @@ public static class SendComposedEmailCommandHandler
     private static void LogOnSendEmailFailed(ILogger logger, Guid notificationId)
     {
         logger.LogWarning(
-            "SendEmailCommandHandler failed to send email for NotificationId: {NotificationId}.",
+            "SendComposedEmailCommandHandler failed to send email for NotificationId: {NotificationId}.",
             notificationId);
     }
 }
