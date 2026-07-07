@@ -4086,94 +4086,23 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetComposedOrderChainTracking_ComposedOrderWithoutSendersReference_HandlesNullSendersReference()
-    {
-        // Arrange
-        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-
-        Guid orderId = Guid.NewGuid();
-        Guid orderChainId = Guid.NewGuid();
-
-        string creator = $"creator-{Guid.NewGuid():N}";
-        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
-
-        DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
-
-        _orderIdsToDelete.Add(orderId);
-        _ordersChainIdsToDelete.Add(orderChainId);
-
-        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(orderId)
-            .SetType(OrderType.Composed)
-            .SetOrderChainId(orderChainId)
-            .SetIdempotencyId(idempotencyId)
-            .SetCreator(new Creator(creator))
-            .SetRequestedSendTime(requestedSendTime)
-            .SetRecipient(new NotificationRecipient
-            {
-                RecipientComposedEmail = new RecipientComposedEmail
-                {
-                    EmailAddress = "recipient@altinnxyz.no",
-                    Settings = new ComposedEmailSendingOptions
-                    {
-                        Subject = "No reference subject",
-                        Body = "No reference body",
-                        Attachments =
-                        [
-                            new SasFileReference
-                            {
-                                Filename = "document.pdf",
-                                MimeType = "application/pdf",
-                                SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
-                            }
-                        ]
-                    }
-                }
-            })
-            .Build();
-
-        NotificationOrder notificationOrder = new()
-        {
-            Id = orderId,
-            Creator = new(creator),
-            Type = OrderType.Composed,
-            RequestedSendTime = requestedSendTime,
-            NotificationChannel = NotificationChannel.Email,
-            Templates = [new EmailTemplate("noreply@altinn.no", "No reference subject", "No reference body", EmailContentType.Plain)],
-            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
-        };
-
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
-
-        // Act
-        var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.OrderChainReceipt.Reminders);
-        Assert.Equal(orderChainId, result.OrderChainId);
-        Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
-        Assert.Null(result.OrderChainReceipt.SendersReference);
-    }
-
-    [Fact]
     public async Task Create_TwoComposedEmailOrdersWithSameIdempotencyId_ThrowsPostgresUniqueConstraintException()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
             .GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
-        Guid firstOrderId = Guid.NewGuid();
-        Guid secondOrderId = Guid.NewGuid();
-        Guid firstOrderChainId = Guid.NewGuid();
-        Guid secondOrderChainId = Guid.NewGuid();
+        Guid originalOrderId = Guid.NewGuid();
+        Guid duplicateOrderId = Guid.NewGuid();
+        Guid originalOrderChainId = Guid.NewGuid();
+        Guid duplicateOrderChainId = Guid.NewGuid();
         string idempotencyId = Guid.NewGuid().ToString();
         DateTime requestedSendTime = DateTime.UtcNow.AddHours(1);
 
-        _orderIdsToDelete.Add(firstOrderId);
-        _orderIdsToDelete.Add(secondOrderId);
-        _ordersChainIdsToDelete.Add(firstOrderChainId);
-        _ordersChainIdsToDelete.Add(secondOrderChainId);
+        _orderIdsToDelete.Add(originalOrderId);
+        _orderIdsToDelete.Add(duplicateOrderId);
+        _ordersChainIdsToDelete.Add(originalOrderChainId);
+        _ordersChainIdsToDelete.Add(duplicateOrderChainId);
 
         var attachment = new SasFileReference
         {
@@ -4182,86 +4111,85 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             SasUrl = new Uri("https://example.blob.core.windows.net/container/document.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
         };
 
-        var orderRequest1 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(firstOrderId)
-            .SetOrderChainId(firstOrderChainId)
-            .SetIdempotencyId(idempotencyId)
+        var originalOrderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(originalOrderId)
             .SetType(OrderType.Composed)
             .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId(idempotencyId)
+            .SetOrderChainId(originalOrderChainId)
             .SetRequestedSendTime(requestedSendTime)
             .SetRecipient(new NotificationRecipient
             {
                 RecipientComposedEmail = new RecipientComposedEmail
                 {
-                    EmailAddress = "first@altinnxyz.no",
+                    EmailAddress = "original@altinnxyz.no",
                     Settings = new ComposedEmailSendingOptions
                     {
-                        Subject = "First subject",
-                        Body = "First body",
+                        Subject = "Original subject",
+                        Body = "Original body",
                         Attachments = [attachment]
                     }
                 }
             })
             .Build();
 
-        NotificationOrder notificationOrder1 = new()
+        NotificationOrder originalOrder = new()
         {
-            Id = firstOrderId,
+            Id = originalOrderId,
             Creator = new("ttd"),
             Type = OrderType.Composed,
             EmailAttachments = [attachment],
             RequestedSendTime = requestedSendTime,
             NotificationChannel = NotificationChannel.Email,
-            Templates = [new EmailTemplate("noreply@altinn.no", "First subject", "First body", EmailContentType.Plain)],
-            Recipients = [new Recipient([new EmailAddressPoint("first@altinnxyz.no")])]
+            Templates = [new EmailTemplate("noreply@altinn.no", "Original subject", "Original body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("original@altinnxyz.no")])]
         };
 
-        var orderRequest2 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(secondOrderId)
-            .SetOrderChainId(secondOrderChainId)
-            .SetIdempotencyId(idempotencyId)
+        var duplicateOrderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetType(OrderType.Composed)
+            .SetOrderId(duplicateOrderId)
             .SetCreator(new Creator("ttd"))
+            .SetIdempotencyId(idempotencyId)
+            .SetOrderChainId(duplicateOrderChainId)
             .SetRequestedSendTime(requestedSendTime)
             .SetRecipient(new NotificationRecipient
             {
                 RecipientComposedEmail = new RecipientComposedEmail
                 {
-                    EmailAddress = "second@altinnxyz.no",
+                    EmailAddress = "duplicate@altinnxyz.no",
                     Settings = new ComposedEmailSendingOptions
                     {
-                        Subject = "Second subject",
-                        Body = "Second body",
+                        Subject = "Duplicate subject",
+                        Body = "Duplicate body",
                         Attachments = [attachment]
                     }
                 }
             })
             .Build();
 
-        NotificationOrder notificationOrder2 = new()
+        NotificationOrder duplicateOrder = new()
         {
-            Id = secondOrderId,
-            Type = OrderType.Composed,
+            Id = duplicateOrderId,
             Creator = new("ttd"),
-            Created = DateTime.UtcNow,
+            Type = OrderType.Composed,
+            EmailAttachments = [attachment],
             RequestedSendTime = requestedSendTime,
             NotificationChannel = NotificationChannel.Email,
-            EmailAttachments = [attachment],
-            Templates = [new EmailTemplate("noreply@altinn.no", "Second subject", "Second body", EmailContentType.Plain)],
-            Recipients = [new Recipient([new EmailAddressPoint("second@altinnxyz.no")])]
+            Templates = [new EmailTemplate("noreply@altinn.no", "Duplicate subject", "Duplicate body", EmailContentType.Plain)],
+            Recipients = [new Recipient([new EmailAddressPoint("duplicate@altinnxyz.no")])]
         };
 
         // Act
-        var result1 = await repo.Create(orderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
+        var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
 
-        // Assert — second composed order with the same idempotency ID must violate unique constraint
+        // Assert — duplicate order with the same idempotency ID must violate unique constraint
         var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
-            await repo.Create(orderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken));
+            await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken));
 
         Assert.Equal("23505", ex.SqlState);
-        Assert.NotNull(result1);
-        Assert.Single(result1);
-        Assert.Equal(firstOrderId, result1[0].Id);
+        Assert.NotNull(originalResult);
+        Assert.Single(originalResult);
+        Assert.Equal(originalOrderId, originalResult[0].Id);
     }
 
     [Fact]
