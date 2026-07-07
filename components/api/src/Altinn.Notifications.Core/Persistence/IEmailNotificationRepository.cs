@@ -46,7 +46,7 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// <param name="status">The result status of the email notification.</param>
     /// <param name="operationId">The operation identifier from the email provider (optional if <paramref name="notificationId"/> is provided).</param>
     /// <param name="deliveryReport">The raw delivery report payload received from the email provider (optional).</param>
-    /// <param name="encodedAttachmentsSize">Total base64-encoded attachment size in bytes; 0 for standard emails.</param>
+    /// <param name="encodedAttachmentsSize">Total base64-encoded attachment size in bytes; null for standard emails.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="Exceptions.InvalidNotificationIdentifierException">
     /// Thrown when both <paramref name="notificationId"/> and <paramref name="operationId"/> are null or empty.
