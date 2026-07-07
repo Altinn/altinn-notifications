@@ -127,7 +127,7 @@ internal static class SasFileReferenceRules
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="filename"/> is safe to use as an attachment
-    /// filename: no forward or backward slashes and includes a file extension of at least one character after the dot.
+    /// filename: no forward or backward slashes, and includes a file extension of at least one character after the dot.
     /// </summary>
     internal static bool IsValidFilename(string filename) =>
         !filename.Contains('/')

@@ -230,7 +230,7 @@ public class ComposedEmailRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_AttachmentWithValidSasUrlAndSufficientExpiry_NoExpiryError()
+    public void Validate_AttachmentWithNullSasUrl_SkipsExpiryCheck()
     {
         // Arrange
         var sendTime = DateTime.UtcNow.AddHours(1);

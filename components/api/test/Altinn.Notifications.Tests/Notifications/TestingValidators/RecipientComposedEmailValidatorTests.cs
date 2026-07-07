@@ -166,7 +166,7 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage("Attachment '../../etc/passwd': filename must not contain path separators or traversal sequences, and must include a file extension.");
+            .WithErrorMessage("Attachment '../../etc/passwd': filename must not contain path separators, and must include a file extension.");
     }
 
     [Fact]
@@ -319,7 +319,7 @@ public class RecipientComposedEmailValidatorTests
     [InlineData("folder/../contract.pdf")]
     [InlineData("subfolder/contract.pdf")]
     [InlineData("subfolder\\contract.pdf")]
-    public void Validate_AttachmentFilenameWithPathSeparatorOrTraversal_HasError(string filename)
+    public void Validate_AttachmentFilenameContainingPathSeparator_HasError(string filename)
     {
         // Arrange
         var recipient = RecipientWithFileReference(new SasFileReferenceExt
@@ -334,7 +334,7 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage($"Attachment '{filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
+            .WithErrorMessage($"Attachment '{filename}': filename must not contain path separators, and must include a file extension.");
     }
 
     [Theory]

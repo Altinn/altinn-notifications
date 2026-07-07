@@ -25,7 +25,7 @@ public static class EmailSendResultHandler
         IEmailNotificationService emailNotificationService,
         ILogger logger)
     {
-        if (!Enum.TryParse<EmailNotificationResultType>(command.SendResult, ignoreCase: false, out var sendResult))
+        if (!Enum.TryParse<EmailNotificationResultType>(command.SendResult, ignoreCase: true, out var sendResult))
         {
             logger.LogError(
                 "EmailSendResultHandler received unrecognized SendResult value: {SendResult}. NotificationId: {NotificationId}, OperationId: {OperationId}",
