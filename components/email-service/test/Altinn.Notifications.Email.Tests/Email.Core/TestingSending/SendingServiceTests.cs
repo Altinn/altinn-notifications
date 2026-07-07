@@ -5,6 +5,7 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
+using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
 
@@ -191,7 +192,8 @@ public class SendingServiceTests
         Guid id = Guid.NewGuid();
         const string operationId = "composed-op-id";
         const long encodedSize = 204800L;
-        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
@@ -223,7 +225,8 @@ public class SendingServiceTests
         // Arrange
         Guid id = Guid.NewGuid();
         const long encodedSize = 1_048_576L;
-        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
@@ -263,7 +266,8 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
@@ -298,7 +302,8 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
@@ -345,7 +350,8 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
         var exception = new InvalidSasUrlException("attachment.pdf", 403);
 
         Mock<IEmailServiceClient> clientMock = new();

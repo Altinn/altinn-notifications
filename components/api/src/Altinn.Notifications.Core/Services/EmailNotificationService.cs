@@ -117,12 +117,14 @@ public class EmailNotificationService(
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var unpublished = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                await ResetSendStatusToNewAsync(unpublished);
+                var unpublishedEmails = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
+
+                await ResetSendStatusToNewAsync(unpublishedEmails);
             }
             catch (Exception)
             {
                 await ResetSendStatusToNewAsync(newEmailNotifications);
+
                 throw;
             }
         }
