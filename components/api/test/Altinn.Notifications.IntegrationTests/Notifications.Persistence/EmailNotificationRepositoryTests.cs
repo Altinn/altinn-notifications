@@ -54,7 +54,6 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
         _orderIdsToDelete.Add(orderId);
 
-        // Arrange
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
             .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
@@ -694,7 +693,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithEncodedAttachmentsSize_PersistsSizeToDatabase()
+    public async Task UpdateSendStatus_PayloadTooLarge_PersistsEncodedAttachmentsSizeToDatabase()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -704,10 +703,16 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        string operationId = Guid.NewGuid().ToString();
-        long expectedSize = 158304L;
+        // Simulate pipeline: New → Sending (claimed by batch worker)
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = '{EmailNotificationResultType.Sending}'
+            WHERE alternateid = '{emailNotification.Id}'");
 
-        // Act
+        string operationId = Guid.NewGuid().ToString();
+        long expectedSize = 12_534_336L; // Exceeds the 10 MB ACS limit, triggering Failed_PayloadTooLarge
+
+        // Act — Sending → Failed_PayloadTooLarge (ACS rejects with 413)
         await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Failed_PayloadTooLarge, operationId, deliveryReport: null, encodedAttachmentsSize: expectedSize);
 
         // Assert
@@ -720,7 +725,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithExistingEncodedAttachmentsSize_DeliveryReportUpdatePreservesSize()
+    public async Task UpdateSendStatus_SubsequentDeliveryReportUpdate_PreservesExistingEncodedAttachmentsSize()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -733,6 +738,12 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         string operationId = Guid.NewGuid().ToString();
         long expectedSize = 158304L;
         string deliveryReport = """{"messageId":"test-op","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
+
+        // Simulate pipeline: New → Sending (claimed by batch worker)
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = '{EmailNotificationResultType.Sending}'
+            WHERE alternateid = '{emailNotification.Id}'");
 
         // Act
         await repo.UpdateSendStatus(
@@ -759,7 +770,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_ExpiredNotificationWithEncodedAttachmentsSize_ThrowsAndPreservesOriginalSize()
+    public async Task UpdateSendStatus_ExpiredNotification_ThrowsAndPreservesEncodedAttachmentsSize()
     {
         // Arrange
         Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();

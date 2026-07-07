@@ -40,13 +40,15 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Sets result status of an email notification, updates the operation id, and persists the raw delivery report.
+    /// Updates the send status of an email notification and optionally persists
+    /// the operation identifier, delivery report, and encoded attachments size.
+    /// At least one of <paramref name="notificationId"/> or <paramref name="operationId"/> must be provided.
     /// </summary>
-    /// <param name="notificationId">The unique identifier of the email notification (optional if <paramref name="operationId"/> is provided).</param>
-    /// <param name="status">The result status of the email notification.</param>
-    /// <param name="operationId">The operation identifier from the email provider (optional if <paramref name="notificationId"/> is provided).</param>
-    /// <param name="deliveryReport">The raw delivery report payload received from the email provider (optional).</param>
-    /// <param name="encodedAttachmentsSize">Total base64-encoded attachment size in bytes; null for standard emails.</param>
+    /// <param name="notificationId">The alternate UUID of the notification. Takes precedence over <paramref name="operationId"/> when both are provided.</param>
+    /// <param name="status">The new result status to set on the notification.</param>
+    /// <param name="operationId">The operation identifier returned by the email provider. Used as a fallback lookup key when <paramref name="notificationId"/> is null.</param>
+    /// <param name="deliveryReport">The raw delivery report payload from the email provider. Always overwritten when provided, regardless of expiry.</param>
+    /// <param name="encodedAttachmentsSize">Total base64-encoded attachment size in bytes.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="Exceptions.InvalidNotificationIdentifierException">
     /// Thrown when both <paramref name="notificationId"/> and <paramref name="operationId"/> are null or empty.
