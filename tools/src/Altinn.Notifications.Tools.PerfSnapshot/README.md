@@ -24,15 +24,15 @@ dotnet user-secrets set "PostgreSQLSettings:ConnectionString" "Host=<host>;Port=
 The sendersReference, poll interval, output path, and an optional duration bound can be set in `appsettings.json` under `PerfSnapshotSettings`, or passed as command-line flags (these take precedence):
 
 ```bash
-dotnet run -- --sendersRef k6-order-980ff11f --interval 60 --output perf-snapshot.csv --duration 90
+dotnet run -- --sendersRef k6-order-980ff11f --interval 100 --output perf-snapshot.csv --duration 90
 ```
 
 - `--sendersRef` (required, or set via config) — the shared `sendersReference` for the test run's orders.
-- `--interval` — polling interval in seconds (default 60). If a query takes longer than this (see note below), the tool moves on immediately rather than also waiting a full interval afterwards.
+- `--interval` — polling interval in seconds (default 100). If both queries together take longer than this (see note below), the tool moves on immediately rather than also waiting a full interval afterwards.
 - `--output` — CSV output path (default `perf-snapshot.csv`, relative to the working directory).
 - `--duration` — optional safety bound in minutes; omit to run until you stop it with Ctrl+C.
 
-> **Note:** these queries scan `notifications.orders`/`notifications.emailnotifications` without a covering index on `sendersreference`, so they get noticeably slower — observed up to 1-2 minutes — once a test has grown the tables to hundreds of thousands of rows. `PerfSnapshotSettings:CommandTimeoutSeconds` (default 300s / 5 minutes) is set well above that so a slow query is never mistaken for a failure. Raise it further if you're running against an even larger dataset.
+> **Note:** these queries scan `notifications.orders`/`notifications.emailnotifications` without a covering index on `sendersreference`, so they get noticeably slower — observed around 35-40s each — once a test has grown the tables to hundreds of thousands of rows. The two queries run concurrently on separate pooled connections rather than one after another, so a full snapshot still takes roughly one query's worth of time rather than the sum of both. The default 100s interval is set comfortably above that. `PerfSnapshotSettings:CommandTimeoutSeconds` (default 300s / 5 minutes) is set well above even the worst case so a slow query is never mistaken for a failure — raise it further if you're running against an even larger dataset.
 
 ## Running
 

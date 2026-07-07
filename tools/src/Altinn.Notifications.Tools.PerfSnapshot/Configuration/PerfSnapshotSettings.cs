@@ -11,9 +11,11 @@ public class PerfSnapshotSettings
     public string SendersReference { get; set; } = string.Empty;
 
     /// <summary>
-    /// How often, in seconds, to poll the database for a new snapshot.
+    /// How often, in seconds, to poll the database for a new snapshot. Defaults to 100s —
+    /// comfortably above the ~75s these queries can take once the tables are large, so the
+    /// "queries took longer than the interval" warning shouldn't normally trigger.
     /// </summary>
-    public int IntervalSeconds { get; set; } = 60;
+    public int IntervalSeconds { get; set; } = 100;
 
     /// <summary>
     /// Path (relative or absolute) of the CSV file snapshots are appended to.

@@ -99,10 +99,18 @@ while (!cts.IsCancellationRequested && (deadline is null || DateTime.UtcNow < de
 
     try
     {
-        orderCounts = await GetOrderStatusCountsAsync(
+        // Run on two separate pooled connections concurrently instead of sequentially —
+        // each query can take over a minute once the tables are large, so doing them
+        // one after another roughly doubles the time needed for a single snapshot.
+        var orderCountsTask = GetOrderStatusCountsAsync(
             dataSource, perfSettings.SendersReference, perfSettings.CommandTimeoutSeconds, cts.Token);
-        emailCounts = await GetEmailResultCountsAsync(
+        var emailCountsTask = GetEmailResultCountsAsync(
             dataSource, perfSettings.SendersReference, perfSettings.CommandTimeoutSeconds, cts.Token);
+
+        await Task.WhenAll(orderCountsTask, emailCountsTask);
+
+        orderCounts = orderCountsTask.Result;
+        emailCounts = emailCountsTask.Result;
     }
     catch (Exception ex) when (ex is not OperationCanceledException)
     {
