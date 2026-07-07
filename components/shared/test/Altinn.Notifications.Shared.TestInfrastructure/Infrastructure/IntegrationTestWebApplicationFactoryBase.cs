@@ -255,6 +255,41 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     }
 
     /// <summary>
+    /// Drains all messages from the main queues for each of the given <paramref name="queueNames"/>.
+    /// Use this to remove leftover messages from previous test runs that could pollute subsequent tests.
+    /// Silently skips blank names. Exceptions are logged but not rethrown.
+    /// </summary>
+    protected static async Task DrainMainQueuesAsync(string connectionString, params string[] queueNames)
+    {
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
+
+        try
+        {
+            await using var client = new ServiceBusClient(connectionString);
+
+            foreach (var queueName in queueNames)
+            {
+                await using var receiver = client.CreateReceiver(queueName);
+
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Factory] Main queue drain failed (non-fatal): {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Truncates a string to the specified maximum length for console output.
     /// </summary>
     protected static string Truncate(string? value, int maxLength) =>
