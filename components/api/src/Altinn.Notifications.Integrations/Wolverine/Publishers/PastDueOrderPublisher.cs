@@ -86,6 +86,13 @@ public class PastDueOrderPublisher(
             await messageBus.SendAsync(new ProcessPastDueOrderCommand { Order = order });
             return null;
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation(
+                "PastDueOrderPublisher cancelled before publishing order {OrderId}; reporting as unpublished.",
+                order.Id);
+            return order;
+        }
         catch (Exception ex)
         {
             _logger.LogError(
