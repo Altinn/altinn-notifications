@@ -85,9 +85,11 @@ public class PastDueOrderPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_Rethrows()
+    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_ReturnsFailedOrderWithoutThrowing()
     {
         // Arrange
+        var order = CreateOrder();
+
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
             .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
@@ -95,9 +97,59 @@ public class PastDueOrderPublisherTests
 
         var publisher = CreatePublisher(messageBusMock);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync([CreateOrder()], TestContext.Current.CancellationToken));
+        // Act
+
+        // A per-order cancellation must be reported as a failed (unpublished) order rather than
+        // propagating out of PublishAsync — otherwise the caller loses track of which orders in
+        // the batch were actually sent and has to pessimistically reset all of them, even ones
+        // that were already published successfully.
+        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(order.Id, result[0].Id);
+    }
+
+    [Fact]
+    public async Task PublishAsync_CancellationWhileQueuedOnSemaphore_ReturnsQueuedOrderAsFailedWithoutThrowing()
+    {
+        // Arrange
+        var runningOrder = CreateOrder();
+        var queuedOrder = CreateOrder();
+
+        using var cts = new CancellationTokenSource();
+        var releaseRunningOrder = new TaskCompletionSource();
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(
+                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == runningOrder.Id),
+                It.IsAny<DeliveryOptions?>()))
+            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(releaseRunningOrder.Task));
+
+        var publisher = CreatePublisher(messageBusMock, concurrency: 1);
+
+        // Act
+
+        // With concurrency capped at 1, runningOrder takes the only slot and suspends (awaiting
+        // releaseRunningOrder) without releasing it, so queuedOrder is deterministically still
+        // waiting on the semaphore — never having started a send — when cancellation fires.
+        var publishTask = publisher.PublishAsync([runningOrder, queuedOrder], cts.Token);
+
+        await cts.CancelAsync();
+        releaseRunningOrder.SetResult();
+
+        var result = await publishTask;
+
+        // Assert: PublishAsync must not throw, and must report exactly the queued order as
+        // failed — it never got a chance to attempt a send, so it definitely was not published.
+        Assert.Single(result);
+        Assert.Equal(queuedOrder.Id, result[0].Id);
+        messageBusMock.Verify(
+            m => m.SendAsync(
+                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == queuedOrder.Id),
+                It.IsAny<DeliveryOptions?>()),
+            Times.Never);
     }
 
     [Fact]

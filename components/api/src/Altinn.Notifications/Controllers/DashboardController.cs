@@ -28,17 +28,20 @@ namespace Altinn.Notifications.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
-    private readonly IValidator<NotificationsByNinRequestExt> _validator;
+    private readonly IValidator<NotificationsByNinRequestExt> _ninValidator;
+    private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
     /// </summary>
     /// <param name="dashboardService">The dashboard service.</param>
-    /// <param name="validator">The validator for NIN lookup requests.</param>
-    public DashboardController(IDashboardService dashboardService, IValidator<NotificationsByNinRequestExt> validator)
+    /// <param name="ninValidator">The validator for NIN lookup requests.</param>
+    /// <param name="orgNumberValidator">The validator for organization number lookup requests.</param>
+    public DashboardController(IDashboardService dashboardService, IValidator<NotificationsByNinRequestExt> ninValidator, IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator)
     {
         _dashboardService = dashboardService;
-        _validator = validator;
+        _ninValidator = ninValidator;
+        _orgNumberValidator = orgNumberValidator;
     }
 
     /// <summary>
@@ -56,7 +59,7 @@ public class DashboardController : ControllerBase
         NotificationsByNinRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _validator.Validate(request);
+        var validationResult = _ninValidator.Validate(request);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(ModelState);
@@ -67,6 +70,44 @@ public class DashboardController : ControllerBase
         {
             Result<List<DashboardNotification>, ServiceError> result =
                 await _dashboardService.GetNotificationsByNinAsync(request.NationalIdentityNumber, request.From, request.To, cancellationToken);
+
+            return result.Match(
+                notifications => Ok(notifications.MapToDashboardNotificationExtList()),
+                error => StatusCode(error.ErrorCode, error.ErrorMessage));
+        }
+        catch (OperationCanceledException)
+        {
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves all notifications for a given organization number.
+    /// </summary>
+    /// <param name="request">The request containing the organization number and optional date range filters.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A list of notifications matching the search criteria.</returns>
+    [HttpGet("recipients/notifications/orgnumber")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByOrgNumber(
+        NotificationsByOrgNumberRequestExt request,
+        CancellationToken cancellationToken = default)
+    {
+        var validationResult = _orgNumberValidator.Validate(request);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
+        }
+
+        try
+        {
+            Result<List<DashboardNotification>, ServiceError> result =
+                await _dashboardService.GetNotificationsByOrgNumberAsync(request.OrganizationNumber, request.From, request.To, cancellationToken);
 
             return result.Match(
                 notifications => Ok(notifications.MapToDashboardNotificationExtList()),
