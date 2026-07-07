@@ -97,18 +97,18 @@ public class OrderProcessingService : IOrderProcessingService
     /// </summary>
     private async Task ResetOrdersToRegistered(IEnumerable<NotificationOrder> orders)
     {
-        foreach (var order in orders)
+        foreach (var orderId in orders.Select(order => order.Id))
         {
             try
             {
-                await _orderRepository.ResetProcessingToRegistered(order.Id);
+                await _orderRepository.ResetProcessingToRegistered(orderId);
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
                     "Failed to reset order {OrderId} back to Registered after a failed publish attempt. It may remain stuck in Processing until reconciled.",
-                    order.Id);
+                    orderId);
             }
         }
     }
