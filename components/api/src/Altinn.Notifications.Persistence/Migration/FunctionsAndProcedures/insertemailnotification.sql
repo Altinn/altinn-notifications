@@ -48,3 +48,11 @@ BEGIN
     );
 END;
 $BODY$;
+
+ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    IS 'Inserts a new email notification linked to the given order.
+Raises an exception if no order with the specified alternateid exists.
+_encoded_attachments_size: base64-encoded size of all attachments in bytes (0 for standard emails with no attachments).';
