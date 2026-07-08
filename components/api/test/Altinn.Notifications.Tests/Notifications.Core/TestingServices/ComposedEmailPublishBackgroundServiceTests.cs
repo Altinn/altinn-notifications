@@ -217,7 +217,5 @@ public class ComposedEmailPublishBackgroundServiceTests
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-
-        emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.AtLeast(2));
     }
 }

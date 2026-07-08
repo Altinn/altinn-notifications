@@ -36,8 +36,8 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var failed = new ConcurrentBag<ComposedEmail>();
-        var dispatched = new ConcurrentBag<ComposedEmail>();
+        var published = new ConcurrentBag<ComposedEmail>();
+        var unpublished = new ConcurrentBag<ComposedEmail>();
         using var semaphore = new SemaphoreSlim(_publishConcurrency);
 
         try
@@ -48,14 +48,14 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
 
                 try
                 {
-                    var failure = await SendAsync(email, messageBus, cancellationToken);
-                    if (failure is not null)
+                    var failedToPublish = await SendAsync(email, messageBus, cancellationToken);
+                    if (failedToPublish is null)
                     {
-                        failed.Add(failure);
+                        published.Add(email);
                     }
                     else
                     {
-                        dispatched.Add(email);
+                        unpublished.Add(failedToPublish);
                     }
                 }
                 finally
@@ -66,11 +66,11 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
         }
         catch (OperationCanceledException)
         {
-            var dispatchedIds = dispatched.Select(e => e.NotificationId).ToHashSet();
-            return [.. emails.Where(e => !dispatchedIds.Contains(e.NotificationId))];
+            var publishedIds = published.Select(e => e.NotificationId).ToHashSet();
+            return [.. emails.Where(e => !publishedIds.Contains(e.NotificationId))];
         }
 
-        return [.. failed];
+        return [.. unpublished];
     }
 
     /// <summary>
