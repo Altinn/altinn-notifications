@@ -145,11 +145,12 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_TokenCancelledMidBatch_ThrowsOperationCanceledException()
+    public async Task PublishAsync_Batch_TokenCancelledMidBatch_ReturnsUnpublishedEmails()
     {
         // Arrange
-        var email = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain, []);
-        var emails = Enumerable.Repeat(email, 500).ToList();
+        var firstEmail = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "first@test.no", EmailContentType.Plain, []);
+        var secondEmail = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "second@test.no", EmailContentType.Plain, []);
+        var emails = new List<ComposedEmail> { firstEmail, secondEmail };
 
         using var cts = new CancellationTokenSource();
 
@@ -158,7 +159,7 @@ public class ComposedEmailCommandPublisherTests
 
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendComposedEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()))
+            .Setup(m => m.SendAsync(It.Is<SendComposedEmailCommand>(c => c.NotificationId == firstEmail.NotificationId), It.IsAny<DeliveryOptions?>()))
             .Returns<SendComposedEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
             {
                 firstEmailStarted.TrySetResult();
@@ -174,12 +175,12 @@ public class ComposedEmailCommandPublisherTests
         await cts.CancelAsync();
         firstEmailCanProceed.SetResult();
 
-        // Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => publishTask);
+        var result = await publishTask;
 
-        messageBusMock.Verify(
-            m => m.SendAsync(It.Is<SendComposedEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()),
-            Times.AtLeastOnce);
+        // Assert — first email was confirmed published, second never started; only second is returned
+        Assert.Single(result);
+        Assert.Contains(secondEmail, result);
+        Assert.DoesNotContain(firstEmail, result);
     }
 
     [Fact]
@@ -255,7 +256,7 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_MessageBusThrowsOperationCanceledException_Rethrows()
+    public async Task PublishAsync_Batch_MessageBusThrowsOperationCanceledException_TreatedAsUnpublished()
     {
         // Arrange
         var emails = new List<ComposedEmail> { _composedEmail };
@@ -267,9 +268,12 @@ public class ComposedEmailCommandPublisherTests
 
         var publisher = CreatePublisher(messageBusMock);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(emails, TestContext.Current.CancellationToken));
+        // Act
+        var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+
+        // Assert — the email was not confirmed published, so it is returned for the caller to reset
+        Assert.Single(result);
+        Assert.Contains(_composedEmail, result);
     }
 
     [Fact]

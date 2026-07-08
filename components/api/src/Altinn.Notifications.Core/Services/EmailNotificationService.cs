@@ -85,7 +85,7 @@ public class EmailNotificationService(
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                
+
                 await ResetSendStatusToNewAsync(unpublishedEmails);
             }
             catch (Exception)
@@ -101,34 +101,36 @@ public class EmailNotificationService(
     /// <inheritdoc/>
     public async Task SendComposedNotifications(CancellationToken cancellationToken)
     {
-        List<ComposedEmail> newEmailNotifications;
+        List<ComposedEmail> claimedNotifications;
 
         do
         {
-            newEmailNotifications = [];
+            IReadOnlyList<ComposedEmail> unpublishedNotifications = [];
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications.Count == 0)
+                unpublishedNotifications =
+                    claimedNotifications =
+                    await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+                if (claimedNotifications.Count == 0)
                 {
                     break;
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var unpublishedEmails = await _composedEmailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
+                unpublishedNotifications = await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
 
-                await ResetSendStatusToNewAsync(unpublishedEmails);
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
             catch (Exception)
             {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
 
                 throw;
             }
         }
-        while (newEmailNotifications.Count > 0);
+        while (claimedNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
