@@ -1,6 +1,5 @@
 using System.Diagnostics;
 
-using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
