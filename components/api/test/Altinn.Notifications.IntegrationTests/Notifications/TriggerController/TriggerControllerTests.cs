@@ -63,7 +63,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             .Returns(true)
             .Verifiable();
 
-        var composedEmailPublishSignalMock = CreateIdleComposedEmailQueueMock();
+        var composedEmailPublishSignalMock = CreateIdleComposedEmailSignalMock();
         composedEmailPublishSignalMock
             .Setup(e => e.TryEnqueue())
             .Returns(true)
@@ -199,15 +199,15 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         return emailPublishTaskQueueMock;
     }
 
-    private static Mock<IComposedEmailPublishSignal> CreateIdleComposedEmailQueueMock()
+    private static Mock<IComposedEmailPublishSignal> CreateIdleComposedEmailSignalMock()
     {
         var taskCompletionSource = new TaskCompletionSource();
-        var composedEmailPublishTaskQueueMock = new Mock<IComposedEmailPublishSignal>();
-        composedEmailPublishTaskQueueMock
+        var composedEmailPublishSignalMock = new Mock<IComposedEmailPublishSignal>();
+        composedEmailPublishSignalMock
             .Setup(e => e.WaitAsync(It.IsAny<CancellationToken>()))
             .Returns(taskCompletionSource.Task);
 
-        return composedEmailPublishTaskQueueMock;
+        return composedEmailPublishSignalMock;
     }
 
     private HttpClient GetTestClient(
