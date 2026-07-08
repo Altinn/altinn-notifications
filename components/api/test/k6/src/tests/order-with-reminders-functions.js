@@ -475,7 +475,10 @@ export function prepareBaseOrderChain(
     const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
 
     orderChainPayload.requestedSendTime = getFutureDate(futureDays);
-    orderChainPayload.sendersReference = `${orderSenderPrefix}-${uniqueIdentifier}`;
+    // Allows topping up a previous run (e.g. after some iterations failed) under the same
+    // sendersReference, via `-e sendersReference=<value>`, instead of always generating a new one.
+    orderChainPayload.sendersReference =
+        __ENV.sendersReference || `${orderSenderPrefix}-${uniqueIdentifier}`;
 
     if (addDialogAssociation) {
         orderChainPayload.dialogportenAssociation = {
