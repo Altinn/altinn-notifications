@@ -217,6 +217,36 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 client.SendComposedEmail(email, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
         }
 
+        [Fact]
+        public async Task SendComposedEmail_SecondAttachmentReturns4xx_ThrowsInvalidSasUrlExceptionNotOce()
+        {
+            // Arrange: the SECOND attachment returns 4xx, which triggers CancelAsync on the linked CTS.
+            // The FIRST attachment is in-flight and gets cancelled (OCE). Without the Task.WhenAll fix,
+            // Task.WhenAll would propagate OCE (from task index 0) instead of InvalidSasUrlException.
+            var firstBlocking = new TaskCompletionSource();
+
+            EmailServiceClient client = BuildClientWithHandler(
+                async (request, ct) =>
+                {
+                    if (request.RequestUri!.ToString().Contains("first"))
+                    {
+                        firstBlocking.TrySetResult();
+                        await Task.Delay(Timeout.Infinite, ct);
+                        return null!; // unreachable
+                    }
+
+                    // Ensure first attachment is truly in-flight before returning 4xx.
+                    await firstBlocking.Task;
+                    return new HttpResponseMessage(HttpStatusCode.Forbidden);
+                },
+                blobConcurrency: 2);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
+                client.SendComposedEmail(MakeTwoAttachmentEmail(), TestContext.Current.CancellationToken)
+                      .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        }
+
         private static EmailServiceClient BuildClientWithHandler(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond,
             int blobConcurrency = 5)
@@ -246,6 +276,19 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 "to@test.no",
                 EmailContentType.Plain,
                 [new SasFileAttachment { Filename = "file.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/file.pdf?sas=token" }]);
+
+        private static ComposedEmail MakeTwoAttachmentEmail() =>
+            new(
+                Guid.NewGuid(),
+                "subject",
+                "body",
+                "from@test.no",
+                "to@test.no",
+                EmailContentType.Plain,
+                [
+                    new SasFileAttachment { Filename = "first.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/first.pdf?sas=token" },
+                    new SasFileAttachment { Filename = "second.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/second.pdf?sas=token" }
+                ]);
 
         private sealed class FakeBlobHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
         {
