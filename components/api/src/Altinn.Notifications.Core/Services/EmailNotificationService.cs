@@ -68,34 +68,36 @@ public class EmailNotificationService(
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> newEmailNotifications;
+        List<Email> claimedNotifications;
 
         do
         {
-            newEmailNotifications = [];
+            IReadOnlyList<Email> unpublishedNotifications = [];
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications.Count == 0)
+                unpublishedNotifications =
+                    claimedNotifications =
+                    await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                if (claimedNotifications.Count == 0)
                 {
                     break;
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
+                unpublishedNotifications = await _emailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
 
-                await ResetSendStatusToNewAsync(unpublishedEmails);
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
             catch (Exception)
             {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
 
                 throw;
             }
         }
-        while (newEmailNotifications.Count > 0);
+        while (claimedNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
