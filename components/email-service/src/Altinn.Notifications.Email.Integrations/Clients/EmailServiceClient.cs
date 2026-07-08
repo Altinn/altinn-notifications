@@ -133,8 +133,7 @@ public class EmailServiceClient : IEmailServiceClient
                         await linkedCts.CancelAsync();
                         throw;
                     }
-                })
-                .ToList();
+                });
 
             (SasFileAttachment Metadata, byte[] Data)[] downloaded;
             try
