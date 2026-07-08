@@ -130,6 +130,7 @@ public class ComposedEmailPublishBackgroundServiceTests
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+        signalMock.Verify(s => s.WaitAsync(It.IsAny<CancellationToken>()), Times.AtLeast(2));
     }
 
     [Fact]
@@ -162,6 +163,7 @@ public class ComposedEmailPublishBackgroundServiceTests
         await service.StopAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        signalMock.Verify(s => s.WaitAsync(It.IsAny<CancellationToken>()), Times.Once);
         emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -215,5 +217,7 @@ public class ComposedEmailPublishBackgroundServiceTests
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+
+        emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.AtLeast(2));
     }
 }
