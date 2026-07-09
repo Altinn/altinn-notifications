@@ -39,7 +39,7 @@ public class SendComposedEmailCommandHandlerPolicyTests
         policy.Apply([chain], null!, null!);
 
         // Assert
-        var exception = new AttachmentDownloadException("file.pdf", new HttpRequestException("network error"));
+        var exception = new AttachmentDownloadException("file.pdf", Guid.NewGuid(), new HttpRequestException("network error"));
         bool isHandled = chain.Failures.Any(rule => rule.TryCreateContinuation(exception, envelope, out _));
         Assert.True(isHandled);
     }

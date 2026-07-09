@@ -10,10 +10,11 @@ public class AttachmentDownloadException : Exception
     /// Initializes a new instance of <see cref="AttachmentDownloadException"/> for a transient HTTP error.
     /// </summary>
     /// <param name="filename">The filename of the attachment that failed to download.</param>
+    /// <param name="notificationId">The notification ID the attachment belongs to.</param>
     /// <param name="httpStatusCode">The HTTP status code returned by the blob storage endpoint.</param>
     /// <param name="inner">The underlying HTTP exception.</param>
-    public AttachmentDownloadException(string filename, int httpStatusCode, Exception inner)
-        : base($"Transient HTTP {httpStatusCode} error downloading attachment '{filename}'.", inner)
+    public AttachmentDownloadException(string filename, Guid notificationId, int httpStatusCode, Exception inner)
+        : base($"Transient HTTP {httpStatusCode} error downloading attachment '{filename}' for notification {notificationId}.", inner)
     {
     }
 
@@ -21,9 +22,10 @@ public class AttachmentDownloadException : Exception
     /// Initializes a new instance of <see cref="AttachmentDownloadException"/> for a network or unknown error.
     /// </summary>
     /// <param name="filename">The filename of the attachment that failed to download.</param>
+    /// <param name="notificationId">The notification ID the attachment belongs to.</param>
     /// <param name="inner">The underlying network exception.</param>
-    public AttachmentDownloadException(string filename, Exception inner)
-        : base($"Network error downloading attachment '{filename}'.", inner)
+    public AttachmentDownloadException(string filename, Guid notificationId, Exception inner)
+        : base($"Network error downloading attachment '{filename}' for notification {notificationId}.", inner)
     {
     }
 }

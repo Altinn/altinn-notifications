@@ -400,7 +400,7 @@ public class SendingServiceTests
         Guid id = Guid.NewGuid();
         var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
-        var exception = new AttachmentDownloadException("report.pdf", 503, new HttpRequestException("transient"));
+        var exception = new AttachmentDownloadException("report.pdf", Guid.NewGuid(), 503, new HttpRequestException("transient"));
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))

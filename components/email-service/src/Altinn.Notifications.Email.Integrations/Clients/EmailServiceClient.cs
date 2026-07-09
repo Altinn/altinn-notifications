@@ -126,7 +126,7 @@ public class EmailServiceClient : IEmailServiceClient
                 {
                     try
                     {
-                        return await DownloadAttachmentAsync(httpClient, semaphore, attachment, linkedCts.Token);
+                        return await DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token);
                     }
                     catch
                     {
@@ -309,6 +309,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// <summary>
     /// Downloads a single attachment from a SAS URL with concurrency throttling.
     /// </summary>
+    /// <param name="notificationId">The unique identifier of the notification the attachment belongs to.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> used to perform the download request.</param>
     /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads.</param>
     /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
@@ -316,7 +317,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// <returns>The original <see cref="SasFileAttachment"/> paired with its downloaded byte data.</returns>
     /// <exception cref="AttachmentDownloadException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
     /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
-    private static async Task<(SasFileAttachment Metadata, byte[] Data)> DownloadAttachmentAsync(HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
+    private static async Task<(SasFileAttachment Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
 
@@ -331,7 +332,7 @@ public class EmailServiceClient : IEmailServiceClient
             }
             catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500 || ex.StatusCode == HttpStatusCode.TooManyRequests || ex.StatusCode == HttpStatusCode.RequestTimeout)
             {
-                throw new AttachmentDownloadException(attachment.Filename, (int)ex.StatusCode.Value, ex);
+                throw new AttachmentDownloadException(attachment.Filename, notificationId, (int)ex.StatusCode.Value, ex);
             }
             catch (HttpRequestException ex) when (ex.StatusCode.HasValue)
             {
@@ -339,7 +340,7 @@ public class EmailServiceClient : IEmailServiceClient
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                throw new AttachmentDownloadException(attachment.Filename, ex);
+                throw new AttachmentDownloadException(attachment.Filename, notificationId, ex);
             }
         }
         finally
