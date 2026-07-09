@@ -118,7 +118,8 @@ public class EmailNotificationService(
 
         do
         {
-            claimedNotifications = await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+            claimedNotifications =
+                await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
             if (claimedNotifications.Count == 0)
             {
                 break;
