@@ -91,7 +91,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                     }
                 }
             };
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), expectedCreatorName, It.IsAny<CancellationToken>()))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), expectedCreatorName, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(statusFeedList);
 
             // Act
@@ -100,7 +100,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             // Assert
             Assert.NotNull(result);
             Assert.IsType<ActionResult<List<StatusFeedExt>>>(result);
-            _statusFeedService.Verify(x => x.GetStatusFeed(expectedSequenceNumber, It.IsAny<int?>(), expectedCreatorName, It.IsAny<CancellationToken>()), Times.Once);
+            _statusFeedService.Verify(x => x.GetStatusFeed(expectedSequenceNumber, It.IsAny<int?>(), expectedCreatorName, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             var ojectResult = Assert.IsType<OkObjectResult>(result.Result);
             var returnedItems = Assert.IsType<List<StatusFeedExt>>(ojectResult.Value);
             Assert.Equal(statusFeedList.Count, returnedItems.Count);
@@ -111,7 +111,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WhenServiceThrowsOperationCanceledException_IsCaughtWithCorrectStatusCodeReturned()
         {
             // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new OperationCanceledException());
 
             // Act
