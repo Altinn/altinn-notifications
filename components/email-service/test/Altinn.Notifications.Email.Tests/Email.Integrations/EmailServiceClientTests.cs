@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core.Exceptions;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Integrations.Clients;
@@ -105,12 +105,12 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         [InlineData(503)]
         [InlineData(429)]
         [InlineData(408)]
-        public async Task SendComposedEmail_BlobReturnsTransientHttpError_ThrowsInvalidOperationException(int statusCode)
+        public async Task SendComposedEmail_BlobReturnsTransientHttpError_ThrowsAttachmentDownloadException(int statusCode)
         {
             EmailServiceClient client = BuildClientWithHandler((_, _) =>
                 Task.FromResult(new HttpResponseMessage((HttpStatusCode)statusCode)));
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<AttachmentDownloadException>(() =>
                 client.SendComposedEmail(MakeSingleAttachmentEmail(), TestContext.Current.CancellationToken));
         }
 
@@ -127,12 +127,12 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         }
 
         [Fact]
-        public async Task SendComposedEmail_BlobRequestFailsWithNetworkError_ThrowsInvalidOperationException()
+        public async Task SendComposedEmail_BlobRequestFailsWithNetworkError_ThrowsAttachmentDownloadException()
         {
             EmailServiceClient client = BuildClientWithHandler((_, _) =>
                 throw new HttpRequestException("simulated network error"));
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<AttachmentDownloadException>(() =>
                 client.SendComposedEmail(MakeSingleAttachmentEmail(), TestContext.Current.CancellationToken));
         }
 

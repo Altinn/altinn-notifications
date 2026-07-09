@@ -25,6 +25,8 @@ public interface IEmailServiceClient
     /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total encoded attachment size on success,
     /// or an <see cref="EmailClientErrorResponse"/> on failure.
     /// </returns>
+    /// <exception cref="Exceptions.InvalidSasUrlException">Thrown when a SAS URL returns a permanent 4xx error. The caller should not retry.</exception>
+    /// <exception cref="Exceptions.AttachmentDownloadException">Thrown when a transient network or HTTP error occurs while downloading an attachment. The caller should retry.</exception>
     Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(Sending.ComposedEmail email, CancellationToken cancellationToken = default);
 
     /// <summary>

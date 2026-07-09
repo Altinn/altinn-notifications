@@ -16,5 +16,6 @@ public interface ISendingService
     /// </summary>
     /// <param name="email">The composed email with SAS-referenced attachments.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <exception cref="Exceptions.AttachmentDownloadException">Propagated when a transient network or HTTP error occurs downloading an attachment. Wolverine will retry.</exception>
     Task SendComposedAsync(ComposedEmail email, CancellationToken cancellationToken = default);
 }

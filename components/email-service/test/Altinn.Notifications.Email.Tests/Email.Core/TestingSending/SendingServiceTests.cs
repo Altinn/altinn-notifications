@@ -1,7 +1,7 @@
 using System.Text.Json;
 
-using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Exceptions;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
@@ -390,6 +390,37 @@ public class SendingServiceTests
             Times.Once);
 
         checkDispatcherMock.VerifyNoOtherCalls();
+        rateLimitDispatcherMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendComposedAsync_AttachmentDownloadException_PropagatesWithoutDispatching()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
+        var exception = new AttachmentDownloadException("report.pdf", 503, new HttpRequestException("transient"));
+
+        Mock<IEmailServiceClient> clientMock = new();
+        clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
+        Mock<IEmailSendResultDispatcher> statusDispatcherMock = new();
+        Mock<IEmailServiceRateLimitDispatcher> rateLimitDispatcherMock = new();
+
+        var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, rateLimitDispatcherMock.Object);
+
+        // Act — AttachmentDownloadException must propagate so Wolverine can apply the retry policy
+        var thrown = await Assert.ThrowsAsync<AttachmentDownloadException>(
+            () => sendingService.SendComposedAsync(email, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Same(exception, thrown);
+
+        checkDispatcherMock.VerifyNoOtherCalls();
+        statusDispatcherMock.VerifyNoOtherCalls();
         rateLimitDispatcherMock.VerifyNoOtherCalls();
     }
 

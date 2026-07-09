@@ -1,5 +1,6 @@
 using System.Diagnostics;
 
+using Altinn.Notifications.Email.Core.Exceptions;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 
@@ -32,7 +33,7 @@ internal sealed class SendComposedEmailCommandHandlerPolicy(WolverineSettings se
             .OnException<TimeoutException>()
             .Or<ServiceBusException>()
             .Or<TaskCanceledException>()
-            .Or<InvalidOperationException>()
+            .Or<AttachmentDownloadException>()
             .RetryWithCooldown(policy.GetCooldownDelays())
             .Then.ScheduleRetry(policy.GetScheduleDelays())
             .Then.MoveToErrorQueue();
