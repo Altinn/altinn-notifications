@@ -97,12 +97,6 @@ public static class WolverineServiceCollectionExtensions
                 $"{nameof(WolverineSettings.ComposedEmailSendQueueName)} must be configured.");
         }
 
-        if (wolverineSettings.BlobDownloadConcurrency <= 0)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.BlobDownloadConcurrency)} must be greater than 0.");
-        }
-
         wolverineOptions.ListenToAzureServiceBusQueue(wolverineSettings.ComposedEmailSendQueueName)
                         .ListenerCount(wolverineSettings.ComposedEmailSendListenerCount);
 

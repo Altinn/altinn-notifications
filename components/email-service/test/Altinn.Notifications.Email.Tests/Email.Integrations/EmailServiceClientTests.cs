@@ -10,7 +10,6 @@ using Altinn.Notifications.Shared.Commands;
 using Azure;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -40,8 +39,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
 
             var loggerMock = new Mock<ILogger<EmailServiceClient>>();
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-            var wolverineOptions = Options.Create(new WolverineSettings());
-            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, httpClientFactoryMock.Object, wolverineOptions, loggerMock.Object);
+            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, httpClientFactoryMock.Object, loggerMock.Object);
 
             // Act
             var result = client.GetDelayFromString(input);
@@ -66,9 +64,8 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 IntermittentErrorDelay = configuredDelay
             };
             var loggerMock = new Mock<ILogger<EmailServiceClient>>();
-            var wolverineOptions = Options.Create(new WolverineSettings());
             var httpClientFactoryMock = new Mock<System.Net.Http.IHttpClientFactory>();
-            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, httpClientFactoryMock.Object, wolverineOptions, loggerMock.Object);
+            var client = new EmailServiceClient(communicationServicesSettings, emailServiceAdminSettings, httpClientFactoryMock.Object, loggerMock.Object);
 
             // Act
             var result = client.GetUnknownErrorDelay();
@@ -261,9 +258,8 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 {
                     ConnectionString = "endpoint=https://test.communication.azure.com/;accesskey=testkey"
                 },
-                new EmailServiceAdminSettings { IntermittentErrorDelay = 60 },
+                new EmailServiceAdminSettings { IntermittentErrorDelay = 60, BlobDownloadConcurrency = blobConcurrency },
                 httpClientFactoryMock.Object,
-                Options.Create(new WolverineSettings { BlobDownloadConcurrency = blobConcurrency }),
                 new Mock<ILogger<EmailServiceClient>>().Object);
         }
 

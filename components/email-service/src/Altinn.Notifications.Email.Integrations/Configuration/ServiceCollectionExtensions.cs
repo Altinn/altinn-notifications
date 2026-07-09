@@ -33,6 +33,11 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required email service admin settings are missing from application configuration");
         }
 
+        if (emailServiceAdminSettings.BlobDownloadConcurrency <= 0)
+        {
+            throw new InvalidOperationException($"{nameof(EmailServiceAdminSettings.BlobDownloadConcurrency)} must be greater than 0.");
+        }
+
         if (emailServiceAdminSettings.BlobDownloadTimeoutInSeconds <= 0)
         {
             throw new InvalidOperationException($"{nameof(EmailServiceAdminSettings.BlobDownloadTimeoutInSeconds)} must be greater than 0.");

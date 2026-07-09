@@ -41,12 +41,6 @@ public class WolverineSettings : WolverineSettingsBase
     public int ComposedEmailSendListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Maximum number of attachment blobs downloaded concurrently per composed email.
-    /// Controls memory and thread pressure when fetching SAS-referenced files.
-    /// </summary>
-    public int BlobDownloadConcurrency { get; set; } = 5;
-
-    /// <summary>
     /// ASB queue name for email status check operations (polling loop).
     /// </summary>
     public string EmailStatusCheckQueueName { get; set; } = string.Empty;

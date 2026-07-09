@@ -64,4 +64,24 @@ public class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
         Assert.Contains(nameof(EmailServiceAdminSettings.BlobDownloadTimeoutInSeconds), exception.Message);
     }
+
+    [Fact]
+    public void AddIntegrationServices_BlobDownloadConcurrencyIsZero_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CommunicationServicesSettings:ConnectionString"] = "endpoint=https://test.com/;accesskey=key",
+                ["EmailServiceAdminSettings:BlobDownloadTimeoutInSeconds"] = "30",
+                ["EmailServiceAdminSettings:BlobDownloadConcurrency"] = "0"
+            })
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddIntegrationServices(config));
+        Assert.Contains(nameof(EmailServiceAdminSettings.BlobDownloadConcurrency), exception.Message);
+    }
 }

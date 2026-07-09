@@ -16,7 +16,6 @@ using Azure.Communication.Email;
 using Azure.Core;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
 
@@ -28,7 +27,6 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
-    private readonly int _blobDownloadConcurrency;
     private readonly ILogger<EmailServiceClient> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
@@ -40,13 +38,11 @@ public class EmailServiceClient : IEmailServiceClient
         CommunicationServicesSettings communicationServicesSettings,
         EmailServiceAdminSettings emailServiceAdminSettings,
         IHttpClientFactory httpClientFactory,
-        IOptions<WolverineSettings> wolverineSettings,
         ILogger<EmailServiceClient> logger)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _emailServiceAdminSettings = emailServiceAdminSettings;
-        _blobDownloadConcurrency = wolverineSettings.Value.BlobDownloadConcurrency;
 
         var emailClientOptions = new EmailClientOptions();
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
@@ -118,8 +114,8 @@ public class EmailServiceClient : IEmailServiceClient
         if (email.Attachments.Count > 0)
         {
             using var httpClient = _httpClientFactory.CreateClient(nameof(EmailServiceClient));
-            using var semaphore = new SemaphoreSlim(_blobDownloadConcurrency);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            using var semaphore = new SemaphoreSlim(_emailServiceAdminSettings.BlobDownloadConcurrency);
 
             var downloadTasks = email.Attachments
                 .Select(async attachment =>
