@@ -145,6 +145,27 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
+    public async Task PublishAsync_Batch_SendFails_ReturnsUnpublishedEmail()
+    {
+        // Arrange
+        var emails = new List<ComposedEmail> { _composedEmail };
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+            .ThrowsAsync(new Exception("Service Bus unavailable"));
+
+        var publisher = CreatePublisher(messageBusMock);
+
+        // Act
+        var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Contains(_composedEmail, result);
+    }
+
+    [Fact]
     public async Task PublishAsync_Batch_TokenCancelledMidBatch_ReturnsUnpublishedEmails()
     {
         // Arrange
@@ -187,25 +208,23 @@ public class ComposedEmailCommandPublisherTests
     public async Task PublishAsync_Batch_RespectsComposedEmailPublishConcurrency()
     {
         // Arrange
-        const int concurrency = 3;
-        const int emailCount = 12;
+        const int concurrency = 5;
+        const int emailCount = 500;
 
-        var lockObj = new object();
         int currentConcurrent = 0;
         int maxObservedConcurrent = 0;
 
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Setup(e => e.SendAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<DeliveryOptions?>()))
             .Returns<SendComposedEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
             {
                 int current = Interlocked.Increment(ref currentConcurrent);
-                lock (lockObj)
-                {
-                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
-                }
 
-                await Task.Delay(30);
+                Interlocked.Exchange(ref maxObservedConcurrent, Math.Max(Volatile.Read(ref maxObservedConcurrent), current));
+
+                await Task.Delay(100);
+
                 Interlocked.Decrement(ref currentConcurrent);
             })));
 
@@ -256,7 +275,7 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_MessageBusThrowsOperationCanceledException_TreatedAsUnpublished()
+    public async Task PublishAsync_Batch_MessageBusCancellation_IsReturnedAsUnpublished()
     {
         // Arrange
         var emails = new List<ComposedEmail> { _composedEmail };
@@ -271,7 +290,7 @@ public class ComposedEmailCommandPublisherTests
         // Act
         var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
-        // Assert — the email was not confirmed published, so it is returned for the caller to reset
+        // Assert
         Assert.Single(result);
         Assert.Contains(_composedEmail, result);
     }

@@ -31,44 +31,40 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
             return [];
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var published = new ConcurrentBag<ComposedEmail>();
         var unpublished = new ConcurrentBag<ComposedEmail>();
         using var semaphore = new SemaphoreSlim(_publishConcurrency);
 
-        try
+        await Task.WhenAll(emails.Select(async email =>
         {
-            await Task.WhenAll(emails.Select(async email =>
+            try
             {
+                // Cancellation is only observed before acquiring a slot.
+                // Once a send has started, it is allowed to complete to avoid
+                // an ambiguous published/not-published state on the broker.
                 await semaphore.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                unpublished.Add(email);
 
-                try
+                return;
+            }
+
+            try
+            {
+                if (!await SendAsync(email, messageBus))
                 {
-                    var failedToPublish = await SendAsync(email, messageBus, cancellationToken);
-                    if (failedToPublish is null)
-                    {
-                        published.Add(email);
-                    }
-                    else
-                    {
-                        unpublished.Add(failedToPublish);
-                    }
+                    unpublished.Add(email);
                 }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }));
-        }
-        catch (OperationCanceledException)
-        {
-            var publishedIds = published.Select(e => e.NotificationId).ToHashSet();
-            return [.. emails.Where(e => !publishedIds.Contains(e.NotificationId))];
-        }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
 
         return [.. unpublished];
     }
@@ -78,11 +74,10 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
     /// </summary>
     /// <param name="email">The composed email to publish.</param>
     /// <param name="messageBus">The message bus used to send the command.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
-    /// <c>null</c> if the email was published successfully; otherwise, the <see cref="ComposedEmail"/> that failed to publish.
+    /// <c>true</c> if the email was published successfully; <c>false</c> if publish operation did not complete successfully.
     /// </returns>
-    private async Task<ComposedEmail?> SendAsync(ComposedEmail email, IMessageBus messageBus, CancellationToken cancellationToken)
+    private async Task<bool> SendAsync(ComposedEmail email, IMessageBus messageBus)
     {
         var command = new SendComposedEmailCommand
         {
@@ -103,15 +98,9 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             await messageBus.SendAsync(command);
 
-            return null;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
+            return true;
         }
         catch (Exception ex)
         {
@@ -120,7 +109,7 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
                 "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
                 email.NotificationId);
 
-            return email;
+            return false;
         }
     }
 }
