@@ -17,4 +17,9 @@ public class GetStatusFeedRequestExt
     /// The number of items to return in one page. The default value is set by the API
     /// </summary>
     public int? PageSize { get; set; }
+
+    /// <summary>
+    /// The order in which the status feed entries should be returned. The default value is "Asc" for ascending order
+    /// </summary>
+    public OrderByDirection OrderBy { get; set; } = OrderByDirection.Asc;
 }

@@ -11,7 +11,8 @@ post {
 }
 
 headers {
-  X-API-Key: valid-api-key
+  X-API-Key: {{process.env.METRICS_API_KEY}}
+  Ocp-Apim-Subscription-Key: {{process.env.METRICS_SUBSCRIPTION_KEY}}
 }
 
 settings {
