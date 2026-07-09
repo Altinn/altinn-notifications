@@ -35,27 +35,38 @@ public class EmailNotificationService(
     private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
+    public Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
+        var notifications = new List<EmailNotification>();
+
         if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
-            emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
-            return;
+            emailRecipient.ToAddress = string.Empty;
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         if (emailAddresses.Count == 0)
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
-            return;
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
-            emailRecipient.ToAddress = addressPoint.EmailAddress;
-
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+            var recipientForAddress = new EmailRecipient
+            {
+                IsReserved = emailRecipient.IsReserved,
+                OrganizationNumber = emailRecipient.OrganizationNumber,
+                NationalIdentityNumber = emailRecipient.NationalIdentityNumber,
+                CustomizedBody = emailRecipient.CustomizedBody,
+                CustomizedSubject = emailRecipient.CustomizedSubject,
+                ToAddress = addressPoint.EmailAddress
+            };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipientForAddress, EmailNotificationResultType.New));
         }
+
+        return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
     }
 
     /// <inheritdoc/>
@@ -170,16 +181,11 @@ public class EmailNotificationService(
     }
 
     /// <summary>
-    /// Creates a notification for a recipient.
+    /// Builds an in-memory email notification for a single recipient. Does not persist.
     /// </summary>
-    /// <param name="orderId">The order identifier.</param>
-    /// <param name="requestedSendTime">The requested send time.</param>
-    /// <param name="recipient">The email recipient.</param>
-    /// <param name="result">The result of the notification.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
+    private EmailNotification CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
     {
-        var emailNotification = new EmailNotification()
+        return new EmailNotification()
         {
             OrderId = orderId,
             Id = _guidService.NewGuid(),
@@ -187,18 +193,5 @@ public class EmailNotificationService(
             RequestedSendTime = requestedSendTime,
             SendResult = new(result, _dateTimeService.UtcNow())
         };
-
-        DateTime expiry;
-
-        if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
-        {
-            expiry = _dateTimeService.UtcNow();
-        }
-        else
-        {
-            expiry = requestedSendTime.AddHours(48);
-        }
-
-        await _emailNotificationRepository.AddNotification(emailNotification, expiry);
     }
 }

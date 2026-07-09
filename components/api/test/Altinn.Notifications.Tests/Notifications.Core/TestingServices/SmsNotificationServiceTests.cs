@@ -94,7 +94,6 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(48);
 
         SmsNotification expected = new()
         {
@@ -109,15 +108,16 @@ public class SmsNotificationServiceTests
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient());
+        var result = await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient());
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equivalent(expected, result[0]);
     }
 
     [Fact]
@@ -143,15 +143,17 @@ public class SmsNotificationServiceTests
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient { IsReserved = true });
+        var result = await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient { IsReserved = true });
+        var singleResult = result[0];
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+        Assert.NotNull(singleResult);
+        Assert.Single(result);
+        Assert.Equivalent(expected, singleResult);  
     }
 
     [Fact]
@@ -162,7 +164,6 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(48);
 
         SmsNotification expected = new()
         {
@@ -178,15 +179,17 @@ public class SmsNotificationServiceTests
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient { IsReserved = true }, true);
+        var result = await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient { IsReserved = true }, true);
+        var singleResult = result[0];
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+        Assert.NotNull(singleResult);
+        Assert.Single(result);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
@@ -197,7 +200,6 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = dateTimeOutput;
 
         SmsNotification expected = new()
         {
@@ -208,37 +210,42 @@ public class SmsNotificationServiceTests
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient());
+        var result = await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient());
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.IsAny<SmsNotification>(), It.IsAny<DateTime>()), Times.Once);
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equivalent(expected, result[0]);
     }
 
     [Fact]
     public async Task CreateNotification_RecipientHasTwoMobileNumbers_RepositoryCalledOnceForEachNumber()
     {
         // Arrange        
+        var expectedMobileNumber1 = "+4748123456";
+        var expectedMobileNumber2 = "+4799123456";
+
         Recipient recipient = new()
         {
             OrganizationNumber = "org",
-            AddressInfo = new List<IAddressPoint> { new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4799123456") }
+            AddressInfo = new List<IAddressPoint> { new SmsAddressPoint(expectedMobileNumber1), new SmsAddressPoint(expectedMobileNumber2) }
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()));
 
         var service = GetTestService(repository: repoMock.Object);
 
         // Act
-        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddHours(48), recipient.AddressInfo.OfType<SmsAddressPoint>().ToList(), new SmsRecipient { OrganizationNumber = "org" }, true);
+        var result = await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddHours(48), recipient.AddressInfo.OfType<SmsAddressPoint>().ToList(), new SmsRecipient { OrganizationNumber = "org" }, true);
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()), Times.Exactly(2));
+        Assert.Equal(2, result.Count(x => x.Recipient.OrganizationNumber == "org"));
+        Assert.Equal(expectedMobileNumber1, result[0].Recipient.MobileNumber);
+        Assert.Equal(expectedMobileNumber2, result[1].Recipient.MobileNumber);
     }
 
     [Fact]
