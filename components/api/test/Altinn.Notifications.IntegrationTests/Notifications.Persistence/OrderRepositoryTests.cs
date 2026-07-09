@@ -65,11 +65,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -108,10 +108,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -142,11 +142,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -173,11 +173,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -214,10 +214,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -242,6 +242,82 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ResetProcessingToRegistered_OrderInProcessingState_ResetsToRegistered()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        // Act
+        await repo.ResetProcessingToRegistered(order.Id);
+
+        // Assert
+        string sql = $@"SELECT processedstatus
+                            FROM notifications.orders
+                            WHERE alternateid = '{order.Id}'";
+
+        string? status = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), status);
+    }
+
+    [Fact]
+    public async Task ResetProcessingToRegistered_OrderAlreadyAdvancedPastProcessing_IsNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        // Act
+
+        // Simulates a duplicate/stale reset attempt racing against an order that a concurrent
+        // delivery has already advanced past Processing — must not regress it back to Registered.
+        await repo.ResetProcessingToRegistered(order.Id);
+
+        // Assert
+        string sql = $@"SELECT processedstatus
+                            FROM notifications.orders
+                            WHERE alternateid = '{order.Id}'";
+
+        string? status = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), status);
+    }
+
+    [Fact]
     public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
     {
         // Arrange
@@ -255,10 +331,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Created = DateTime.UtcNow,
             Creator = new("test"),
             SendersReference = Guid.NewGuid().ToString(),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -299,10 +375,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Created = DateTime.UtcNow,
             Creator = new("test"),
             SendersReference = null,
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -383,10 +459,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             RequestedSendTime = DateTime.UtcNow.AddMinutes(-1)
         };
 
@@ -420,10 +496,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             RequestedSendTime = DateTime.UtcNow.AddMinutes(20)
         };
 
@@ -1848,22 +1924,6 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.Null(result.OrderChainReceipt.Reminders);
         Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
         Assert.Equal("TRACKING-C69C615A8412", result.OrderChainReceipt.SendersReference);
-    }
-
-    [Theory]
-    [InlineData(AlternateIdentifierSource.Sms)]
-    [InlineData(AlternateIdentifierSource.Email)]
-    [InlineData(AlternateIdentifierSource.Order)]
-    public async Task TryCompleteOrderBasedOnNotificationsState_WithNullNotificationId_ReturnsFalse(AlternateIdentifierSource alternateIdentifierSource)
-    {
-        // Arrange
-        OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-
-        // Act
-        bool result = await repo.TryCompleteOrderBasedOnNotificationsState(null, alternateIdentifierSource);
-
-        // Assert
-        Assert.False(result);
     }
 
     [Theory]

@@ -4,29 +4,33 @@ using Altinn.Notifications.Core.Models.Orders;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the order processing service specific to SMS orders
+/// Interface for the order processing service specific to SMS orders.
 /// </summary>
 public interface ISmsOrderProcessingService
 {
     /// <summary>
-    /// Processes a notification order
+    /// Processes a notification order, performing contact point lookup, then building
+    /// in-memory SMS notifications without persisting them.
     /// </summary>
-    public Task ProcessOrder(NotificationOrder order);
+    Task<SmsOrderProcessingResult> ProcessOrder(NotificationOrder order);
 
     /// <summary>
     /// Processes a notification order for the provided list of recipients
-    /// without looking up additional recipient data
+    /// without looking up additional recipient data. Returns in-memory notifications
+    /// without persisting them.
     /// </summary>
-    public Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
+    Task<SmsOrderProcessingResult> ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
 
     /// <summary>
-    /// Retry processing of an order
+    /// Retries processing of an order, performing contact point lookup, then building
+    /// in-memory SMS notifications without persisting them.
     /// </summary>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    Task<SmsOrderProcessingResult> ProcessOrderRetry(NotificationOrder order);
 
     /// <summary>
-    /// Retry processing of a notification order for the provided list of recipients
-    /// without looking up additional recipient data
+    /// Retries processing of a notification order for the provided list of recipients
+    /// without looking up additional recipient data. Returns in-memory notifications
+    /// without persisting them.
     /// </summary>
-    public Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
+    Task<SmsOrderProcessingResult> ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
 }
