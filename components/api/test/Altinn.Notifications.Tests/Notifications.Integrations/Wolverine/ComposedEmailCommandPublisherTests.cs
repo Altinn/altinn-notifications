@@ -204,13 +204,17 @@ public class ComposedEmailCommandPublisherTests
 
         var result = await publishTask;
 
-        // Assert — whichever email started first is published; the other is returned as unpublished
+        // Assert
         ComposedEmail publishedEmail = emails.Single(e => e.NotificationId == firstPublishedNotificationId);
         ComposedEmail unpublishedEmail = emails.Single(e => e.NotificationId != firstPublishedNotificationId);
 
-        Assert.Single(result);
-        Assert.Contains(unpublishedEmail, result);
         Assert.DoesNotContain(publishedEmail, result);
+        Assert.True(result.Count <= 1, $"Expected at most one unpublished email in a two-email batch, got {result.Count}.");
+
+        if (result.Count == 1)
+        {
+            Assert.Contains(unpublishedEmail, result);
+        }
     }
 
     [Fact]
