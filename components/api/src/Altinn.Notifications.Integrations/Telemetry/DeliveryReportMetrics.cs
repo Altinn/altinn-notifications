@@ -26,6 +26,13 @@ public sealed class DeliveryReportMetrics : IDisposable
     private readonly Counter<long> _deliveryReportStatusCounter;
 
     /// <summary>
+    /// Gets the <see cref="System.Diagnostics.Metrics.Meter"/> owned by this instance.
+    /// Exposed so tests can listen to this exact instance instead of matching on the meter name,
+    /// which would also pick up measurements from other instances in parallel tests.
+    /// </summary>
+    internal Meter Meter => _meter;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryReportMetrics"/> class.
     /// </summary>
     public DeliveryReportMetrics()

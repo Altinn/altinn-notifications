@@ -6,9 +6,26 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
-    public class FunctionTests
+    [Collection(GlobalStateSerialCollection.Name)]
+    public class FunctionTests : IAsyncLifetime
     {
         private readonly int _publishBatchSize = 500;
+
+        public ValueTask InitializeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            // Reset the email timeout to NULL so a failed run does not leave global state behind
+            string cleanupSql = @"UPDATE notifications.resourcelimitlog
+                                  SET emaillimittimeout = NULL
+                                  WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
+            await PostgreUtil.RunSql(cleanupSql);
+
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Scenario: Registered email limit timeout in db has passed
