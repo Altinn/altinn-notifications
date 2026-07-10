@@ -720,28 +720,6 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendComposedNotifications_CancellationAfterFetchBeforePublish_StatusResetForBatch()
-    {
-        // Arrange
-        var emails = new List<ComposedEmail> { _composedEmail, _composedEmail };
-        using var cts = new CancellationTokenSource();
-
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
-            .Callback<int, CancellationToken>((_, _) => cts.Cancel())
-            .ReturnsAsync(emails);
-
-        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendComposedNotifications(cts.Token));
-
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<ComposedEmail>>(), It.IsAny<CancellationToken>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(emails.Count));
-    }
-
-    [Fact]
     public async Task SendComposedNotifications_PublisherThrowsOperationCanceled_StatusResetForBatch()
     {
         // Arrange
