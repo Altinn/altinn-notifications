@@ -2,7 +2,6 @@
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
