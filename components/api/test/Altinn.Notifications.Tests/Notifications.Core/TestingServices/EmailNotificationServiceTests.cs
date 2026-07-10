@@ -594,6 +594,47 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendComposedNotifications_RepositoryThrowsOperationCanceledDuringFetch_NoStatusResets()
+    {
+        // Arrange
+        var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
+        emailNotificationRepositoryMock
+            .Setup(e => e.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var service = GetTestService(repo: emailNotificationRepositoryMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendComposedNotifications(TestContext.Current.CancellationToken));
+
+        emailNotificationRepositoryMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendComposedNotifications_CancellationAfterPublishBeforeNextFetch_NoStatusResets()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .SetupSequence(r => r.GetNewComposedNotificationsAsync(_composedPublishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([_composedEmail, _composedEmail])
+            .ThrowsAsync(new OperationCanceledException());
+
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+        publisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<ComposedEmail>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendComposedNotifications(TestContext.Current.CancellationToken));
+
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<IReadOnlyList<ComposedEmail>>(), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendComposedNotifications_EmptyBatch_PublisherNotCalled()
     {
         // Arrange
