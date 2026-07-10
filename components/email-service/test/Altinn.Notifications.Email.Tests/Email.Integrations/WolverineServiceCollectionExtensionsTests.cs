@@ -82,6 +82,59 @@ public class WolverineServiceCollectionExtensionsTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public void AddWolverineServices_ComposedEmailSendQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
+    {
+        // Arrange
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            ["WolverineSettings:EmailSendListenerCount"] = "1",
+            ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
+            ["WolverineSettings:EmailStatusCheckListenerCount"] = "1",
+            ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+            ["WolverineSettings:ComposedEmailSendListenerCount"] = "1",
+            ["WolverineSettings:ComposedEmailSendQueueName"] = queueName,
+            ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
+        });
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddWolverineServices(config, CreateHostEnvironment()));
+
+        // Assert
+        Assert.Contains(nameof(WolverineSettings.ComposedEmailSendQueueName), exception.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AddWolverineServices_ComposedEmailSendListenerCountInvalid_ThrowsInvalidOperationException(int listenerCount)
+    {
+        // Arrange
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            ["WolverineSettings:EmailSendListenerCount"] = "1",
+            ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
+            ["WolverineSettings:EmailStatusCheckListenerCount"] = "1",
+            ["WolverineSettings:EmailStatusCheckQueueName"] = "altinn.notifications.email.check.send.status",
+            ["WolverineSettings:ComposedEmailSendListenerCount"] = listenerCount.ToString(),
+            ["WolverineSettings:ComposedEmailSendQueueName"] = "altinn.notifications.composedemail.send",
+            ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
+        });
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddWolverineServices(config, CreateHostEnvironment()));
+
+        // Assert
+        Assert.Contains(nameof(WolverineSettings.ComposedEmailSendListenerCount), exception.Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public void AddWolverineServices_EmailServiceRateLimitQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
         // Arrange
