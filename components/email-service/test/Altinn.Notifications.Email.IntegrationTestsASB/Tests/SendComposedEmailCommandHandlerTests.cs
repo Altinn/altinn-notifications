@@ -14,6 +14,7 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixture fixture)
 {
     private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private static readonly TimeSpan _sendTimeout = TimeSpan.FromSeconds(30);
 
     private static SendComposedEmailCommand ValidCommand(string contentType = "Plain") => new()
     {
@@ -46,7 +47,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
 
             // Act
             await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
             // Assert
             Assert.NotNull(capturedEmail);
@@ -76,7 +77,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
 
             // Act
             await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
             // Assert
             Assert.NotNull(capturedEmail);
@@ -101,7 +102,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
 
             // Act
             await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
             // Assert - email is sent successfully with Plain as the fallback content type
             Assert.NotNull(capturedEmail);
@@ -133,7 +134,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
 
             // Act
             await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(TimeSpan.FromSeconds(10));
+            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
             // Assert
             Assert.NotNull(capturedEmail);

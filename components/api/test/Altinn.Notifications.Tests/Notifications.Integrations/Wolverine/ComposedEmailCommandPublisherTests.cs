@@ -175,16 +175,22 @@ public class ComposedEmailCommandPublisherTests
 
         using var cts = new CancellationTokenSource();
 
+        int invocationCount = 0;
+        Guid firstPublishedNotificationId = Guid.Empty;
         var firstEmailStarted = new TaskCompletionSource();
         var firstEmailCanProceed = new TaskCompletionSource();
 
         var messageBusMock = new Mock<IMessageBus>();
         messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendComposedEmailCommand>(c => c.NotificationId == firstEmail.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .Returns<SendComposedEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
+            .Setup(m => m.SendAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+            .Returns<SendComposedEmailCommand, DeliveryOptions?>((command, _) => new ValueTask(Task.Run(async () =>
             {
-                firstEmailStarted.TrySetResult();
-                await firstEmailCanProceed.Task;
+                if (Interlocked.Increment(ref invocationCount) == 1)
+                {
+                    firstPublishedNotificationId = command.NotificationId;
+                    firstEmailStarted.TrySetResult();
+                    await firstEmailCanProceed.Task;
+                }
             })));
 
         var publisher = CreatePublisher(messageBusMock, publishConcurrency: 1);
@@ -198,10 +204,13 @@ public class ComposedEmailCommandPublisherTests
 
         var result = await publishTask;
 
-        // Assert — first email was confirmed published, second never started; only second is returned
+        // Assert — whichever email started first is published; the other is returned as unpublished
+        ComposedEmail publishedEmail = emails.Single(e => e.NotificationId == firstPublishedNotificationId);
+        ComposedEmail unpublishedEmail = emails.Single(e => e.NotificationId != firstPublishedNotificationId);
+
         Assert.Single(result);
-        Assert.Contains(secondEmail, result);
-        Assert.DoesNotContain(firstEmail, result);
+        Assert.Contains(unpublishedEmail, result);
+        Assert.DoesNotContain(publishedEmail, result);
     }
 
     [Fact]

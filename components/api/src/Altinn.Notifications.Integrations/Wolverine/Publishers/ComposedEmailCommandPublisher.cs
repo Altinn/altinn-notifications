@@ -31,6 +31,8 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
             return [];
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 

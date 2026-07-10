@@ -115,21 +115,30 @@ public class EmailNotificationService(
     public async Task SendComposedNotifications(CancellationToken cancellationToken)
     {
         List<ComposedEmail> claimedNotifications;
+        IReadOnlyList<ComposedEmail> unpublishedNotifications = [];
 
         do
         {
-            claimedNotifications =
-                await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
-            if (claimedNotifications.Count == 0)
+            try
             {
-                break;
+                unpublishedNotifications = 
+                    claimedNotifications =
+                    await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+                if (claimedNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                unpublishedNotifications = await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
+
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
+            catch (Exception)
+            {
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var unpublishedNotifications = await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
-
-            await ResetSendStatusToNewAsync(unpublishedNotifications);
+                throw;
+            }
         }
         while (claimedNotifications.Count > 0);
     }
