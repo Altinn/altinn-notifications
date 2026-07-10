@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +14,7 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
 
@@ -87,7 +89,7 @@ public class OrderProcessingServiceTests
 
         foreach (var order in batchOrders)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
         }
     }
 
@@ -123,7 +125,7 @@ public class OrderProcessingServiceTests
 
         foreach (var order in firstBatch)
         {
-            repo.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Never);
+            repo.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Never);
         }
     }
 
@@ -162,13 +164,13 @@ public class OrderProcessingServiceTests
 
         foreach (var order in failedOrders)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
         }
 
         var succeededOrders = batchOrders.Except(failedOrders).ToList();
         foreach (var order in succeededOrders)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Never);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Never);
         }
     }
 
@@ -201,7 +203,7 @@ public class OrderProcessingServiceTests
 
         foreach (var order in pastDueOrders)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
         }
 
         publisherMock.Verify(e => e.PublishAsync(It.IsAny<IReadOnlyList<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -240,10 +242,48 @@ public class OrderProcessingServiceTests
 
         foreach (var order in failedOrders)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
         }
 
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.Is<Guid>(id => !failedOrders.Select(v => v.Id).Contains(id)), OrderProcessingStatus.Registered), Times.Never);
+        orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(It.Is<Guid>(id => !failedOrders.Select(v => v.Id).Contains(id))), Times.Never);
+    }
+
+    [Fact]
+    public async Task StartProcessingPastDueOrders_ResetThrowsForOneOrder_ContinuesResettingRemainingOrders()
+    {
+        // Arrange
+        var batchOrders = CreateOrderBatch(3, "reset-failure");
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchOrders);
+
+        // Simulate a transient failure resetting the first order — the remaining orders in the
+        // batch must still be reset rather than being left stuck in Processing.
+        orderRepositoryMock
+            .Setup(e => e.ResetProcessingToRegistered(batchOrders[0].Id))
+            .ThrowsAsync(new InvalidOperationException("Transient database failure"));
+
+        var publisherMock = new Mock<IPastDueOrderPublisher>();
+        publisherMock
+            .Setup(e => e.PublishAsync(
+                It.Is<IReadOnlyList<NotificationOrder>>(orders => orders.Count == 3),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchOrders);
+
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, publisher: publisherMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        // Act
+        await service.StartProcessingPastDueOrders(cancellationTokenSource.Token);
+
+        // Assert: every order was attempted, including the ones after the one that threw.
+        foreach (var order in batchOrders)
+        {
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
+        }
     }
 
     [Fact]
@@ -305,7 +345,7 @@ public class OrderProcessingServiceTests
         foreach (var orderId in unpublishedOrderIds)
         {
             orderRepositoryMock.Verify(
-                r => r.SetProcessingStatus(orderId, OrderProcessingStatus.Registered),
+                r => r.ResetProcessingToRegistered(orderId),
                 Times.Once);
         }
 
@@ -313,7 +353,7 @@ public class OrderProcessingServiceTests
         foreach (var orderId in publishedOrderIds)
         {
             orderRepositoryMock.Verify(
-                r => r.SetProcessingStatus(orderId, OrderProcessingStatus.Registered),
+                r => r.ResetProcessingToRegistered(orderId),
                 Times.Never);
         }
     }
@@ -342,7 +382,7 @@ public class OrderProcessingServiceTests
 
         foreach (var order in fetchedBatch)
         {
-            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+            orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
         }
     }
 
@@ -1870,6 +1910,38 @@ public class OrderProcessingServiceTests
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
 
         orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_PlatformDependencyExceptionThrown_ResetsOrderToRegisteredWithoutRethrowing()
+    {
+        // Arrange
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            NotificationChannel = NotificationChannel.Sms
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var processingServiceMock = new Mock<ISmsOrderProcessingService>();
+        processingServiceMock
+            .Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()))
+            .ThrowsAsync(new PlatformDependencyException("ProfileClient", "GetUserContactPoints", new HttpRequestException("Connection refused")));
+
+        var orderProcessingService = GetTestService(orderRepository: orderRepositoryMock.Object, smsOrderProcessingService: processingServiceMock.Object);
+
+        // Act
+
+        // A platform dependency failure during retry must be swallowed (not rethrown) and the
+        // order rolled back to Registered so it can be re-claimed on the next poll, instead of
+        // being left stuck in Processing.
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.ResetProcessingToRegistered(order.Id), Times.Once);
+        orderRepositoryMock.Verify(e => e.PersistProcessingResultAsync(It.IsAny<NotificationOrder>(), It.IsAny<EmailOrderProcessingResult>(), It.IsAny<SmsOrderProcessingResult>()), Times.Never);
     }
 
     [Fact]

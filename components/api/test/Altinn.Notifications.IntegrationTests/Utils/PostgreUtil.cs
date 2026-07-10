@@ -17,6 +17,8 @@ public static class PostgreUtil
     // Cached dependencies — resolved once, reused for the entire test run.
     private static readonly Lazy<NpgsqlDataSource> _dataSource = new(() => ServiceUtil.GetSharedDataSource());
 
+    private static readonly Lazy<NpgsqlDataSource> _adminDataSource = new(() => ServiceUtil.GetSharedAdminDataSource());
+
     private static readonly Lazy<OrderRepository> _orderRepo = new(() =>
         (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(s => s is OrderRepository));
 
@@ -27,6 +29,8 @@ public static class PostgreUtil
         (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).First(s => s is SmsNotificationRepository));
 
     private static NpgsqlDataSource DataSource => _dataSource.Value;
+
+    private static NpgsqlDataSource AdminDataSource => _adminDataSource.Value;
 
     private static OrderRepository OrderRepo => _orderRepo.Value;
 
@@ -201,6 +205,7 @@ public static class PostgreUtil
             await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
 
+        await RefreshMaterializedViews();
         return (order, smsNotification);
     }
 
@@ -266,7 +271,17 @@ public static class PostgreUtil
 
         await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
+        await RefreshMaterializedViews();
         return order;
+    }
+
+    public static async Task RefreshMaterializedViews()
+    {
+        string sql = @"
+            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
+            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;";
+        await using NpgsqlCommand pgcom = AdminDataSource.CreateCommand(sql);
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task DeleteOrderFromDb(string sendersRef)

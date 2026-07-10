@@ -26,4 +26,10 @@ public class DashboardService : IDashboardService
     {
         return await _dashboardRepository.GetDashboardNotificationsByNinAsync(recipientNin, dateTimeFrom, dateTimeTo, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByOrgNumberAsync(string recipientOrgNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return await _dashboardRepository.GetDashboardNotificationsByOrgNumberAsync(recipientOrgNumber, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
 }

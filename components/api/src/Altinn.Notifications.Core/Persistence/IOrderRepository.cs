@@ -131,6 +131,16 @@ public interface IOrderRepository
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 
     /// <summary>
+    /// Resets an order that is currently <see cref="OrderProcessingStatus.Processing"/> back to
+    /// <see cref="OrderProcessingStatus.Registered"/> so it can be re-claimed for processing.
+    /// A no-op if the order is no longer in <see cref="OrderProcessingStatus.Processing"/> state
+    /// (for example, if a concurrent/duplicate delivery has already advanced it to a later status),
+    /// preventing an already-completed order from being regressed and reprocessed.
+    /// </summary>
+    /// <param name="orderId">The unique identifier of the order to reset.</param>
+    public Task ResetProcessingToRegistered(Guid orderId);
+
+    /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
     /// </summary>
     /// <param name="id">The order id</param>

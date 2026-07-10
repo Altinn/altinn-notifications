@@ -66,11 +66,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -109,10 +109,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -143,11 +143,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -174,11 +174,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             ConditionEndpoint = new Uri("https://vg.no/condition")
         };
 
@@ -215,10 +215,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-            }
+            ]
         };
 
         _orderIdsToDelete.Add(order.Id);
@@ -240,6 +240,189 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.NotNull(processedTimestamp);
         Assert.True(processedTimestamp.Value >= beforeStatusUpdate, "Processed timestamp should be set to current time or later");
         Assert.True(processedTimestamp.Value <= DateTime.UtcNow.AddSeconds(5), "Processed timestamp should be close to current time");
+    }
+
+    [Fact]
+    public async Task ResetProcessingToRegistered_OrderInProcessingState_ResetsToRegistered()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        // Act
+        await repo.ResetProcessingToRegistered(order.Id);
+
+        // Assert
+        string sql = $@"SELECT processedstatus
+                            FROM notifications.orders
+                            WHERE alternateid = '{order.Id}'";
+
+        string? status = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(OrderProcessingStatus.Registered.ToString(), status);
+    }
+
+    [Fact]
+    public async Task ResetProcessingToRegistered_OrderAlreadyAdvancedPastProcessing_IsNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        // Act
+
+        // Simulates a duplicate/stale reset attempt racing against an order that a concurrent
+        // delivery has already advanced past Processing — must not regress it back to Registered.
+        await repo.ResetProcessingToRegistered(order.Id);
+
+        // Assert
+        string sql = $@"SELECT processedstatus
+                            FROM notifications.orders
+                            WHERE alternateid = '{order.Id}'";
+
+        string? status = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), status);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            SendersReference = Guid.NewGuid().ToString(),
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ],
+            ConditionEndpoint = new Uri("https://vg.no/condition")
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+
+        // Act
+        await repo.InsertStatusFeedForOrder(order.Id);
+
+        // Assert
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
+        string jsonSql = $@"select sf.orderstatus
+                                from notifications.statusfeed sf
+                                join notifications.orders o on sf.orderid = o._id
+                                where o.alternateid = '{order.Id}'";
+
+        string orderStatusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        Assert.NotNull(orderStatusJson);
+        Assert.Contains("\"Recipients\": []", orderStatusJson);
+        Assert.Contains("\"Status\": \"Order_SendConditionNotMet\"", orderStatusJson);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrderAndSendersRefNull_InsertsStatusFeedCorrectly()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            SendersReference = null,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            ],
+            ConditionEndpoint = new Uri("https://vg.no/condition")
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+
+        // Act
+        await repo.InsertStatusFeedForOrder(order.Id);
+
+        // Assert
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
+        string jsonSql = $@"select sf.orderstatus
+                                from notifications.statusfeed sf
+                                join notifications.orders o on sf.orderid = o._id
+                                where o.alternateid = '{order.Id}'";
+
+        string orderStatusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        Assert.NotNull(orderStatusJson);
+        Assert.Contains("\"Recipients\": []", orderStatusJson);
+        Assert.Contains("\"Status\": \"Order_SendConditionNotMet\"", orderStatusJson);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedForOrder_OrderDoesNotExist_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid nonExistentOrderId = Guid.NewGuid();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await repo.InsertStatusFeedForOrder(nonExistentOrderId));
+
+        Assert.Contains("Order with ID", exception.Message);
+        Assert.Contains("not found", exception.Message);
+        Assert.Contains(nonExistentOrderId.ToString(), exception.Message);
     }
 
     [Fact]
@@ -277,10 +460,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             RequestedSendTime = DateTime.UtcNow.AddMinutes(-1)
         };
 
@@ -314,10 +497,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("test"),
-            Templates = new List<INotificationTemplate>()
-            {
+            Templates =
+            [
                 new SmsTemplate("Altinn", "This is the body")
-            },
+            ],
             RequestedSendTime = DateTime.UtcNow.AddMinutes(20)
         };
 

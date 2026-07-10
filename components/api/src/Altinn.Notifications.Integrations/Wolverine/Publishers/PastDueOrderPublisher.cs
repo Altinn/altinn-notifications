@@ -42,9 +42,21 @@ public class PastDueOrderPublisher(
         var failed = new ConcurrentBag<NotificationOrder>();
         using var semaphore = new SemaphoreSlim(_publishConcurrency);
 
+        // None of the per-order work below is allowed to throw — including cancellation while
+        // still queued on the semaphore — so Task.WhenAll always returns normally with a `failed`
+        // list that is a complete and accurate record of every order that was not published.
+        // Callers depend on that guarantee to safely retry only the orders that need it.
         await Task.WhenAll(orders.Select(async order =>
         {
-            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                failed.Add(order);
+                return;
+            }
 
             try
             {
@@ -74,9 +86,13 @@ public class PastDueOrderPublisher(
             await messageBus.SendAsync(new ProcessPastDueOrderCommand { Order = order });
             return null;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            throw;
+            _logger.LogInformation(
+                ex,
+                "PastDueOrderPublisher cancelled before publishing order {OrderId}; reporting as unpublished.",
+                order.Id);
+            return order;
         }
         catch (Exception ex)
         {

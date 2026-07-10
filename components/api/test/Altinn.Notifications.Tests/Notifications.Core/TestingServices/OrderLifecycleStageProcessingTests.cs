@@ -241,7 +241,6 @@ public class OrderLifecycleStageProcessingTests
         emailNotificationServiceMock.Setup(x => x.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<EmailAddressPoint>>(), It.IsAny<EmailRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
 
         return new EmailOrderProcessingService(
-            new Mock<IEmailNotificationRepository>().Object,
             emailNotificationServiceMock.Object,
             contactPointService,
             keywordsServiceMock.Object);
@@ -266,7 +265,6 @@ public class OrderLifecycleStageProcessingTests
             keywordsServiceMock.Object,
             smsNotificationServiceMock.Object,
             contactPointService,
-            new Mock<ISmsNotificationRepository>().Object,
             scheduleMock.Object);
     }
 

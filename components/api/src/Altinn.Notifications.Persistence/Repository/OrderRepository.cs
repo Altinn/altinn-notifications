@@ -38,6 +38,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _advanceStatusFromProcessingSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Processing'::orderprocessingstate";
+    private const string _resetProcessingToRegisteredSql = "update notifications.orders set processedstatus = 'Registered'::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$1 AND processedstatus = 'Processing'::orderprocessingstate";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
@@ -239,6 +240,14 @@ public class OrderRepository : IOrderRepository
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetProcessingToRegistered(Guid orderId)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_resetProcessingToRegisteredSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         await pgcom.ExecuteNonQueryAsync();
     }
