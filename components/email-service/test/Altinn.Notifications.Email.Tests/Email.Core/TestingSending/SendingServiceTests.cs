@@ -5,7 +5,6 @@ using Altinn.Notifications.Email.Core.Exceptions;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
-using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
 
@@ -192,7 +191,7 @@ public class SendingServiceTests
         Guid id = Guid.NewGuid();
         const string operationId = "composed-op-id";
         const long encodedSize = 204800L;
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
@@ -225,7 +224,7 @@ public class SendingServiceTests
         // Arrange
         Guid id = Guid.NewGuid();
         const long encodedSize = 1_048_576L;
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
@@ -266,7 +265,7 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
@@ -302,7 +301,7 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
 
         Mock<IEmailServiceClient> clientMock = new();
@@ -350,7 +349,7 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
         var exception = new InvalidSasUrlException("attachment.pdf", 403);
 
@@ -398,7 +397,7 @@ public class SendingServiceTests
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        var attachment = new SasFileAttachment { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
+        var attachment = new SasFileAttachmentReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = "https://storage.example.com/report.pdf?sv=2024" };
         var email = new ComposedEmail(id, "subject", "body", "from@test.no", "to@test.no", EmailContentType.Plain, [attachment]);
         var exception = new AttachmentDownloadException("report.pdf", Guid.NewGuid(), 503, new HttpRequestException("transient"));
 

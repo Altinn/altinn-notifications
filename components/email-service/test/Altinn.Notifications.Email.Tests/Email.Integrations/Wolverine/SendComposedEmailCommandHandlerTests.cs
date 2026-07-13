@@ -48,7 +48,10 @@ public class SendComposedEmailCommandHandlerTests
         Assert.Equal(_validCommand.FromAddress, capturedEmail.FromAddress);
         Assert.Equal(_validCommand.ToAddress, capturedEmail.ToAddress);
         Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
-        Assert.Equal(_validCommand.Attachments, capturedEmail.Attachments);
+        Assert.Equal(_validCommand.Attachments.Count, capturedEmail.Attachments.Count);
+        Assert.Equal(_validCommand.Attachments[0].Filename, capturedEmail.Attachments[0].Filename);
+        Assert.Equal(_validCommand.Attachments[0].MimeType, capturedEmail.Attachments[0].MimeType);
+        Assert.Equal(_validCommand.Attachments[0].SasUrl, capturedEmail.Attachments[0].SasUrl);
     }
 
     [Fact]

@@ -9,7 +9,6 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Clients.AzureCommunicationServices;
 using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Shared.Commands;
 
 using Azure;
 using Azure.Communication.Email;
@@ -308,7 +307,7 @@ public class EmailServiceClient : IEmailServiceClient
                 }
             });
 
-        (SasFileAttachment Metadata, byte[] Data)[] downloaded;
+        (SasFileAttachmentReference Metadata, byte[] Data)[] downloaded;
 
         try
         {
@@ -341,12 +340,12 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="notificationId">The unique identifier of the notification the attachment belongs to.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> used to perform the download request.</param>
     /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads per email.</param>
-    /// <param name="attachment">The <see cref="SasFileAttachment"/> containing the SAS URL and file metadata.</param>
+    /// <param name="attachment">The <see cref="SasFileAttachmentReference"/> containing the SAS URL and file metadata.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    /// <returns>The original <see cref="SasFileAttachment"/> paired with its downloaded byte data.</returns>
+    /// <returns>The original <see cref="SasFileAttachmentReference"/> paired with its downloaded byte data.</returns>
     /// <exception cref="AttachmentDownloadException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
     /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
-    private static async Task<(SasFileAttachment Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachment attachment, CancellationToken cancellationToken)
+    private static async Task<(SasFileAttachmentReference Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachmentReference attachment, CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
 

@@ -5,7 +5,6 @@ using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Shared.Commands;
 
 using Azure;
 
@@ -165,8 +164,8 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 "to@test.no",
                 EmailContentType.Plain,
                 [
-                    new SasFileAttachment { Filename = "a.pdf", MimeType = "application/pdf", SasUrl = url1 },
-                    new SasFileAttachment { Filename = "b.pdf", MimeType = "application/pdf", SasUrl = url2 }
+                    new SasFileAttachmentReference { Filename = "a.pdf", MimeType = "application/pdf", SasUrl = url1 },
+                    new SasFileAttachmentReference { Filename = "b.pdf", MimeType = "application/pdf", SasUrl = url2 }
                 ]);
 
             await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
@@ -206,8 +205,8 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 "to@test.no",
                 EmailContentType.Plain,
                 [
-                    new SasFileAttachment { Filename = "slow.pdf", MimeType = "application/pdf", SasUrl = url1 },
-                    new SasFileAttachment { Filename = "bad.pdf", MimeType = "application/pdf", SasUrl = url2 }
+                    new SasFileAttachmentReference { Filename = "slow.pdf", MimeType = "application/pdf", SasUrl = url1 },
+                    new SasFileAttachmentReference { Filename = "bad.pdf", MimeType = "application/pdf", SasUrl = url2 }
                 ]);
 
             await Assert.ThrowsAsync<InvalidSasUrlException>(() =>
@@ -271,7 +270,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 "from@test.no",
                 "to@test.no",
                 EmailContentType.Plain,
-                [new SasFileAttachment { Filename = "file.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/file.pdf?sas=token" }]);
+                [new SasFileAttachmentReference { Filename = "file.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/file.pdf?sas=token" }]);
 
         private static ComposedEmail MakeTwoAttachmentEmail() =>
             new(
@@ -282,8 +281,8 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
                 "to@test.no",
                 EmailContentType.Plain,
                 [
-                    new SasFileAttachment { Filename = "first.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/first.pdf?sas=token" },
-                    new SasFileAttachment { Filename = "second.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/second.pdf?sas=token" }
+                    new SasFileAttachmentReference { Filename = "first.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/first.pdf?sas=token" },
+                    new SasFileAttachmentReference { Filename = "second.pdf", MimeType = "application/pdf", SasUrl = "https://blob.test/second.pdf?sas=token" }
                 ]);
 
         private sealed class FakeBlobHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler

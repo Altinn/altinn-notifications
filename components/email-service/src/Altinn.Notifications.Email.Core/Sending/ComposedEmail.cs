@@ -1,5 +1,3 @@
-using Altinn.Notifications.Shared.Commands;
-
 namespace Altinn.Notifications.Email.Core.Sending;
 
 /// <summary>
@@ -23,10 +21,10 @@ public class ComposedEmail(
     string fromAddress,
     string toAddress,
     EmailContentType contentType,
-    IReadOnlyList<SasFileAttachment> attachments) : Email(notificationId, subject, body, fromAddress, toAddress, contentType)
+    IReadOnlyList<SasFileAttachmentReference> attachments) : Email(notificationId, subject, body, fromAddress, toAddress, contentType)
 {
     /// <summary>
     /// The file attachments to be downloaded and encoded before submission to ACS.
     /// </summary>
-    public IReadOnlyList<SasFileAttachment> Attachments { get; } = attachments;
+    public IReadOnlyList<SasFileAttachmentReference> Attachments { get; } = attachments;
 }

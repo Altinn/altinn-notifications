@@ -40,7 +40,14 @@ public static class SendComposedEmailCommandHandler
             command.FromAddress,
             command.ToAddress,
             contentType,
-            command.Attachments);
+            command.Attachments
+                .Select(a => new SasFileAttachmentReference
+                {
+                    Filename = a.Filename,
+                    MimeType = a.MimeType,
+                    SasUrl = a.SasUrl
+                })
+                .ToArray());
 
         try
         {
