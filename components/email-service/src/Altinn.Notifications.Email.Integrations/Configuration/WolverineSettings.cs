@@ -38,7 +38,7 @@ public class WolverineSettings : WolverineSettingsBase
     /// <summary>
     /// Number of concurrent listeners for the composed email send queue per pod.
     /// </summary>
-    public int ComposedEmailSendListenerCount { get; set; } = 10;
+    public int ComposedEmailSendListenerCount { get; set; } = 5;
 
     /// <summary>
     /// ASB queue name for email status check operations (polling loop).
