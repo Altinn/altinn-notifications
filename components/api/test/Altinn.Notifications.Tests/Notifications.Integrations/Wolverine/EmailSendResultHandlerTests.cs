@@ -90,12 +90,12 @@ public sealed class EmailSendResultHandlerTests
                 r.NotificationId == notificationId &&
                 r.SendResult == resultType &&
                 r.OperationId == "op-456" &&
-                r.EncodedAttachmentsSize == null)),
+                r.TotalAttachmentSizeBytes == null)),
             Times.Once);
     }
 
     [Fact]
-    public async Task Handle_ComposedEmailResult_MapsEncodedAttachmentsSizeToOperationResult()
+    public async Task Handle_ComposedEmailResult_MapsTotalAttachmentSizeBytesToOperationResult()
     {
         // Arrange
         var notificationId = Guid.NewGuid();
@@ -104,7 +104,7 @@ public sealed class EmailSendResultHandlerTests
         {
             OperationId = "op-789",
             NotificationId = notificationId,
-            EncodedAttachmentsSize = encodedSize,
+            TotalAttachmentSizeBytes = encodedSize,
             SendResult = EmailNotificationResultType.Succeeded.ToString()
         };
 
@@ -119,7 +119,7 @@ public sealed class EmailSendResultHandlerTests
         _serviceMock.Verify(
             s => s.UpdateSendStatus(It.Is<EmailSendOperationResult>(r =>
                 r.NotificationId == notificationId &&
-                r.EncodedAttachmentsSize == encodedSize)),
+                r.TotalAttachmentSizeBytes == encodedSize)),
             Times.Once);
     }
 }

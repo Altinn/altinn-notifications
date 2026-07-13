@@ -74,7 +74,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await repo.AddNotification(emailNotification, DateTime.UtcNow);
 
         // Assert
-        string sql = $@"SELECT encoded_attachments_size 
+        string sql = $@"SELECT total_attachment_size_bytes 
               FROM notifications.emailnotifications o
               WHERE o.alternateid = '{notificationId}'";
 
@@ -199,7 +199,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               WHERE email.alternateid = '{emailNotification.Id}' 
               AND email.result = '{EmailNotificationResultType.Succeeded}' 
               AND email.operationid = '{operationId}'
-              AND email.encoded_attachments_size = 0";
+              AND email.total_attachment_size_bytes = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -228,7 +228,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               WHERE email.alternateid = '{emailNotification.Id}' 
               AND email.result  = '{EmailNotificationResultType.Delivered}' 
               AND email.operationid = '{operationId}'
-              AND email.encoded_attachments_size = 0";
+              AND email.total_attachment_size_bytes = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -291,7 +291,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               WHERE email.alternateid = '{emailNotification.Id}'
               AND email.result = '{EmailNotificationResultType.Succeeded}'
               AND email.operationid = '{operationId}'
-              AND email.encoded_attachments_size = 0";
+              AND email.total_attachment_size_bytes = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -317,7 +317,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
               FROM notifications.emailnotifications email
               WHERE email.alternateid = '{emailNotification.Id}' 
               AND email.result  = '{EmailNotificationResultType.Failed}'
-              AND email.encoded_attachments_size = 0";
+              AND email.total_attachment_size_bytes = 0";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
@@ -693,7 +693,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_PayloadTooLarge_PersistsEncodedAttachmentsSizeToDatabase()
+    public async Task UpdateSendStatus_PayloadTooLarge_PersistsTotalAttachmentSizeBytesToDatabase()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -713,11 +713,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         long expectedSize = 12_534_336L; // Exceeds the 10 MB ACS limit, triggering Failed_PayloadTooLarge
 
         // Act — Sending → Failed_PayloadTooLarge (ACS rejects with 413)
-        await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Failed_PayloadTooLarge, operationId, deliveryReport: null, encodedAttachmentsSize: expectedSize);
+        await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Failed_PayloadTooLarge, operationId, deliveryReport: null, totalAttachmentSizeBytes: expectedSize);
 
         // Assert
         string sql = $@"
-            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            SELECT total_attachment_size_bytes FROM notifications.emailnotifications
             WHERE alternateid = '{emailNotification.Id}'";
 
         long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
@@ -725,7 +725,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_SubsequentDeliveryReportUpdate_PreservesExistingEncodedAttachmentsSize()
+    public async Task UpdateSendStatus_SubsequentDeliveryReportUpdate_PreservesExistingTotalAttachmentSizeBytes()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -751,18 +751,18 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             EmailNotificationResultType.Succeeded,
             operationId,
             deliveryReport: null,
-            encodedAttachmentsSize: expectedSize);
+            totalAttachmentSizeBytes: expectedSize);
 
         await repo.UpdateSendStatus(
             null,
             EmailNotificationResultType.Delivered,
             operationId,
             deliveryReport,
-            encodedAttachmentsSize: null);
+            totalAttachmentSizeBytes: null);
 
         // Assert
         string sql = $@"
-            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            SELECT total_attachment_size_bytes FROM notifications.emailnotifications
             WHERE alternateid = '{emailNotification.Id}'";
 
         long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);
@@ -770,7 +770,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_ExpiredNotification_ThrowsAndPreservesEncodedAttachmentsSize()
+    public async Task UpdateSendStatus_ExpiredNotification_ThrowsAndPreservesTotalAttachmentSizeBytes()
     {
         // Arrange
         Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
@@ -792,13 +792,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         // Add notification with expiry time already in the past
         await repo.AddNotification(notification, DateTime.UtcNow.AddMinutes(-10));
 
-        // Act: attempt to update with a non-zero encodedAttachmentsSize
+        // Act: attempt to update with a non-zero totalAttachmentSizeBytes
         await Assert.ThrowsAsync<NotificationExpiredException>(() =>
-            repo.UpdateSendStatus(notificationId, EmailNotificationResultType.Succeeded, encodedAttachmentsSize: 204800L));
+            repo.UpdateSendStatus(notificationId, EmailNotificationResultType.Succeeded, totalAttachmentSizeBytes: 204800L));
 
-        // Assert: transaction was rolled back — encoded_attachments_size is still 0 (never persisted)
+        // Assert: transaction was rolled back — total_attachment_size_bytes is still 0 (never persisted)
         string sql = $@"
-            SELECT encoded_attachments_size FROM notifications.emailnotifications
+            SELECT total_attachment_size_bytes FROM notifications.emailnotifications
             WHERE alternateid = '{notificationId}'";
 
         long actualSize = await PostgreUtil.RunSqlReturnOutput<long>(sql);

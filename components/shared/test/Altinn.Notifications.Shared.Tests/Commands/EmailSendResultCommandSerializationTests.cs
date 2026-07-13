@@ -82,57 +82,57 @@ public class EmailSendResultCommandSerializationTests
     }
 
     [Fact]
-    public void EmailSendResultCommand_WhenEncodedAttachmentsSizeIsSet_SerializesProperty()
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesIsSet_SerializesProperty()
     {
         var command = new EmailSendResultCommand
         {
             SendResult = "Failed_PayloadTooLarge",
             NotificationId = Guid.Empty,
-            EncodedAttachmentsSize = 11_534_336L
+            TotalAttachmentSizeBytes = 11_534_336L
         };
 
         var serializedString = JsonSerializer.Serialize(command, _options);
         var jsonElement = JsonDocument.Parse(serializedString).RootElement;
 
-        Assert.True(jsonElement.TryGetProperty("encodedAttachmentsSize", out var prop), "Expected property 'encodedAttachmentsSize' not found.");
+        Assert.True(jsonElement.TryGetProperty("totalAttachmentSizeBytes", out var prop), "Expected property 'totalAttachmentSizeBytes' not found.");
         Assert.Equal(11_534_336L, prop.GetInt64());
     }
 
     [Fact]
-    public void EmailSendResultCommand_WhenEncodedAttachmentsSizeIsNull_OmitsPropertyFromJson()
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesIsNull_OmitsPropertyFromJson()
     {
         var command = new EmailSendResultCommand
         {
             SendResult = "Succeeded",
             NotificationId = Guid.Empty,
-            EncodedAttachmentsSize = null
+            TotalAttachmentSizeBytes = null
         };
 
         var serializedString = JsonSerializer.Serialize(command, _options);
         var jsonElement = JsonDocument.Parse(serializedString).RootElement;
 
-        Assert.False(jsonElement.TryGetProperty("encodedAttachmentsSize", out _), "Property 'encodedAttachmentsSize' should be omitted when null.");
+        Assert.False(jsonElement.TryGetProperty("totalAttachmentSizeBytes", out _), "Property 'totalAttachmentSizeBytes' should be omitted when null.");
     }
 
     [Fact]
-    public void EmailSendResultCommand_WhenEncodedAttachmentsSizePresentInJson_DeserializesCorrectly()
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesPresentInJson_DeserializesCorrectly()
     {
         const string json = """
             {
                 "sendResult": "Failed_PayloadTooLarge",
                 "notificationId": "00000000-0000-0000-0000-000000000001",
-                "encodedAttachmentsSize": 11534336
+                "totalAttachmentSizeBytes": 11534336
             }
             """;
 
         var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
 
         Assert.NotNull(command);
-        Assert.Equal(11_534_336L, command.EncodedAttachmentsSize);
+        Assert.Equal(11_534_336L, command.TotalAttachmentSizeBytes);
     }
 
     [Fact]
-    public void EmailSendResultCommand_WhenEncodedAttachmentsSizeAbsentInJson_DeserializesToNull()
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesAbsentInJson_DeserializesToNull()
     {
         const string json = """
             {
@@ -144,6 +144,6 @@ public class EmailSendResultCommandSerializationTests
         var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
 
         Assert.NotNull(command);
-        Assert.Null(command.EncodedAttachmentsSize);
+        Assert.Null(command.TotalAttachmentSizeBytes);
     }
 }

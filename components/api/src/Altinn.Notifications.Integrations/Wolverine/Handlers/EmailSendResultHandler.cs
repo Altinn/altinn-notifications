@@ -41,7 +41,7 @@ public static class EmailSendResultHandler
             SendResult = sendResult,
             NotificationId = command.NotificationId,
             OperationId = command.OperationId ?? string.Empty,
-            EncodedAttachmentsSize = command.EncodedAttachmentsSize
+            TotalAttachmentSizeBytes = command.TotalAttachmentSizeBytes
         };
 
         await emailNotificationService.UpdateSendStatus(operationResult);

@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v4(
     _operationid text,
     _alternateid uuid,
     _deliveryreport jsonb,
-    _encoded_attachments_size BIGINT
+    _total_attachment_size_bytes BIGINT
 )
 RETURNS TABLE (
     alternateid uuid,
@@ -44,9 +44,9 @@ BEGIN
         -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
         deliveryreport = _deliveryreport,
         -- Preserve previously stored composed size when later updates pass 0 (e.g. delivery reports)
-        encoded_attachments_size = CASE
-            WHEN _encoded_attachments_size > 0 THEN _encoded_attachments_size
-            ELSE emailnotifications.encoded_attachments_size
+        total_attachment_size_bytes = CASE
+            WHEN _total_attachment_size_bytes IS NOT NULL THEN _total_attachment_size_bytes
+            ELSE emailnotifications.total_attachment_size_bytes
         END
     WHERE
         -- Match by alternateid (takes priority) OR by operationid (fallback)
@@ -55,7 +55,7 @@ BEGIN
         (_alternateid IS NULL AND _operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
     RETURNING
         emailnotifications.alternateid,
-        -- was_updated reflects whether status fields were modified; deliveryreport and encoded_attachments_size writes do not affect this flag
+        -- was_updated reflects whether status fields were modified; deliveryreport and total_attachment_size_bytes writes do not affect this flag
         (expirytime > v_now) AS was_updated,
         -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= v_now) AS is_expired;
@@ -71,16 +71,16 @@ ALTER FUNCTION notifications.updateemailnotification_v4(
     _operationid text,
     _alternateid uuid,
     _deliveryreport jsonb,
-    _encoded_attachments_size BIGINT
+    _total_attachment_size_bytes BIGINT
 )
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.updateemailnotification_v4 IS
 'Updates an email notification result, resulttime, operationid, deliveryreport,
-and encoded_attachments_size by alternateid or operationid, with expiry validation.
-Extends v3 by adding _encoded_attachments_size (BIGINT).
+and total_attachment_size_bytes by alternateid or operationid, with expiry validation.
+Extends v3 by adding _total_attachment_size_bytes (BIGINT).
 Standard email results pass 0; composed email results pass the computed value.
-When _encoded_attachments_size is NULL or 0, the existing value is preserved.
+When _total_attachment_size_bytes is NULL, the existing value is preserved.
 
 Return values:
 - alternateid: UUID of the notification (NULL if not found)
@@ -89,4 +89,4 @@ Return values:
 
 Precedence: alternateid takes priority over operationid when both are non-null.
 deliveryreport is always overwritten regardless of expiry.
-encoded_attachments_size is overwritten only when _encoded_attachments_size > 0; otherwise the existing value is preserved.';
+total_attachment_size_bytes is overwritten only when _total_attachment_size_bytes IS NOT NULL; otherwise the existing value is preserved.';

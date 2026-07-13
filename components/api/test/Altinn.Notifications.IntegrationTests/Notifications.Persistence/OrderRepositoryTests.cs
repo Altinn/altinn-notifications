@@ -3721,8 +3721,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         DateTime storedExpiry = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT expirytime {baseQuery}");
         Assert.Equal(expiry, storedExpiry, TimeSpan.FromSeconds(1));
 
-        long encodedAttachmentsSize = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT encoded_attachments_size {baseQuery}");
-        Assert.Equal(0L, encodedAttachmentsSize);
+        long totalAttachmentSizeBytes = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT total_attachment_size_bytes {baseQuery}");
+        Assert.Equal(0L, totalAttachmentSizeBytes);
     }
 
     [Fact]

@@ -84,7 +84,7 @@ public enum EmailNotificationResultType
     Failed_InvalidSasUrl,
 
     /// <summary>
-    /// Failed because the total encoded attachment size exceeded the email service limit.
+    /// Failed because the total attachment size exceeded the email service limit.
     /// </summary>
     Failed_PayloadTooLarge
 }

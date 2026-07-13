@@ -14,13 +14,13 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations.Wolverine;
 
 public class CheckEmailSendStatusHandlerTests
 {
-    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123", long? encodedAttachmentsSize = null) =>
+    private static CheckEmailSendStatusCommand ValidCommand(Guid? notificationId = null, string operationId = "op-123", long? totalAttachmentSizeBytes = null) =>
         new()
         {
             SendOperationId = operationId,
             LastCheckedAtUtc = DateTime.UtcNow,
-            EncodedAttachmentsSize = encodedAttachmentsSize,
-            NotificationId = notificationId ?? Guid.NewGuid()
+            NotificationId = notificationId ?? Guid.NewGuid(),
+            TotalAttachmentSizeBytes = totalAttachmentSizeBytes
         };
 
     [Fact]
@@ -71,7 +71,7 @@ public class CheckEmailSendStatusHandlerTests
     public async Task Handle_TerminalSendResult_DispatchesViaStatusDispatcher(EmailSendResult terminalResult)
     {
         // Arrange
-        var command = ValidCommand(encodedAttachmentsSize: 12345);
+        var command = ValidCommand(totalAttachmentSizeBytes: 12345);
 
         var clientMock = new Mock<IEmailServiceClient>();
         clientMock.Setup(c => c.GetOperationUpdate(command.SendOperationId))
@@ -98,7 +98,7 @@ public class CheckEmailSendStatusHandlerTests
         Assert.Equal(terminalResult, capturedResult.SendResult);
         Assert.Equal(command.SendOperationId, capturedResult.OperationId);
         Assert.Equal(command.NotificationId, capturedResult.NotificationId);
-        Assert.Equal(command.EncodedAttachmentsSize, capturedResult.EncodedAttachmentsSize);
+        Assert.Equal(command.TotalAttachmentSizeBytes, capturedResult.TotalAttachmentSizeBytes);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class CheckEmailSendStatusHandlerTests
     public async Task Handle_SendResultIsSending_SchedulesRecheckAndDoesNotDispatch()
     {
         // Arrange
-        var command = ValidCommand(encodedAttachmentsSize: 99999);
+        var command = ValidCommand(totalAttachmentSizeBytes: 99999);
         var fixedTime = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         var clientMock = new Mock<IEmailServiceClient>();
@@ -161,7 +161,7 @@ public class CheckEmailSendStatusHandlerTests
                     c.NotificationId == command.NotificationId &&
                     c.SendOperationId == command.SendOperationId &&
                     c.LastCheckedAtUtc == fixedTime &&
-                    c.EncodedAttachmentsSize == command.EncodedAttachmentsSize),
+                    c.TotalAttachmentSizeBytes == command.TotalAttachmentSizeBytes),
                 It.Is<DeliveryOptions?>(o => o != null && o.ScheduleDelay == TimeSpan.FromMilliseconds(8000))),
             Times.Once);
 

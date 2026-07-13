@@ -1,2 +1,2 @@
 ALTER TABLE notifications.emailnotifications
-    ADD COLUMN IF NOT EXISTS encoded_attachments_size BIGINT NOT NULL DEFAULT 0;
+    ADD COLUMN IF NOT EXISTS total_attachment_size_bytes BIGINT NOT NULL DEFAULT 0;

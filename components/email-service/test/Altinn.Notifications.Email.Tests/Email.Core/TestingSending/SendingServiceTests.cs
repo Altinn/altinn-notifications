@@ -186,7 +186,7 @@ public class SendingServiceTests
     }
 
     [Fact]
-    public async Task SendComposedAsync_Success_DispatchesStatusCheckWithOperationIdAndEncodedAttachmentsSize()
+    public async Task SendComposedAsync_Success_DispatchesStatusCheckWithOperationIdAndTotalAttachmentSizeBytes()
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -197,7 +197,7 @@ public class SendingServiceTests
 
         Mock<IEmailServiceClient> clientMock = new();
         clientMock.Setup(c => c.SendComposedEmail(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ComposedEmailSendResult { OperationId = operationId, EncodedAttachmentsSize = encodedSize });
+            .ReturnsAsync(new ComposedEmailSendResult { OperationId = operationId, TotalAttachmentSizeBytes = encodedSize });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
         checkDispatcherMock
@@ -220,7 +220,7 @@ public class SendingServiceTests
     }
 
     [Fact]
-    public async Task SendComposedAsync_PayloadTooLarge_DispatchesStatusResultWithEncodedAttachmentsSize()
+    public async Task SendComposedAsync_PayloadTooLarge_DispatchesStatusResultWithTotalAttachmentSizeBytes()
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -233,7 +233,7 @@ public class SendingServiceTests
             .ReturnsAsync(new EmailClientErrorResponse
             {
                 SendResult = EmailSendResult.Failed_PayloadTooLarge,
-                EncodedAttachmentsSize = encodedSize
+                TotalAttachmentSizeBytes = encodedSize
             });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -253,7 +253,7 @@ public class SendingServiceTests
             d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
                 r.NotificationId == id &&
                 r.SendResult == EmailSendResult.Failed_PayloadTooLarge &&
-                r.EncodedAttachmentsSize == encodedSize)),
+                r.TotalAttachmentSizeBytes == encodedSize)),
             Times.Once);
 
         checkDispatcherMock.VerifyNoOtherCalls();

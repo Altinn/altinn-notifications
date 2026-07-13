@@ -98,7 +98,7 @@ public class EmailServiceClient : IEmailServiceClient
     {
         EmailMessage emailMessage = BuildEmailMessage(email);
 
-        long encodedAttachmentsSize = await DownloadAttachmentsAsync(email, emailMessage, cancellationToken);
+        long totalAttachmentSizeBytes = await DownloadAttachmentsAsync(email, emailMessage, cancellationToken);
 
         try
         {
@@ -107,7 +107,7 @@ public class EmailServiceClient : IEmailServiceClient
             return new ComposedEmailSendResult
             {
                 OperationId = emailSendOperation.Id,
-                EncodedAttachmentsSize = encodedAttachmentsSize
+                TotalAttachmentSizeBytes = totalAttachmentSizeBytes
             };
         }
         catch (RequestFailedException e)
@@ -117,7 +117,7 @@ public class EmailServiceClient : IEmailServiceClient
             EmailClientErrorResponse errorResponse = new()
             {
                 SendResult = GetEmailSendResult(e),
-                EncodedAttachmentsSize = encodedAttachmentsSize > 0 ? encodedAttachmentsSize : null
+                TotalAttachmentSizeBytes = totalAttachmentSizeBytes > 0 ? totalAttachmentSizeBytes : null
             };
 
             if (errorResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
@@ -269,7 +269,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="email">The composed email containing the attachments to download.</param>
     /// <param name="emailMessage">The message to attach the downloaded files to.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    /// <returns>The total Base64-encoded size in bytes of all downloaded attachments, or <c>0</c> if there are none.</returns>
+    /// <returns>The total raw attachment size in bytes of all downloaded attachments, or <c>0</c> if there are none.</returns>
     /// <exception cref="InvalidSasUrlException">Thrown when a SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
     /// <exception cref="AttachmentDownloadException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
     private async Task<long> DownloadAttachmentsAsync(ComposedEmail email, EmailMessage emailMessage, CancellationToken cancellationToken)
@@ -324,15 +324,15 @@ public class EmailServiceClient : IEmailServiceClient
             throw;
         }
 
-        long encodedAttachmentsSize = 0;
+        long totalAttachmentSizeBytes = 0;
 
         foreach (var (metadata, data) in downloaded)
         {
-            encodedAttachmentsSize += ((long)data.Length + 2) / 3 * 4;
+            totalAttachmentSizeBytes += data.LongLength;
             emailMessage.Attachments.Add(new EmailAttachment(metadata.Filename, metadata.MimeType, BinaryData.FromBytes(data)));
         }
 
-        return encodedAttachmentsSize;
+        return totalAttachmentSizeBytes;
     }
 
     /// <summary>

@@ -28,11 +28,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=encoded_attachments_size
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
     private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch_v2(@batchsize)";
     private const string _getComposedEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_composed_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=encoded_attachments_size
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
@@ -94,7 +94,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
     /// <inheritdoc/>
     /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? encodedAttachmentsSize = null)
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
@@ -111,7 +111,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, encodedAttachmentsSize == null ? 0 : encodedAttachmentsSize);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)totalAttachmentSizeBytes ?? DBNull.Value);
             },
             NotificationChannel.Email,
             notificationId,

@@ -28,9 +28,9 @@ public sealed record EmailSendResultCommand
     public string SendResult { get; init; } = string.Empty;
 
     /// <summary>
-    /// Total base64-encoded size of all attachments in bytes. Null for standard email notifications.
+    /// Total raw attachment size in bytes. Null for standard email notifications.
     /// </summary>
-    [JsonPropertyName("encodedAttachmentsSize")]
+    [JsonPropertyName("totalAttachmentSizeBytes")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public long? EncodedAttachmentsSize { get; init; }
+    public long? TotalAttachmentSizeBytes { get; init; }
 }

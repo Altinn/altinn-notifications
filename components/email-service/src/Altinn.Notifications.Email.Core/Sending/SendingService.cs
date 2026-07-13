@@ -56,7 +56,7 @@ public class SendingService(
                     await _emailStatusCheckDispatcher.DispatchAsync(
                         email.NotificationId,
                         composedResult.OperationId,
-                        composedResult.EncodedAttachmentsSize);
+                        composedResult.TotalAttachmentSizeBytes);
                 },
                 async emailSendFailResponse =>
                 {
@@ -107,7 +107,7 @@ public class SendingService(
         {
             NotificationId = notificationId,
             SendResult = emailSendFailResponse.SendResult,
-            EncodedAttachmentsSize = emailSendFailResponse.EncodedAttachmentsSize
+            TotalAttachmentSizeBytes = emailSendFailResponse.TotalAttachmentSizeBytes
         };
 
         await _emailSendingStatusDispatcher.DispatchAsync(operationResult);

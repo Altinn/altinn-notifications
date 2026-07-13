@@ -9,7 +9,7 @@ CREATE OR REPLACE PROCEDURE notifications.insertemailnotification_v2(
     _result TEXT,
     _resulttime timestamptz,
     _expirytime timestamptz,
-    _encoded_attachments_size BIGINT
+    _total_attachment_size_bytes BIGINT
 )
 LANGUAGE 'plpgsql'
 AS $BODY$
@@ -31,7 +31,7 @@ BEGIN
         result,
         resulttime,
         expirytime,
-        encoded_attachments_size
+        total_attachment_size_bytes
     )
     VALUES (
         __orderid,
@@ -44,7 +44,7 @@ BEGIN
         _result::emailnotificationresulttype,
         _resulttime,
         _expirytime,
-        _encoded_attachments_size
+        _total_attachment_size_bytes
     );
 END;
 $BODY$;
@@ -55,4 +55,4 @@ ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text,
 COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
     IS 'Inserts a new email notification linked to the given order.
 Raises an exception if no order with the specified alternateid exists.
-_encoded_attachments_size: base64-encoded size of all attachments in bytes (0 for standard emails with no attachments).';
+_total_attachment_size_bytes: total raw attachment size in bytes (0 for standard emails with no attachments).';

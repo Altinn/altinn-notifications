@@ -47,7 +47,7 @@ public class EmailSendResultPublisher : WolverinePublisher, IEmailSendResultDisp
         {
             NotificationId = result.NotificationId.Value,
             SendResult = result.SendResult.Value.ToString(),
-            EncodedAttachmentsSize = result.EncodedAttachmentsSize,
+            TotalAttachmentSizeBytes = result.TotalAttachmentSizeBytes,
             OperationId = string.IsNullOrWhiteSpace(result.OperationId) ? null : result.OperationId
         };
 

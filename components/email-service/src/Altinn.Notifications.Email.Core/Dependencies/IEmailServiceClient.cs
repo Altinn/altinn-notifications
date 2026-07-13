@@ -16,13 +16,13 @@ public interface IEmailServiceClient
     Task<Result<string, EmailClientErrorResponse>> SendEmail(Sending.Email email);
 
     /// <summary>
-    /// Downloads the attachments in <paramref name="email"/> via SAS URL, encodes them as base64,
+    /// Downloads the attachments in <paramref name="email"/> via SAS URL,
     /// and submits the composed email to Azure Communication Services.
     /// </summary>
     /// <param name="email">The composed email with SAS-referenced attachments.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>
-    /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total encoded attachment size on success,
+    /// A <see cref="ComposedEmailSendResult"/> with the ACS operation ID and total raw attachment size in bytes on success,
     /// or an <see cref="EmailClientErrorResponse"/> on failure.
     /// </returns>
     /// <exception cref="Exceptions.InvalidSasUrlException">Thrown when a SAS URL returns a permanent 4xx error. The caller should not retry.</exception>

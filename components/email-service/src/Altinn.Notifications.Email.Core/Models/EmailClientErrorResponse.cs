@@ -18,7 +18,7 @@ public class EmailClientErrorResponse
     public int? IntermittentErrorDelay { get; set; }
 
     /// <summary>
-    /// Total base64-encoded attachment size in bytes accumulated before the send attempt; null when no attachments were processed.
+    /// Total raw attachment size in bytes accumulated before the send attempt; null when no attachments were processed.
     /// </summary>
-    public long? EncodedAttachmentsSize { get; set; }
+    public long? TotalAttachmentSizeBytes { get; set; }
 }

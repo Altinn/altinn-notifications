@@ -157,7 +157,7 @@ public class EmailNotificationService(
             (EmailNotificationResultType)sendOperationResult.SendResult!,
             sendOperationResult.OperationId,
             sendOperationResult.DeliveryReport,
-            sendOperationResult.EncodedAttachmentsSize);
+            sendOperationResult.TotalAttachmentSizeBytes);
     }
 
     /// <summary>

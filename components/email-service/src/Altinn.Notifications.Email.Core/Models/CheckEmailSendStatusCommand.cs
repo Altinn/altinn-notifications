@@ -26,8 +26,8 @@ public class CheckEmailSendStatusCommand
     public required DateTime LastCheckedAtUtc { get; init; }
 
     /// <summary>
-    /// Total base64-encoded attachment size in bytes. Carried through the polling loop
+    /// Total raw attachment size in bytes. Carried through the polling loop
     /// so it can be reported back once a terminal status is reached. Null for standard emails.
     /// </summary>
-    public long? EncodedAttachmentsSize { get; init; }
+    public long? TotalAttachmentSizeBytes { get; init; }
 }
