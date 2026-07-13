@@ -141,18 +141,6 @@ public interface IOrderRepository
     public Task ResetProcessingToRegistered(Guid orderId);
 
     /// <summary>
-    /// Inserts a status feed entry for the specified order.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the order.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// This method retrieves the current shipment tracking information for the order
-    /// and inserts it into the status feed. This is typically used for orders that
-    /// reach terminal states such as failed or where send condition is not met.
-    /// </remarks>
-    public Task InsertStatusFeedForOrder(Guid orderId);
-
-    /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
     /// </summary>
     /// <param name="id">The order id</param>
