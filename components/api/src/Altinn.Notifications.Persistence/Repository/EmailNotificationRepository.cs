@@ -1,9 +1,12 @@
 using System.Data;
+using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -25,10 +28,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
     private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch_v2(@batchsize)";
+    private const string _getComposedEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_composed_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v3($1, $2, $3, $4)"; // (_result, _operationid, _alternateid, _deliveryreport)
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
@@ -60,6 +64,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, 0L);
 
         await pgcom.ExecuteNonQueryAsync();
     }
@@ -89,7 +94,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
     /// <inheritdoc/>
     /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null)
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
@@ -106,6 +111,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)totalAttachmentSizeBytes ?? DBNull.Value);
             },
             NotificationChannel.Email,
             notificationId,
@@ -137,6 +143,36 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
                 searchResult.Add(email);
             }
+        }
+
+        return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    {
+        var searchResult = new List<ComposedEmail>();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getComposedEmailNotificationsBatchSql);
+        pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            EmailContentType contentType = Enum.Parse<EmailContentType>(await reader.GetFieldValueAsync<string>("contenttype", cancellationToken));
+
+            var attachmentsJson = await reader.GetFieldValueAsync<string>("attachments", cancellationToken);
+            var attachments = JsonSerializer.Deserialize<List<SasFileReference>>(attachmentsJson, JsonSerializerOptionsProvider.Options)
+                ?? [];
+
+            searchResult.Add(new ComposedEmail(
+                await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+                await reader.GetFieldValueAsync<string>("subject", cancellationToken),
+                await reader.GetFieldValueAsync<string>("body", cancellationToken),
+                await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
+                await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
+                contentType,
+                attachments));
         }
 
         return searchResult;

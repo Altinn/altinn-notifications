@@ -17,7 +17,7 @@ public record SasFileReferenceExt
     /// The filename, including extension (e.g. <c>contract.pdf</c>).
     /// </summary>
     /// <remarks>
-    /// Must not contain path separators (<c>/</c>, <c>\</c>) or traversal sequences (<c>..</c>).
+    /// Must not contain path separators (<c>/</c>, <c>\</c>).
     /// </remarks>
     /// <example>contract.pdf</example>
     [Required]

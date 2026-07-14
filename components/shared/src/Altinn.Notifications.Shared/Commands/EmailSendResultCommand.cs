@@ -26,4 +26,11 @@ public sealed record EmailSendResultCommand
     /// </summary>
     [JsonPropertyName("sendResult")]
     public string SendResult { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Total raw attachment size in bytes. Null for standard email notifications.
+    /// </summary>
+    [JsonPropertyName("totalAttachmentSizeBytes")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? TotalAttachmentSizeBytes { get; init; }
 }

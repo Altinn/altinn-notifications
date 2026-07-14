@@ -9,39 +9,30 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all trigger operations
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="TriggerController"/> class.
+/// </remarks>
 [ApiController]
 [Route("notifications/api/v1/trigger")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class TriggerController : ControllerBase
+public class TriggerController(
+    ILogger<TriggerController> logger,
+    IStatusFeedService statusFeedService,
+    ISmsPublishTaskQueue smsPublishTaskQueue,
+    INotificationScheduleService scheduleService,
+    IOrderProcessingService orderProcessingService,
+    IEmailPublishTaskQueue emailPublishingTaskQueue,
+    IComposedEmailPublishSignal composedEmailPublishSignal,
+    ITerminateExpiredNotificationsService terminateExpiredService) : ControllerBase
 {
-    private readonly ILogger<TriggerController> _logger;
-    private readonly IStatusFeedService _statusFeedService;
-    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
-    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
-    private readonly INotificationScheduleService _scheduleService;
-    private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ITerminateExpiredNotificationsService _terminateExpiredService;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TriggerController"/> class.
-    /// </summary>
-    public TriggerController(
-        ILogger<TriggerController> logger,
-        IStatusFeedService statusFeedService,
-        ISmsPublishTaskQueue smsPublishTaskQueue,
-        IEmailPublishTaskQueue emailPublishingTaskQueue,
-        INotificationScheduleService scheduleService,
-        IOrderProcessingService orderProcessingService,
-        ITerminateExpiredNotificationsService terminateExpiredService)
-    {
-        _logger = logger;
-        _scheduleService = scheduleService;
-        _statusFeedService = statusFeedService;
-        _smsPublishTaskQueue = smsPublishTaskQueue;
-        _emailPublishTaskQueue = emailPublishingTaskQueue;
-        _orderProcessingService = orderProcessingService;
-        _terminateExpiredService = terminateExpiredService;
-    }
+    private readonly ILogger<TriggerController> _logger = logger;
+    private readonly IStatusFeedService _statusFeedService = statusFeedService;
+    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue = smsPublishTaskQueue;
+    private readonly INotificationScheduleService _scheduleService = scheduleService;
+    private readonly IOrderProcessingService _orderProcessingService = orderProcessingService;
+    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue = emailPublishingTaskQueue;
+    private readonly IComposedEmailPublishSignal _composedEmailPublishSignal = composedEmailPublishSignal;
+    private readonly ITerminateExpiredNotificationsService _terminateExpiredService = terminateExpiredService;
 
     /// <summary>
     /// Endpoint for starting the processing of past due orders
@@ -69,6 +60,7 @@ public class TriggerController : ControllerBase
     public ActionResult Trigger_SendEmailNotifications()
     {
         _emailPublishTaskQueue.TryEnqueue();
+        _composedEmailPublishSignal.TryEnqueue();
         return Ok();
     }
 

@@ -61,9 +61,11 @@ public sealed class EmailSendResultHandlerTests
     }
 
     [Theory]
-    [InlineData(EmailNotificationResultType.Succeeded)]
     [InlineData(EmailNotificationResultType.Failed)]
     [InlineData(EmailNotificationResultType.Sending)]
+    [InlineData(EmailNotificationResultType.Succeeded)]
+    [InlineData(EmailNotificationResultType.Failed_InvalidSasUrl)]
+    [InlineData(EmailNotificationResultType.Failed_PayloadTooLarge)]
     public async Task Handle_RecognizedSendResult_CallsUpdateSendStatus(EmailNotificationResultType resultType)
     {
         // Arrange
@@ -87,7 +89,37 @@ public sealed class EmailSendResultHandlerTests
             s => s.UpdateSendStatus(It.Is<EmailSendOperationResult>(r =>
                 r.NotificationId == notificationId &&
                 r.SendResult == resultType &&
-                r.OperationId == "op-456")),
+                r.OperationId == "op-456" &&
+                r.TotalAttachmentSizeBytes == null)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ComposedEmailResult_MapsTotalAttachmentSizeBytesToOperationResult()
+    {
+        // Arrange
+        var notificationId = Guid.NewGuid();
+        const long encodedSize = 204800L;
+        var command = new EmailSendResultCommand
+        {
+            OperationId = "op-789",
+            NotificationId = notificationId,
+            TotalAttachmentSizeBytes = encodedSize,
+            SendResult = EmailNotificationResultType.Succeeded.ToString()
+        };
+
+        _serviceMock
+            .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await EmailSendResultHandler.Handle(command, _serviceMock.Object, NullLogger.Instance);
+
+        // Assert
+        _serviceMock.Verify(
+            s => s.UpdateSendStatus(It.Is<EmailSendOperationResult>(r =>
+                r.NotificationId == notificationId &&
+                r.TotalAttachmentSizeBytes == encodedSize)),
             Times.Once);
     }
 }

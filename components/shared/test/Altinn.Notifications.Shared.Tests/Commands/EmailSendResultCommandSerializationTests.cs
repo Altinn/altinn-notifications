@@ -80,4 +80,70 @@ public class EmailSendResultCommandSerializationTests
         Assert.NotNull(command);
         Assert.Null(command.OperationId);
     }
+
+    [Fact]
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesIsSet_SerializesProperty()
+    {
+        var command = new EmailSendResultCommand
+        {
+            SendResult = "Failed_PayloadTooLarge",
+            NotificationId = Guid.Empty,
+            TotalAttachmentSizeBytes = 11_534_336L
+        };
+
+        var serializedString = JsonSerializer.Serialize(command, _options);
+        var jsonElement = JsonDocument.Parse(serializedString).RootElement;
+
+        Assert.True(jsonElement.TryGetProperty("totalAttachmentSizeBytes", out var prop), "Expected property 'totalAttachmentSizeBytes' not found.");
+        Assert.Equal(11_534_336L, prop.GetInt64());
+    }
+
+    [Fact]
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesIsNull_OmitsPropertyFromJson()
+    {
+        var command = new EmailSendResultCommand
+        {
+            SendResult = "Succeeded",
+            NotificationId = Guid.Empty,
+            TotalAttachmentSizeBytes = null
+        };
+
+        var serializedString = JsonSerializer.Serialize(command, _options);
+        var jsonElement = JsonDocument.Parse(serializedString).RootElement;
+
+        Assert.False(jsonElement.TryGetProperty("totalAttachmentSizeBytes", out _), "Property 'totalAttachmentSizeBytes' should be omitted when null.");
+    }
+
+    [Fact]
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesPresentInJson_DeserializesCorrectly()
+    {
+        const string json = """
+            {
+                "sendResult": "Failed_PayloadTooLarge",
+                "notificationId": "00000000-0000-0000-0000-000000000001",
+                "totalAttachmentSizeBytes": 11534336
+            }
+            """;
+
+        var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
+
+        Assert.NotNull(command);
+        Assert.Equal(11_534_336L, command.TotalAttachmentSizeBytes);
+    }
+
+    [Fact]
+    public void EmailSendResultCommand_WhenTotalAttachmentSizeBytesAbsentInJson_DeserializesToNull()
+    {
+        const string json = """
+            {
+                "sendResult": "Succeeded",
+                "notificationId": "00000000-0000-0000-0000-000000000001"
+            }
+            """;
+
+        var command = JsonSerializer.Deserialize<EmailSendResultCommand>(json, _options);
+
+        Assert.NotNull(command);
+        Assert.Null(command.TotalAttachmentSizeBytes);
+    }
 }

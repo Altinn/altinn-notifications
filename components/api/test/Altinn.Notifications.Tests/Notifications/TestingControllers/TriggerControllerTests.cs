@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,19 +28,32 @@ public class TriggerControllerTests
     private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
     private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
+    private readonly Mock<IComposedEmailPublishSignal> _composedEmailPublishSignalMock = new();
 
     public TriggerControllerTests()
     {
-        ITerminateExpiredNotificationsService terminateExpiredNotificationsService = new TerminateExpiredService(_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object);
-
         _controller = new TriggerController(
         NullLogger<TriggerController>.Instance,
         _statusFeedServiceMock.Object,
         _smsPublishTaskQueueMock.Object,
-        _emailPublishTaskQueueMock.Object,
         _notificationScheduleMock.Object,
         _orderProcessingServiceMock.Object,
-        terminateExpiredNotificationsService);
+        _emailPublishTaskQueueMock.Object,
+        _composedEmailPublishSignalMock.Object,
+        new TerminateExpiredService(_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object));
+    }
+
+    [Fact]
+    public void Trigger_SendEmailNotifications_SignalsBothQueuesAndReturnsOk()
+    {
+        // Act
+        var result = _controller.Trigger_SendEmailNotifications();
+
+        // Assert
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(), Times.Once);
+        _composedEmailPublishSignalMock.Verify(x => x.TryEnqueue(), Times.Once);
+
+        Assert.IsType<OkResult>(result);
     }
 
     [Fact]

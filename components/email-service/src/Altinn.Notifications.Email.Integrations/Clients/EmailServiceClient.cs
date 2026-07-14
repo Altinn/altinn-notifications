@@ -1,7 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Exceptions;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Clients.AzureCommunicationServices;
@@ -24,19 +27,23 @@ public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
     private readonly ILogger<EmailServiceClient> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmailServiceAdminSettings _emailServiceAdminSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
     /// </summary>
-    /// <param name="communicationServicesSettings">Settings for integration against Communication Services.</param>
-    /// <param name="emailServiceAdminSettings">Settings for email service administration and error handling.</param>
-    /// <param name="logger">A logger</param>
-    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, EmailServiceAdminSettings emailServiceAdminSettings, ILogger<EmailServiceClient> logger)
+    public EmailServiceClient(
+        CommunicationServicesSettings communicationServicesSettings,
+        EmailServiceAdminSettings emailServiceAdminSettings,
+        IHttpClientFactory httpClientFactory,
+        ILogger<EmailServiceClient> logger)
     {
         _logger = logger;
-        var emailClientOptions = new EmailClientOptions();
+        _httpClientFactory = httpClientFactory;
         _emailServiceAdminSettings = emailServiceAdminSettings;
+
+        var emailClientOptions = new EmailClientOptions();
         emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString, emailClientOptions);
     }
@@ -82,6 +89,42 @@ public class EmailServiceClient : IEmailServiceClient
             }
 
             return emailSendFailResponse;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
+    {
+        EmailMessage emailMessage = BuildEmailMessage(email);
+
+        long totalAttachmentSizeBytes = await DownloadAttachmentsAsync(email, emailMessage, cancellationToken);
+
+        try
+        {
+            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cancellationToken);
+
+            return new ComposedEmailSendResult
+            {
+                OperationId = emailSendOperation.Id,
+                TotalAttachmentSizeBytes = totalAttachmentSizeBytes
+            };
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError(e, "// EmailServiceClient // SendComposedEmail // Failed to send composed email, NotificationId {NotificationId}", email.NotificationId);
+
+            EmailClientErrorResponse errorResponse = new()
+            {
+                SendResult = GetEmailSendResult(e),
+                TotalAttachmentSizeBytes = totalAttachmentSizeBytes > 0 ? totalAttachmentSizeBytes : null
+            };
+
+            if (errorResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
+            {
+                errorResponse.IntermittentErrorDelay = GetDelayFromString(e.Message);
+            }
+
+            return errorResponse;
         }
     }
 
@@ -131,40 +174,6 @@ public class EmailServiceClient : IEmailServiceClient
     }
 
     /// <summary>
-    /// Determines the appropriate email send result based on the request failed exception from Azure Communication Services.
-    /// </summary>
-    /// <param name="e">The request failed exception thrown by Azure Communication Services.</param>
-    /// <returns>The email send result indicating the type of failure.</returns>
-    internal static Core.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
-    {
-        Core.Status.EmailSendResult emailSendResult;
-
-        if (e.ErrorCode == ErrorTypes.ExcessiveCallVolumeErrorCode)
-        {
-            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
-        }
-        else if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
-        {
-            emailSendResult = Core.Status.EmailSendResult.Failed_SupressedRecipient;
-        }
-        else if (e.Message.Contains(ErrorTypes.InvalidEmailFormatErrorMessage))
-        {
-            emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
-        }
-        else if ((e.Status >= 500 && e.Status < 600) || e.Status == 0)
-        {
-            // Handle all 5xx errors and status 0 (network/no response) as transient errors
-            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
-        }
-        else
-        {
-            emailSendResult = Core.Status.EmailSendResult.Failed;
-        }
-
-        return emailSendResult;
-    }
-
-    /// <summary>
     /// Gets the configured delay in seconds for handling unknown/intermittent errors from Azure Communication Services.
     /// This is used as a fallback when Azure Communication Services returns 5xx errors or other errors
     /// where a retry-after value cannot be parsed from the error message.
@@ -191,5 +200,183 @@ public class EmailServiceClient : IEmailServiceClient
                 .Value;
 
         return string.IsNullOrEmpty(secondsString) ? GetUnknownErrorDelay() : int.Parse(secondsString);
+    }
+
+    /// <summary>
+    /// Determines the appropriate email send result based on the request failed exception from Azure Communication Services.
+    /// </summary>
+    /// <param name="e">The request failed exception thrown by Azure Communication Services.</param>
+    /// <returns>The email send result indicating the type of failure.</returns>
+    internal static Core.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
+    {
+        Core.Status.EmailSendResult emailSendResult;
+
+        if (e.ErrorCode == ErrorTypes.ExcessiveCallVolumeErrorCode)
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
+        }
+        else if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_SupressedRecipient;
+        }
+        else if (e.Message.Contains(ErrorTypes.InvalidEmailFormatErrorMessage))
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
+        }
+        else if (e.Status == ErrorTypes.PayloadTooLargeStatusCode)
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed_PayloadTooLarge;
+        }
+        else if ((e.Status >= 500 && e.Status < 600) || e.Status == 0)
+        {
+            // Handle all 5xx errors and status 0 (network/no response) as transient errors
+            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
+        }
+        else
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed;
+        }
+
+        return emailSendResult;
+    }
+
+    /// <summary>
+    /// Builds an <see cref="EmailMessage"/> from the given <see cref="ComposedEmail"/>, populating subject, body, and recipients.
+    /// </summary>
+    /// <param name="email">The composed email to build the message from.</param>
+    /// <returns>A fully constructed <see cref="EmailMessage"/> ready for attachment and sending.</returns>
+    private static EmailMessage BuildEmailMessage(ComposedEmail email)
+    {
+        EmailContent emailContent = new(email.Subject);
+
+        switch (email.ContentType)
+        {
+            case EmailContentType.Plain:
+                emailContent.PlainText = email.Body;
+                break;
+            case EmailContentType.Html:
+                emailContent.Html = email.Body;
+                break;
+        }
+
+        return new EmailMessage(email.FromAddress, email.ToAddress, emailContent);
+    }
+
+    /// <summary>
+    /// Downloads all attachments from their SAS URLs concurrently and adds them to the <see cref="EmailMessage"/>.
+    /// </summary>
+    /// <param name="email">The composed email containing the attachments to download.</param>
+    /// <param name="emailMessage">The message to attach the downloaded files to.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <returns>The total raw attachment size in bytes of all downloaded attachments, or <c>0</c> if there are none.</returns>
+    /// <exception cref="InvalidSasUrlException">Thrown when a SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
+    /// <exception cref="AttachmentDownloadException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
+    private async Task<long> DownloadAttachmentsAsync(ComposedEmail email, EmailMessage emailMessage, CancellationToken cancellationToken)
+    {
+        if (email.Attachments.Count == 0)
+        {
+            return 0;
+        }
+
+        Exception? downloadException = null;
+
+        using var httpClient = _httpClientFactory.CreateClient(nameof(EmailServiceClient));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var semaphore = new SemaphoreSlim(_emailServiceAdminSettings.BlobDownloadConcurrency);
+
+        var downloadTasks = email.Attachments
+            .Select(async attachment =>
+            {
+                try
+                {
+                    return await DownloadAttachmentAsync(email.NotificationId, httpClient, semaphore, attachment, linkedCts.Token);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Interlocked.CompareExchange(ref downloadException, ex, null);
+
+                    await linkedCts.CancelAsync();
+
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    await linkedCts.CancelAsync();
+
+                    throw;
+                }
+            });
+
+        (SasFileAttachmentReference Metadata, byte[] Data)[] downloaded;
+
+        try
+        {
+            downloaded = await Task.WhenAll(downloadTasks);
+        }
+        catch (OperationCanceledException) when (linkedCts.IsCancellationRequested)
+        {
+            if (downloadException != null)
+            {
+                ExceptionDispatchInfo.Capture(downloadException).Throw();
+            }
+
+            throw;
+        }
+
+        long totalAttachmentSizeBytes = 0;
+
+        foreach (var (metadata, data) in downloaded)
+        {
+            totalAttachmentSizeBytes += data.LongLength;
+            emailMessage.Attachments.Add(new EmailAttachment(metadata.Filename, metadata.MimeType, BinaryData.FromBytes(data)));
+        }
+
+        return totalAttachmentSizeBytes;
+    }
+
+    /// <summary>
+    /// Downloads a single attachment from a SAS URL with concurrency throttling.
+    /// </summary>
+    /// <param name="notificationId">The unique identifier of the notification the attachment belongs to.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> used to perform the download request.</param>
+    /// <param name="semaphore">A <see cref="SemaphoreSlim"/> used to limit the number of concurrent downloads per email.</param>
+    /// <param name="attachment">The <see cref="SasFileAttachmentReference"/> containing the SAS URL and file metadata.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <returns>The original <see cref="SasFileAttachmentReference"/> paired with its downloaded byte data.</returns>
+    /// <exception cref="AttachmentDownloadException">Thrown when a network error or transient HTTP response (5xx, 429, 408) occurs during the download.</exception>
+    /// <exception cref="InvalidSasUrlException">Thrown when the SAS URL returns a permanent HTTP 4xx response (excluding 429 and 408).</exception>
+    private static async Task<(SasFileAttachmentReference Metadata, byte[] Data)> DownloadAttachmentAsync(Guid notificationId, HttpClient httpClient, SemaphoreSlim semaphore, SasFileAttachmentReference attachment, CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            try
+            {
+                using HttpResponseMessage response = await httpClient.GetAsync(attachment.SasUrl, cancellationToken);
+
+                response.EnsureSuccessStatusCode();
+
+                byte[] data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+
+                return (attachment, data);
+            }
+            catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500 || ex.StatusCode == HttpStatusCode.TooManyRequests || ex.StatusCode == HttpStatusCode.RequestTimeout)
+            {
+                throw new AttachmentDownloadException(attachment.Filename, notificationId, (int)ex.StatusCode.Value, ex);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode.HasValue)
+            {
+                throw new InvalidSasUrlException(attachment.Filename, (int)ex.StatusCode.Value);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new AttachmentDownloadException(attachment.Filename, notificationId, ex);
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 }

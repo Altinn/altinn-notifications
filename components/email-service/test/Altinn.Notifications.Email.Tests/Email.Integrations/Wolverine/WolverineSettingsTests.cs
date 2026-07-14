@@ -23,6 +23,10 @@ public class WolverineSettingsTests
         Assert.Equal(10, settings.EmailStatusCheckListenerCount);
         Assert.NotNull(settings.EmailStatusCheckQueuePolicy);
 
+        Assert.Equal(string.Empty, settings.ComposedEmailSendQueueName);
+        Assert.Equal(5, settings.ComposedEmailSendListenerCount);
+        Assert.NotNull(settings.ComposedEmailSendQueuePolicy);
+
         Assert.Equal(string.Empty, settings.EmailSendResultQueueName);
         Assert.Equal(string.Empty, settings.EmailServiceRateLimitQueueName);
     }
@@ -43,6 +47,10 @@ public class WolverineSettingsTests
                 ["WolverineSettings:EmailStatusCheckListenerCount"] = "3",
                 ["WolverineSettings:EmailStatusCheckQueuePolicy:CooldownDelaysMs:0"] = "500",
                 ["WolverineSettings:EmailStatusCheckQueuePolicy:ScheduleDelaysMs:0"] = "30000",
+                ["WolverineSettings:ComposedEmailSendQueueName"] = "altinn.notifications.composedemail.send",
+                ["WolverineSettings:ComposedEmailSendListenerCount"] = "7",
+                ["WolverineSettings:ComposedEmailSendQueuePolicy:CooldownDelaysMs:0"] = "2000",
+                ["WolverineSettings:ComposedEmailSendQueuePolicy:ScheduleDelaysMs:0"] = "45000",
                 ["WolverineSettings:EmailSendResultQueueName"] = "altinn.notifications.email.send.result",
                 ["WolverineSettings:EmailServiceRateLimitQueueName"] = "altinn.notifications.email.send.ratelimit",
             })
@@ -63,6 +71,11 @@ public class WolverineSettingsTests
         Assert.Equal(3, settings.EmailStatusCheckListenerCount);
         Assert.Contains(TimeSpan.FromMilliseconds(500), settings.EmailStatusCheckQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(30000), settings.EmailStatusCheckQueuePolicy.GetScheduleDelays());
+
+        Assert.Equal("altinn.notifications.composedemail.send", settings.ComposedEmailSendQueueName);
+        Assert.Equal(7, settings.ComposedEmailSendListenerCount);
+        Assert.Contains(TimeSpan.FromMilliseconds(2000), settings.ComposedEmailSendQueuePolicy.GetCooldownDelays());
+        Assert.Contains(TimeSpan.FromMilliseconds(45000), settings.ComposedEmailSendQueuePolicy.GetScheduleDelays());
 
         Assert.Equal("altinn.notifications.email.send.result", settings.EmailSendResultQueueName);
         Assert.Equal("altinn.notifications.email.send.ratelimit", settings.EmailServiceRateLimitQueueName);

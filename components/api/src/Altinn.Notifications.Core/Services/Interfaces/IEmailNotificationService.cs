@@ -27,7 +27,15 @@ public interface IEmailNotificationService : INotificationService
     Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Updates the send status of an email notification based on the provided send operation result.
+    /// Claims and publishes a batch of pending composed email notifications to the email service queue.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
+    Task SendComposedNotifications(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates the send status of a notification.
     /// </summary>
     Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 }

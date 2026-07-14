@@ -65,16 +65,21 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return;
         }
 
-        await DrainDeadLetterQueuesAsync(
-            Fixture.ServiceBusConnectionString,
+        string[] allQueues =
+        [
             WolverineSettings.SendSmsQueueName,
             WolverineSettings.EmailSendQueueName,
-            WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.PastDueOrdersQueueName,
             WolverineSettings.SmsSendResultQueueName,
+            WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.ComposedEmailSendQueueName,
             WolverineSettings.SmsDeliveryReportQueueName,
             WolverineSettings.EmailDeliveryReportQueueName,
-            WolverineSettings.EmailServiceRateLimitQueueName,
-            WolverineSettings.PastDueOrdersQueueName);
+            WolverineSettings.EmailServiceRateLimitQueueName
+        ];
+
+        await DrainMainQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
+        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
     }
 
     /// <inheritdoc/>

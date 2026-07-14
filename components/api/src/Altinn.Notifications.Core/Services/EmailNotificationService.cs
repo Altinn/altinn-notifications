@@ -23,13 +23,16 @@ public class EmailNotificationService(
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
     IOptions<NotificationConfig> notificationConfig,
-    IEmailNotificationRepository emailNotificationRepository) : IEmailNotificationService
+    IEmailNotificationRepository emailNotificationRepository,
+    IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
 {
     private readonly IGuidService _guidService = guidService;
-    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
+    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
+    private readonly int _composedEmailPublishBatchSize = notificationConfig.Value.ComposedEmailPublishBatchSize;
+    private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
@@ -76,42 +79,68 @@ public class EmailNotificationService(
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> newEmailNotifications;
+        List<Email> claimedNotifications;
 
         do
         {
-            newEmailNotifications = [];
+            IReadOnlyList<Email> unpublishedNotifications = [];
 
             try
             {
-                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications.Count == 0)
+                unpublishedNotifications =
+                    claimedNotifications =
+                    await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                if (claimedNotifications.Count == 0)
                 {
                     break;
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                foreach (var email in unpublishedEmails)
-                {
-                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
+                unpublishedNotifications = await _emailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
 
-                throw;
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
 
                 throw;
             }
         }
-        while (newEmailNotifications.Count > 0);
+        while (claimedNotifications.Count > 0);
+    }
+
+    /// <inheritdoc/>
+    public async Task SendComposedNotifications(CancellationToken cancellationToken)
+    {
+        List<ComposedEmail> claimedNotifications;
+        IReadOnlyList<ComposedEmail> unpublishedNotifications = [];
+
+        do
+        {
+            try
+            {
+                unpublishedNotifications = 
+                    claimedNotifications =
+                    await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
+                if (claimedNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                unpublishedNotifications = await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
+
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
+            }
+            catch (Exception)
+            {
+                await ResetSendStatusToNewAsync(unpublishedNotifications);
+
+                throw;
+            }
+        }
+        while (claimedNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
@@ -127,7 +156,8 @@ public class EmailNotificationService(
             sendOperationResult.NotificationId,
             (EmailNotificationResultType)sendOperationResult.SendResult!,
             sendOperationResult.OperationId,
-            sendOperationResult.DeliveryReport);
+            sendOperationResult.DeliveryReport,
+            sendOperationResult.TotalAttachmentSizeBytes);
     }
 
     /// <summary>
