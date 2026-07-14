@@ -3,11 +3,14 @@ using Altinn.Notifications.Shared.Commands;
 
 using Microsoft.Extensions.Logging;
 
+using Wolverine.Attributes;
+
 namespace Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 
 /// <summary>
 /// Wolverine handler for <see cref="SendComposedEmailCommand"/> messages received from Azure Service Bus.
 /// </summary>
+[WolverineHandler]
 public static class SendComposedEmailCommandHandler
 {
     /// <summary>
@@ -18,7 +21,7 @@ public static class SendComposedEmailCommandHandler
     /// <param name="sendingService">The service responsible for downloading attachments and sending the email.</param>
     /// <param name="logger">The logger used to record processing events.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    public static async Task HandleAsync(SendComposedEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
+    public static async Task Handle(SendComposedEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {

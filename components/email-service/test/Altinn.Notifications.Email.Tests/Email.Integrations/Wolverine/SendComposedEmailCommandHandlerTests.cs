@@ -27,7 +27,7 @@ public class SendComposedEmailCommandHandlerTests
     };
 
     [Fact]
-    public async Task HandleAsync_ValidCommand_MapsAllFieldsToComposedEmail()
+    public async Task Handle_ValidCommand_MapsAllFieldsToComposedEmail()
     {
         // Arrange
         ComposedEmail? capturedEmail = null;
@@ -38,7 +38,7 @@ public class SendComposedEmailCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, Mock.Of<ILogger>(), TestContext.Current.CancellationToken);
+        await SendComposedEmailCommandHandler.Handle(_validCommand, sendingServiceMock.Object, Mock.Of<ILogger>(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedEmail);
@@ -55,7 +55,7 @@ public class SendComposedEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnknownContentType_LogsErrorAndDefaultsToPlain()
+    public async Task Handle_UnknownContentType_LogsErrorAndDefaultsToPlain()
     {
         // Arrange
         var command = _validCommand with { ContentType = "UnknownFormat" };
@@ -71,7 +71,7 @@ public class SendComposedEmailCommandHandlerTests
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         // Act
-        await SendComposedEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken);
+        await SendComposedEmailCommandHandler.Handle(command, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(
@@ -88,7 +88,7 @@ public class SendComposedEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_GeneralException_LogsWarningAndRethrows()
+    public async Task Handle_GeneralException_LogsWarningAndRethrows()
     {
         // Arrange
         var exception = new InvalidOperationException("ACS error");
@@ -103,7 +103,7 @@ public class SendComposedEmailCommandHandlerTests
 
         // Act & Assert
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
+            () => SendComposedEmailCommandHandler.Handle(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         Assert.Same(exception, thrown);
 
@@ -118,7 +118,7 @@ public class SendComposedEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_OperationCanceledException_LogsWarningAndRethrows()
+    public async Task Handle_OperationCanceledException_LogsWarningAndRethrows()
     {
         // Arrange
         var exception = new OperationCanceledException();
@@ -133,7 +133,7 @@ public class SendComposedEmailCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => SendComposedEmailCommandHandler.HandleAsync(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
+            () => SendComposedEmailCommandHandler.Handle(_validCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         loggerMock.Verify(
             l => l.Log(
