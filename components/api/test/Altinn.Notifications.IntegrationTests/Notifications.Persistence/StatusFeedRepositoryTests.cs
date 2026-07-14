@@ -13,6 +13,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
+[Collection(GlobalStateSerialCollection.Name)]
 public sealed class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;

@@ -76,5 +76,15 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Time to live (TTL) for email notification has expired 
     /// </summary>
-    Failed_TTL
+    Failed_TTL,
+
+    /// <summary>
+    /// Failed because one or more SAS URLs were invalid, expired, or inaccessible at send time.
+    /// </summary>
+    Failed_InvalidSasUrl,
+
+    /// <summary>
+    /// Failed because the total attachment size exceeded the email service limit.
+    /// </summary>
+    Failed_PayloadTooLarge
 }

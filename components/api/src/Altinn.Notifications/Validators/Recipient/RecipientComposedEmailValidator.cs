@@ -52,7 +52,7 @@ internal sealed class RecipientComposedEmailValidator : AbstractValidator<Recipi
                                 {
                                     rules.RuleFor(a => a.Filename)
                                         .Must(SasFileReferenceRules.IsValidFilename)
-                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
+                                        .WithMessage((a, _) => $"Attachment '{a.Filename}': filename must not contain path separators, and must include a file extension.");
                                 });
 
                             rules.RuleFor(a => a.SasUrl)

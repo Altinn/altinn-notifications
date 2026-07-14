@@ -16,4 +16,9 @@ public class EmailClientErrorResponse
     /// The delay in seconds before Azure Communication Services can receive new emails
     /// </summary>
     public int? IntermittentErrorDelay { get; set; }
+
+    /// <summary>
+    /// Total raw attachment size in bytes accumulated before the send attempt; null when no attachments were processed.
+    /// </summary>
+    public long? TotalAttachmentSizeBytes { get; set; }
 }

@@ -74,15 +74,17 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.Email_Sending => ProcessingLifecycleExt.Email_Sending,
             ProcessingLifecycle.Email_Succeeded => ProcessingLifecycleExt.Email_Succeeded,
             ProcessingLifecycle.Email_Delivered => ProcessingLifecycleExt.Email_Delivered,
+            ProcessingLifecycle.Email_Failed_TTL => ProcessingLifecycleExt.Email_Failed_TTL,
             ProcessingLifecycle.Email_Failed_Bounced => ProcessingLifecycleExt.Email_Failed_Bounced,
             ProcessingLifecycle.Email_Failed_Quarantined => ProcessingLifecycleExt.Email_Failed_Quarantined,
             ProcessingLifecycle.Email_Failed_FilteredSpam => ProcessingLifecycleExt.Email_Failed_FilteredSpam,
             ProcessingLifecycle.Email_Failed_InvalidFormat => ProcessingLifecycleExt.Email_Failed_InvalidFormat,
+            ProcessingLifecycle.Email_Failed_InvalidSasUrl => ProcessingLifecycleExt.Email_Failed_InvalidSasUrl,
             ProcessingLifecycle.Email_Failed_TransientError => ProcessingLifecycleExt.Email_Failed_TransientError,
+            ProcessingLifecycle.Email_Failed_PayloadTooLarge => ProcessingLifecycleExt.Email_Failed_PayloadTooLarge,
             ProcessingLifecycle.Email_Failed_RecipientReserved => ProcessingLifecycleExt.Email_Failed_RecipientReserved,
             ProcessingLifecycle.Email_Failed_SuppressedRecipient => ProcessingLifecycleExt.Email_Failed_SuppressedRecipient,
             ProcessingLifecycle.Email_Failed_RecipientNotIdentified => ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified,
-            ProcessingLifecycle.Email_Failed_TTL => ProcessingLifecycleExt.Email_Failed_TTL,
 
             // In case a new status is added to the enum but not to this mapping:
             _ => throw new ArgumentOutOfRangeException(nameof(status), $"Unsupported status: {status}")

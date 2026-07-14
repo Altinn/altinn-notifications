@@ -260,7 +260,7 @@ public abstract class NotificationRepositoryBase
     /// If notificationId is provided (non-null and non-empty), it takes precedence for error messages.
     /// Otherwise, the secondaryIdentifier is used.
     /// </remarks>
-    /// <param name="sqlCommand">The SQL command text to execute (e.g., "select * from notifications.updateemailnotification($1, $2, $3)").</param>
+    /// <param name="sqlCommand">The SQL command text to execute.</param>
     /// <param name="parameters">Action to configure the command parameters before execution.</param>
     /// <param name="channel">The notification channel (Email or SMS).</param>
     /// <param name="notificationId">The notification ID (takes precedence for error reporting if provided).</param>

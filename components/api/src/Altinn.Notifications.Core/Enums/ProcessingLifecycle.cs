@@ -287,5 +287,15 @@ public enum ProcessingLifecycle
     /// <summary>
     /// The email notification failed to reach the delivered state during the time-to-live (TTL) timeframe.
     /// </summary>
-    Email_Failed_TTL
+    Email_Failed_TTL,
+
+    /// <summary>
+    /// The email notification was not sent because one or more attachment SAS URLs were invalid, expired, or inaccessible.
+    /// </summary>
+    Email_Failed_InvalidSasUrl,
+
+    /// <summary>
+    /// The email notification was not sent because the total size of the attachments exceeded the allowed limit.
+    /// </summary>
+    Email_Failed_PayloadTooLarge
 }

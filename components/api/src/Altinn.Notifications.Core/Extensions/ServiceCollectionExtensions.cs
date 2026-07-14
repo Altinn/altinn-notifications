@@ -29,7 +29,8 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SmsPublishBackgroundService>()
-            .AddHostedService<EmailPublishBackgroundService>();
+            .AddHostedService<EmailPublishBackgroundService>()
+            .AddHostedService<ComposedEmailPublishBackgroundService>();
 
         services
             .AddSingleton<IGuidService, GuidService>()
@@ -49,6 +50,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
+            .AddSingleton<IComposedEmailPublishSignal, ComposedEmailPublishSignal>()
             .AddSingleton<IInstantOrderRequestService, InstantOrderRequestService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()

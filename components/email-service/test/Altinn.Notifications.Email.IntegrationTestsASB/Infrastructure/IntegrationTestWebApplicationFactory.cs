@@ -42,11 +42,16 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return;
         }
 
-        await DrainDeadLetterQueuesAsync(
-            Fixture.ServiceBusConnectionString,
+        string[] allQueues =
+        [
             WolverineSettings.EmailSendQueueName,
             WolverineSettings.EmailSendResultQueueName,
             WolverineSettings.EmailStatusCheckQueueName,
-            WolverineSettings.EmailServiceRateLimitQueueName);
+            WolverineSettings.ComposedEmailSendQueueName,
+            WolverineSettings.EmailServiceRateLimitQueueName
+        ];
+
+        await DrainMainQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
+        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
     }
 }

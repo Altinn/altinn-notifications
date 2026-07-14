@@ -46,10 +46,8 @@ public class EmailSendResultPublisher : WolverinePublisher, IEmailSendResultDisp
         var command = new EmailSendResultCommand
         {
             NotificationId = result.NotificationId.Value,
-            
-            // SendResult.ToString() is the wire format; EmailNotificationResultType on the API side
-            // must have matching member names — any divergence will be treated as an unrecognized result.
             SendResult = result.SendResult.Value.ToString(),
+            TotalAttachmentSizeBytes = result.TotalAttachmentSizeBytes,
             OperationId = string.IsNullOrWhiteSpace(result.OperationId) ? null : result.OperationId
         };
 

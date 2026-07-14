@@ -61,6 +61,7 @@ public static class WolverineServiceCollectionExtensions
             AddSendSmsPublisher(services, wolverineSettings, opts);
             AddSendEmailPublisher(services, wolverineSettings, opts);
             AddPastDueOrderPublisher(services, wolverineSettings, opts);
+            AddSendComposedEmailPublisher(services, wolverineSettings, opts);
         });
     }
 
@@ -259,6 +260,31 @@ public static class WolverineServiceCollectionExtensions
                         .ListenerCount(wolverineSettings.PastDueOrdersListenerCount);
 
         wolverineOptions.Policies.Add(new ProcessPastDueOrderHandlerPolicy(wolverineSettings));
+    }
+
+    /// <summary>
+    /// Configures Wolverine to publish <see cref="SendComposedEmailCommand"/> messages
+    /// to the dedicated Azure Service Bus composed email queue and registers
+    /// <see cref="ComposedEmailCommandPublisher"/> as the <see cref="IComposedEmailCommandPublisher"/> implementation.
+    /// </summary>
+    private static void AddSendComposedEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        if (wolverineSettings.ComposedEmailPublishConcurrency <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.ComposedEmailPublishConcurrency)} must be greater than 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(wolverineSettings.ComposedEmailSendQueueName))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(WolverineSettings.ComposedEmailSendQueueName)} must be configured.");
+        }
+
+        wolverineOptions.PublishMessage<SendComposedEmailCommand>()
+                        .ToAzureServiceBusQueue(wolverineSettings.ComposedEmailSendQueueName);
+
+        services.AddSingleton<IComposedEmailCommandPublisher, ComposedEmailCommandPublisher>();
     }
 
     /// <summary>

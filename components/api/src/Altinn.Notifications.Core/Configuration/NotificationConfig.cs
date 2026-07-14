@@ -41,6 +41,13 @@ public class NotificationConfig
     public int EmailPublishBatchSize { get; set; } = 500;
 
     /// <summary>
+    /// The maximum number of composed email notifications claimed and published in one batch.
+    /// Defaults to 50 (vs 500 for standard emails) because each composed email triggers
+    /// concurrent blob downloads at send time, making the per-message cost significantly higher.
+    /// </summary>
+    public int ComposedEmailPublishBatchSize { get; set; } = 50;
+
+    /// <summary>
     /// The number of expired notifications to terminate per batch.
     /// </summary>
     public int TerminationBatchSize { get; set; } = 100;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
@@ -167,7 +166,7 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage("Attachment '../../etc/passwd': filename must not contain path separators or traversal sequences, and must include a file extension.");
+            .WithErrorMessage("Attachment '../../etc/passwd': filename must not contain path separators, and must include a file extension.");
     }
 
     [Fact]
@@ -208,12 +207,12 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl must not be null.");
     }
 
-    public static IEnumerable<object[]> NonHttpsUris =>
+    public static TheoryData<Uri> NonHttpsUris =>
     [
-        [new Uri("relative/path/file.pdf", UriKind.Relative)],
-        [new Uri("ftp://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")],
-        [new Uri("http://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")],
-        [new Uri("http://localhost:10000/devstoreaccount1/attachments/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")]
+        new Uri("relative/path/file.pdf", UriKind.Relative),
+        new Uri("ftp://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x"),
+        new Uri("http://account.blob.core.windows.net/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x"),
+        new Uri("http://localhost:10000/devstoreaccount1/attachments/file.pdf?se=2099-01-01T00%3A00%3A00Z&sig=x")
     ];
 
     [Theory]
@@ -236,11 +235,11 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl must be an absolute HTTPS URI.");
     }
 
-    public static IEnumerable<object[]> NonAzureBlobHostUris =>
+    public static TheoryData<Uri> NonAzureBlobHostUris =>
     [
-        [new Uri("https://evil.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")],
-        [new Uri("https://attacker.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")],
-        [new Uri("https://notazure.blob.example.com/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")]
+        new Uri("https://evil.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"),
+        new Uri("https://attacker.example.com/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake"),
+        new Uri("https://notazure.blob.example.com/container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fake")
     ];
 
     [Theory]
@@ -263,9 +262,9 @@ public class RecipientComposedEmailValidatorTests
             .WithErrorMessage("Attachment 'contract.pdf': sasUrl host must be within Azure Blob Storage (*.blob.core.windows.net).");
     }
 
-    public static IEnumerable<object[]> ValidSasUris =>
+    public static TheoryData<Uri> ValidSasUris =>
     [
-        [new Uri("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
+        new Uri("https://account.blob.core.windows.net/container/file.pdf?se=2020-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")
     ];
 
     [Theory]
@@ -320,7 +319,7 @@ public class RecipientComposedEmailValidatorTests
     [InlineData("folder/../contract.pdf")]
     [InlineData("subfolder/contract.pdf")]
     [InlineData("subfolder\\contract.pdf")]
-    public void Validate_AttachmentFilenameWithPathSeparatorOrTraversal_HasError(string filename)
+    public void Validate_AttachmentFilenameContainingPathSeparator_HasError(string filename)
     {
         // Arrange
         var recipient = RecipientWithFileReference(new SasFileReferenceExt
@@ -335,7 +334,7 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrors()
-            .WithErrorMessage($"Attachment '{filename}': filename must not contain path separators or traversal sequences, and must include a file extension.");
+            .WithErrorMessage($"Attachment '{filename}': filename must not contain path separators, and must include a file extension.");
     }
 
     [Theory]

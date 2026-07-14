@@ -25,6 +25,22 @@ public class WolverineSettings : WolverineSettingsBase
     public int EmailSendListenerCount { get; set; } = 10;
 
     /// <summary>
+    /// ASB queue name for receiving composed email send commands.
+    /// Produced by the API and consumed by this email service on a dedicated listener.
+    /// </summary>
+    public string ComposedEmailSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the composed email send queue.
+    /// </summary>
+    public QueueRetryPolicy ComposedEmailSendQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the composed email send queue per pod.
+    /// </summary>
+    public int ComposedEmailSendListenerCount { get; set; } = 5;
+
+    /// <summary>
     /// ASB queue name for email status check operations (polling loop).
     /// </summary>
     public string EmailStatusCheckQueueName { get; set; } = string.Empty;

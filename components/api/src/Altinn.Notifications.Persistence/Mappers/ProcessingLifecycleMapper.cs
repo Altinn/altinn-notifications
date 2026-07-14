@@ -17,6 +17,7 @@ public static class ProcessingLifecycleMapper
         { "sending", ProcessingLifecycle.SMS_Sending },
         { "accepted", ProcessingLifecycle.SMS_Accepted },
         { "delivered", ProcessingLifecycle.SMS_Delivered },
+        { "failed_ttl", ProcessingLifecycle.SMS_Failed_TTL },
         { "failed_deleted", ProcessingLifecycle.SMS_Failed_Deleted },
         { "failed_expired", ProcessingLifecycle.SMS_Failed_Expired },
         { "failed_rejected", ProcessingLifecycle.SMS_Failed_Rejected },
@@ -25,8 +26,7 @@ public static class ProcessingLifecycleMapper
         { "failed_invalidreceiver", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
         { "failed_invalidrecipient", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
         { "failed_recipientreserved", ProcessingLifecycle.SMS_Failed_RecipientReserved },
-        { "failed_recipientnotidentified", ProcessingLifecycle.SMS_Failed_RecipientNotIdentified },
-        { "failed_ttl", ProcessingLifecycle.SMS_Failed_TTL }
+        { "failed_recipientnotidentified", ProcessingLifecycle.SMS_Failed_RecipientNotIdentified }
     };
 
     /// <summary>
@@ -39,15 +39,17 @@ public static class ProcessingLifecycleMapper
         { "sending", ProcessingLifecycle.Email_Sending },
         { "succeeded", ProcessingLifecycle.Email_Succeeded },
         { "delivered", ProcessingLifecycle.Email_Delivered },
+        { "failed_ttl", ProcessingLifecycle.Email_Failed_TTL },
         { "failed_bounced", ProcessingLifecycle.Email_Failed_Bounced },
         { "failed_quarantined", ProcessingLifecycle.Email_Failed_Quarantined },
         { "failed_filteredspam", ProcessingLifecycle.Email_Failed_FilteredSpam },
+        { "failed_invalidsasurl", ProcessingLifecycle.Email_Failed_InvalidSasUrl },
         { "failed_transienterror", ProcessingLifecycle.Email_Failed_TransientError },
+        { "failed_payloadtoolarge", ProcessingLifecycle.Email_Failed_PayloadTooLarge },
         { "failed_invalidemailformat", ProcessingLifecycle.Email_Failed_InvalidFormat },
         { "failed_recipientreserved", ProcessingLifecycle.Email_Failed_RecipientReserved },
         { "failed_supressedrecipient", ProcessingLifecycle.Email_Failed_SuppressedRecipient },
-        { "failed_recipientnotidentified", ProcessingLifecycle.Email_Failed_RecipientNotIdentified },
-        { "failed_ttl", ProcessingLifecycle.Email_Failed_TTL }
+        { "failed_recipientnotidentified", ProcessingLifecycle.Email_Failed_RecipientNotIdentified }
     };
 
     /// <summary>

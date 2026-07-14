@@ -20,6 +20,17 @@ public class WolverineSettings : WolverineSettingsBase
     public string EmailSendQueueName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Maximum number of composed email send commands published concurrently during a batch publish operation.
+    /// </summary>
+    public int ComposedEmailPublishConcurrency { get; set; } = 5;
+
+    /// <summary>
+    /// ASB queue name for publishing composed email send commands.
+    /// Produced by this API and consumed by the email service on a dedicated listener.
+    /// </summary>
+    public string ComposedEmailSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Maximum number of SMS send commands published concurrently during a batch publish operation.
     /// </summary>
     public int SmsPublishConcurrency { get; set; } = 10;
