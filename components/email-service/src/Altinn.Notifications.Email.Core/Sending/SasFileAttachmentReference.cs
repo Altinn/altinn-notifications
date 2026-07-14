@@ -20,4 +20,11 @@ public sealed record SasFileAttachmentReference
     /// Gets or sets the SAS URL granting temporary read access to the blob.
     /// </summary>
     public string SasUrl { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Returns a safe string representation that excludes <see cref="SasUrl"/> to prevent
+    /// accidental exposure of live SAS tokens in logs, exception messages, or debugger output.
+    /// </summary>
+    public override string ToString() =>
+        $"SasFileReference {{ Filename = {Filename}, MimeType = {MimeType}, SasUrl = [redacted] }}";
 }
