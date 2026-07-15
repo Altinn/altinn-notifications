@@ -33,7 +33,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
     private const string _deleteOldStatusFeedRecordsSql =
         "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
     
-    private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
+    private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed_v2(o._id, o.creatorname, @orderstatus)
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
 
@@ -94,12 +94,15 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
     /// <param name="orderStatus">The order status object to be serialized as JSONB</param>
     /// <param name="connection">The database connection to use</param>
     /// <param name="transaction">The database transaction to use</param>
-    /// <returns>A task representing the asynchronous operation</returns>
+    /// <returns>
+    /// <see langword="true"/> if a new status feed entry was inserted; <see langword="false"/> if the insert
+    /// was skipped because this order already had a status feed entry (idempotent no-op).
+    /// </returns>
     /// <remarks>
     /// This is a shared helper method that can be called from both NotificationRepositoryBase
     /// and OrderRepository to insert status feed entries consistently.
     /// </remarks>
-    public static async Task InsertStatusFeedEntry(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    public static async Task<bool> InsertStatusFeedEntry(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         ArgumentNullException.ThrowIfNull(orderStatus);
         ArgumentNullException.ThrowIfNull(connection);
@@ -116,5 +119,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<Notifica
         {
             throw new InvalidOperationException($"Failed to insert status feed entry. No order found with alternateid {orderStatus.ShipmentId}.");
         }
+
+        return await reader.GetFieldValueAsync<bool>(0);
     }
 }

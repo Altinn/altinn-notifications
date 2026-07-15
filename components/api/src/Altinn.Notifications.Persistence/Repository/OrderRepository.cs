@@ -14,6 +14,8 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
 
+using Microsoft.Extensions.Logging;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -22,14 +24,20 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implementation of order repository logic
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="OrderRepository"/> class.
+/// </remarks>
+/// <param name="dataSource">The npgsql data source.</param>
+/// <param name="logger">The logger associated with this implementation of the IOrderRepository</param>
 [ExcludeFromCodeCoverage]
-public class OrderRepository : IOrderRepository
+public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger) : IOrderRepository
 {
     private const string _shipmentIdColumnName = "shipment_id";
     private const string _ordersChainIdColumnName = "orders_chain_id";
     private const string _senderReferenceColumnName = "senders_reference";
 
-    private readonly NpgsqlDataSource _dataSource;
+    private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly ILogger<OrderRepository> _logger = logger;
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
@@ -49,15 +57,6 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime, _total_attachment_size_bytes)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OrderRepository"/> class.
-    /// </summary>
-    /// <param name="dataSource">The npgsql data source.</param>
-    public OrderRepository(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
 
     /// <inheritdoc/>
     public async Task<NotificationOrder?> GetOrderById(Guid id, string creator)
@@ -970,7 +969,7 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private static async Task InsertStatusFeedForOrderAsync(
+    private async Task InsertStatusFeedForOrderAsync(
         NotificationOrder order,
         OrderProcessingStatus status,
         IReadOnlyList<EmailNotification> emailNotifications,
@@ -1010,6 +1009,10 @@ public class OrderRepository : IOrderRepository
             Recipients = recipients.ToImmutableArray()
         };
 
-        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        bool inserted = await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        if (!inserted)
+        {
+            _logger.LogError("Status feed entry for order {OrderId} already existed; this order was processed more than once.", order.Id);
+        }
     }
 }
