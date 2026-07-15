@@ -164,6 +164,12 @@ public abstract class NotificationRepositoryBase
             {
                 _logger.LogError("Status feed entry for completed order {AlternateId} already existed; this order was processed more than once.", alternateId);
             }
+
+            var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderStatus.ShipmentId, connection, transaction);
+            foreach (var skippedNotificationId in skippedNotificationIds)
+            {
+                _logger.LogError("Notification log entry for notification {NotificationId} (shipment {AlternateId}) already existed; this notification was processed more than once.", skippedNotificationId, alternateId);
+            }
         }
         else
         {
