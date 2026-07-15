@@ -170,7 +170,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     public async Task InsertNotificationLogEntry_CalledTwiceForSameShipment_SecondCallReturnsSkippedIdAndInsertsNoDuplicateRow()
     {
         // Arrange
-        (NotificationOrder order, EmailNotification _) =
+        (NotificationOrder order, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true);
 
         _orderIdsToCleanup.Add(order.Id);
@@ -184,10 +184,10 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         IReadOnlyList<Guid> secondCallSkippedIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
-        // Assert — first call logged the notification, second call reported it as already logged
+        // Assert — first call logged the notification, second call reported the same notification as already logged
         Assert.Empty(firstCallSkippedIds);
         Guid skippedId = Assert.Single(secondCallSkippedIds);
-        Assert.NotEqual(Guid.Empty, skippedId);
+        Assert.Equal(emailNotification.Id, skippedId);
 
         // Assert — no duplicate row was inserted
         int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);

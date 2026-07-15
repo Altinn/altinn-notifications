@@ -967,7 +967,7 @@ public static class PostgreUtil
             Destination: await reader.IsDBNullAsync(destinationOrdinal) ? null : await reader.GetFieldValueAsync<string>(destinationOrdinal),
             Resource: await reader.IsDBNullAsync(resourceOrdinal) ? null : await reader.GetFieldValueAsync<string>(resourceOrdinal),
             Status: await reader.IsDBNullAsync(statusOrdinal) ? null : await reader.GetFieldValueAsync<string>(statusOrdinal),
-            CreatedTimestamp: await reader.IsDBNullAsync(createdTimestampOrdinal) ? DateTime.UtcNow : await reader.GetFieldValueAsync<DateTime>(createdTimestampOrdinal),
+            CreatedTimestamp: await reader.GetFieldValueAsync<DateTime>(createdTimestampOrdinal),
             LastUpdateTimestamp: await reader.IsDBNullAsync(lastUpdateTimestampOrdinal) ? null : await reader.GetFieldValueAsync<DateTime>(lastUpdateTimestampOrdinal));
     }
 }

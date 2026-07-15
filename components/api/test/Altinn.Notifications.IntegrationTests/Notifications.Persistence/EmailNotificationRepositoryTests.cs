@@ -309,7 +309,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await sut.UpdateSendStatus(notifications[1].Id, EmailNotificationResultType.Delivered);
 
         int statusFeedCountBeforeLastDelivery = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        int notificationLogCountBeforeLastDelivery = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
         Assert.Equal(0, statusFeedCountBeforeLastDelivery);
+        Assert.Equal(0, notificationLogCountBeforeLastDelivery);
 
         // Deliver the last recipient — the order now completes, triggering the status feed and notification log inserts
         await sut.UpdateSendStatus(notifications[2].Id, EmailNotificationResultType.Delivered);
