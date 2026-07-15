@@ -3487,6 +3487,42 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_OrderProcessedTwice_SecondCallIsIdempotentNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-processed-twice",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        // Act - first call completes normally
+        await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
+
+        // Simulate the order somehow being reprocessed: reset it back to Processing so the
+        // second call reaches the status feed insert instead of failing on the state guard.
+        await PostgreUtil.RunSql($"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid = '{order.Id}'");
+
+        await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert - second call did not throw, and only one status feed entry exists
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+    }
+
+    [Fact]
     public async Task SetOrderSendConditionNotMetAsync_WhenOrderDoesNotExistInDb_ThrowsAndRollsBack()
     {
         // Arrange
