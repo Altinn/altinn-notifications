@@ -4,3 +4,7 @@
 | del(.components.securitySchemes)
 | .paths |= map_values(map_values(del(.security)))
 | .paths |= with_entries(.key |= sub("/notifications/api/v1"; ""))
+| del(.paths."/tests/sendcondition")
+| del(.paths."/metrics", .paths."/metrics/sms", .paths."/metrics/email")
+| .paths |= with_entries(select(.key | startswith("/future/dashboard") | not))
+| .components.schemas |= with_entries(select(.key | startswith("Dashboard") | not))
