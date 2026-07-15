@@ -40,6 +40,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             foreach (Guid orderId in _orderIdsToDelete)
             {
                 await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+                await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             }
 
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
@@ -3293,6 +3294,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        // The notification log entry is written in the same transaction as the status feed entry.
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(1, notificationLogCount);
     }
 
     [Fact]
@@ -3341,6 +3346,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(0, statusFeedCount);
+
+        // Not yet completed, so no notification log entry should have been written either.
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
@@ -3405,6 +3414,14 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
         string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
         Assert.Equal(OrderProcessingStatus.Processing.ToString(), actualStatus);
+
+        // Verify: neither the status feed entry nor the notification log entry were written,
+        // since they are only inserted after the notifications within the same transaction.
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
+
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
@@ -3748,6 +3765,75 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PersistProcessingResultAsync_WithMultipleTerminalNotifications_WritesNotificationsStatusFeedAndNotificationLogInSameTransaction()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "tx-test-combined-log",
+            Type = OrderType.Notification,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                new SmsTemplate("Altinn", "sms-body")
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailNotifications = new List<EmailNotification>
+        {
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "a@example.com" }, SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow) },
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "b@example.com" }, SendResult = new(EmailNotificationResultType.Failed_RecipientReserved, DateTime.UtcNow) }
+        };
+
+        var smsNotifications = new List<SmsNotification>
+        {
+            new() { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4791111111" }, SendResult = new(SmsNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow) }
+        };
+
+        var emailResult = new EmailOrderProcessingResult(emailNotifications, ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult(smsNotifications, ExpirationDateTime: DateTime.UtcNow.AddDays(2));
+
+        // Act
+        bool isCompleted = await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert — all terminal, so the order completes and every artifact of the transaction is present
+        Assert.True(isCompleted);
+
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        string emailCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+            JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int emailCount = await PostgreUtil.RunSqlReturnOutput<int>(emailCountSql);
+        Assert.Equal(2, emailCount);
+
+        string smsCountSql = $@"SELECT count(1) FROM notifications.smsnotifications s
+            JOIN notifications.orders o ON s._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int smsCount = await PostgreUtil.RunSqlReturnOutput<int>(smsCountSql);
+        Assert.Equal(1, smsCount);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        // The notification log function derives one row per email/sms notification for the shipment,
+        // so the count must match the total number of notifications written in this same transaction.
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(emailCount + smsCount, notificationLogCount);
+    }
+
+    [Fact]
     public async Task PersistProcessingResultAsync_WhenBothNotificationListsAreEmpty_CompletesOrderAndWritesEmptyStatusFeed()
     {
         // Arrange
@@ -3789,6 +3875,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
         using var doc = JsonDocument.Parse(statusJson);
         Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
+
+        // No notifications means the insert_notification_log function has nothing to derive a row from.
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
@@ -3838,6 +3928,13 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
         string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
         Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+
+        // Verify: neither the status feed entry nor the notification log entry were written
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
+
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
@@ -3874,6 +3971,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Verify: no status feed entry written
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(0, statusFeedCount);
+
+        // Verify: no notification log entry written either
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
