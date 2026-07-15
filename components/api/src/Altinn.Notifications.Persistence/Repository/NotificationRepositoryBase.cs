@@ -159,14 +159,10 @@ public abstract class NotificationRepositoryBase
         var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
         if (orderStatus != null)
         {
-            try
+            bool inserted = await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            if (!inserted)
             {
-                await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
-            }
-            catch (Exception ex)
-            {
-                var maskedAlternateId = string.Concat(alternateId.ToString().AsSpan(0, 8), "****");
-                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", maskedAlternateId);
+                _logger.LogError("Status feed entry for completed order {AlternateId} already existed; this order was processed more than once.", alternateId);
             }
         }
         else

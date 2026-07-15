@@ -586,6 +586,33 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InsertOrderStatusCompletedOrder_CalledTwiceForSameAlternateId_SecondCallIsIdempotentNoOp()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+        var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        // Act - call twice for the same alternateId within the same transaction, simulating the order being processed more than once
+        await (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
+        await (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        // Assert - the second call did not throw, and only one status feed entry exists
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+    }
+
+    [Fact]
     public async Task InsertOrderStatusCompletedOrder_OrderStatusNotFound_ThrowsInvalidOperationException()
     {
         // Arrange
