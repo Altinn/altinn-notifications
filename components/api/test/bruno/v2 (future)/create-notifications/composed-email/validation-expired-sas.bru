@@ -34,9 +34,16 @@ body:json {
   }
 }
 
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
 docs {
   Validation: the SAS URL 'se' expiry (2020-01-01) is in the past and well before
   requestedSendTime + 15 minutes. The request must be rejected with 400 Bad Request.
 
-  Expected: 400 Bad Request with a validation error referencing the sasUrl expiry.
+  Expected: 400 Bad Request with a validation error stating the sasUrl must be valid
+  for at least 15 minutes after requestedSendTime.
 }
