@@ -1,0 +1,3 @@
+reviews:
+  path_filters:
+    - "!components/api/src/Altinn.Notifications.Persistence/Migration/v*/*functions-and-procedures.sql"
