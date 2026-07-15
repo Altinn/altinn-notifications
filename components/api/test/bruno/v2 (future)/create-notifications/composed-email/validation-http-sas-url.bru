@@ -34,9 +34,15 @@ body:json {
   }
 }
 
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
 docs {
   Validation: the sasUrl uses HTTP instead of HTTPS.
   The request must be rejected with 400 Bad Request.
 
-  Expected: 400 Bad Request with a validation error referencing sasUrl.
+  Expected: 400 Bad Request with a validation error stating the sasUrl must be an absolute HTTPS URI.
 }

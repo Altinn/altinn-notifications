@@ -39,6 +39,12 @@ body:json {
   }
 }
 
+tests {
+  test("should return 201 status code", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
 docs {
   Happy path: registers a composed email order with multiple file references of different types.
 
@@ -49,4 +55,5 @@ docs {
   - TESTDATA_REQUESTED_SEND_TIME: ISO 8601 UTC datetime
 
   Expected: 201 Created with order chain details in the response body.
+  Response body: { "notificationOrderId": "<guid>", "notification": { "shipmentId": "<guid>", "sendersReference": "...", "reminders": null } }
 }
