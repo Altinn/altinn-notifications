@@ -194,12 +194,50 @@ public sealed class StatusFeedRepositoryTests : IAsyncLifetime
         await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
         // Act
-        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        bool inserted = await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         // Assert - verify status feed entry was created
+        Assert.True(inserted);
+
         // Note: We use SelectStatusFeedEntryCount instead of GetStatusFeed because GetStatusFeed
         // filters out entries created within the last 2 seconds to avoid returning entries still being processed
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
+        Assert.Equal(1, statusFeedCount);
+
+        // Cleanup
+        _ordersToDelete.Add(orderAlternateId);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_CalledTwiceForSameOrder_SecondCallIsIdempotentNoOp()
+    {
+        // Arrange
+        Guid orderAlternateId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = orderAlternateId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        bool firstCallInserted = await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        bool secondCallInserted = await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(firstCallInserted);
+        Assert.False(secondCallInserted);
+
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
         Assert.Equal(1, statusFeedCount);
 
