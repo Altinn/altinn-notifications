@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Core.Models.NotificationLog;
 /// <param name="DeliveryReference">
 /// The email or SMS provider's own tracking reference for this send attempt (Azure Communication Services'
 /// operation ID for email, LinkMobility's gateway reference for SMS), or <see langword="null"/> if the
-/// notification has not yet been processed by the provider.
+/// notification was not processed by the provider.
 /// </param>
 /// <param name="Recipient">
 /// The national identity number or organisation number of the recipient, or <see langword="null"/> when
