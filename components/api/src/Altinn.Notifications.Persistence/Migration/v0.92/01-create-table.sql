@@ -1,35 +1,22 @@
 CREATE TABLE IF NOT EXISTS notifications.notificationlog (
-    id bigint GENERATED ALWAYS AS IDENTITY,
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     orderchainid uuid,
     shipmentid uuid NOT NULL,
-    notificationid uuid NOT NULL, -- The alternateid of the source email/sms notification. Idempotency key.
-    creatorname text,
+    notificationid uuid NOT NULL UNIQUE, -- The alternateid of the source email/sms notification. Idempotency key.
+    creatorname text NOT NULL,
+    sendersreference text,
     dialogid text,
     transmissionid text,
-    operationid text,
-    gatewayreference text,
+    deliveryreference text, -- The email/sms provider's tracking reference for this send attempt
     recipient text,    -- Organization number or national identity number
     type text NOT NULL,
     channel text NOT NULL, -- 'Email' or 'Sms'
-    destination text,  -- Email address or phone number
+    destination text NOT NULL,  -- Email address or phone number
     resource text,
-    status text,
-    created_timestamp timestamp with time zone,
-    last_update_timestamp timestamp with time zone,
-    PRIMARY KEY (id, created_timestamp),
-    UNIQUE (notificationid, created_timestamp)
-) PARTITION BY RANGE (created_timestamp);
-
--- Add IF NOT EXISTS for partition tables
-CREATE TABLE IF NOT EXISTS notifications.notificationlog_2026 PARTITION OF notifications.notificationlog
-    FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2027-01-01 00:00:00+00');
-
-CREATE TABLE IF NOT EXISTS notifications.notificationlog_2027 PARTITION OF notifications.notificationlog
-    FOR VALUES FROM ('2027-01-01 00:00:00+00') TO ('2028-01-01 00:00:00+00');
-
--- Add IF NOT EXISTS for default partition
-CREATE TABLE IF NOT EXISTS notifications.notificationlog_default PARTITION OF notifications.notificationlog
-    DEFAULT;
+    status text NOT NULL,
+    requestedsendtime timestamp with time zone NOT NULL,
+    lastupdatetime timestamp with time zone NOT NULL
+);
 
 GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog TO platform_notifications;
 

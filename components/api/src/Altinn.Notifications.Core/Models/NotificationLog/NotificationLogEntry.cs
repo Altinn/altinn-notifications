@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Core.Models.NotificationLog;
 /// Unique per entry; used as the idempotency key for the underlying insert.
 /// </param>
 /// <param name="CreatorName">The short name of the service owner that created the order.</param>
+/// <param name="SendersReference">The sender's own reference for the order, or <see langword="null"/> if none was provided.</param>
 /// <param name="DialogId">
 /// The Dialogporten dialog identifier associated with this notification, or <see langword="null"/> when
 /// the order has no Dialogporten association.
@@ -24,13 +25,10 @@ namespace Altinn.Notifications.Core.Models.NotificationLog;
 /// The Dialogporten transmission identifier associated with this notification, or <see langword="null"/>
 /// when the order has no Dialogporten association.
 /// </param>
-/// <param name="OperationId">
-/// The operation identifier returned by the email gateway, or <see langword="null"/> for SMS notifications
-/// and for email notifications that have not yet been processed.
-/// </param>
-/// <param name="GatewayReference">
-/// The gateway reference returned by the SMS gateway, or <see langword="null"/> for email notifications
-/// and for SMS notifications that have not yet been processed.
+/// <param name="DeliveryReference">
+/// The email or SMS provider's own tracking reference for this send attempt (Azure Communication Services'
+/// operation ID for email, LinkMobility's gateway reference for SMS), or <see langword="null"/> if the
+/// notification has not yet been processed by the provider.
 /// </param>
 /// <param name="Recipient">
 /// The national identity number or organisation number of the recipient, or <see langword="null"/> when
@@ -41,22 +39,22 @@ namespace Altinn.Notifications.Core.Models.NotificationLog;
 /// <param name="Destination">The email address or mobile number the notification was sent to.</param>
 /// <param name="Resource">The Altinn resource identifier linked to this notification.</param>
 /// <param name="Status">The delivery result status at the time the log entry was created.</param>
-/// <param name="CreatedTimestamp">The timestamp when the order was created.</param>
-/// <param name="LastUpdateTimestamp">The timestamp when the notification status was last updated.</param>
+/// <param name="RequestedSendTime">The timestamp the order requested notifications be sent at.</param>
+/// <param name="LastUpdateTime">The timestamp when the notification status was last updated.</param>
 public record NotificationLogEntry(
     Guid? OrderChainId,
     Guid ShipmentId,
     Guid NotificationId,
-    string? CreatorName,
+    string CreatorName,
+    string? SendersReference,
     string? DialogId,
     string? TransmissionId,
-    string? OperationId,
-    string? GatewayReference,
+    string? DeliveryReference,
     string? Recipient,
     string Type,
     string Channel,
-    string? Destination,
+    string Destination,
     string? Resource,
-    string? Status,
-    DateTime? CreatedTimestamp,
-    DateTime? LastUpdateTimestamp);
+    string Status,
+    DateTime RequestedSendTime,
+    DateTime LastUpdateTime);

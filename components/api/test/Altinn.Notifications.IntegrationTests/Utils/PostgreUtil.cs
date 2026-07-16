@@ -913,18 +913,18 @@ public static class PostgreUtil
                 shipmentid,
                 notificationid,
                 creatorname,
+                sendersreference,
                 dialogid,
                 transmissionid,
-                operationid,
-                gatewayreference,
+                deliveryreference,
                 recipient,
                 type,
                 channel,
                 destination,
                 resource,
                 status,
-                created_timestamp,
-                last_update_timestamp
+                requestedsendtime,
+                lastupdatetime
             FROM notifications.notificationlog
             WHERE shipmentid = @shipmentId
             LIMIT 1
@@ -941,33 +941,33 @@ public static class PostgreUtil
 
         int orderChainIdOrdinal = reader.GetOrdinal("orderchainid");
         int creatorNameOrdinal = reader.GetOrdinal("creatorname");
+        int sendersReferenceOrdinal = reader.GetOrdinal("sendersreference");
         int dialogIdOrdinal = reader.GetOrdinal("dialogid");
         int transmissionIdOrdinal = reader.GetOrdinal("transmissionid");
-        int operationIdOrdinal = reader.GetOrdinal("operationid");
-        int gatewayReferenceOrdinal = reader.GetOrdinal("gatewayreference");
+        int deliveryReferenceOrdinal = reader.GetOrdinal("deliveryreference");
         int recipientOrdinal = reader.GetOrdinal("recipient");
         int destinationOrdinal = reader.GetOrdinal("destination");
         int resourceOrdinal = reader.GetOrdinal("resource");
         int statusOrdinal = reader.GetOrdinal("status");
-        int createdTimestampOrdinal = reader.GetOrdinal("created_timestamp");
-        int lastUpdateTimestampOrdinal = reader.GetOrdinal("last_update_timestamp");
+        int requestedSendTimeOrdinal = reader.GetOrdinal("requestedsendtime");
+        int lastUpdateTimeOrdinal = reader.GetOrdinal("lastupdatetime");
 
         return new NotificationLogEntry(
             OrderChainId: await reader.IsDBNullAsync(orderChainIdOrdinal) ? null : await reader.GetFieldValueAsync<Guid?>(orderChainIdOrdinal),
             ShipmentId: await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipmentid")),
             NotificationId: await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("notificationid")),
-            CreatorName: await reader.IsDBNullAsync(creatorNameOrdinal) ? null : await reader.GetFieldValueAsync<string>(creatorNameOrdinal),
+            CreatorName: await reader.GetFieldValueAsync<string>(creatorNameOrdinal),
+            SendersReference: await reader.IsDBNullAsync(sendersReferenceOrdinal) ? null : await reader.GetFieldValueAsync<string>(sendersReferenceOrdinal),
             DialogId: await reader.IsDBNullAsync(dialogIdOrdinal) ? null : await reader.GetFieldValueAsync<string>(dialogIdOrdinal),
             TransmissionId: await reader.IsDBNullAsync(transmissionIdOrdinal) ? null : await reader.GetFieldValueAsync<string>(transmissionIdOrdinal),
-            OperationId: await reader.IsDBNullAsync(operationIdOrdinal) ? null : await reader.GetFieldValueAsync<string>(operationIdOrdinal),
-            GatewayReference: await reader.IsDBNullAsync(gatewayReferenceOrdinal) ? null : await reader.GetFieldValueAsync<string>(gatewayReferenceOrdinal),
+            DeliveryReference: await reader.IsDBNullAsync(deliveryReferenceOrdinal) ? null : await reader.GetFieldValueAsync<string>(deliveryReferenceOrdinal),
             Recipient: await reader.IsDBNullAsync(recipientOrdinal) ? null : await reader.GetFieldValueAsync<string>(recipientOrdinal),
             Type: await reader.GetFieldValueAsync<string>(reader.GetOrdinal("type")),
             Channel: await reader.GetFieldValueAsync<string>(reader.GetOrdinal("channel")),
-            Destination: await reader.IsDBNullAsync(destinationOrdinal) ? null : await reader.GetFieldValueAsync<string>(destinationOrdinal),
+            Destination: await reader.GetFieldValueAsync<string>(destinationOrdinal),
             Resource: await reader.IsDBNullAsync(resourceOrdinal) ? null : await reader.GetFieldValueAsync<string>(resourceOrdinal),
-            Status: await reader.IsDBNullAsync(statusOrdinal) ? null : await reader.GetFieldValueAsync<string>(statusOrdinal),
-            CreatedTimestamp: await reader.GetFieldValueAsync<DateTime>(createdTimestampOrdinal),
-            LastUpdateTimestamp: await reader.IsDBNullAsync(lastUpdateTimestampOrdinal) ? null : await reader.GetFieldValueAsync<DateTime>(lastUpdateTimestampOrdinal));
+            Status: await reader.GetFieldValueAsync<string>(statusOrdinal),
+            RequestedSendTime: await reader.GetFieldValueAsync<DateTime>(requestedSendTimeOrdinal),
+            LastUpdateTime: await reader.GetFieldValueAsync<DateTime>(lastUpdateTimeOrdinal));
     }
 }

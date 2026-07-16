@@ -2180,18 +2180,18 @@ BEGIN
             o.alternateid AS shipmentid,
             email.alternateid AS notificationid,
             o.creatorname AS creatorname,
-            o.notificationorder->>'ResourceId' AS resource,
+            o.sendersreference AS sendersreference,
             (c.orderchain->'dialogportenAssociation'->>'dialogId') AS dialogid,
             c.orderchain->'dialogportenAssociation'->>'transmissionId' AS transmissionid,
-            email.operationid AS operationid,
-            NULL::text AS gatewayreference,
+            email.operationid AS deliveryreference,
             COALESCE(email.recipientorgno, email.recipientnin) AS recipient,
             o.type::text AS type,
             'Email'::text AS channel,
             email.toaddress AS destination,
+            o.notificationorder->>'ResourceId' AS resource,
             email.result::text AS status,
-            o.created AS created_timestamp,
-            email.resulttime AS last_update_timestamp
+            o.requestedsendtime AS requestedsendtime,
+            email.resulttime AS lastupdatetime
         FROM notifications.emailnotifications email
         INNER JOIN notifications.orders o ON o._id = email._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
@@ -2204,18 +2204,18 @@ BEGIN
             o.alternateid AS shipmentid,
             sms.alternateid AS notificationid,
             o.creatorname AS creatorname,
-            o.notificationorder->>'ResourceId' AS resource,
+            o.sendersreference AS sendersreference,
             (c.orderchain->'dialogportenAssociation'->>'dialogId') AS dialogid,
             c.orderchain->'dialogportenAssociation'->>'transmissionId' AS transmissionid,
-            NULL::text AS operationid,
-            sms.gatewayreference AS gatewayreference,
+            sms.gatewayreference AS deliveryreference,
             COALESCE(sms.recipientorgno, sms.recipientnin) AS recipient,
             o.type::text AS type,
             'Sms'::text AS channel,
             sms.mobilenumber AS destination,
+            o.notificationorder->>'ResourceId' AS resource,
             sms.result::text AS status,
-            o.created AS created_timestamp,
-            sms.resulttime AS last_update_timestamp
+            o.requestedsendtime AS requestedsendtime,
+            sms.resulttime AS lastupdatetime
         FROM notifications.smsnotifications sms
         INNER JOIN notifications.orders o ON o._id = sms._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
@@ -2227,38 +2227,38 @@ BEGIN
             shipmentid,
             notificationid,
             creatorname,
+            sendersreference,
             dialogid,
             transmissionid,
-            operationid,
-            gatewayreference,
+            deliveryreference,
             recipient,
             type,
             channel,
             destination,
             resource,
             status,
-            created_timestamp,
-            last_update_timestamp
+            requestedsendtime,
+            lastupdatetime
         )
         SELECT
             orderchainid,
             shipmentid,
             notificationid,
             creatorname,
+            sendersreference,
             dialogid,
             transmissionid,
-            operationid,
-            gatewayreference,
+            deliveryreference,
             recipient,
             type,
             channel,
             destination,
             resource,
             status,
-            created_timestamp,
-            last_update_timestamp
+            requestedsendtime,
+            lastupdatetime
         FROM candidates
-        ON CONFLICT (notificationid, created_timestamp) DO NOTHING
+        ON CONFLICT (notificationid) DO NOTHING
         RETURNING notificationid
     )
     SELECT array_agg(diff.notificationid)

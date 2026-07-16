@@ -78,17 +78,15 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal("Notification", entry.Type);
         Assert.Equal("Email", entry.Channel);
         Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(operationId, entry.OperationId);  // set via updateemailnotification_v4
+        Assert.Equal(operationId, entry.DeliveryReference);  // set via updateemailnotification_v4
         Assert.Null(entry.Recipient);
-        Assert.Null(entry.GatewayReference);
 
-        // CreatedTimestamp is sourced from the order's own created timestamp, set moments ago by the test setup.
-        Assert.True(entry.CreatedTimestamp <= DateTime.UtcNow && entry.CreatedTimestamp > DateTime.UtcNow.AddMinutes(-1));
+        // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
+        Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
 
-        // LastUpdateTimestamp is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before creation.
-        Assert.NotNull(entry.LastUpdateTimestamp);
-        Assert.True(entry.LastUpdateTimestamp >= entry.CreatedTimestamp);
+        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
+        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
+        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
     }
 
     [Fact]
@@ -140,16 +138,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal("Sms", entry.Channel);
         Assert.Equal("Delivered", entry.Status);
         Assert.Null(entry.Recipient);
-        Assert.Equal(gatewayReference, entry.GatewayReference);  // SMS path — gateway reference is set
-        Assert.Null(entry.OperationId);                          // SMS path — operation ID is null
+        Assert.Equal(gatewayReference, entry.DeliveryReference);  // SMS path — gateway reference is set
 
-        // CreatedTimestamp is sourced from the order's own created timestamp, set moments ago by the test setup.
-        Assert.True(entry.CreatedTimestamp <= DateTime.UtcNow && entry.CreatedTimestamp > DateTime.UtcNow.AddMinutes(-1));
+        // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
+        Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
 
-        // LastUpdateTimestamp is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before creation.
-        Assert.NotNull(entry.LastUpdateTimestamp);
-        Assert.True(entry.LastUpdateTimestamp >= entry.CreatedTimestamp);
+        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
+        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
+        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
     }
 
     [Fact]
