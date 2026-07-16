@@ -26,6 +26,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         foreach (var orderId in _orderIdsToCleanup)
         {
             await PostgreUtil.DeleteStatusFeedFromDb(orderId);
+            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
         }
     }
@@ -365,7 +366,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
     [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
     [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
-    public async Task ParseSmsSendOperationResult_StatusFailed_ShouldUpdateOrderStatusToCompleted(SmsNotificationResultType resultType)
+    public async Task ParseSmsSendOperationResult_StatusFailed_ShouldCompleteOrder_InsertStatusFeed_AndInsertNotificationLog(SmsNotificationResultType resultType)
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: null, simulateCronJob: true);
@@ -388,10 +389,109 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         var status = await SelectSmsNotificationStatus(smsNotification.Id);
-        Assert.Equal(resultType.ToString(), status);
+        var completedCount = await SelectOrdersCompletedCount(order);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
 
-        int actualCount = await SelectOrdersCompletedCount(order);
-        Assert.Equal(1, actualCount);
+        Assert.Equal(resultType.ToString(), status);
+        Assert.Equal(1, completedCount);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
+    }
+
+    [Fact]
+    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailed_CompleteOrder_InsertToFeed_AndInsertNotificationLog()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // modify the notification to simulate an expired notification
+        string sql = $@"
+            UPDATE notifications.smsnotifications
+            SET result = 'Accepted',
+                expirytime = NOW() - INTERVAL '3 day'
+            WHERE alternateid = '{smsNotification.Id}';";
+
+        await PostgreUtil.RunSql(sql);
+
+        // Act
+        await repo.TerminateExpiredNotifications();
+
+        // Assert
+        var result = await SelectSmsNotificationStatus(smsNotification.Id);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
+
+        Assert.NotNull(result);
+        Assert.Equal(SmsNotificationResultType.Failed_TTL.ToString(), result);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatusDelivered_WithNotificationId_ShouldCompleteOrder_InsertStatusFeed_AndInsertNotificationLog()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Delivered);
+
+        // Assert
+        var completedCount = await SelectOrdersCompletedCount(order);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+
+        Assert.Equal(1, completedCount);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatusDelivered_WithGatewayRef_ShouldCompleteOrder_InsertStatusFeed_AndInsertNotificationLog()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        string gatewayReference = Guid.NewGuid().ToString();
+
+        string setGatewaySql = $@"Update notifications.smsnotifications
+                SET gatewayreference = '{gatewayReference}'
+                WHERE alternateid = '{smsNotification.Id}'";
+
+        await PostgreUtil.RunSql(setGatewaySql);
+
+        // Act
+        await repo.UpdateSendStatus(null, SmsNotificationResultType.Delivered, gatewayReference);
+
+        // Assert
+        var completedCount = await SelectOrdersCompletedCount(order);
+        var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+
+        Assert.Equal(1, completedCount);
+        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, notificationLogCount);
     }
 
     [Fact]
