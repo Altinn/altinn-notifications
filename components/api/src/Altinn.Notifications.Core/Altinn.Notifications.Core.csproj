@@ -1,24 +1,21 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ProjectGuid>{607C02FB-8C76-41BD-A3DF-282B2D0E2296}</ProjectGuid>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="5.4.0" />
-    <PackageReference Include="Parquet.Net" Version="6.0.3" />
-    <PackageReference Include="libphonenumber-csharp" Version="9.0.34" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
+    <PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" />
+	  <PackageReference Include="Parquet.Net" />
+	  <PackageReference Include="libphonenumber-csharp" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+	  <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+    <PackageReference Include="StyleCop.Analyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -31,23 +28,15 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
     </AssemblyAttribute>
-  </ItemGroup>
-  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.IntegrationTests</_Parameter1>
     </AssemblyAttribute>
-  </ItemGroup>
-  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.Tools.Tests</_Parameter1>
     </AssemblyAttribute>
-  </ItemGroup>
-  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.Tools.StatusFeedBackfillTool</_Parameter1>
     </AssemblyAttribute>
-  </ItemGroup>
-  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.IntegrationTestsASB</_Parameter1>
     </AssemblyAttribute>
