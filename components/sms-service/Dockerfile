@@ -4,6 +4,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.301-alpine3.23@sha256:940f919ae84dd92ccd4
 # Set the working directory in the container
 WORKDIR /app
 
+# CPM / build configuration
+COPY Directory.Packages.props ./
+COPY Directory.Build.props ./
+
 # Copy csproj and restore as distinct layers
 # Paths mirror the repo structure so cross-component project references resolve correctly
 COPY components/sms-service/src/Altinn.Notifications.Sms/*.csproj ./components/sms-service/src/Altinn.Notifications.Sms/

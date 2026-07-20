@@ -1,6 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.301-alpine3.23@sha256:940f919ae84dd92ccd4aab7686fa5b777870b006c9360351039e16bcaad73d89 AS build
 WORKDIR /app
 
+# CPM / build configuration
+COPY Directory.Packages.props ./
+COPY Directory.Build.props ./
+
 # Copy csproj and restore as distinct layers
 # Paths mirror the repo structure so cross-component project references resolve correctly
 COPY components/api/src/Altinn.Notifications/*.csproj ./components/api/src/Altinn.Notifications/
