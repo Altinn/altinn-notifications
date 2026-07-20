@@ -1014,5 +1014,11 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         {
             _logger.LogError("Status feed entry for order {OrderId} already existed; this order was processed more than once.", order.Id);
         }
+
+        var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
+        foreach (var skippedNotificationId in skippedNotificationIds)
+        {
+            _logger.LogError("Notification log entry for notification {NotificationId} (order {OrderId}) already existed; this notification was processed more than once.", skippedNotificationId, order.Id);
+        }
     }
 }
