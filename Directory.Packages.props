@@ -1,0 +1,95 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <!-- Altinn -->
+    <PackageVersion Include="Altinn.ApiClients.Maskinporten" Version="10.1.0" />
+    <PackageVersion Include="Altinn.Authorization.ProblemDetails" Version="5.4.0" />
+    <PackageVersion Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="5.4.0" />
+    <PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.9" />
+    <PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.8" />
+    <PackageVersion Include="Altinn.Common.PEP" Version="4.2.3" />
+    <PackageVersion Include="Altinn.Urn" Version="4.3.0" />
+
+    <!-- Azure -->
+    <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.2" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.2" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />
+
+    <!-- ASP.NET -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+
+    <!-- FluentValidation -->
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+
+    <!-- Link Mobility -->
+    <PackageVersion Include="LinkMobilityNE.PSWin.Client" Version="1.3.1" />
+    <PackageVersion Include="LinkMobilityNE.PSWin.Receiver" Version="1.3.1" />
+
+    <!-- Microsoft Extensions -->
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
+
+    <!-- Npgsql -->
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+
+    <!-- OpenTelemetry -->
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
+
+    <!-- Other -->
+    <PackageVersion Include="JWTCookieAuthentication" Version="4.0.4" />
+    <PackageVersion Include="libphonenumber-csharp" Version="9.0.34" />
+    <PackageVersion Include="Parquet.Net" Version="6.0.3" />
+    <PackageVersion Include="RandomString4Net" Version="1.10.0" />
+    <PackageVersion Include="System.Memory.Data" Version="10.0.9" />
+    <PackageVersion Include="Testcontainers" Version="4.13.0" />
+
+    <!-- Quality / Testing -->
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="FluentAssertions" Version="8.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
+
+    <!-- Swagger -->
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.2.3" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
+
+    <!-- Wolverine -->
+    <PackageVersion Include="WolverineFx" Version="6.17.3" />
+    <PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.17.3" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.17.3" />
+
+    <!-- xUnit -->
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
+
+    <!-- Yuniql -->
+    <PackageVersion Include="Yuniql.AspNetCore" Version="1.2.25" />
+    <PackageVersion Include="Yuniql.PostgreSql" Version="1.3.15" />
+
+  </ItemGroup>
+</Project>
