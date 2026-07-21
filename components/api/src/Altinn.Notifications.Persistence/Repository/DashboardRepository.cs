@@ -16,6 +16,7 @@ public class DashboardRepository : IDashboardRepository
 
     private const string _getNotificationsByOrgNo = "SELECT * from notifications.get_notifications_by_organization_number($1,$2,$3)"; // (_recipientorgno, _from_date,_to_date)
     private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
+    private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email($1,$2,$3)"; // (_email, _from_date,_to_date)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
@@ -36,6 +37,12 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByEmailAsync(string email, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
@@ -60,12 +67,13 @@ public class DashboardRepository : IDashboardRepository
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            bool isNin = recipientValue.Length == 11;
+            bool hasRecipientNin = HasColumn(reader, "recipientnin");
+            bool hasRecipientOrgNo = HasColumn(reader, "recipientorgno");
 
             while (await reader.ReadAsync(cancellationToken))
             {
-                string? recipientNin = isNin ? reader.GetValue<string?>("recipientnin") : null;
-                string? recipientOrgNo = isNin ? null : reader.GetValue<string?>("recipientorgno");
+                string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
+                string? recipientOrgNo = hasRecipientOrgNo ? reader.GetValue<string?>("recipientorgno") : null;
 
                 var shipmentId = reader.GetValue<Guid>("shipmentid");
                 string channel = reader.GetValue<string>("channel");
@@ -107,5 +115,21 @@ public class DashboardRepository : IDashboardRepository
             var e = groups[id];
             return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
         })];
+    }
+
+    /// <summary>
+    /// Determines whether the given data reader's result set contains a column with the given name.
+    /// </summary>
+    private static bool HasColumn(NpgsqlDataReader reader, string colName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), colName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
