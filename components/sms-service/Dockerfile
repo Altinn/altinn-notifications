@@ -8,7 +8,6 @@ WORKDIR /app
 COPY Directory.Packages.props ./
 COPY Directory.Build.props ./
 COPY Directory.Build.targets ./
-COPY stylecop.json ./
 
 # Copy csproj and restore as distinct layers
 # Paths mirror the repo structure so cross-component project references resolve correctly
