@@ -7,6 +7,8 @@
   "packageRules": [
     {
       "matchFileNames": [
+        "Directory.Build.props",
+        "Directory.Build.targets",
         "Directory.Packages.props"
       ],
       "addLabels": [

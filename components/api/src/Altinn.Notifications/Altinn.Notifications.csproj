@@ -1,54 +1,45 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ProjectGuid>{A791EC3D-DC08-416D-9522-C4BE4540084F}</ProjectGuid>
-    <UserSecretsId>abbc1054-3be2-45c5-b3e0-36044cb70e42</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ProjectGuid>{A791EC3D-DC08-416D-9522-C4BE4540084F}</ProjectGuid>
+		<UserSecretsId>abbc1054-3be2-45c5-b3e0-36044cb70e42</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Altinn.Authorization.ProblemDetails" />
-    <PackageReference Include="Altinn.Common.AccessToken" />
-    <PackageReference Include="Altinn.Urn" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
-    <PackageReference Include="FluentValidation" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="JWTCookieAuthentication" />
-    <PackageReference Include="Npgsql.OpenTelemetry" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
-    <PackageReference Include="Swashbuckle.AspNetCore" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Altinn.Authorization.ProblemDetails" />
+		<PackageReference Include="Altinn.Common.AccessToken" />
+		<PackageReference Include="Altinn.Urn" />
+		<PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+		<PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
+		<PackageReference Include="FluentValidation" />
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+		<PackageReference Include="JWTCookieAuthentication" />
+		<PackageReference Include="Npgsql.OpenTelemetry" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+		<PackageReference Include="Swashbuckle.AspNetCore" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Filters" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
-    <ProjectReference Include="..\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
-    <ProjectReference Include="..\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+		<ProjectReference Include="..\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
+		<ProjectReference Include="..\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+	</ItemGroup>
 
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
-      <Link>stylecop.json</Link>
-    </AdditionalFiles>
-  </ItemGroup>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Altinn.Notifications.Tests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Update="Views\Metrics\Index.cshtml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Update="Views\Metrics\Index.cshtml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 </Project>

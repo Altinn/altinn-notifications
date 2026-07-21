@@ -1,36 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <NoWarn>1591</NoWarn>
-	<IsTestProject>true</IsTestProject>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
-    <PackageReference Include="Npgsql" />
-    <PackageReference Include="Testcontainers" />
-    <PackageReference Include="WolverineFx" />
-    <PackageReference Include="xunit.v3.extensibility.core" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Azure.Messaging.ServiceBus" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Npgsql" />
+		<PackageReference Include="Testcontainers" />
+		<PackageReference Include="WolverineFx" />
+		<PackageReference Include="xunit.v3.extensibility.core" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="container-images.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
-      <Link>stylecop.json</Link>
-    </AdditionalFiles>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="container-images.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

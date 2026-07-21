@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-	<NoWarn>1591</NoWarn>
-	<TargetFramework>net10.0</TargetFramework>
-    <UserSecretsId>80322a93-a2dd-480a-8417-6655f767c6f9</UserSecretsId>
+	  <OutputType>Exe</OutputType>
+	  <NoWarn>$(NoWarn);1591</NoWarn>
+	  <TargetFramework>net10.0</TargetFramework>
+	  <UserSecretsId>80322a93-a2dd-480a-8417-6655f767c6f9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,24 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ProjectGuid>{184897A2-F52D-400A-BD50-FEB6554845AF}</ProjectGuid>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ProjectGuid>{184897A2-F52D-400A-BD50-FEB6554845AF}</ProjectGuid>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="LinkMobilityNE.PSWin.Receiver" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
-      <Link>stylecop.json</Link>
-    </AdditionalFiles>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="LinkMobilityNE.PSWin.Receiver" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+	</ItemGroup>
 
 </Project>

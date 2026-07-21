@@ -1,16 +1,9 @@
 <Project>
-
 	<PropertyGroup>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
-		<IsPackable>false</IsPackable>
-		<GenerateDocumentationFile>false</GenerateDocumentationFile>
-	</PropertyGroup>
-
 </Project>

@@ -1,46 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ProjectGuid>{DC8CDE0B-67F9-496D-8B01-CE2257950D05}</ProjectGuid>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ProjectGuid>{DC8CDE0B-67F9-496D-8B01-CE2257950D05}</ProjectGuid>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Altinn.ApiClients.Maskinporten" />
-    <PackageReference Include="Altinn.Common.AccessTokenClient" />
-    <PackageReference Include="Altinn.Common.PEP" />
-    <PackageReference Include="Azure.Messaging.EventGrid" />
-    <PackageReference Include="OpenTelemetry.Api" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
-    <PackageReference Include="Npgsql" />
-    <PackageReference Include="WolverineFx" />
-    <PackageReference Include="WolverineFx.AzureServiceBus" />
-    <PackageReference Include="WolverineFx.RuntimeCompilation" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Altinn.ApiClients.Maskinporten" />
+		<PackageReference Include="Altinn.Common.AccessTokenClient" />
+		<PackageReference Include="Altinn.Common.PEP" />
+		<PackageReference Include="Azure.Messaging.EventGrid" />
+		<PackageReference Include="OpenTelemetry.Api" />
+		<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+		<PackageReference Include="Npgsql" />
+		<PackageReference Include="WolverineFx" />
+		<PackageReference Include="WolverineFx.AzureServiceBus" />
+		<PackageReference Include="WolverineFx.RuntimeCompilation" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
-    <ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+		<ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
-    </AssemblyAttribute>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Altinn.Notifications.Tests</_Parameter1>
+		</AssemblyAttribute>
 
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Altinn.Notifications.IntegrationTests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
-      <Link>stylecop.json</Link>
-    </AdditionalFiles>
-  </ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Altinn.Notifications.IntegrationTests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 
 </Project>

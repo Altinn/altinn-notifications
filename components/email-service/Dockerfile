@@ -7,6 +7,8 @@ WORKDIR /app
 # CPM / build configuration
 COPY Directory.Packages.props ./
 COPY Directory.Build.props ./
+COPY Directory.Build.targets ./
+COPY stylecop.json ./
 
 # Copy csproj and restore as distinct layers
 # Paths mirror the repo structure so cross-component project references resolve correctly
@@ -20,20 +22,26 @@ RUN dotnet restore ./components/email-service/src/Altinn.Notifications.Email/Alt
 # Copy the remaining source code and build the application
 COPY components/email-service/src ./components/email-service/src
 COPY components/shared/src ./components/shared/src
+
 RUN dotnet publish -c Release -o out \
     ./components/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj
 
 # Use the official .NET runtime image with Alpine Linux as a base image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-alpine3.23@sha256:57bd717ac18ff6c8a39cc0ee4a76c1f15adc46df50434c73eff0c3f1df4c88f0 AS final
+
 EXPOSE 5091
+
 WORKDIR /app
+
 COPY --from=build /app/out ./
 
 # setup the user and group
 # the user will have no password, using shell /bin/false and using the group dotnet
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
+
 # update permissions of files if necessary before becoming dotnet user
 USER dotnet
+
 RUN mkdir /tmp/logtelemetry
 
 # Run the application

@@ -1,61 +1,51 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ProjectGuid>{DB57DAD7-753D-4595-81AD-9CB43B7A697A}</ProjectGuid>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ProjectGuid>{DB57DAD7-753D-4595-81AD-9CB43B7A697A}</ProjectGuid>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
-    <PackageReference Include="Npgsql" />
-    <PackageReference Include="Npgsql.DependencyInjection" />
-    <PackageReference Include="Yuniql.AspNetCore" />
-    <PackageReference Include="Yuniql.PostgreSql" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+		<PackageReference Include="Npgsql" />
+		<PackageReference Include="Npgsql.DependencyInjection" />
+		<PackageReference Include="Yuniql.AspNetCore" />
+		<PackageReference Include="Yuniql.PostgreSql" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DbTools\DbTools.csproj">
-      <TreatAsUsed>true</TreatAsUsed>
-    </ProjectReference>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\DbTools\DbTools.csproj">
+			<TreatAsUsed>true</TreatAsUsed>
+		</ProjectReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
-    </AssemblyAttribute>
-	  
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Altinn.Notifications.Tools.StatusFeedBackfillTool</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Altinn.Notifications.Tests</_Parameter1>
+		</AssemblyAttribute>
 
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <AdditionalFiles Include="..\..\..\..\stylecop.json">
-      <Link>stylecop.json</Link>
-    </AdditionalFiles>
-  </ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Altinn.Notifications.Tools.StatusFeedBackfillTool</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <PropertyGroup>
-      <DbToolsExecuted>false</DbToolsExecuted>
-    </PropertyGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<PropertyGroup>
+			<DbToolsExecuted>false</DbToolsExecuted>
+		</PropertyGroup>
 
-    <Exec Command="/app_tools/DbTools ./Migration" Condition="Exists('/app_tools/DbTools')" />
+		<Exec Command="/app_tools/DbTools ./Migration" Condition="Exists('/app_tools/DbTools')" />
 
-    <PropertyGroup Condition="Exists('/app_tools/DbTools')">
-      <DbToolsExecuted>true</DbToolsExecuted>
-    </PropertyGroup>
+		<PropertyGroup Condition="Exists('/app_tools/DbTools')">
+			<DbToolsExecuted>true</DbToolsExecuted>
+		</PropertyGroup>
 
-    <Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration"
-          Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
-  </Target>
+		<Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration"
+			  Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
+	</Target>
 
 </Project>
