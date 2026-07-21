@@ -34,9 +34,11 @@ builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
     var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PostgreSqlSettings>>().Value;
 
     if (string.IsNullOrWhiteSpace(settings.ConnectionString))
+    {
         throw new InvalidOperationException(
             "PostgreSQLSettings:ConnectionString is not configured. " +
             "Set it in appsettings.json or via user secrets.");
+    }
 
     return new NpgsqlDataSourceBuilder(settings.ConnectionString).Build();
 });
@@ -52,9 +54,11 @@ builder.Services.AddSingleton<ServiceBusClient>(sp =>
     var asbSettings = sp.GetRequiredService<IOptions<AsbSettings>>();
 
     if (string.IsNullOrWhiteSpace(asbSettings.Value.ConnectionString))
+    {
         throw new InvalidOperationException(
             "AsbSettings:ConnectionString is not configured. " +
             "Set it in appsettings.json or via user secrets.");
+    }
 
     return new ServiceBusClient(asbSettings.Value.ConnectionString);
 });

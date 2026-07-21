@@ -2,11 +2,19 @@
 
 namespace DbTools
 {
+    /// <summary>
+    /// Contains the application's startup and entry point logic.
+    /// </summary>
     internal static class Program
     {
         private const string _scriptSuffix = "-functions-and-procedures.sql";
 
-        static void Main(string[] args)
+        /// <summary>
+        /// Defines the entry point of the application.
+        /// </summary>
+        /// <param name="args">The arguments.</param>
+        /// <exception cref="ArgumentException">Migration directory {migrationPath} does not exist</exception>
+        public static void Main(string[] args)
         {
             string migrationPath = args.Length != 0 ? args[0] : @"../../../../Altinn.Notifications.Persistence/Migration";
             string funcAndProcDirectory = $@"{migrationPath}/FunctionsAndProcedures";
@@ -14,8 +22,9 @@ namespace DbTools
             {
                 throw new ArgumentException($"Migration directory {migrationPath} does not exist");
             }
+
             string? versionDirectory = GetVersionDirectory(migrationPath);
-            if (versionDirectory == null )
+            if (versionDirectory == null)
             {
                 return;
             }

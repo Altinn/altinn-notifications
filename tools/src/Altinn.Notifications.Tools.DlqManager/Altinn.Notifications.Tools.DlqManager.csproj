@@ -1,32 +1,47 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-	<NoWarn>$(NoWarn);1591</NoWarn>
-    <TargetFramework>net10.0</TargetFramework>
-    <UserSecretsId>dlq-manager-tool-7c3e1a9g</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1025;
+			SA1208;
+			SA1501;
+			SA1503;
+			SA1508;
+			SA1512;
+			SA1513;
+			SA1515;
+			SA1516;
+			SA1600;
+			SA1614;
+			SA1649
+		</NoWarn>
+		<UserSecretsId>dlq-manager-tool-7c3e1a9g</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Remove="appsettings.json" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Npgsql" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Azure.Messaging.ServiceBus" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
+		<PackageReference Include="Npgsql" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../../../components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="../../../components/shared/src/Altinn.Notifications.Shared/Altinn.Notifications.Shared.csproj" />
+	</ItemGroup>
 
 </Project>

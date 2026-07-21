@@ -2,6 +2,22 @@
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1025;
+			SA1208;
+			SA1501;
+			SA1503;
+			SA1508;
+			SA1512;
+			SA1513;
+			SA1515;
+			SA1516;
+			SA1600;
+			SA1614;
+			SA1649
+		</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
