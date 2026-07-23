@@ -252,7 +252,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrderRetry(order);
 
         // Assert
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>()), Times.Exactly(order.Recipients.Count ));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>()), Times.Exactly(order.Recipients.Count));
     }
 
     [Fact]

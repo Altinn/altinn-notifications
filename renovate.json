@@ -7,6 +7,16 @@
   "packageRules": [
     {
       "matchFileNames": [
+        "Directory.Build.props",
+        "Directory.Build.targets",
+        "Directory.Packages.props"
+      ],
+      "addLabels": [
+        "review/all-components"
+      ]
+    },
+    {
+      "matchFileNames": [
         "components/api/**"
       ],
       "addLabels": [
