@@ -26,7 +26,11 @@ public class DashboardControllerTests
 
     public DashboardControllerTests()
     {
-        _controller = new DashboardController(_dashboardServiceMock.Object, new NotificationsByNinRequestValidator(), new NotificationsByOrgNumberRequestValidator());
+        _controller = new DashboardController(
+            _dashboardServiceMock.Object,
+            new NotificationsByNinRequestValidator(),
+            new NotificationsByOrgNumberRequestValidator(),
+            new NotificationsByEmailRequestValidator());
     }
 
     [Theory]
@@ -466,6 +470,229 @@ public class DashboardControllerTests
         // Act
         var result = await _controller.GetNotificationsByOrgNumber(
             new NotificationsByOrgNumberRequestExt { OrganizationNumber = "123456789" },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetNotificationsByEmail_EmailNullEmptyOrWhitespace_ReturnsValidationProblem(string? email)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = email! },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("missing-at-sign.com")]
+    [InlineData("user@")]
+    public async Task GetNotificationsByEmail_InvalidEmailFormat_ReturnsValidationProblem(string email)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = email },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_FromEqualToTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = instant, To = instant },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_FromAfterTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_OnlyFromProvided_PassesValidationAndCallsService()
+    {
+        // Arrange — only one side of the range provided, so the from >= to check must not trigger
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByEmailAsync("recipient@example.com", from, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = from },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_ValidInput_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByEmailAsync("recipient@example.com", from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+        _dashboardServiceMock.Verify(
+            x => x.GetNotificationsByEmailAsync("recipient@example.com", from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_NoNotificationsFound_Returns200WithEmptyList()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByEmailAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com" },
+            CancellationToken.None);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_ToInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var to = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_FromInFuture_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = from },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_FromMoreThan10YearsAgo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = DateTime.UtcNow.AddYears(-10).AddDays(-1);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", From = from },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_OnlyToProvidedAndTooFarInPast_ReturnsValidationProblem()
+    {
+        // Arrange — To is more than 7 days in the past with no From, which the validator rejects
+        var to = DateTime.UtcNow.AddDays(-8);
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com", To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmail_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByEmailAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByEmail(
+            new NotificationsByEmailRequestExt { Email = "recipient@example.com" },
             CancellationToken.None);
 
         // Assert

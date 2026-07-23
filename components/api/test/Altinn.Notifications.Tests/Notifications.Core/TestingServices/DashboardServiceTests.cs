@@ -17,6 +17,7 @@ public class DashboardServiceTests
 {
     private const string _recipientNin = "12345678901";
     private const string _recipientOrgNo = "123456789";
+    private const string _recipientEmail = "recipient@example.com";
 
     [Fact]
     public async Task GetNotificationsByNinAsync_ValidInput_ReturnsRepositoryResult()
@@ -212,6 +213,106 @@ public class DashboardServiceTests
         repository.Verify(
             x => x.GetDashboardNotificationsByOrgNumberAsync(
                 _recipientOrgNo,
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmailAsync_ValidInput_ReturnsRepositoryResult()
+    {
+        // Arrange
+        var expected = new List<DashboardNotification>
+        {
+            new(
+                Guid.NewGuid(),
+                "test",
+                null,
+                null,
+                DateTime.UtcNow,
+                NotificationChannel.EmailPreferred,
+                "notification",
+                [new DashboardDeliveryAttempt(null, null, "email", _recipientEmail, null, "Succeeded", null)]),
+        };
+
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var sut = new DashboardService(repository.Object);
+        DateTime from = DateTime.UtcNow.AddDays(-3);
+        DateTime to = DateTime.UtcNow;
+
+        // Act
+        var result = await sut.GetNotificationsByEmailAsync(_recipientEmail, from, to, CancellationToken.None);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByEmailAsync(_recipientEmail, from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.True(result.IsSuccess);
+        var entry = Assert.Single(result.Value!);
+        Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
+        Assert.Equal(_recipientEmail, Assert.Single(entry.DeliveryAttempts).EmailAddress);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmailAsync_NullDateRange_ForwardsNullsToRepository()
+    {
+        // Arrange
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new DashboardService(repository.Object);
+
+        // Act
+        var result = await sut.GetNotificationsByEmailAsync(_recipientEmail, null, null, CancellationToken.None);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByEmailAsync(_recipientEmail, null, null, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByEmailAsync_ForwardsCancellationToken()
+    {
+        // Arrange
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new DashboardService(repository.Object);
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        await sut.GetNotificationsByEmailAsync(_recipientEmail, null, null, cts.Token);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByEmailAsync(
+                _recipientEmail,
                 It.IsAny<DateTime?>(),
                 It.IsAny<DateTime?>(),
                 cts.Token),
