@@ -80,27 +80,32 @@ jobs:
           filters: |
             api:
               - 'global.json'
+              - 'Directory.Packages.props'
               - 'components/api/src/**'
               - 'components/api/Altinn.Notifications.API.slnx'
               - 'components/api/test/Altinn.Notifications.Tests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTests/**'
               - 'components/api/test/Altinn.Notifications.IntegrationTestsASB/**'
             shared:
+              - 'Directory.Packages.props'
               - 'global.json'
               - 'components/shared/src/**'
               - 'components/shared/test/**'
               - 'components/shared/Altinn.Notifications.Shared.slnx'
             sms:
+              - 'Directory.Packages.props'
               - 'global.json'
               - 'components/sms-service/src/**'
               - 'components/sms-service/test/**'
               - 'components/sms-service/Altinn.Notifications.Sms.slnx'
             email:
+              - 'Directory.Packages.props'
               - 'global.json'
               - 'components/email-service/src/**'
               - 'components/email-service/test/**'
               - 'components/email-service/Altinn.Notifications.Email.slnx'
             tools:
+              - 'Directory.Packages.props'
               - 'global.json'
               - 'tools/src/**'
               - 'tools/test/**'
