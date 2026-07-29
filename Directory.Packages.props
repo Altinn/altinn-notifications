@@ -13,7 +13,7 @@
 		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.9" />
 		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.8" />
 		<PackageVersion Include="Altinn.Common.PEP" Version="4.2.3" />
-		<PackageVersion Include="Altinn.Urn" Version="4.3.0" />
+		<PackageVersion Include="Altinn.Urn" Version="5.0.0" />
 
 		<!-- Azure -->
 		<PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
