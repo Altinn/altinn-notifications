@@ -13,7 +13,7 @@ public interface INotificationLogService
     /// <param name="dialogId">The Dialogporten dialog identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Notification log entries associated with the dialog.</returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string? dialogId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets notification log entries for a shipment.

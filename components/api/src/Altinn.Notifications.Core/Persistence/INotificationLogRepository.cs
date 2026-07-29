@@ -15,7 +15,7 @@ public interface INotificationLogRepository
     /// <returns>
     /// A collection of notification log entries associated with the specified dialog.
     /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string? dialogId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets notification log entries associated with the specified shipment.

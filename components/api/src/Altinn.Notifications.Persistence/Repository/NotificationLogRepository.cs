@@ -66,7 +66,7 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string? dialogId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
     {
         await using var command = CreateNotificationLogCommand(
             dialogId: dialogId,

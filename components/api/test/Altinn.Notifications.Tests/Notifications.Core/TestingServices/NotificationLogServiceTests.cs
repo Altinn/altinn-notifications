@@ -40,26 +40,6 @@ public sealed class NotificationLogServiceTests
     }
 
     [Fact]
-    public async Task GetByDialogId_WithNullDialogId_PassesNullToRepository()
-    {
-        // Arrange
-        string? dialogId = null;
-        IReadOnlyList<NotificationLogEntry> expected = [];
-
-        _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
-            .ReturnsAsync(expected);
-
-        // Act
-        IReadOnlyList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Same(expected, result);
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogId(null, TestContext.Current.CancellationToken), Times.Once);
-        _notificationLogRepositoryMock.VerifyNoOtherCalls();
-    }
-
-    [Fact]
     public async Task GetByDialogId_WhenRepositoryReturnsEmptyList_ReturnsEmptyList()
     {
         // Arrange

@@ -12,7 +12,7 @@ public sealed class NotificationLogService(INotificationLogRepository notificati
     private readonly INotificationLogRepository _notificationLogRepository = notificationLogRepository;
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string? dialogId, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
     {
         return _notificationLogRepository.GetByDialogId(dialogId, cancellationToken);
     }
