@@ -1,13 +1,17 @@
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -347,5 +351,413 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         string thirdNotificationCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE notificationid = '{thirdEmail.Id}'";
         int thirdNotificationCount = await PostgreUtil.RunSqlReturnOutput<int>(thirdNotificationCountSql);
         Assert.Equal(1, thirdNotificationCount);
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenShipmentWithEmailNotificationExists_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        Guid emailNotificationId = Guid.NewGuid();
+        string dialogId = Guid.NewGuid().ToString();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        string operationId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            emailNotificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogEntry entry = Assert.Single(notificationLog);
+
+        Assert.Null(entry.Resource);
+        Assert.Null(entry.Recipient);
+        Assert.Equal("Email", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("ttd", entry.CreatorName);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal(orderId, entry.ShipmentId);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(orderChainId, entry.OrderChainId);
+        Assert.Equal(operationId, entry.DeliveryReference);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(sendersReference, entry.SendersReference);
+        Assert.Equal(emailNotificationId, entry.NotificationId);
+        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
+        Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_WhenShipmentWithSmsNotificationExists_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        Guid smsNotificationId = Guid.NewGuid();
+        string dialogId = Guid.NewGuid().ToString();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        string transmissionId = Guid.NewGuid().ToString();
+        string gatwayReference = Guid.NewGuid().ToString();
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        await RegisterShipmentWithDeliveredSmsNotification(
+            orderId,
+            orderChainId,
+            smsNotificationId,
+            gatwayReference,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByShipmentId(orderId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogEntry entry = Assert.Single(notificationLog);
+
+        Assert.Null(entry.Resource);
+        Assert.Null(entry.Recipient);
+        Assert.Equal("Sms", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("ttd", entry.CreatorName);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal(orderId, entry.ShipmentId);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal("+4799999999", entry.Destination);
+        Assert.Equal(orderChainId, entry.OrderChainId);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(smsNotificationId, entry.NotificationId);
+        Assert.Equal(sendersReference, entry.SendersReference);
+        Assert.Equal(gatwayReference, entry.DeliveryReference);
+        Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenNotificationExists_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        Guid emailNotificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+
+        DateTime requestedSendTime = DateTime.UtcNow;
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            emailNotificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogEntry entry = Assert.Single(notificationLog);
+
+        Assert.Null(entry.Resource);
+        Assert.Null(entry.Recipient);
+        Assert.Equal("Email", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("ttd", entry.CreatorName);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal(orderId, entry.ShipmentId);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(orderChainId, entry.OrderChainId);
+        Assert.Equal(operationId, entry.DeliveryReference);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(sendersReference, entry.SendersReference);
+        Assert.Equal(emailNotificationId, entry.NotificationId);
+        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
+        Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenNoNotificationMatches_ReturnsEmptyList()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByDialogId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_WhenNoNotificationMatches_ReturnsEmptyList()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByShipmentId(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenNoNotificationMatches_ReturnsEmptyList()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act
+        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByTransmissionId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    private static NotificationLogRepository GetNotificationLogRepository()
+    {
+        return (NotificationLogRepository)ServiceUtil
+            .GetServices([typeof(INotificationLogRepository)])
+            .First(i => i.GetType() == typeof(NotificationLogRepository));
+    }
+
+    private static async Task RegisterShipmentWithDeliveredSmsNotification(
+        Guid orderId,
+        Guid orderChainId,
+        Guid smsNotificationId,
+        string gatwayReference,
+        string dialogId,
+        string transmissionId,
+        DateTime requestedSendTime,
+        string sendersReference)
+    {
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetDialogportenAssociation(new DialogportenIdentifiers
+            {
+                DialogId = dialogId,
+                TransmissionId = transmissionId,
+            })
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSms = new RecipientSms
+                {
+                    PhoneNumber = "+4799999999",
+                    Settings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "Your OTP is 12345",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients = [new Recipient([new SmsAddressPoint("+4799999999")])],
+            Templates =
+            [
+                new SmsTemplate("Altinn", "Your OTP is 12345")
+            ]
+        };
+
+        SmsNotification smsNotification = new()
+        {
+            OrderId = orderId,
+            Id = smsNotificationId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new() { MobileNumber = "+4799999999" },
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        await orderRepository.Create(
+            orderChainRequest,
+            notificationOrder,
+            null,
+            TestContext.Current.CancellationToken);
+
+        await orderRepository.SetProcessingStatus(
+            orderId,
+            OrderProcessingStatus.Processing);
+
+        SmsNotificationRepository smsNotificationRepository = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        await smsNotificationRepository.AddNotification(
+            smsNotification,
+            DateTime.UtcNow.AddDays(2));
+
+        await smsNotificationRepository.UpdateSendStatus(
+            smsNotificationId,
+            SmsNotificationResultType.Sending);
+
+        await smsNotificationRepository.UpdateSendStatus(
+            smsNotificationId,
+            SmsNotificationResultType.Accepted,
+            gatwayReference);
+
+        await smsNotificationRepository.UpdateSendStatus(
+            null,
+            SmsNotificationResultType.Delivered,
+            gatwayReference);
+    }
+
+    private static async Task RegisterShipmentWithDeliveredEmailNotification(
+        Guid orderId,
+        Guid orderChainId,
+        Guid emailNotificationId,
+        string operationId,
+        string dialogId,
+        string transmissionId,
+        DateTime requestedSendTime,
+        string sendersReference)
+    {
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetDialogportenAssociation(new DialogportenIdentifiers
+            {
+                DialogId = dialogId,
+                TransmissionId = transmissionId,
+            })
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new EmailSendingOptions
+                    {
+                        Subject = "Decision from Altinn",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no",
+                        Body = "Please review the attached document",
+                        SendingTimePolicy = SendingTimePolicy.Anytime
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
+            Templates =
+            [
+                new EmailTemplate(
+                "noreply@altinn.no",
+                "Decision from Altinn",
+                "Please review the attached document.",
+                EmailContentType.Plain)
+            ]
+        };
+
+        EmailNotification emailNotification = new()
+        {
+            OrderId = orderId,
+            Id = emailNotificationId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new() { ToAddress = "recipient@altinnxyz.no" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        await orderRepository.Create(
+            orderChainRequest,
+            notificationOrder,
+            null,
+            TestContext.Current.CancellationToken);
+
+        await orderRepository.SetProcessingStatus(
+            orderId,
+            OrderProcessingStatus.Processing);
+
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        await emailNotificationRepository.AddNotification(
+            emailNotification,
+            DateTime.UtcNow.AddDays(2));
+
+        await emailNotificationRepository.UpdateSendStatus(
+            emailNotificationId,
+            EmailNotificationResultType.Sending);
+
+        await emailNotificationRepository.UpdateSendStatus(
+            emailNotificationId,
+            EmailNotificationResultType.Succeeded,
+            operationId);
+
+        await emailNotificationRepository.UpdateSendStatus(
+            null,
+            EmailNotificationResultType.Delivered,
+            operationId);
     }
 }
