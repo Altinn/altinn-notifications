@@ -6,7 +6,7 @@ using Npgsql;
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <summary>
-/// Provides access to notification log data.
+/// Represents notification log operations.
 /// </summary>
 public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INotificationLogRepository
 {
@@ -31,7 +31,6 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
             lastupdatetime
         FROM notifications.getnotificationlog(
             _dialogid := @dialogid,
-            _shipmentid := @shipmentid,
             _transmissionid := @transmissionid
         )";
 
@@ -66,34 +65,9 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string transmissionId, string dialogId, CancellationToken cancellationToken)
     {
-        await using var command = CreateNotificationLogCommand(
-            dialogId: dialogId,
-            shipmentId: null,
-            transmissionId: null);
-
-        return await ReadNotificationLogEntries(command, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<NotificationLogEntry>> GetByShipmentId(Guid shipmentId, CancellationToken cancellationToken)
-    {
-        await using var command = CreateNotificationLogCommand(
-            dialogId: null,
-            shipmentId: shipmentId,
-            transmissionId: null);
-
-        return await ReadNotificationLogEntries(command, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
-    {
-        await using var command = CreateNotificationLogCommand(
-            dialogId: null,
-            shipmentId: null,
-            transmissionId: transmissionId);
+        await using var command = CreateNotificationLogCommand(dialogId, transmissionId);
 
         return await ReadNotificationLogEntries(command, cancellationToken);
     }
@@ -154,21 +128,20 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     /// Creates a database command for retrieving notification log entries.
     /// </summary>
     /// <param name="dialogId">
-    /// The Dialogporten dialog identifier to use as the lookup criterion, or <see langword="null"/>.
-    /// </param>
-    /// <param name="shipmentId">
-    /// The shipment identifier to use as the lookup criterion, or <see langword="null"/>.
+    /// The Dialogporten dialog identifier to filter by, or <see langword="null"/>.
     /// </param>
     /// <param name="transmissionId">
-    /// The Dialogporten transmission identifier to use as the lookup criterion, or <see langword="null"/>.
+    /// The Dialogporten transmission identifier to filter by, or <see langword="null"/>.
     /// </param>
-    /// <returns>A configured database command for retrieving notification log entries.</returns>
-    private NpgsqlCommand CreateNotificationLogCommand(string? dialogId, Guid? shipmentId, string? transmissionId)
+    /// <returns>
+    /// A configured database command for retrieving notification log entries.
+    /// </returns>
+    private NpgsqlCommand CreateNotificationLogCommand(string? dialogId, string? transmissionId)
     {
         var command = _dataSource.CreateCommand(_getNotificationLogSql);
 
         command.Parameters.AddWithValue("dialogid", dialogId is null ? DBNull.Value : dialogId);
-        command.Parameters.AddWithValue("shipmentid", shipmentId is null ? DBNull.Value : shipmentId);
+
         command.Parameters.AddWithValue("transmissionid", transmissionId is null ? DBNull.Value : transmissionId);
 
         return command;

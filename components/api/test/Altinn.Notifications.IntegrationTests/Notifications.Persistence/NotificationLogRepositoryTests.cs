@@ -354,7 +354,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogId_WhenShipmentWithEmailNotificationExists_ReturnsNotificationLogEntry()
+    public async Task GetByDialogOrTransmission_WhenLookupByDialogId_ReturnsNotificationLogEntry()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -382,7 +382,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: null, dialogId: dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         NotificationLogEntry entry = Assert.Single(notificationLog);
@@ -405,7 +406,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByShipmentId_WhenShipmentWithSmsNotificationExists_ReturnsNotificationLogEntry()
+    public async Task GetByDialogOrTransmission_WhenLookupByTransmissionId_ReturnsNotificationLogEntry()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -414,18 +415,19 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        Guid smsNotificationId = Guid.NewGuid();
+        Guid emailNotificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
         string dialogId = Guid.NewGuid().ToString();
-        DateTime requestedSendTime = DateTime.UtcNow;
         string transmissionId = Guid.NewGuid().ToString();
-        string gatwayReference = Guid.NewGuid().ToString();
+
+        DateTime requestedSendTime = DateTime.UtcNow;
         string sendersReference = $"ref-{Guid.NewGuid():N}";
 
-        await RegisterShipmentWithDeliveredSmsNotification(
+        await RegisterShipmentWithDeliveredEmailNotification(
             orderId,
             orderChainId,
-            smsNotificationId,
-            gatwayReference,
+            emailNotificationId,
+            operationId,
             dialogId,
             transmissionId,
             requestedSendTime,
@@ -433,7 +435,61 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByShipmentId(orderId, TestContext.Current.CancellationToken);
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: transmissionId, dialogId: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogEntry entry = Assert.Single(notificationLog);
+
+        Assert.Null(entry.Resource);
+        Assert.Null(entry.Recipient);
+        Assert.Equal("Email", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("ttd", entry.CreatorName);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal(orderId, entry.ShipmentId);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(orderChainId, entry.OrderChainId);
+        Assert.Equal(operationId, entry.DeliveryReference);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(sendersReference, entry.SendersReference);
+        Assert.Equal(emailNotificationId, entry.NotificationId);
+        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
+        Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
+    }
+
+    [Fact]
+    public async Task GetByDialogOrTransmission_WhenLookupByDialogIdAndTransmissionId_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        Guid emailNotificationId = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+
+        DateTime requestedSendTime = DateTime.UtcNow;
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        await RegisterShipmentWithDeliveredSmsNotification(
+            orderId,
+            orderChainId,
+            emailNotificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: transmissionId, dialogId: dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         NotificationLogEntry entry = Assert.Single(notificationLog);
@@ -448,101 +504,43 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal("Notification", entry.Type);
         Assert.Equal("+4799999999", entry.Destination);
         Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(transmissionId, entry.TransmissionId);
-        Assert.Equal(smsNotificationId, entry.NotificationId);
-        Assert.Equal(sendersReference, entry.SendersReference);
-        Assert.Equal(gatwayReference, entry.DeliveryReference);
-        Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
-    }
-
-    [Fact]
-    public async Task GetByTransmissionId_WhenNotificationExists_ReturnsNotificationLogEntry()
-    {
-        // Arrange
-        Guid orderId = Guid.NewGuid();
-        Guid orderChainId = Guid.NewGuid();
-
-        _orderIdsToCleanup.Add(orderId);
-        _orderChainIdsToCleanup.Add(orderChainId);
-
-        Guid emailNotificationId = Guid.NewGuid();
-        string operationId = Guid.NewGuid().ToString();
-        string dialogId = Guid.NewGuid().ToString();
-        string transmissionId = Guid.NewGuid().ToString();
-
-        DateTime requestedSendTime = DateTime.UtcNow;
-        string sendersReference = $"ref-{Guid.NewGuid():N}";
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            orderId,
-            orderChainId,
-            emailNotificationId,
-            operationId,
-            dialogId,
-            transmissionId,
-            requestedSendTime,
-            sendersReference);
-
-        // Act
-        NotificationLogRepository repository = GetNotificationLogRepository();
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
-
-        // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
-
-        Assert.Null(entry.Resource);
-        Assert.Null(entry.Recipient);
-        Assert.Equal("Email", entry.Channel);
-        Assert.Equal(dialogId, entry.DialogId);
-        Assert.Equal("ttd", entry.CreatorName);
-        Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(orderId, entry.ShipmentId);
-        Assert.Equal("Notification", entry.Type);
-        Assert.Equal(orderChainId, entry.OrderChainId);
         Assert.Equal(operationId, entry.DeliveryReference);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(sendersReference, entry.SendersReference);
         Assert.Equal(emailNotificationId, entry.NotificationId);
-        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
         Assert.True(Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500);
     }
 
     [Fact]
-    public async Task GetByDialogId_WhenNoNotificationMatches_ReturnsEmptyList()
+    public async Task GetByDialogOrTransmission_WhenDialogIdDoesNotMatch_ReturnsEmptyList()
     {
-        // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        // Act
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByDialogId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: null, dialogId: Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Empty(notificationLog);
     }
 
     [Fact]
-    public async Task GetByShipmentId_WhenNoNotificationMatches_ReturnsEmptyList()
+    public async Task GetByDialogOrTransmission_WhenTransmissionIdDoesNotMatch_ReturnsEmptyList()
     {
-        // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        // Act
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByShipmentId(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: Guid.NewGuid().ToString(), dialogId: null, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Empty(notificationLog);
     }
 
     [Fact]
-    public async Task GetByTransmissionId_WhenNoNotificationMatches_ReturnsEmptyList()
+    public async Task GetByDialogOrTransmission_WhenDialogIdAndTransmissionIdDoNotMatch_ReturnsEmptyList()
     {
-        // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        // Act
-        IReadOnlyList<NotificationLogEntry> notificationLog = await repository.GetByTransmissionId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+        IReadOnlyList<NotificationLogEntry> notificationLog =
+            await repository.GetByDialogOrTransmission(transmissionId: Guid.NewGuid().ToString(), dialogId: Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Empty(notificationLog);
     }
 

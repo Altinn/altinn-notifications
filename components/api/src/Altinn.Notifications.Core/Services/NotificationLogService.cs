@@ -5,27 +5,15 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Provides access to notification log entries.
+/// Define service to handle notification log.
 /// </summary>
 public sealed class NotificationLogService(INotificationLogRepository notificationLogRepository) : INotificationLogService
 {
     private readonly INotificationLogRepository _notificationLogRepository = notificationLogRepository;
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string transmissionId, string dialogId, CancellationToken cancellationToken)
     {
-        return _notificationLogRepository.GetByDialogId(dialogId, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<NotificationLogEntry>> GetByShipmentId(Guid shipmentId, CancellationToken cancellationToken)
-    {
-        return _notificationLogRepository.GetByShipmentId(shipmentId, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
-    {
-        return _notificationLogRepository.GetByTransmissionId(transmissionId, cancellationToken);
+        return _notificationLogRepository.GetByDialogOrTransmission(transmissionId, dialogId, cancellationToken);
     }
 }

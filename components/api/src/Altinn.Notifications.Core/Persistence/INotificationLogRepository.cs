@@ -3,37 +3,24 @@
 namespace Altinn.Notifications.Core.Persistence;
 
 /// <summary>
-/// Provides access to notification log entries.
+/// Define notification log operations.
 /// </summary>
 public interface INotificationLogRepository
 {
     /// <summary>
-    /// Gets notification log entries associated with the specified Dialogporten dialog.
+    /// Gets notification log entries matching the specified criteria.
     /// </summary>
-    /// <param name="dialogId">The Dialogporten dialog identifier.</param>
-    /// <param name="cancellationToken">The token used to cancel the asynchronous operation.</param>
+    /// <param name="transmissionId">
+    /// The Dialogporten transmission identifier used to filter notification log entries.
+    /// </param>
+    /// <param name="dialogId">
+    /// The Dialogporten dialog identifier used to filter notification log entries.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The token used to cancel the asynchronous operation.
+    /// </param>
     /// <returns>
-    /// A collection of notification log entries associated with the specified dialog.
+    /// A collection of notification log entries matching the specified criteria.
     /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Gets notification log entries associated with the specified shipment.
-    /// </summary>
-    /// <param name="shipmentId">The shipment identifier.</param>
-    /// <param name="cancellationToken">The token used to cancel the asynchronous operation.</param>
-    /// <returns>
-    /// A collection of notification log entries associated with the specified shipment.
-    /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByShipmentId(Guid shipmentId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Gets notification log entries associated with the specified Dialogporten transmission.
-    /// </summary>
-    /// <param name="transmissionId">The Dialogporten transmission identifier.</param>
-    /// <param name="cancellationToken">The token used to cancel the asynchronous operation.</param>
-    /// <returns>
-    /// A collection of notification log entries associated with the specified transmission.
-    /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string transmissionId, string dialogId, CancellationToken cancellationToken);
 }
