@@ -383,7 +383,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
         IReadOnlyList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogOrTransmission(transmissionId: string.Empty, dialogId: dialogId, TestContext.Current.CancellationToken);
+            await repository.GetByDialogOrTransmission(transmissionId: null, dialogId: dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         NotificationLogEntry entry = Assert.Single(notificationLog);
@@ -436,7 +436,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
         IReadOnlyList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogOrTransmission(transmissionId: transmissionId, dialogId: string.Empty, TestContext.Current.CancellationToken);
+            await repository.GetByDialogOrTransmission(transmissionId: transmissionId, dialogId: null, TestContext.Current.CancellationToken);
 
         // Assert
         NotificationLogEntry entry = Assert.Single(notificationLog);
@@ -517,7 +517,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IReadOnlyList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogOrTransmission(transmissionId: string.Empty, dialogId: Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+            await repository.GetByDialogOrTransmission(transmissionId: null, dialogId: Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
         Assert.Empty(notificationLog);
     }
@@ -528,7 +528,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IReadOnlyList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogOrTransmission(transmissionId: Guid.NewGuid().ToString(), dialogId: string.Empty, TestContext.Current.CancellationToken);
+            await repository.GetByDialogOrTransmission(transmissionId: Guid.NewGuid().ToString(), dialogId: null, TestContext.Current.CancellationToken);
 
         Assert.Empty(notificationLog);
     }

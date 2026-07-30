@@ -22,5 +22,5 @@ public interface INotificationLogService
     /// <returns>
     /// A collection of notification log entries matching the specified criteria.
     /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string transmissionId, string dialogId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string? transmissionId, string? dialogId, CancellationToken cancellationToken);
 }
