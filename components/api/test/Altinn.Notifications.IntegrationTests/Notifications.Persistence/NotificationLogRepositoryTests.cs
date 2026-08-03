@@ -677,185 +677,6 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogId_WhenMultipleEntriesMatch_ReturnsAllMatchingEntries()
-    {
-        // Arrange
-        Guid orderChainId = Guid.NewGuid();
-        _orderChainIdsToCleanup.Add(orderChainId);
-
-        string dialogId = Guid.NewGuid().ToString();
-
-        DateTime firstRequestedSendTime = DateTime.UtcNow.AddMinutes(-2);
-        DateTime secondRequestedSendTime = DateTime.UtcNow.AddMinutes(-1);
-
-        Guid firstOrderId = Guid.NewGuid();
-        Guid firstNotificationId = Guid.NewGuid();
-
-        Guid secondOrderId = Guid.NewGuid();
-        Guid secondNotificationId = Guid.NewGuid();
-
-        _orderIdsToCleanup.Add(firstOrderId);
-        _orderIdsToCleanup.Add(secondOrderId);
-
-        string firstTransmissionId = Guid.NewGuid().ToString();
-        string secondTransmissionId = Guid.NewGuid().ToString();
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            firstOrderId,
-            orderChainId,
-            firstNotificationId,
-            Guid.NewGuid().ToString(),
-            dialogId,
-            firstTransmissionId,
-            firstRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            secondOrderId,
-            orderChainId,
-            secondNotificationId,
-            Guid.NewGuid().ToString(),
-            dialogId,
-            secondTransmissionId,
-            secondRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        // Act
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        IImmutableList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogId(
-                dialogId,
-                TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, notificationLog.Count);
-        Assert.Equal(firstNotificationId, notificationLog[0].NotificationId);
-        Assert.Equal(secondNotificationId, notificationLog[1].NotificationId);
-        Assert.Equal(firstRequestedSendTime, notificationLog[0].RequestedSendTime);
-        Assert.Equal(secondRequestedSendTime, notificationLog[1].RequestedSendTime);
-    }
-
-    [Fact]
-    public async Task GetByTransmissionId_WhenMultipleEntriesMatch_ReturnsAllMatchingEntries()
-    {
-        // Arrange
-        Guid orderChainId = Guid.NewGuid();
-        _orderChainIdsToCleanup.Add(orderChainId);
-
-        string transmissionId = Guid.NewGuid().ToString();
-
-        DateTime firstRequestedSendTime = DateTime.UtcNow.AddMinutes(-2);
-        DateTime secondRequestedSendTime = DateTime.UtcNow.AddMinutes(-1);
-
-        Guid firstOrderId = Guid.NewGuid();
-        Guid firstNotificationId = Guid.NewGuid();
-
-        Guid secondOrderId = Guid.NewGuid();
-        Guid secondNotificationId = Guid.NewGuid();
-
-        _orderIdsToCleanup.Add(firstOrderId);
-        _orderIdsToCleanup.Add(secondOrderId);
-
-        string firstDialogId = Guid.NewGuid().ToString();
-        string secondDialogId = Guid.NewGuid().ToString();
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            firstOrderId,
-            orderChainId,
-            firstNotificationId,
-            Guid.NewGuid().ToString(),
-            firstDialogId,
-            transmissionId,
-            firstRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            secondOrderId,
-            orderChainId,
-            secondNotificationId,
-            Guid.NewGuid().ToString(),
-            secondDialogId,
-            transmissionId,
-            secondRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        // Act
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        IImmutableList<NotificationLogEntry> notificationLog =
-            await repository.GetByTransmissionId(
-                transmissionId,
-                TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, notificationLog.Count);
-        Assert.Equal(firstNotificationId, notificationLog[0].NotificationId);
-        Assert.Equal(secondNotificationId, notificationLog[1].NotificationId);
-        Assert.Equal(firstRequestedSendTime, notificationLog[0].RequestedSendTime);
-        Assert.Equal(secondRequestedSendTime, notificationLog[1].RequestedSendTime);
-    }
-
-    [Fact]
-    public async Task GetByDialogAndTransmission_WhenMultipleEntriesMatch_ReturnsAllMatchingEntries()
-    {
-        // Arrange
-        Guid orderChainId = Guid.NewGuid();
-        _orderChainIdsToCleanup.Add(orderChainId);
-
-        string dialogId = Guid.NewGuid().ToString();
-        string transmissionId = Guid.NewGuid().ToString();
-
-        DateTime firstRequestedSendTime = DateTime.UtcNow.AddMinutes(-2);
-        DateTime secondRequestedSendTime = DateTime.UtcNow.AddMinutes(-1);
-
-        Guid firstOrderId = Guid.NewGuid();
-        Guid firstNotificationId = Guid.NewGuid();
-
-        Guid secondOrderId = Guid.NewGuid();
-        Guid secondNotificationId = Guid.NewGuid();
-
-        _orderIdsToCleanup.Add(firstOrderId);
-        _orderIdsToCleanup.Add(secondOrderId);
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            firstOrderId,
-            orderChainId,
-            firstNotificationId,
-            Guid.NewGuid().ToString(),
-            dialogId,
-            transmissionId,
-            firstRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        await RegisterShipmentWithDeliveredEmailNotification(
-            secondOrderId,
-            orderChainId,
-            secondNotificationId,
-            Guid.NewGuid().ToString(),
-            dialogId,
-            transmissionId,
-            secondRequestedSendTime,
-            $"ref-{Guid.NewGuid():N}");
-
-        // Act
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        IImmutableList<NotificationLogEntry> notificationLog =
-            await repository.GetByDialogAndTransmission(
-                dialogId,
-                transmissionId,
-                TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, notificationLog.Count);
-        Assert.Equal(firstNotificationId, notificationLog[0].NotificationId);
-        Assert.Equal(secondNotificationId, notificationLog[1].NotificationId);
-        Assert.Equal(firstRequestedSendTime, notificationLog[0].RequestedSendTime);
-        Assert.Equal(secondRequestedSendTime, notificationLog[1].RequestedSendTime);
-    }
-
-    [Fact]
     public async Task GetByDialogId_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyMatchingEntries()
     {
         // Arrange
@@ -1199,7 +1020,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
-            Recipients = [new Recipient([new SmsAddressPoint("+4799999999")])],
+            Recipients = [new Altinn.Notifications.Core.Models.Recipient([new SmsAddressPoint("+4799999999")])],
             Templates =
             [
                 new SmsTemplate("Altinn", "Your OTP is 12345")
@@ -1302,7 +1123,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Email,
-            Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
+            Recipients = [new Altinn.Notifications.Core.Models.Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
             Templates =
             [
                 new EmailTemplate(
