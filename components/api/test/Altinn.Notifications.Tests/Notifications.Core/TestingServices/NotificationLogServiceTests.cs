@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models.NotificationLog;
+﻿using System.Collections.Immutable;
+
+using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 
@@ -20,315 +22,275 @@ public sealed class NotificationLogServiceTests
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByNonexistentDialogId_ReturnsEmptyList()
+    public async Task GetByDialogId_WhenLookupByNonexistentDialogId_ReturnsEmptyList()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
-        IReadOnlyList<NotificationLogEntry> expected = [];
+        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result = await _notificationLogService.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
         Assert.Same(expected, result);
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken), Times.Once);
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidDialogId_ReturnsNotificationLogEntry()
+    public async Task GetByDialogId_WhenLookupByValidDialogId_ReturnsNotificationLogEntry()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
-        IReadOnlyList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result = await _notificationLogService.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken), Times.Once);
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidSharedDialogId_ReturnsAllNotificationLogEntries()
+    public async Task GetByDialogId_WhenLookupByValidSharedDialogId_ReturnsAllNotificationLogEntries()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
 
-        IReadOnlyList<NotificationLogEntry> expected =
-        [
+        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
-            CreateNotificationLogEntry()
-        ];
+            CreateNotificationLogEntry());
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result =
-            await _notificationLogService.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
         Assert.Equal(3, result.Count);
-
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken), Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidDialogIdAndRepositoryThrows_PropagatesException()
+    public async Task GetByDialogId_WhenRepositoryThrows_PropagatesException()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Database error");
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ThrowsAsync(expectedException);
 
         // Act
         InvalidOperationException exception =
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _notificationLogService.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken));
+                () => _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Same(expectedException, exception);
-
-        _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(null, dialogId, TestContext.Current.CancellationToken),
-            Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByNonexistentTransmissionId_ReturnsEmptyList()
+    public async Task GetByTransmissionId_WhenLookupByNonexistentTransmissionId_ReturnsEmptyList()
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
-        IReadOnlyList<NotificationLogEntry> expected = [];
+        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result = await _notificationLogService.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
         Assert.Same(expected, result);
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken), Times.Once);
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidTransmissionId_ReturnsNotificationLogEntry()
+    public async Task GetByTransmissionId_WhenLookupByValidTransmissionId_ReturnsNotificationLogEntry()
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
-        IReadOnlyList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result = await _notificationLogService.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken), Times.Once);
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidSharedTransmissionId_ReturnsAllNotificationLogEntries()
+    public async Task GetByTransmissionId_WhenLookupByValidSharedTransmissionId_ReturnsAllNotificationLogEntries()
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
 
-        IReadOnlyList<NotificationLogEntry> expected =
-        [
+        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
-            CreateNotificationLogEntry()
-        ];
+            CreateNotificationLogEntry());
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result =
-            await _notificationLogService.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
         Assert.Equal(3, result.Count);
-
-        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken), Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidTransmissionIdAndRepositoryThrows_PropagatesException()
+    public async Task GetByTransmissionId_WhenRepositoryThrows_PropagatesException()
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Database error");
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ThrowsAsync(expectedException);
 
         // Act
         InvalidOperationException exception =
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _notificationLogService.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken));
+                () => _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Same(expectedException, exception);
-
-        _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(transmissionId, null, TestContext.Current.CancellationToken),
-            Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByNonexistentDialogIdAndTransmissionId_ReturnsEmptyList()
+    public async Task GetByDialogAndTransmission_WhenLookupByNonexistentIds_ReturnsEmptyList()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
-
-        IReadOnlyList<NotificationLogEntry> expected = [];
+        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result =
-            await _notificationLogService.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result =
+            await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
         Assert.Same(expected, result);
-
-        _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken),
-            Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidDialogIdAndTransmissionId_ReturnsNotificationLogEntry()
+    public async Task GetByDialogAndTransmission_WhenLookupByValidIds_ReturnsNotificationLogEntry()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
-
-        IReadOnlyList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result =
-            await _notificationLogService.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result =
+            await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
-
-        _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken),
-            Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidSharedDialogIdAndTransmissionId_ReturnsAllNotificationLogEntries()
+    public async Task GetByDialogAndTransmission_WhenLookupByValidSharedIds_ReturnsAllNotificationLogEntries()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
 
-        IReadOnlyList<NotificationLogEntry> expected =
-        [
+        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
-            CreateNotificationLogEntry()
-        ];
+            CreateNotificationLogEntry());
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IReadOnlyList<NotificationLogEntry> result =
-            await _notificationLogService.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogEntry> result =
+            await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
         Assert.Equal(3, result.Count);
-
-        _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken),
-            Times.Once);
-
+        _notificationLogRepositoryMock.Verify(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken), Times.Once);
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetByDialogOrTransmission_WhenLookupByValidDialogIdAndTransmissionIdAndRepositoryThrows_PropagatesException()
+    public async Task GetByDialogAndTransmission_WhenRepositoryThrows_PropagatesException()
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
-
         var expectedException = new InvalidOperationException("Database error");
 
         _notificationLogRepositoryMock
-            .Setup(repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken))
+            .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ThrowsAsync(expectedException);
 
         // Act
         InvalidOperationException exception =
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _notificationLogService.GetByDialogOrTransmission(
-                    transmissionId,
-                    dialogId,
-                    TestContext.Current.CancellationToken));
+                () => _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Same(expectedException, exception);
-
         _notificationLogRepositoryMock.Verify(
-            repository => repository.GetByDialogOrTransmission(transmissionId, dialogId, TestContext.Current.CancellationToken),
+            repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken),
             Times.Once);
-
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
@@ -353,11 +315,8 @@ public sealed class NotificationLogServiceTests
             DeliveryReference: Guid.NewGuid().ToString());
     }
 
-    private static IReadOnlyList<NotificationLogEntry> CreateNotificationLogEntries()
+    private static IImmutableList<NotificationLogEntry> CreateNotificationLogEntries()
     {
-        return
-        [
-            CreateNotificationLogEntry()
-        ];
+        return ImmutableList.Create(CreateNotificationLogEntry());
     }
 }

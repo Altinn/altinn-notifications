@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Persistence;
 
@@ -65,8 +67,31 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string? transmissionId, string? dialogId, CancellationToken cancellationToken)
+    public async Task<IImmutableList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dialogId);
+
+        await using var command = CreateNotificationLogCommand(dialogId, null);
+
+        return await ReadNotificationLogEntries(command, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(transmissionId);
+
+        await using var command = CreateNotificationLogCommand(null, transmissionId);
+
+        return await ReadNotificationLogEntries(command, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<NotificationLogEntry>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dialogId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(transmissionId);
+
         await using var command = CreateNotificationLogCommand(dialogId, transmissionId);
 
         return await ReadNotificationLogEntries(command, cancellationToken);
@@ -152,8 +177,8 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     /// </summary>
     /// <param name="command">The database command to execute.</param>
     /// <param name="cancellationToken">The token used to cancel the asynchronous operation.</param>
-    /// <returns>The notification log entries returned by the database.</returns>
-    private static async Task<IReadOnlyList<NotificationLogEntry>> ReadNotificationLogEntries(NpgsqlCommand command, CancellationToken cancellationToken)
+    /// <returns>An immutable collection of notification log entries.</returns>
+    private static async Task<IImmutableList<NotificationLogEntry>> ReadNotificationLogEntries(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -164,6 +189,6 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
             result.Add(MapNotificationLogEntry(reader));
         }
 
-        return result;
+        return result.ToImmutableList();
     }
 }

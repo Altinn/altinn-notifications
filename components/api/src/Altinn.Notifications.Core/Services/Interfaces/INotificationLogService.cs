@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models.NotificationLog;
+﻿using System.Collections.Immutable;
+
+using Altinn.Notifications.Core.Models.NotificationLog;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -8,19 +10,47 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface INotificationLogService
 {
     /// <summary>
-    /// Gets notification log entries matching the specified criteria.
+    /// Gets notification log entries matching the specified dialog identifier.
     /// </summary>
-    /// <param name="transmissionId">
-    /// The Dialogporten transmission identifier used to filter notification log entries.
-    /// </param>
     /// <param name="dialogId">
-    /// The Dialogporten dialog identifier used to filter notification log entries.
+    /// The dialog identifier used to filter notification log entries.
     /// </param>
     /// <param name="cancellationToken">
     /// The token used to cancel the asynchronous operation.
     /// </param>
     /// <returns>
-    /// A collection of notification log entries matching the specified criteria.
+    /// An immutable collection of notification log entries matching the specified dialog identifier.
     /// </returns>
-    Task<IReadOnlyList<NotificationLogEntry>> GetByDialogOrTransmission(string? transmissionId, string? dialogId, CancellationToken cancellationToken);
+    Task<IImmutableList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets notification log entries matching the specified transmission identifier.
+    /// </summary>
+    /// <param name="transmissionId">
+    /// The transmission identifier used to filter notification log entries.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The token used to cancel the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// An immutable collection of notification log entries matching the specified transmission identifier.
+    /// </returns>
+    Task<IImmutableList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets notification log entries matching the specified dialog and transmission identifiers.
+    /// </summary>
+    /// <param name="dialogId">
+    /// The dialog identifier used to filter notification log entries.
+    /// </param>
+    /// <param name="transmissionId">
+    /// The transmission identifier used to filter notification log entries.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The token used to cancel the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// An immutable collection of notification log entries matching both the specified dialog and transmission identifiers.
+    /// </returns>
+    Task<IImmutableList<NotificationLogEntry>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken);
 }
