@@ -904,9 +904,40 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             }
 
             bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
-
             var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
-            await SetProcessingStatusAsync(order.Id, status, connection, transaction, cancellationToken);
+
+            await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
+            int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+
+            if (rowsAffected == 0)
+            {
+                await using NpgsqlCommand statusCmd = new(
+                    "SELECT processedstatus FROM notifications.orders WHERE alternateid = $1",
+                    connection,
+                    transaction);
+                statusCmd.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
+                var currentStatus = (string?)await statusCmd.ExecuteScalarAsync(cancellationToken);
+
+                if (currentStatus is "Completed" or "Processed")
+                {
+                    // Explicit rollback here — duplicate notifications are discarded.
+                    // We return normally so this path never reaches the catch block.
+                    await transaction.RollbackAsync(CancellationToken.None);
+
+                    _logger.LogError(
+                        "Order {OrderId} already had status '{CurrentStatus}' when PersistProcessingResultAsync was called; this order was processed more than once. Duplicate notifications were rolled back.",
+                        order.Id,
+                        currentStatus);
+
+                    return isCompleted;
+                }
+
+                // Throw — the catch block handles the single rollback for this path.
+                throw new InvalidOperationException(
+                    $"Order {order.Id} had unexpected status '{currentStatus ?? "not found"}' when attempting to persist processing result; expected Processing.");
+            }
 
             if (isCompleted)
             {
