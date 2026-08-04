@@ -10,10 +10,10 @@
 		<PackageVersion Include="Altinn.ApiClients.Maskinporten" Version="10.1.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails" Version="5.4.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="5.4.0" />
-		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.9" />
-		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.8" />
+		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.10" />
+		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.9" />
 		<PackageVersion Include="Altinn.Common.PEP" Version="4.2.3" />
-		<PackageVersion Include="Altinn.Urn" Version="4.3.0" />
+		<PackageVersion Include="Altinn.Urn" Version="5.0.0" />
 
 		<!-- Azure -->
 		<PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
@@ -21,7 +21,7 @@
 		<PackageVersion Include="Azure.Identity" Version="1.21.0" />
 		<PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
 		<PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.2" />
-		<PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.2" />
+		<PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
 		<PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />
 
 		<!-- ASP.NET -->
@@ -79,9 +79,9 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
 
 		<!-- Wolverine -->
-		<PackageVersion Include="WolverineFx" Version="6.21.0" />
-		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.21.0" />
-		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.21.0" />
+		<PackageVersion Include="WolverineFx" Version="6.23.0" />
+		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.23.0" />
+		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.23.0" />
 
 		<!-- xUnit -->
 		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
