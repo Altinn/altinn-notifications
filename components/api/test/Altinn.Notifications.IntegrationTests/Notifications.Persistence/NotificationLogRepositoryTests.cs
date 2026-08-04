@@ -456,7 +456,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenBothIdsMatch_ReturnsNotificationLogEntry()
+    public async Task GetByDialogAndTransmissionIds_WhenBothIdsMatch_ReturnsNotificationLogEntry()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -486,7 +486,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IImmutableList<NotificationLogSummary> notificationLog =
-            await repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
+            await repository.GetByDialogAndTransmissionIds(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         NotificationLogSummary entry = Assert.Single(notificationLog);
@@ -533,7 +533,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenDialogIdDoesNotMatch_ReturnsEmptyList()
+    public async Task GetByDialogAndTransmissionIds_WhenDialogIdDoesNotMatch_ReturnsEmptyList()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -561,14 +561,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IImmutableList<NotificationLogSummary> notificationLog =
-            await repository.GetByDialogAndTransmission(Guid.NewGuid().ToString(), transmissionId, TestContext.Current.CancellationToken);
+            await repository.GetByDialogAndTransmissionIds(Guid.NewGuid().ToString(), transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(notificationLog);
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenTransmissionIdDoesNotMatch_ReturnsEmptyList()
+    public async Task GetByDialogAndTransmissionIds_WhenTransmissionIdDoesNotMatch_ReturnsEmptyList()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -596,14 +596,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IImmutableList<NotificationLogSummary> notificationLog =
-            await repository.GetByDialogAndTransmission(dialogId, Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+            await repository.GetByDialogAndTransmissionIds(dialogId, Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(notificationLog);
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenDialogAndTransmissionBelongToDifferentEntries_ReturnsEmptyList()
+    public async Task GetByDialogAndTransmissionIds_WhenDialogAndTransmissionBelongToDifferentEntries_ReturnsEmptyList()
     {
         // Arrange
         Guid firstOrderId = Guid.NewGuid();
@@ -648,7 +648,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IImmutableList<NotificationLogSummary> notificationLog =
-            await repository.GetByDialogAndTransmission(firstDialogId, secondTransmissionId, TestContext.Current.CancellationToken);
+            await repository.GetByDialogAndTransmissionIds(firstDialogId, secondTransmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(notificationLog);
@@ -763,7 +763,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyExactMatches()
+    public async Task GetByDialogAndTransmissionIds_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyExactMatches()
     {
         // Arrange
         Guid matchingOrderId = Guid.NewGuid();
@@ -823,7 +823,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         IImmutableList<NotificationLogSummary> notificationLog =
-            await repository.GetByDialogAndTransmission(
+            await repository.GetByDialogAndTransmissionIds(
                 dialogId,
                 transmissionId,
                 TestContext.Current.CancellationToken);
@@ -888,56 +888,56 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenDialogIdIsEmpty_ThrowsArgumentException()
+    public async Task GetByDialogAndTransmissionIds_WhenDialogIdIsEmpty_ThrowsArgumentException()
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmission(
+            repository.GetByDialogAndTransmissionIds(
                 string.Empty,
                 Guid.NewGuid().ToString(),
                 TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
+    public async Task GetByDialogAndTransmissionIds_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmission(
+            repository.GetByDialogAndTransmissionIds(
                 Guid.NewGuid().ToString(),
                 string.Empty,
                 TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenDialogIdIsWhitespace_ThrowsArgumentException()
+    public async Task GetByDialogAndTransmissionIds_WhenDialogIdIsWhitespace_ThrowsArgumentException()
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmission(
+            repository.GetByDialogAndTransmissionIds(
                 "   ",
                 Guid.NewGuid().ToString(),
                 TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task GetByDialogAndTransmission_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
+    public async Task GetByDialogAndTransmissionIds_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmission(
+            repository.GetByDialogAndTransmissionIds(
                 Guid.NewGuid().ToString(),
                 "   ",
                 TestContext.Current.CancellationToken));

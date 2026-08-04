@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Controllers;
 /// Controller for retrieving notification log entries by Dialogporten identifiers.
 /// </summary>
 [ApiController]
-[Route("notifications/api/v1/future/notificationlog")]
+[Route("notifications/api/v1/future/log")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
@@ -31,8 +31,8 @@ public class NotificationLogController(
     INotificationLogService notificationLogService,
     IValidator<NotificationLogQueryExt> validator) : ControllerBase
 {
-    private readonly INotificationLogService _notificationLogService = notificationLogService;
     private readonly IValidator<NotificationLogQueryExt> _validator = validator;
+    private readonly INotificationLogService _notificationLogService = notificationLogService;
 
     /// <summary>
     /// Retrieves notification log entries filtered by dialog identifier, transmission identifier, or both.
@@ -44,12 +44,10 @@ public class NotificationLogController(
     /// </returns>
     [HttpGet]
     [Produces("application/json")]
-    [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogEntryExt>))]
+    [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogSummaryExt>))]
     [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
-    public async Task<ActionResult<IImmutableList<NotificationLogEntryExt>>> Get(
-        [FromQuery] NotificationLogQueryExt query,
-        CancellationToken cancellationToken = default)
+    public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> Get([FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -66,14 +64,13 @@ public class NotificationLogController(
                 return Forbid();
             }
 
+            IImmutableList<NotificationLogSummary> entries;
+
             bool hasDialogId = !string.IsNullOrWhiteSpace(query.DialogId);
             bool hasTransmissionId = !string.IsNullOrWhiteSpace(query.TransmissionId);
-
-            IImmutableList<NotificationLogEntry> entries;
-
             if (hasDialogId && hasTransmissionId)
             {
-                entries = await _notificationLogService.GetByDialogAndTransmission(query.DialogId!, query.TransmissionId!, cancellationToken);
+                entries = await _notificationLogService.GetByDialogAndTransmissionIds(query.DialogId!, query.TransmissionId!, cancellationToken);
             }
             else if (hasDialogId)
             {
@@ -84,7 +81,7 @@ public class NotificationLogController(
                 entries = await _notificationLogService.GetByTransmissionId(query.TransmissionId!, cancellationToken);
             }
 
-            return Ok(entries.MapToNotificationLogEntryExtList());
+            return Ok(entries.MapToNotificationLogSummaryList());
         }
         catch (OperationCanceledException)
         {

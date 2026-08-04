@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Persistence;
@@ -26,8 +26,8 @@ public sealed class NotificationLogService(INotificationLogRepository notificati
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
+    public Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmissionIds(string dialogId, string transmissionId, CancellationToken cancellationToken)
     {
-        return _notificationLogRepository.GetByDialogAndTransmission(dialogId, transmissionId, cancellationToken);
+        return _notificationLogRepository.GetByDialogAndTransmissionIds(dialogId, transmissionId, cancellationToken);
     }
 }
