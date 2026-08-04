@@ -46,6 +46,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _advanceStatusFromProcessingSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Processing'::orderprocessingstate";
+    private const string _advanceStatusToSendConditionNotMetSql = "UPDATE notifications.orders SET processedstatus = 'SendConditionNotMet'::orderprocessingstate, processed = CURRENT_TIMESTAMP WHERE alternateid = $1 AND processedstatus NOT IN ('SendConditionNotMet'::orderprocessingstate, 'Completed'::orderprocessingstate)";
     private const string _resetProcessingToRegisteredSql = "update notifications.orders set processedstatus = 'Registered'::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$1 AND processedstatus = 'Processing'::orderprocessingstate";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
@@ -931,8 +932,21 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
         try
         {
-            await SetProcessingStatusAsync(order.Id, OrderProcessingStatus.SendConditionNotMet, connection, transaction, cancellationToken);
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            await using NpgsqlCommand pgcom = new(_advanceStatusToSendConditionNotMetSql, connection, transaction);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
+            int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+
+            if (rowsAffected > 0)
+            {
+                await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            }
+            else
+            {
+                _logger.LogError(
+                    "Order {OrderId} was already in a terminal state when SetOrderSendConditionNotMetAsync was called; this order was processed more than once.",
+                    order.Id);
+            }
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch
