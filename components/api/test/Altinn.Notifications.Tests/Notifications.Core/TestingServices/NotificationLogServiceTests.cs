@@ -310,7 +310,7 @@ public sealed class NotificationLogServiceTests
         };
     }
 
-    private static IImmutableList<NotificationLogSummary> CreateNotificationLogEntries()
+    private static ImmutableList<NotificationLogSummary> CreateNotificationLogEntries()
     {
         return ImmutableList.Create(CreateNotificationLogEntry());
     }
