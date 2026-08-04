@@ -1,35 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>80322a93-a2dd-480a-8417-6655f767c6f9</UserSecretsId>
-  </PropertyGroup>  
-  
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1025;
+			SA1208;
+			SA1501;
+			SA1503;
+			SA1508;
+			SA1512;
+			SA1513;
+			SA1515;
+			SA1516;
+			SA1600;
+			SA1614;
+			SA1649
+		</NoWarn>
+		<UserSecretsId>80322a93-a2dd-480a-8417-6655f767c6f9</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
-    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
-    <ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Remove="appsettings.json" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Azure.Messaging.EventGrid" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
-    <PackageReference Include="Npgsql" Version="10.0.3" />
-    <PackageReference Include="System.Memory.Data" Version="10.0.9" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
+		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Azure.Messaging.EventGrid" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
+		<PackageReference Include="Npgsql" />
+		<PackageReference Include="System.Memory.Data" />
+	</ItemGroup>
 
 </Project>

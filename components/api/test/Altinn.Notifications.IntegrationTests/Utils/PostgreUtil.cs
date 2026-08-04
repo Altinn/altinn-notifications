@@ -603,9 +603,9 @@ public static class PostgreUtil
             {
                 "orderId": "{{orderId}}",
                 "idempotencyId": "test-{{orderChainId}}",
-                "dialogportenAssociation": {
-                    "dialogId": "{{dialogId}}",
-                    "transmissionId": "{{transmissionId}}"
+                "DialogportenAssociation": {
+                    "DialogId": "{{dialogId}}",
+                    "TransmissionId": "{{transmissionId}}"
                 }
             }
             """;
@@ -769,9 +769,9 @@ public static class PostgreUtil
             {
                 "orderId": "{{orderId}}",
                 "idempotencyId": "test-{{orderChainId}}",
-                "dialogportenAssociation": {
-                    "dialogId": "{{dialogId}}",
-                    "transmissionId": "{{transmissionId}}"
+                "DialogportenAssociation": {
+                    "DialogId": "{{dialogId}}",
+                    "TransmissionId": "{{transmissionId}}"
                 }
             }
             """;

@@ -48,7 +48,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
     /// <summary>
     /// Verifies that <see cref="EmailContentType.Plain"/> is serialized as the string "Plain"
-    /// when mapping from <see cref="Email.ContentType"/> (enum) to <see cref="SendEmailCommand.ContentType"/> (string).
+    /// when mapping from <see cref="Email.ContentType"/> (enum) to <see cref="EmailCommandBase.ContentType"/> (string).
     /// </summary>
     [Fact]
     public async Task PublishAsync_PlainContentType_MapsEnumToStringCorrectly()
