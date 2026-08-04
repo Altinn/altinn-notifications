@@ -881,19 +881,12 @@ CREATE OR REPLACE FUNCTION notifications.getnotificationlog
     _transmissionid text DEFAULT NULL
 )
 RETURNS TABLE (
-    orderchainid uuid,
-    shipmentid uuid,
     notificationid uuid,
-    creatorname text,
-    sendersreference text,
     dialogid text,
     transmissionid text,
-    deliveryreference text,
-    recipient text,
     type text,
     channel text,
     destination text,
-    resource text,
     status text,
     requestedsendtime timestamptz,
     lastupdatetime timestamptz
@@ -905,19 +898,12 @@ BEGIN
     IF _dialogid IS NOT NULL AND _transmissionid IS NOT NULL THEN
         RETURN QUERY
         SELECT
-            nl.orderchainid,
-            nl.shipmentid,
             nl.notificationid,
-            nl.creatorname,
-            nl.sendersreference,
             nl.dialogid,
             nl.transmissionid,
-            nl.deliveryreference,
-            nl.recipient,
             nl.type,
             nl.channel,
             nl.destination,
-            nl.resource,
             nl.status,
             nl.requestedsendtime,
             nl.lastupdatetime
@@ -928,19 +914,12 @@ BEGIN
     ELSIF _dialogid IS NOT NULL THEN
         RETURN QUERY
         SELECT
-            nl.orderchainid,
-            nl.shipmentid,
             nl.notificationid,
-            nl.creatorname,
-            nl.sendersreference,
             nl.dialogid,
             nl.transmissionid,
-            nl.deliveryreference,
-            nl.recipient,
             nl.type,
             nl.channel,
             nl.destination,
-            nl.resource,
             nl.status,
             nl.requestedsendtime,
             nl.lastupdatetime
@@ -950,19 +929,12 @@ BEGIN
     ELSIF _transmissionid IS NOT NULL THEN
         RETURN QUERY
         SELECT
-            nl.orderchainid,
-            nl.shipmentid,
             nl.notificationid,
-            nl.creatorname,
-            nl.sendersreference,
             nl.dialogid,
             nl.transmissionid,
-            nl.deliveryreference,
-            nl.recipient,
             nl.type,
             nl.channel,
             nl.destination,
-            nl.resource,
             nl.status,
             nl.requestedsendtime,
             nl.lastupdatetime

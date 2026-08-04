@@ -14,19 +14,19 @@ public sealed class NotificationLogService(INotificationLogRepository notificati
     private readonly INotificationLogRepository _notificationLogRepository = notificationLogRepository;
 
     /// <inheritdoc/>
-    public Task<IImmutableList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
+    public Task<IImmutableList<NotificationLogSummary>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
     {
         return _notificationLogRepository.GetByDialogId(dialogId, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
+    public Task<IImmutableList<NotificationLogSummary>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
     {
         return _notificationLogRepository.GetByTransmissionId(transmissionId, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableList<NotificationLogEntry>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
+    public Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
     {
         return _notificationLogRepository.GetByDialogAndTransmission(dialogId, transmissionId, cancellationToken);
     }

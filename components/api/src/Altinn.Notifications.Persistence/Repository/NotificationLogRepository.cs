@@ -15,19 +15,12 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     private readonly NpgsqlDataSource _dataSource = dataSource;
     private const string _getNotificationLogSql = @"
         SELECT
-            orderchainid,
-            shipmentid,
             notificationid,
-            creatorname,
-            sendersreference,
             dialogid,
             transmissionid,
-            deliveryreference,
-            recipient,
             type,
             channel,
             destination,
-            resource,
             status,
             requestedsendtime,
             lastupdatetime
@@ -67,47 +60,34 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<NotificationLogEntry>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
+    public async Task<IImmutableList<NotificationLogSummary>> GetByDialogId(string dialogId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dialogId);
 
         await using var command = CreateNotificationLogCommand(dialogId, null);
 
-        return await ReadNotificationLogEntries(command, cancellationToken);
+        return await ReadNotificationLogSummaries(command, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<NotificationLogEntry>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
+    public async Task<IImmutableList<NotificationLogSummary>> GetByTransmissionId(string transmissionId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(transmissionId);
 
         await using var command = CreateNotificationLogCommand(null, transmissionId);
 
-        return await ReadNotificationLogEntries(command, cancellationToken);
+        return await ReadNotificationLogSummaries(command, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<NotificationLogEntry>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
+    public async Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dialogId);
         ArgumentException.ThrowIfNullOrWhiteSpace(transmissionId);
 
         await using var command = CreateNotificationLogCommand(dialogId, transmissionId);
 
-        return await ReadNotificationLogEntries(command, cancellationToken);
-    }
-
-    /// <summary>
-    /// Gets a nullable <see cref="Guid"/> from the specified column.
-    /// </summary>
-    /// <param name="reader">The database reader containing the value.</param>
-    /// <param name="ordinal">The zero-based column ordinal.</param>
-    /// <returns>
-    /// The <see cref="Guid"/> value, or <see langword="null"/> if the column contains <see cref="DBNull"/>.
-    /// </returns>
-    private static Guid? GetNullableGuid(NpgsqlDataReader reader, int ordinal)
-    {
-        return reader.IsDBNull(ordinal) ? null : reader.GetGuid(ordinal);
+        return await ReadNotificationLogSummaries(command, cancellationToken);
     }
 
     /// <summary>
@@ -124,29 +104,24 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <summary>
-    /// Maps the current row of the database reader to a <see cref="NotificationLogEntry"/>.
+    /// Maps the current row of the database reader to a <see cref="NotificationLogSummary"/>.
     /// </summary>
     /// <param name="reader">The database reader positioned on a notification log row.</param>
-    /// <returns>The notification log entry represented by the current row.</returns>
-    private static NotificationLogEntry MapNotificationLogEntry(NpgsqlDataReader reader)
+    /// <returns>The notification log summary represented by the current row.</returns>
+    private static NotificationLogSummary MapNotificationLogSummary(NpgsqlDataReader reader)
     {
-        return new NotificationLogEntry(
-            OrderChainId: GetNullableGuid(reader, 0),
-            ShipmentId: reader.GetGuid(1),
-            NotificationId: reader.GetGuid(2),
-            CreatorName: reader.GetString(3),
-            SendersReference: GetNullableString(reader, 4),
-            DialogId: GetNullableString(reader, 5),
-            TransmissionId: GetNullableString(reader, 6),
-            DeliveryReference: GetNullableString(reader, 7),
-            Recipient: GetNullableString(reader, 8),
-            Type: reader.GetString(9),
-            Channel: reader.GetString(10),
-            Destination: reader.GetString(11),
-            Resource: GetNullableString(reader, 12),
-            Status: reader.GetString(13),
-            RequestedSendTime: reader.GetDateTime(14),
-            LastUpdateTime: reader.GetDateTime(15));
+        return new NotificationLogSummary
+        {
+            NotificationId = reader.GetGuid(0),
+            DialogId = GetNullableString(reader, 1),
+            TransmissionId = GetNullableString(reader, 2),
+            Type = reader.GetString(3),
+            Channel = reader.GetString(4),
+            Destination = reader.GetString(5),
+            Status = reader.GetString(6),
+            RequestedSendTime = reader.GetDateTime(7),
+            LastUpdateTime = reader.GetDateTime(8)
+        };
     }
 
     /// <summary>
@@ -173,20 +148,20 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <summary>
-    /// Executes the specified command and maps the returned rows to notification log entries.
+    /// Executes the specified command and maps the returned rows to notification log summaries.
     /// </summary>
     /// <param name="command">The database command to execute.</param>
     /// <param name="cancellationToken">The token used to cancel the asynchronous operation.</param>
-    /// <returns>An immutable collection of notification log entries.</returns>
-    private static async Task<IImmutableList<NotificationLogEntry>> ReadNotificationLogEntries(NpgsqlCommand command, CancellationToken cancellationToken)
+    /// <returns>An immutable collection of notification log summaries.</returns>
+    private static async Task<IImmutableList<NotificationLogSummary>> ReadNotificationLogSummaries(NpgsqlCommand command, CancellationToken cancellationToken)
     {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<NotificationLogEntry>();
+        var result = new List<NotificationLogSummary>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            result.Add(MapNotificationLogEntry(reader));
+            result.Add(MapNotificationLogSummary(reader));
         }
 
         return result.ToImmutableList();
