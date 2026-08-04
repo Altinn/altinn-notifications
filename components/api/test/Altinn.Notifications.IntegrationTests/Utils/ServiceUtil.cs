@@ -237,11 +237,12 @@ public static class ServiceUtil
         services.AddSingleton<IDashboardRepository, DashboardRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
+        services.AddSingleton<INotificationLogRepository, NotificationLogRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
         services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
+        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
         services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
         services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
-        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment
