@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Persistence;
@@ -26,14 +26,14 @@ public sealed class NotificationLogServiceTests
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
+        IImmutableList<NotificationLogSummary> expected = ImmutableList<NotificationLogSummary>.Empty;
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -47,14 +47,14 @@ public sealed class NotificationLogServiceTests
     {
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogSummary> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
@@ -68,7 +68,7 @@ public sealed class NotificationLogServiceTests
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
 
-        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
+        IImmutableList<NotificationLogSummary> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry());
@@ -78,7 +78,7 @@ public sealed class NotificationLogServiceTests
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
@@ -114,14 +114,14 @@ public sealed class NotificationLogServiceTests
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
+        IImmutableList<NotificationLogSummary> expected = ImmutableList<NotificationLogSummary>.Empty;
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -135,14 +135,14 @@ public sealed class NotificationLogServiceTests
     {
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogSummary> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
@@ -156,7 +156,7 @@ public sealed class NotificationLogServiceTests
         // Arrange
         string transmissionId = Guid.NewGuid().ToString();
 
-        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
+        IImmutableList<NotificationLogSummary> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry());
@@ -166,7 +166,7 @@ public sealed class NotificationLogServiceTests
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
+        IImmutableList<NotificationLogSummary> result = await _notificationLogService.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(expected, result);
@@ -203,14 +203,14 @@ public sealed class NotificationLogServiceTests
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = ImmutableList<NotificationLogEntry>.Empty;
+        IImmutableList<NotificationLogSummary> expected = ImmutableList<NotificationLogSummary>.Empty;
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result =
+        IImmutableList<NotificationLogSummary> result =
             await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
@@ -226,14 +226,14 @@ public sealed class NotificationLogServiceTests
         // Arrange
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
-        IImmutableList<NotificationLogEntry> expected = CreateNotificationLogEntries();
+        IImmutableList<NotificationLogSummary> expected = CreateNotificationLogEntries();
 
         _notificationLogRepositoryMock
             .Setup(repository => repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken))
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result =
+        IImmutableList<NotificationLogSummary> result =
             await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
@@ -249,7 +249,7 @@ public sealed class NotificationLogServiceTests
         string dialogId = Guid.NewGuid().ToString();
         string transmissionId = Guid.NewGuid().ToString();
 
-        IImmutableList<NotificationLogEntry> expected = ImmutableList.Create(
+        IImmutableList<NotificationLogSummary> expected = ImmutableList.Create(
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry(),
             CreateNotificationLogEntry());
@@ -259,7 +259,7 @@ public sealed class NotificationLogServiceTests
             .ReturnsAsync(expected);
 
         // Act
-        IImmutableList<NotificationLogEntry> result =
+        IImmutableList<NotificationLogSummary> result =
             await _notificationLogService.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
@@ -294,28 +294,23 @@ public sealed class NotificationLogServiceTests
         _notificationLogRepositoryMock.VerifyNoOtherCalls();
     }
 
-    private static NotificationLogEntry CreateNotificationLogEntry()
+    private static NotificationLogSummary CreateNotificationLogEntry()
     {
-        return new NotificationLogEntry(
-            Recipient: null,
-            Channel: "Email",
-            CreatorName: "ttd",
-            Status: "Delivered",
-            Type: "Notification",
-            Resource: "resource",
-            ShipmentId: Guid.NewGuid(),
-            OrderChainId: Guid.NewGuid(),
-            NotificationId: Guid.NewGuid(),
-            LastUpdateTime: DateTime.UtcNow,
-            RequestedSendTime: DateTime.UtcNow,
-            DialogId: Guid.NewGuid().ToString(),
-            Destination: "recipient@example.com",
-            SendersReference: "sender-reference",
-            TransmissionId: Guid.NewGuid().ToString(),
-            DeliveryReference: Guid.NewGuid().ToString());
+        return new NotificationLogSummary
+        {
+            NotificationId = Guid.NewGuid(),
+            DialogId = Guid.NewGuid().ToString(),
+            TransmissionId = Guid.NewGuid().ToString(),
+            Type = "Notification",
+            Channel = "Email",
+            Destination = "recipient@example.com",
+            Status = "Delivered",
+            RequestedSendTime = DateTime.UtcNow,
+            LastUpdateTime = DateTime.UtcNow
+        };
     }
 
-    private static IImmutableList<NotificationLogEntry> CreateNotificationLogEntries()
+    private static IImmutableList<NotificationLogSummary> CreateNotificationLogEntries()
     {
         return ImmutableList.Create(CreateNotificationLogEntry());
     }

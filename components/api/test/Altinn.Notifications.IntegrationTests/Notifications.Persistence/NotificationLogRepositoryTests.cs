@@ -8,7 +8,6 @@ using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -388,25 +387,18 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
 
-        Assert.Null(entry.Resource);
-        Assert.Null(entry.Recipient);
         Assert.Equal("Email", entry.Channel);
-        Assert.Equal("ttd", entry.CreatorName);
         Assert.Equal(dialogId, entry.DialogId);
         Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(orderId, entry.ShipmentId);
         Assert.Equal("Notification", entry.Type);
-        Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(operationId, entry.DeliveryReference);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(notificationId, entry.NotificationId);
-        Assert.Equal(sendersReference, entry.SendersReference);
         Assert.Equal("recipient@altinnxyz.no", entry.Destination);
 
         Assert.True(
@@ -444,25 +436,18 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
 
-        Assert.Null(entry.Resource);
-        Assert.Null(entry.Recipient);
         Assert.Equal("Email", entry.Channel);
-        Assert.Equal("ttd", entry.CreatorName);
         Assert.Equal(dialogId, entry.DialogId);
         Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(orderId, entry.ShipmentId);
         Assert.Equal("Notification", entry.Type);
-        Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(operationId, entry.DeliveryReference);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(notificationId, entry.NotificationId);
-        Assert.Equal(sendersReference, entry.SendersReference);
         Assert.Equal("recipient@altinnxyz.no", entry.Destination);
 
         Assert.True(
@@ -500,26 +485,19 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
 
-        Assert.Null(entry.Resource);
-        Assert.Null(entry.Recipient);
         Assert.Equal("Sms", entry.Channel);
-        Assert.Equal("ttd", entry.CreatorName);
         Assert.Equal(dialogId, entry.DialogId);
         Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(orderId, entry.ShipmentId);
         Assert.Equal("Notification", entry.Type);
         Assert.Equal("+4799999999", entry.Destination);
-        Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(operationId, entry.DeliveryReference);
         Assert.Equal(transmissionId, entry.TransmissionId);
         Assert.Equal(notificationId, entry.NotificationId);
-        Assert.Equal(sendersReference, entry.SendersReference);
 
         Assert.True(
             Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500,
@@ -533,7 +511,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
         // Assert
@@ -547,7 +525,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         NotificationLogRepository repository = GetNotificationLogRepository();
 
         // Act
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByTransmissionId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
         // Assert
@@ -582,7 +560,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogAndTransmission(Guid.NewGuid().ToString(), transmissionId, TestContext.Current.CancellationToken);
 
         // Assert
@@ -617,7 +595,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogAndTransmission(dialogId, Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
 
         // Assert
@@ -669,7 +647,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogAndTransmission(firstDialogId, secondTransmissionId, TestContext.Current.CancellationToken);
 
         // Assert
@@ -719,13 +697,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogId(
                 matchingDialogId,
                 TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
         Assert.Equal(matchingNotificationId, entry.NotificationId);
         Assert.Equal(matchingDialogId, entry.DialogId);
     }
@@ -773,13 +751,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByTransmissionId(
                 matchingTransmissionId,
                 TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
         Assert.Equal(matchingNotificationId, entry.NotificationId);
         Assert.Equal(matchingTransmissionId, entry.TransmissionId);
     }
@@ -844,14 +822,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act
         NotificationLogRepository repository = GetNotificationLogRepository();
 
-        IImmutableList<NotificationLogEntry> notificationLog =
+        IImmutableList<NotificationLogSummary> notificationLog =
             await repository.GetByDialogAndTransmission(
                 dialogId,
                 transmissionId,
                 TestContext.Current.CancellationToken);
 
         // Assert
-        NotificationLogEntry entry = Assert.Single(notificationLog);
+        NotificationLogSummary entry = Assert.Single(notificationLog);
         Assert.Equal(matchingNotificationId, entry.NotificationId);
         Assert.Equal(dialogId, entry.DialogId);
         Assert.Equal(transmissionId, entry.TransmissionId);
