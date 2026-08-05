@@ -1024,18 +1024,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         return emailNotifications.All(IsEmailTerminal) && smsNotifications.All(IsSmsTerminal);
     }
 
-    private static async Task SetProcessingStatusAsync(Guid orderId, OrderProcessingStatus status, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
-    {
-        await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
-        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-        if (rowsAffected == 0)
-        {
-            throw new InvalidOperationException($"Order {orderId} was not in Processing state; transaction rolled back.");
-        }
-    }
-
     private async Task InsertStatusFeedForOrderAsync(
         NotificationOrder order,
         OrderProcessingStatus status,
