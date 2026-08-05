@@ -1,13 +1,19 @@
+using System.Collections.Immutable;
+
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -23,8 +29,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     {
         foreach (Guid orderId in _orderIdsToCleanup)
         {
-            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
             await PostgreUtil.DeleteOrderFromDb(orderId);
+            await PostgreUtil.DeleteNotificationLogFromDb(orderId);
         }
 
         await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToCleanup);
@@ -347,5 +353,808 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         string thirdNotificationCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE notificationid = '{thirdEmail.Id}'";
         int thirdNotificationCount = await PostgreUtil.RunSqlReturnOutput<int>(thirdNotificationCountSql);
         Assert.Equal(1, thirdNotificationCount);
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenDialogIdMatches_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+
+        string operationId = Guid.NewGuid().ToString();
+
+        DateTime requestedSendTime = DateTime.UtcNow;
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            notificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogId(dialogId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+
+        Assert.Equal("Email", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(notificationId, entry.NotificationId);
+        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
+
+        Assert.True(
+            Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500,
+            $"Expected RequestedSendTime to be within 500 ticks of {requestedSendTime:O}, but was {entry.RequestedSendTime:O}.");
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenTransmissionIdMatches_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString();
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+        DateTime requestedSendTime = DateTime.UtcNow;
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            notificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByTransmissionId(transmissionId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+
+        Assert.Equal("Email", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(notificationId, entry.NotificationId);
+        Assert.Equal("recipient@altinnxyz.no", entry.Destination);
+
+        Assert.True(
+            Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500,
+            $"Expected RequestedSendTime to be within 500 ticks of {requestedSendTime:O}, but was {entry.RequestedSendTime:O}.");
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenBothIdsMatch_ReturnsNotificationLogEntry()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString();
+        string sendersReference = $"ref-{Guid.NewGuid():N}";
+        DateTime requestedSendTime = DateTime.UtcNow;
+
+        await RegisterShipmentWithDeliveredSmsNotification(
+            orderId,
+            orderChainId,
+            notificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            requestedSendTime,
+            sendersReference);
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogAndTransmission(dialogId, transmissionId, TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+
+        Assert.Equal("Sms", entry.Channel);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal("+4799999999", entry.Destination);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(notificationId, entry.NotificationId);
+
+        Assert.True(
+            Math.Abs((requestedSendTime - entry.RequestedSendTime).Ticks) <= 500,
+            $"Expected RequestedSendTime to be within 500 ticks of {requestedSendTime:O}, but was {entry.RequestedSendTime:O}.");
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenDialogIdDoesNotMatch_ReturnsEmptyList()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenTransmissionIdDoesNotMatch_ReturnsEmptyList()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByTransmissionId(Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenDialogIdDoesNotMatch_ReturnsEmptyList()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            notificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogAndTransmission(Guid.NewGuid().ToString(), transmissionId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenTransmissionIdDoesNotMatch_ReturnsEmptyList()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(orderId);
+        _orderChainIdsToCleanup.Add(orderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            orderId,
+            orderChainId,
+            notificationId,
+            operationId,
+            dialogId,
+            transmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogAndTransmission(dialogId, Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenDialogAndTransmissionBelongToDifferentEntries_ReturnsEmptyList()
+    {
+        // Arrange
+        Guid firstOrderId = Guid.NewGuid();
+        Guid firstOrderChainId = Guid.NewGuid();
+        Guid firstNotificationId = Guid.NewGuid();
+
+        Guid secondOrderId = Guid.NewGuid();
+        Guid secondOrderChainId = Guid.NewGuid();
+        Guid secondNotificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(firstOrderId);
+        _orderIdsToCleanup.Add(secondOrderId);
+        _orderChainIdsToCleanup.Add(firstOrderChainId);
+        _orderChainIdsToCleanup.Add(secondOrderChainId);
+
+        string firstDialogId = Guid.NewGuid().ToString();
+        string firstTransmissionId = Guid.NewGuid().ToString();
+        string secondDialogId = Guid.NewGuid().ToString();
+        string secondTransmissionId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            firstOrderId,
+            firstOrderChainId,
+            firstNotificationId,
+            Guid.NewGuid().ToString(),
+            firstDialogId,
+            firstTransmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            secondOrderId,
+            secondOrderChainId,
+            secondNotificationId,
+            Guid.NewGuid().ToString(),
+            secondDialogId,
+            secondTransmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogAndTransmission(firstDialogId, secondTransmissionId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(notificationLog);
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyMatchingEntries()
+    {
+        // Arrange
+        Guid matchingOrderId = Guid.NewGuid();
+        Guid matchingOrderChainId = Guid.NewGuid();
+        Guid matchingNotificationId = Guid.NewGuid();
+
+        Guid nonMatchingOrderId = Guid.NewGuid();
+        Guid nonMatchingOrderChainId = Guid.NewGuid();
+        Guid nonMatchingNotificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(matchingOrderId);
+        _orderIdsToCleanup.Add(nonMatchingOrderId);
+        _orderChainIdsToCleanup.Add(matchingOrderChainId);
+        _orderChainIdsToCleanup.Add(nonMatchingOrderChainId);
+
+        string matchingDialogId = Guid.NewGuid().ToString();
+        string nonMatchingDialogId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            matchingOrderId,
+            matchingOrderChainId,
+            matchingNotificationId,
+            Guid.NewGuid().ToString(),
+            matchingDialogId,
+            Guid.NewGuid().ToString(),
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            nonMatchingOrderId,
+            nonMatchingOrderChainId,
+            nonMatchingNotificationId,
+            Guid.NewGuid().ToString(),
+            nonMatchingDialogId,
+            Guid.NewGuid().ToString(),
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogId(
+                matchingDialogId,
+                TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+        Assert.Equal(matchingNotificationId, entry.NotificationId);
+        Assert.Equal(matchingDialogId, entry.DialogId);
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyMatchingEntries()
+    {
+        // Arrange
+        Guid matchingOrderId = Guid.NewGuid();
+        Guid matchingOrderChainId = Guid.NewGuid();
+        Guid matchingNotificationId = Guid.NewGuid();
+
+        Guid nonMatchingOrderId = Guid.NewGuid();
+        Guid nonMatchingOrderChainId = Guid.NewGuid();
+        Guid nonMatchingNotificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(matchingOrderId);
+        _orderIdsToCleanup.Add(nonMatchingOrderId);
+        _orderChainIdsToCleanup.Add(matchingOrderChainId);
+        _orderChainIdsToCleanup.Add(nonMatchingOrderChainId);
+
+        string matchingTransmissionId = Guid.NewGuid().ToString();
+        string nonMatchingTransmissionId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            matchingOrderId,
+            matchingOrderChainId,
+            matchingNotificationId,
+            Guid.NewGuid().ToString(),
+            Guid.NewGuid().ToString(),
+            matchingTransmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            nonMatchingOrderId,
+            nonMatchingOrderChainId,
+            nonMatchingNotificationId,
+            Guid.NewGuid().ToString(),
+            Guid.NewGuid().ToString(),
+            nonMatchingTransmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByTransmissionId(
+                matchingTransmissionId,
+                TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+        Assert.Equal(matchingNotificationId, entry.NotificationId);
+        Assert.Equal(matchingTransmissionId, entry.TransmissionId);
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenMatchingAndNonMatchingEntriesExist_ReturnsOnlyExactMatches()
+    {
+        // Arrange
+        Guid matchingOrderId = Guid.NewGuid();
+        Guid matchingOrderChainId = Guid.NewGuid();
+        Guid matchingNotificationId = Guid.NewGuid();
+
+        Guid sameDialogDifferentTransmissionOrderId = Guid.NewGuid();
+        Guid sameDialogDifferentTransmissionOrderChainId = Guid.NewGuid();
+        Guid sameDialogDifferentTransmissionNotificationId = Guid.NewGuid();
+
+        Guid sameTransmissionDifferentDialogOrderId = Guid.NewGuid();
+        Guid sameTransmissionDifferentDialogOrderChainId = Guid.NewGuid();
+        Guid sameTransmissionDifferentDialogNotificationId = Guid.NewGuid();
+
+        _orderIdsToCleanup.Add(matchingOrderId);
+        _orderIdsToCleanup.Add(sameDialogDifferentTransmissionOrderId);
+        _orderIdsToCleanup.Add(sameTransmissionDifferentDialogOrderId);
+
+        _orderChainIdsToCleanup.Add(matchingOrderChainId);
+        _orderChainIdsToCleanup.Add(sameDialogDifferentTransmissionOrderChainId);
+        _orderChainIdsToCleanup.Add(sameTransmissionDifferentDialogOrderChainId);
+
+        string dialogId = Guid.NewGuid().ToString();
+        string transmissionId = Guid.NewGuid().ToString();
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            matchingOrderId,
+            matchingOrderChainId,
+            matchingNotificationId,
+            Guid.NewGuid().ToString(),
+            dialogId,
+            transmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            sameDialogDifferentTransmissionOrderId,
+            sameDialogDifferentTransmissionOrderChainId,
+            sameDialogDifferentTransmissionNotificationId,
+            Guid.NewGuid().ToString(),
+            dialogId,
+            Guid.NewGuid().ToString(),
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        await RegisterShipmentWithDeliveredEmailNotification(
+            sameTransmissionDifferentDialogOrderId,
+            sameTransmissionDifferentDialogOrderChainId,
+            sameTransmissionDifferentDialogNotificationId,
+            Guid.NewGuid().ToString(),
+            Guid.NewGuid().ToString(),
+            transmissionId,
+            DateTime.UtcNow,
+            $"ref-{Guid.NewGuid():N}");
+
+        // Act
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        IImmutableList<NotificationLogSummary> notificationLog =
+            await repository.GetByDialogAndTransmission(
+                dialogId,
+                transmissionId,
+                TestContext.Current.CancellationToken);
+
+        // Assert
+        NotificationLogSummary entry = Assert.Single(notificationLog);
+        Assert.Equal(matchingNotificationId, entry.NotificationId);
+        Assert.Equal(dialogId, entry.DialogId);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenDialogIdIsEmpty_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogId(
+                string.Empty,
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByDialogId_WhenDialogIdIsWhitespace_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogId(
+                "   ",
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByTransmissionId(
+                string.Empty,
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByTransmissionId_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByTransmissionId(
+                "   ",
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenDialogIdIsEmpty_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogAndTransmission(
+                string.Empty,
+                Guid.NewGuid().ToString(),
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogAndTransmission(
+                Guid.NewGuid().ToString(),
+                string.Empty,
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenDialogIdIsWhitespace_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogAndTransmission(
+                "   ",
+                Guid.NewGuid().ToString(),
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByDialogAndTransmission_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
+    {
+        // Arrange
+        NotificationLogRepository repository = GetNotificationLogRepository();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            repository.GetByDialogAndTransmission(
+                Guid.NewGuid().ToString(),
+                "   ",
+                TestContext.Current.CancellationToken));
+    }
+
+    private static NotificationLogRepository GetNotificationLogRepository()
+    {
+        return (NotificationLogRepository)ServiceUtil
+            .GetServices([typeof(INotificationLogRepository)])
+            .First(i => i.GetType() == typeof(NotificationLogRepository));
+    }
+
+    private static async Task RegisterShipmentWithDeliveredSmsNotification(
+        Guid orderId,
+        Guid orderChainId,
+        Guid smsNotificationId,
+        string gatewayReference,
+        string dialogId,
+        string transmissionId,
+        DateTime requestedSendTime,
+        string sendersReference)
+    {
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetDialogportenAssociation(new DialogportenIdentifiers
+            {
+                DialogId = dialogId,
+                TransmissionId = transmissionId,
+            })
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientSms = new RecipientSms
+                {
+                    PhoneNumber = "+4799999999",
+                    Settings = new SmsSendingOptions
+                    {
+                        Sender = "Altinn",
+                        Body = "Your OTP is 12345",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients = [new Altinn.Notifications.Core.Models.Recipient([new SmsAddressPoint("+4799999999")])],
+            Templates =
+            [
+                new SmsTemplate("Altinn", "Your OTP is 12345")
+            ]
+        };
+
+        SmsNotification smsNotification = new()
+        {
+            OrderId = orderId,
+            Id = smsNotificationId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new() { MobileNumber = "+4799999999" },
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        await orderRepository.Create(
+            orderChainRequest,
+            notificationOrder,
+            null,
+            TestContext.Current.CancellationToken);
+
+        await orderRepository.SetProcessingStatus(
+            orderId,
+            OrderProcessingStatus.Processing);
+
+        SmsNotificationRepository smsNotificationRepository = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        await smsNotificationRepository.AddNotification(
+            smsNotification,
+            DateTime.UtcNow.AddDays(2));
+
+        await smsNotificationRepository.UpdateSendStatus(
+            smsNotificationId,
+            SmsNotificationResultType.Sending);
+
+        await smsNotificationRepository.UpdateSendStatus(
+            smsNotificationId,
+            SmsNotificationResultType.Accepted,
+            gatewayReference);
+
+        await smsNotificationRepository.UpdateSendStatus(
+            null,
+            SmsNotificationResultType.Delivered,
+            gatewayReference);
+    }
+
+    private static async Task RegisterShipmentWithDeliveredEmailNotification(
+        Guid orderId,
+        Guid orderChainId,
+        Guid emailNotificationId,
+        string operationId,
+        string dialogId,
+        string transmissionId,
+        DateTime requestedSendTime,
+        string sendersReference)
+    {
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetSendersReference(sendersReference)
+            .SetRequestedSendTime(requestedSendTime)
+            .SetIdempotencyId($"idempotency-{Guid.NewGuid():N}")
+            .SetDialogportenAssociation(new DialogportenIdentifiers
+            {
+                DialogId = dialogId,
+                TransmissionId = transmissionId,
+            })
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "recipient@altinnxyz.no",
+                    Settings = new EmailSendingOptions
+                    {
+                        Subject = "Decision from Altinn",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no",
+                        Body = "Please review the attached document",
+                        SendingTimePolicy = SendingTimePolicy.Anytime
+                    }
+                }
+            })
+            .Build();
+
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = sendersReference,
+            RequestedSendTime = requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = [new Altinn.Notifications.Core.Models.Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
+            Templates =
+            [
+                new EmailTemplate(
+                    "noreply@altinn.no",
+                    "Decision from Altinn",
+                    "Please review the attached document.",
+                    EmailContentType.Plain)
+            ]
+        };
+
+        EmailNotification emailNotification = new()
+        {
+            OrderId = orderId,
+            Id = emailNotificationId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new() { ToAddress = "recipient@altinnxyz.no" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        await orderRepository.Create(
+            orderChainRequest,
+            notificationOrder,
+            null,
+            TestContext.Current.CancellationToken);
+
+        await orderRepository.SetProcessingStatus(
+            orderId,
+            OrderProcessingStatus.Processing);
+
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        await emailNotificationRepository.AddNotification(
+            emailNotification,
+            DateTime.UtcNow.AddDays(2));
+
+        await emailNotificationRepository.UpdateSendStatus(
+            emailNotificationId,
+            EmailNotificationResultType.Sending);
+
+        await emailNotificationRepository.UpdateSendStatus(
+            emailNotificationId,
+            EmailNotificationResultType.Succeeded,
+            operationId);
+
+        await emailNotificationRepository.UpdateSendStatus(
+            null,
+            EmailNotificationResultType.Delivered,
+            operationId);
     }
 }
