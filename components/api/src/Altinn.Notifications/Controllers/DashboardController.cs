@@ -66,27 +66,11 @@ public class DashboardController : ControllerBase
         NotificationsByNinRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _ninValidator.Validate(request);
-        if (!validationResult.IsValid)
-        {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
-        }
-
-        try
-        {
-            Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByNinAsync(request.NationalIdentityNumber, request.From, request.To, cancellationToken);
-
-            return result.Match(
-                notifications => Ok(notifications.MapToDashboardNotificationExtList()),
-                error => StatusCode(error.ErrorCode, error.ErrorMessage));
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
-        }
+        return await ProcessDashboardRequestAsync(
+            request,
+            _ninValidator,
+            (req, ct) => _dashboardService.GetNotificationsByNinAsync(req.NationalIdentityNumber, req.From, req.To, ct),
+            cancellationToken);
     }
 
     /// <summary>
@@ -104,27 +88,11 @@ public class DashboardController : ControllerBase
         NotificationsByOrgNumberRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _orgNumberValidator.Validate(request);
-        if (!validationResult.IsValid)
-        {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
-        }
-
-        try
-        {
-            Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByOrgNumberAsync(request.OrganizationNumber, request.From, request.To, cancellationToken);
-
-            return result.Match(
-                notifications => Ok(notifications.MapToDashboardNotificationExtList()),
-                error => StatusCode(error.ErrorCode, error.ErrorMessage));
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
-        }
+        return await ProcessDashboardRequestAsync(
+            request,
+            _orgNumberValidator,
+            (req, ct) => _dashboardService.GetNotificationsByOrgNumberAsync(req.OrganizationNumber, req.From, req.To, ct),
+            cancellationToken);
     }
 
     /// <summary>
@@ -142,7 +110,23 @@ public class DashboardController : ControllerBase
         NotificationsByEmailRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _emailValidator.Validate(request);
+        return await ProcessDashboardRequestAsync(
+            request,
+            _emailValidator,
+            (req, ct) => _dashboardService.GetNotificationsByEmailAsync(req.Email, req.From, req.To, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Validates the request and retrieves notifications, handling common error scenarios.
+    /// </summary>
+    private async Task<ActionResult<List<DashboardNotificationExt>>> ProcessDashboardRequestAsync<TRequest>(
+        TRequest request,
+        IValidator<TRequest> validator,
+        Func<TRequest, CancellationToken, Task<Result<List<DashboardNotification>, ServiceError>>> getNotifications,
+        CancellationToken cancellationToken)
+    {
+        var validationResult = validator.Validate(request);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(ModelState);
@@ -151,8 +135,7 @@ public class DashboardController : ControllerBase
 
         try
         {
-            Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByEmailAsync(request.Email, request.From, request.To, cancellationToken);
+            Result<List<DashboardNotification>, ServiceError> result = await getNotifications(request, cancellationToken);
 
             return result.Match(
                 notifications => Ok(notifications.MapToDashboardNotificationExtList()),
