@@ -260,14 +260,12 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
-    var instrumentationKey = config.GetValue<string>("ApplicationInsights:InstrumentationKey");
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
 
-    if (string.IsNullOrEmpty(instrumentationKey))
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
         return;
     }
-
-    var applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", instrumentationKey);
 
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {

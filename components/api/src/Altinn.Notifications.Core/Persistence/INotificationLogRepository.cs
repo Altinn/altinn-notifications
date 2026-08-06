@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Models.NotificationLog;
 
@@ -52,5 +52,5 @@ public interface INotificationLogRepository
     /// <returns>
     /// An immutable collection of notification log entries matching both the specified dialog and transmission identifiers.
     /// </returns>
-    Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken);
+    Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmissionIds(string dialogId, string transmissionId, CancellationToken cancellationToken);
 }

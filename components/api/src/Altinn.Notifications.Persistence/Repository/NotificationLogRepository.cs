@@ -80,7 +80,7 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmission(string dialogId, string transmissionId, CancellationToken cancellationToken)
+    public async Task<IImmutableList<NotificationLogSummary>> GetByDialogAndTransmissionIds(string dialogId, string transmissionId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dialogId);
         ArgumentException.ThrowIfNullOrWhiteSpace(transmissionId);
