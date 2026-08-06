@@ -11,7 +11,7 @@
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails" Version="5.4.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="5.4.0" />
 		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.10" />
-		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.9" />
+		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.10" />
 		<PackageVersion Include="Altinn.Common.PEP" Version="4.2.3" />
 		<PackageVersion Include="Altinn.Urn" Version="5.0.0" />
 
@@ -79,9 +79,9 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
 
 		<!-- Wolverine -->
-		<PackageVersion Include="WolverineFx" Version="6.23.0" />
-		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.23.0" />
-		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.23.0" />
+		<PackageVersion Include="WolverineFx" Version="6.24.4" />
+		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.24.4" />
+		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.24.4" />
 
 		<!-- xUnit -->
 		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
