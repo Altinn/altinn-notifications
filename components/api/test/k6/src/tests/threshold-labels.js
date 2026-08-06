@@ -21,6 +21,9 @@ export const post_email_instant_order_v2 = "post_email_instant_order_v2";
 
 export const get_status_feed = "get_status_feed";
 
+export const post_composed_email_order_v2 = "post_composed_email_order_v2";
+export const get_composed_email_shipment = "get_composed_email_shipment";
+
 export const post_valid_order = "post_valid_order";
 export const post_invalid_order = "post_invalid_order";
 export const post_duplicate_order = "post_duplicate_order";
