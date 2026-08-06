@@ -1,0 +1,40 @@
+meta {
+  name: Get notifications by email
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/email
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~from: {{dateFrom}}
+  ~to: {{dateTo}}
+}
+
+headers {
+  Email: {{email}}
+}
+
+vars:pre-request {
+  email: 16035001577-test@altinn.xyz
+}
+
+script:pre-request {
+  const from = bru.getEnvVar("dateFrom");
+  const to = bru.getEnvVar("dateTo");
+  
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
+  bru.setVar("dateTo", to || new Date().toISOString());
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
