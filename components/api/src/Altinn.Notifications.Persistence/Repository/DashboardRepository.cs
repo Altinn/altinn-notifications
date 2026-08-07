@@ -45,6 +45,16 @@ public class DashboardRepository : IDashboardRepository
         return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
+    /// <summary>
+    /// Executes the given SQL command to fetch dashboard notifications for a recipient within a date range,
+    /// grouping delivery attempts by shipment.
+    /// </summary>
+    /// <param name="sqlCommand">The SQL command to execute. Must accept the recipient value, 'from', and 'to' as its three parameters, in that order.</param>
+    /// <param name="recipientValue">The recipient identifier to filter by (e.g. national identity number, organization number, or email address).</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if not provided.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if not provided.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> in the order first seen in the result set, each with its associated delivery attempts.</returns>
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
         string sqlCommand,
         string recipientValue,
