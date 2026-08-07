@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -44,6 +45,7 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("Trigger_PastDueOrders");
         await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
         return Ok();
     }
