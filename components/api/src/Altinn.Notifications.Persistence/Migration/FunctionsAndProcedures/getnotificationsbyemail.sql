@@ -27,7 +27,7 @@ AS $$
         o.alternateid AS shipmentid,
         o.sendersreference,
         o.creatorname,
-        o.type AS notificationtype,
+        o.type::text AS notificationtype,
         o.notificationorder->>'ResourceId' AS resourceid,
         o.notificationorder->>'NotificationChannel' AS notificationchannel,
         o.requestedsendtime,
@@ -42,7 +42,7 @@ AS $$
     WHERE lower(e.toaddress) = lower(_email)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
-    ORDER BY requestedsendtime DESC;
+    ORDER BY o.requestedsendtime DESC;
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_email IS
