@@ -273,7 +273,7 @@ public class OrderProcessingService : IOrderProcessingService
                 }
                 else
                 {
-                    _logger.LogInformation(
+                    _logger.LogError(
                         "// OrderProcessingService // IsSendConditionMet // Condition check yield false for order '{OrderId}' at endpoint '{Endpoint}'.",
                         order.Id,
                         order.ConditionEndpoint);
@@ -285,7 +285,7 @@ public class OrderProcessingService : IOrderProcessingService
             {
                 if (isRetry)
                 {
-                    _logger.LogInformation(
+                    _logger.LogError(
                         "// OrderProcessingService // IsSendConditionMet // Condition check failed on retry for order with ID '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Processing the order regardless.",
                         order.Id,
                         order.ConditionEndpoint,
@@ -296,7 +296,7 @@ public class OrderProcessingService : IOrderProcessingService
                 }
                 else
                 {
-                    _logger.LogInformation(
+                    _logger.LogError(
                         "// OrderProcessingService // IsSendConditionMet // Condition check failed for order '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Order will be sent to retry queue.",
                         order.Id,
                         order.ConditionEndpoint,

@@ -45,7 +45,7 @@ public static class ProcessPastDueOrderHandler
         }
         catch (PlatformDependencyException ex)
         {
-            logger.LogWarning(
+            logger.LogError(
                 ex,
                 "Platform dependency '{DependencyName}' failed during '{Operation}' for order {OrderId}. Scheduling retry.",
                 ex.DependencyName,
@@ -61,6 +61,9 @@ public static class ProcessPastDueOrderHandler
 
         if (result.IsRetryRequired)
         {
+            logger.LogError(
+                "// OrderProcessingService // Handle // Retry required for order '{OrderId}'.",
+                command.Order.Id);
             await messageContext.ScheduleAsync(
                 command with { IsProcessOrderRetry = true },
                 TimeSpan.FromMilliseconds(settings.PastDueOrdersRetryDelayMs));
