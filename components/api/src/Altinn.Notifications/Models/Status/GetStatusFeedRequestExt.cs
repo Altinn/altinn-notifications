@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Altinn.Notifications.Models.Status;
 
@@ -21,5 +22,6 @@ public class GetStatusFeedRequestExt
     /// <summary>
     /// The order in which the status feed entries should be returned. The default value is "Asc" for ascending order
     /// </summary>
+    [DefaultValue(OrderByDirection.Asc)]
     public OrderByDirection OrderBy { get; set; } = OrderByDirection.Asc;
 }
