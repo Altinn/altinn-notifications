@@ -14,6 +14,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     private readonly List<Guid> _orderIdsToDelete = [];
     private readonly string _recipientNin = Random.Shared.NextInt64(10_000_000_000, 99_999_999_999).ToString();
     private readonly string _recipientOrgNumber = Random.Shared.NextInt64(100_000_000, 999_999_999).ToString();
+    private readonly string _recipientEmail = $"dashboard-{Guid.NewGuid():N}@example.com";
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
@@ -271,12 +272,171 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "sms");
     }
 
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_ReturnsNotificationForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "email" && r.EmailAddress == _recipientEmail));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_UnknownEmail_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our email so the table is non-empty
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different email address
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            $"unknown-{Guid.NewGuid():N}@example.com",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-1), toAddress: _recipientEmail);
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-30), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(_recipientEmail, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByEmailAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail, orderType: orderType);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_CaseInsensitiveMatch_ReturnsNotification()
+    {
+        // Arrange — seeded address is lower-case, queried address is upper-case
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail.ToUpperInvariant(),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_RecipientNinIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientNin, attempt.NationalIdentityNumber);
+        Assert.Null(attempt.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_RecipientOrgNoIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientOrgNumber, attempt.OrganizationNumber);
+        Assert.Null(attempt.NationalIdentityNumber);
+    }
+
     private static DashboardRepository GetRepository() =>
         ServiceUtil.GetServices([typeof(IDashboardRepository)])
             .OfType<DashboardRepository>()
             .First();
 
-    private async Task<Guid> SeedOrderWithEmailNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, OrderType orderType = OrderType.Notification)
+    private async Task<Guid> SeedOrderWithEmailNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, OrderType orderType = OrderType.Notification, string toAddress = "recipient@example.com")
     {
         var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
         var emailRepo = ServiceUtil.GetServices([typeof(IEmailNotificationRepository)]).OfType<EmailNotificationRepository>().First();
@@ -294,7 +454,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     RequestedSendTime = requestedSendTime,
-                    Recipient = new() { ToAddress = "recipient@example.com", NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    Recipient = new() { ToAddress = toAddress, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
                     SendResult = new(EmailNotificationResultType.Succeeded, requestedSendTime)
                 },
                 requestedSendTime.AddDays(1));

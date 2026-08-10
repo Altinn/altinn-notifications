@@ -2462,7 +2462,7 @@ END;
 $BODY$;
 
 -- insertorderchain.sql:
-CREATE OR REPLACE FUNCTION notifications.insertorderchain_v2(
+CREATE OR REPLACE FUNCTION notifications.insertorderchain_v3(
     _orderid UUID,
     _idempotencyid TEXT,
     _creatorname TEXT,
@@ -2491,11 +2491,21 @@ BEGIN
         _created,
         _orderchain
     )
+    ON CONFLICT (idempotencyid, creatorname, type) DO NOTHING
     RETURNING _id INTO _chainid;
 
     RETURN _chainid;
 END;
 $BODY$;
+
+COMMENT ON FUNCTION notifications.insertorderchain_v3(UUID, TEXT, TEXT, TIMESTAMP with time zone, JSONB) IS
+'Inserts a new order chain row and returns its internal _id, or NULL if a row
+with the same (idempotencyid, creatorname, type) already exists.
+
+A NULL return value means ON CONFLICT DO NOTHING fired — the chain was already
+committed by a concurrent request. The caller must treat NULL as a duplicate
+signal and skip all downstream order inserts, eliminating the 23505
+unique-constraint violation caused by the TOCTOU race in FutureOrdersController.';
 
 
 -- insertsmsnotification.sql:

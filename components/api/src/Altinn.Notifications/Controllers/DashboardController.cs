@@ -30,6 +30,7 @@ public class DashboardController : ControllerBase
     private readonly IDashboardService _dashboardService;
     private readonly IValidator<NotificationsByNinRequestExt> _ninValidator;
     private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
+    private readonly IValidator<NotificationsByEmailRequestExt> _emailValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
@@ -37,11 +38,17 @@ public class DashboardController : ControllerBase
     /// <param name="dashboardService">The dashboard service.</param>
     /// <param name="ninValidator">The validator for NIN lookup requests.</param>
     /// <param name="orgNumberValidator">The validator for organization number lookup requests.</param>
-    public DashboardController(IDashboardService dashboardService, IValidator<NotificationsByNinRequestExt> ninValidator, IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator)
+    /// <param name="emailValidator">The validator for email lookup requests.</param>
+    public DashboardController(
+        IDashboardService dashboardService,
+        IValidator<NotificationsByNinRequestExt> ninValidator,
+        IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator,
+        IValidator<NotificationsByEmailRequestExt> emailValidator)
     {
         _dashboardService = dashboardService;
         _ninValidator = ninValidator;
         _orgNumberValidator = orgNumberValidator;
+        _emailValidator = emailValidator;
     }
 
     /// <summary>
@@ -59,27 +66,11 @@ public class DashboardController : ControllerBase
         NotificationsByNinRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _ninValidator.Validate(request);
-        if (!validationResult.IsValid)
-        {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
-        }
-
-        try
-        {
-            Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByNinAsync(request.NationalIdentityNumber, request.From, request.To, cancellationToken);
-
-            return result.Match(
-                notifications => Ok(notifications.MapToDashboardNotificationExtList()),
-                error => StatusCode(error.ErrorCode, error.ErrorMessage));
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
-        }
+        return await ProcessDashboardRequestAsync(
+            request,
+            _ninValidator,
+            (req, ct) => _dashboardService.GetNotificationsByNinAsync(req.NationalIdentityNumber, req.From, req.To, ct),
+            cancellationToken);
     }
 
     /// <summary>
@@ -97,7 +88,45 @@ public class DashboardController : ControllerBase
         NotificationsByOrgNumberRequestExt request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = _orgNumberValidator.Validate(request);
+        return await ProcessDashboardRequestAsync(
+            request,
+            _orgNumberValidator,
+            (req, ct) => _dashboardService.GetNotificationsByOrgNumberAsync(req.OrganizationNumber, req.From, req.To, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves all notifications for a recipient identified by their email address.
+    /// </summary>
+    /// <param name="request">The request containing the email address and optional date range filters.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A list of notifications matching the search criteria.</returns>
+    [HttpGet("recipients/notifications/email")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByEmail(
+        NotificationsByEmailRequestExt request,
+        CancellationToken cancellationToken = default)
+    {
+        return await ProcessDashboardRequestAsync(
+            request,
+            _emailValidator,
+            (req, ct) => _dashboardService.GetNotificationsByEmailAsync(req.Email, req.From, req.To, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Validates the request and retrieves notifications, handling common error scenarios.
+    /// </summary>
+    private async Task<ActionResult<List<DashboardNotificationExt>>> ProcessDashboardRequestAsync<TRequest>(
+        TRequest request,
+        IValidator<TRequest> validator,
+        Func<TRequest, CancellationToken, Task<Result<List<DashboardNotification>, ServiceError>>> getNotifications,
+        CancellationToken cancellationToken)
+    {
+        var validationResult = validator.Validate(request);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(ModelState);
@@ -106,8 +135,7 @@ public class DashboardController : ControllerBase
 
         try
         {
-            Result<List<DashboardNotification>, ServiceError> result =
-                await _dashboardService.GetNotificationsByOrgNumberAsync(request.OrganizationNumber, request.From, request.To, cancellationToken);
+            Result<List<DashboardNotification>, ServiceError> result = await getNotifications(request, cancellationToken);
 
             return result.Match(
                 notifications => Ok(notifications.MapToDashboardNotificationExtList()),
