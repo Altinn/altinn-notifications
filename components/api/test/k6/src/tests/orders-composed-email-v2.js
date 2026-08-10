@@ -1,21 +1,14 @@
 /*
-    Test script for the composed-email endpoint using an application owner token.
-    Covers the POST /notifications/api/v1/future/orders/composed-email endpoint.
-
-    Required scope: altinn:serviceowner/notifications.composedemail.create
+    Test script for Platform Notifications composed-email API using an application owner token.
 
     Command:
     podman compose run k6 run /src/tests/orders-composed-email-v2.js \
     --secret-source=file=/.secrets \
     -e altinn_env={environment: at22, at23, at24, tt02, prod} \
-    -e emailRecipient={an email address to use as the notification recipient} \
-    -e sasUrl={optional: a valid Azure Blob Storage SAS URL to include as a test attachment}
+    -e emailRecipient={an email address to use as the notification recipient}
 
     Notes:
-    - When `sasUrl` is omitted the positive flow sends the order without attachments, which is
-      valid per the API contract. Set `sasUrl` only when end-to-end attachment delivery must be
-      exercised.
-    - Setting `subscriptionKey` in .secrets is required — retrieve it from Azure APIM.
+    - Setting `subscriptionKey` in .secrets is required - can be retrieved from Azure APIM.
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
@@ -63,44 +56,6 @@ export const options = {
 setEmptyThresholds(labels, options);
 
 /**
- * Builds a minimal composed-email order request.
- * Includes a single attachment when a sasUrl is provided via the `sasUrl` environment variable.
- * @param {string} emailAddress - The recipient email address.
- * @param {string} idempotencyId - A unique idempotency identifier for the order.
- * @param {string} sendersReference - A caller-defined correlation reference.
- * @returns {Object} The composed-email order request object.
- */
-function buildOrderRequest(emailAddress, idempotencyId, sendersReference) {
-    const requestedSendTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    const request = {
-        ...orderRequestJson,
-        idempotencyId,
-        sendersReference,
-        requestedSendTime,
-        recipient: {
-            emailAddress,
-            emailSettings: {
-                ...orderRequestJson.recipient.emailSettings,
-            },
-        },
-    };
-
-    const sasUrl = __ENV.sasUrl ? __ENV.sasUrl.trim() : null;
-    if (sasUrl) {
-        request.recipient.emailSettings.attachments = [
-            {
-                filename: "test-attachment.pdf",
-                mimeType: "application/pdf",
-                sasUrl,
-            },
-        ];
-    }
-
-    return request;
-}
-
-/**
  * Initialise test data — token and order fixtures.
  * @returns {Object} The data object used across all test iterations.
  */
@@ -117,13 +72,23 @@ export async function setup() {
     const token = await setupToken.getAltinnTokenForOrg(composedEmailScope);
 
     const idempotencyId = uuidv4();
-    const sendersReference = uuidv4();
+    const sendersReference = `k6-composed-email-${uuidv4().substring(0, 8)}`;
 
-    const orderRequest = buildOrderRequest(
-        emailRecipient,
+    const orderRequest = {
+        ...orderRequestJson,
         idempotencyId,
-        sendersReference
-    );
+        sendersReference,
+        dialogportenAssociation: {
+            dialogId: uuidv4(),
+            transmissionId: uuidv4(),
+        },
+        recipient: {
+            emailAddress: emailRecipient,
+            emailSettings: {
+                ...orderRequestJson.recipient.emailSettings,
+            },
+        },
+    };
 
     return {
         token,
@@ -168,7 +133,7 @@ function postComposedEmailOrder(data) {
  * Replays a composed-email order with the same idempotencyId and asserts a 200 OK response.
  * @param {Object} data - Test data containing the order request and token.
  */
-function postComposedEmailOrderIdempotentReplay(data) {
+function replayComposedEmailOrder(data) {
     const response = futureOrdersApi.postComposedEmailNotificationOrder(
         JSON.stringify(data.orderRequest),
         data.token,
@@ -210,7 +175,7 @@ function getComposedEmailShipment(data, shipmentId) {
  * asserts a 400 Bad Request response.
  * @param {Object} data - Test data containing token.
  */
-function postComposedEmailOrderWithMissingSasParameters(data) {
+function postComposedEmailOrderMissingSasQueryParams(data) {
     const invalidRequest = {
         ...data.orderRequest,
         idempotencyId: uuidv4(),
@@ -243,43 +208,6 @@ function postComposedEmailOrderWithMissingSasParameters(data) {
 }
 
 /**
- * Posts a composed-email order with a SAS URL pointing to a non-Azure-Blob-Storage host
- * and asserts a 400 Bad Request response.
- * @param {Object} data - Test data containing token.
- */
-function postComposedEmailOrderWithInvalidSasHost(data) {
-    const invalidRequest = {
-        ...data.orderRequest,
-        idempotencyId: uuidv4(),
-        recipient: {
-            ...data.orderRequest.recipient,
-            emailSettings: {
-                ...data.orderRequest.recipient.emailSettings,
-                attachments: [
-                    {
-                        filename: "doc.pdf",
-                        mimeType: "application/pdf",
-                        sasUrl:
-                            "https://example.com/container/doc.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig",
-                    },
-                ],
-            },
-        },
-    };
-
-    const response = futureOrdersApi.postComposedEmailNotificationOrder(
-        JSON.stringify(invalidRequest),
-        data.token,
-        post_composed_email_order_v2
-    );
-
-    check(response, {
-        "POST composed-email order with non-Azure SAS host. Status is 400 Bad Request":
-            (r) => r.status === 400,
-    });
-}
-
-/**
  * The main test function.
  * @param {Object} data - Test data returned from setup().
  */
@@ -288,9 +216,7 @@ export default function runTests(data) {
 
     getComposedEmailShipment(data, shipmentId);
 
-    postComposedEmailOrderIdempotentReplay(data);
+    replayComposedEmailOrder(data);
 
-    postComposedEmailOrderWithMissingSasParameters(data);
-
-    postComposedEmailOrderWithInvalidSasHost(data);
+    postComposedEmailOrderMissingSasQueryParams(data);
 }

@@ -1,11 +1,17 @@
 {
+  "idempotencyId": "string",
   "sendersReference": "string",
+  "dialogportenAssociation": {
+    "dialogId": "string",
+    "transmissionId": "string"
+  },
   "recipient": {
-    "emailAddress": "$emailaddress$",
+    "emailAddress": "string",
     "emailSettings": {
       "subject": "Automated composed email test from Altinn",
       "body": "This is an automated composed email generated during testing of Altinn Notifications.",
-      "contentType": "Plain"
+      "contentType": "Plain",
+      "sendingTimePolicy": "Anytime"
     }
   }
 }
