@@ -476,7 +476,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var (newOrders, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = newOrders;
 
         // Assert
         Assert.NotNull(result);
@@ -650,7 +651,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = newOrders;
 
         // Assert
         Assert.NotNull(result);
@@ -886,7 +888,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = newOrders;
 
         // Assert
         Assert.NotNull(result);
@@ -1137,7 +1140,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = newOrders;
 
         // Assert
         Assert.NotNull(result);
@@ -2707,7 +2711,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         // Create the normal order
-        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
+        var (normalOrderResult, _) = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
 
         // Create the instant order
         var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1, TestContext.Current.CancellationToken);
@@ -2926,7 +2930,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
+        var (result1, _) = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
 
         // Assert
         var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
@@ -4112,9 +4116,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var (newOrders, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = newOrders;
 
-        // Assert — result contains only the main order, no reminders
+        // Assert — ordersResult contains only the main order, no reminders
         Assert.NotNull(result);
         Assert.Single(result);
         Assert.Equal(orderId, result[0].Id);
@@ -4201,11 +4206,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var (ordersResult, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotNull(ordersResult);
+        Assert.Single(ordersResult);
 
         // Both file references stored in JSONB
         string attachmentSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND jsonb_array_length(notificationorder->'EmailAttachments') = 2";
@@ -4308,7 +4313,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
+        var (originalResult, _) = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
 
         // Assert — duplicate order with the same idempotency ID must violate unique constraint
         var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>

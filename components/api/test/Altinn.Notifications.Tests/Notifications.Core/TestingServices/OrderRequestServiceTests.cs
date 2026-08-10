@@ -307,7 +307,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.Sms && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedNotificationOrder]);
+            .ReturnsAsync(([expectedNotificationOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -426,7 +426,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrder>(o => o.Id == orderId && o.NotificationChannel == NotificationChannel.EmailPreferred && o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) && o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedSavedOrder]);
+            .ReturnsAsync(([expectedSavedOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -603,7 +603,7 @@ public class OrderRequestServiceTests
                     o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedNotificationOrder]);
+            .ReturnsAsync(([expectedNotificationOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -728,7 +728,7 @@ public class OrderRequestServiceTests
                     o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedSavedOrder]);
+            .ReturnsAsync(([expectedSavedOrder], (NotificationOrderChainResponse?)null));    
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -854,7 +854,7 @@ public class OrderRequestServiceTests
                     o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedSavedOrder]);
+            .ReturnsAsync(([expectedSavedOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -1120,7 +1120,7 @@ public class OrderRequestServiceTests
                     list[0].NotificationChannel == NotificationChannel.Sms &&
                     list[0].EmailAttachments == null),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedMainOrder, expectedReminder]);
+            .ReturnsAsync(([expectedMainOrder, expectedReminder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -1956,7 +1956,7 @@ public class OrderRequestServiceTests
                 reminders.Any(o => o.Id == secondReminderId) &&
                 reminders.All(o => o.EmailAttachments == null)),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
+            .ReturnsAsync(([expectedMainOrder, expectedFirstReminder, expectedFinalReminder], (NotificationOrderChainResponse?)null));
 
         contactPointServiceMock
             .Setup(contactService => contactService.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
@@ -2135,7 +2135,7 @@ public class OrderRequestServiceTests
             It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "REF-42DBDAB8281C"),
             It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729") && o.EmailAttachments == null),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
-            It.IsAny<CancellationToken>())).ReturnsAsync([expectedOrder]);
+            It.IsAny<CancellationToken>())).ReturnsAsync(([expectedOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -2231,7 +2231,7 @@ public class OrderRequestServiceTests
                 It.IsAny<List<NotificationOrder>>(),
                 It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>, CancellationToken>((_, _, _, token) => token.ThrowIfCancellationRequested())
-            .ReturnsAsync([]);
+            .ReturnsAsync(([], (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(orderRepositoryMock.Object, null, mainOrderId, mainOrderSendTime);
 
@@ -2389,7 +2389,7 @@ public class OrderRequestServiceTests
                     o.EmailAttachments == null),
                 It.IsAny<List<NotificationOrder>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedOrder]);
+            .ReturnsAsync(([expectedOrder], (NotificationOrderChainResponse?)null));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -2749,10 +2749,10 @@ public class OrderRequestServiceTests
             SendingTimePolicy = sendingTimePolicyInput ?? SendingTimePolicy.Daytime
         };
 
-        var mockResponse = new List<NotificationOrder>
-        {
+        List<NotificationOrder> mockResponse =
+        [
             new()
-        };
+        ];
         DateTime currentTime = DateTime.UtcNow;
         var recipient = new NotificationRecipient
         {
@@ -2765,7 +2765,7 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> orderRepositoryMock = new();
         orderRepositoryMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult(mockResponse));
+            .ReturnsAsync((NewOrders: mockResponse, ExistingChain: (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(orderRepositoryMock.Object, null, orderId, currentTime);
 

@@ -120,7 +120,7 @@ public class ComposedEmailOrderRequestServiceTests
                 It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) =>
                 Assert.Equivalent(expectedOrder, o))
-            .ReturnsAsync([new NotificationOrder { Id = orderId, SendersReference = "ref-001" }]);
+            .ReturnsAsync(([new NotificationOrder { Id = orderId, SendersReference = "ref-001" }], (NotificationOrderChainResponse?)null));
 
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(currentTime);
@@ -174,7 +174,7 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(([new NotificationOrder { Id = orderId }], (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(repoMock.Object);
 
@@ -219,7 +219,7 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(([new NotificationOrder { Id = orderId }], (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(repoMock.Object);
 
@@ -268,7 +268,7 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(([new NotificationOrder { Id = orderId }], (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(repoMock.Object);
 
@@ -289,7 +289,7 @@ public class ComposedEmailOrderRequestServiceTests
         var repoMock = new Mock<IOrderRepository>();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+            .ReturnsAsync((new List<NotificationOrder>(), (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(repoMock.Object);
 
@@ -357,7 +357,7 @@ public class ComposedEmailOrderRequestServiceTests
                 null,
                 It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(([new NotificationOrder { Id = orderId }], (NotificationOrderChainResponse?)null));
 
         var service = GetTestService(repoMock.Object);
 
