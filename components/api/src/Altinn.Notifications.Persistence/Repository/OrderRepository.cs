@@ -50,7 +50,8 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
-    private const string _insertOrderChainSql = "select notifications.insertorderchain_v3($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
+    private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
+    private const string _insertOrderChainIdempotencySql = "select notifications.insertorderchain_idempotency($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking_v2($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _getComposedOrderChainTrackingSql = "SELECT * FROM notifications.get_composed_order_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
@@ -632,7 +633,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
     private static async Task<long?> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
-        await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertOrderChainIdempotencySql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderChain.OrderChainId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orderChain.IdempotencyId);
