@@ -2838,7 +2838,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_TwoNotificationOrdersWithSameIdempotencyIdAndType_ThrowsPostgresUniqueConstraintException()
+    public async Task Create_TwoNotificationOrdersWithSameIdempotencyIdAndType_ReturnsExistingChain()
     {
         // Arrange
         OrderRepository sut = (OrderRepository)ServiceUtil
@@ -2931,15 +2931,17 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         var (result1, _) = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
+        var (result2, existingChain) = await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken);
 
-        // Assert
-        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
-            await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken));
-
-        Assert.Equal("23505", ex.SqlState); // 23505 = unique_violation in PostgreSQL
+        // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(result1);
         Assert.Single(result1);
         Assert.Equal(firstOrderId, result1[0].Id);
+
+        Assert.Null(result2);
+        Assert.NotNull(existingChain);
+        Assert.Equal(firstOrderChainId, existingChain.OrderChainId);
+        Assert.Equal(firstOrderId, existingChain.OrderChainReceipt.ShipmentId);
     }
 
     [Fact]
@@ -4219,7 +4221,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_TwoComposedEmailOrdersWithSameIdempotencyId_ThrowsPostgresUniqueConstraintException()
+    public async Task Create_TwoComposedEmailOrdersWithSameIdempotencyId_ReturnsExistingChain()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -4314,15 +4316,17 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         var (originalResult, _) = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
+        var (duplicateResult, existingChain) = await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken);
 
-        // Assert — duplicate order with the same idempotency ID must violate unique constraint
-        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
-            await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken));
-
-        Assert.Equal("23505", ex.SqlState);
+        // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(originalResult);
         Assert.Single(originalResult);
         Assert.Equal(originalOrderId, originalResult[0].Id);
+
+        Assert.Null(duplicateResult);
+        Assert.NotNull(existingChain);
+        Assert.Equal(originalOrderChainId, existingChain.OrderChainId);
+        Assert.Equal(originalOrderId, existingChain.OrderChainReceipt.ShipmentId);
     }
 
     [Fact]

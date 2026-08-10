@@ -141,7 +141,17 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             if (chainDbId is null)
             {
                 // ON CONFLICT DO NOTHING fired — a concurrent request already committed this chain.
-                return (null, await GetOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken));
+                var existingChain = orderChain.Type == OrderType.Composed
+                    ? await GetComposedOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken)
+                    : await GetOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken);
+
+                if (existingChain is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate idempotency key detected but no existing chain found for creator '{orderChain.Creator.ShortName}' and idempotencyId '{orderChain.IdempotencyId}'.");
+                }
+
+                return (null, existingChain);
             }
 
             cancellationToken.ThrowIfCancellationRequested();

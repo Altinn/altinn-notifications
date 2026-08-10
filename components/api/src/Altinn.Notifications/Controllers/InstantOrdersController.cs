@@ -1,6 +1,5 @@
 ﻿using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -14,7 +13,7 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using Npgsql;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Altinn.Notifications.Controllers;
@@ -145,6 +144,8 @@ public class InstantOrdersController : ControllerBase
         CancellationToken cancellationToken)
         where TRequest : class
     {
+        string creator = string.Empty;
+
         try
         {
             // 1. Validate the instant notification order.
@@ -155,7 +156,7 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creatorError = GetCreatorOrForbid(out string creator);
+            var creatorError = GetCreatorOrForbid(out creator);
             if (creatorError != null)
             {
                 return creatorError;
@@ -184,6 +185,18 @@ public class InstantOrdersController : ControllerBase
         {
             var problemDetails = Problems.PlatformDependencyError.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            // Concurrent request already committed this chain — retrieve and return the existing record.
+            var existingTracking = await _instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
+            if (existingTracking != null)
+            {
+                return Ok(existingTracking.MapToInstantNotificationOrderResponse());
+            }
+
+            // Tracking not found after a unique violation — treat as unexpected failure.
+            throw;
         }
     }
 
