@@ -30,13 +30,19 @@ public interface IOrderRepository
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
-    /// <returns>A list of <see cref="NotificationOrder"/> objects containing both the main notification order and any scheduled reminders, in the order they were persisted.</returns>
+    /// <returns>
+    /// A tuple where <c>NewOrders</c> contains the persisted orders when the chain was newly
+    /// created, or <c>ExistingChain</c> is populated when a duplicate idempotency key was detected.
+    /// Exactly one of the two members is non-null.
+    /// </returns>
     /// <remarks>
     /// This method persists an entire notification chain as an atomic operation. The chain consists of:
     /// - A main notification order that will be processed first.
     /// - Zero or more reminder notifications that will be processed after their respective delays.
+    /// When a concurrent request with the same idempotency key has already committed the chain,
+    /// the insert is silently skipped and the existing chain is returned via <c>ExistingChain</c>.
     /// </remarks>
-    public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
+    public Task<(List<NotificationOrder>? NewOrders, NotificationOrderChainResponse? ExistingChain)> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new new high-priority instant notification order in the database.

@@ -642,21 +642,24 @@ public class OrderRequestService : IOrderRequestService
     /// </exception>
     private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
-        var savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        var (newOrders, existingChain) = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
-        // The first is the main shipment
-        var savedMain = savedOrders[0];
+        if (existingChain != null)
+        {
+            return existingChain;
+        }
 
-        // Build response
-        var response = new NotificationOrderChainResponse
+        var savedMain = newOrders![0];
+
+        return new NotificationOrderChainResponse
         {
             OrderChainId = orderRequest.OrderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 ShipmentId = savedMain.Id,
                 SendersReference = savedMain.SendersReference,
-                Reminders = savedOrders.Count > 1
-                    ? [.. savedOrders
+                Reminders = newOrders.Count > 1
+                    ? [.. newOrders
                         .Where(o => o.Id != savedMain.Id)
                         .Select(o => new NotificationOrderChainShipment
                         {
@@ -666,7 +669,5 @@ public class OrderRequestService : IOrderRequestService
                     : null
             }
         };
-
-        return response;
     }
 }

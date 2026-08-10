@@ -61,12 +61,15 @@ public class ComposedEmailOrderRequestService(
             Templates = [new EmailTemplate(fromAddress, composedEmailSettings.Subject, composedEmailSettings.Body, composedEmailSettings.ContentType)]
         };
 
-        var savedOrders = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);
-        var savedMainNotificationOrder = savedOrders.FirstOrDefault();
-        if (savedMainNotificationOrder == null)
+        var (newOrders, existingChain) = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);
+
+        if (existingChain != null)
         {
-            throw new InvalidOperationException("Could not create the notification order");
+            return existingChain;
         }
+
+        var savedMainNotificationOrder = newOrders?.FirstOrDefault()
+            ?? throw new InvalidOperationException("Could not create the notification order");
 
         return new NotificationOrderChainResponse
         {

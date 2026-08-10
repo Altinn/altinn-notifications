@@ -126,7 +126,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
+    public async Task<(List<NotificationOrder>? NewOrders, NotificationOrderChainResponse? ExistingChain)> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -136,10 +136,16 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            long chainDbId = await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+            long? chainDbId = await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+
+            if (chainDbId is null)
+            {
+                // ON CONFLICT DO NOTHING fired — a concurrent request already committed this chain.
+                return (null, await GetOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken));
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId, cancellationToken);
+            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId.Value, cancellationToken);
 
             if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
             {
@@ -159,7 +165,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId, cancellationToken);
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId.Value, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {
@@ -189,7 +195,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             throw;
         }
 
-        return reminders == null ? [mainOrder] : [mainOrder, .. reminders];
+        return (reminders == null ? [mainOrder] : [mainOrder, .. reminders], null);
     }
 
     /// <inheritdoc/>
@@ -614,7 +620,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<long> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long?> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
 
@@ -627,8 +633,9 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
 
-        long chainId = (long)reader.GetValue(0);
-        return chainId;
+        // NULL is returned when ON CONFLICT DO NOTHING fires — the chain already exists
+        object value = reader.GetValue(0);
+        return value is DBNull ? null : (long)value;
     }
 
     /// <summary>
