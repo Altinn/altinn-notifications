@@ -116,6 +116,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("OrderProcessingService.ProcessOrder");
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
         switch (sendingConditionEvaluationResult)

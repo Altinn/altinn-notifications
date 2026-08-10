@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
@@ -34,6 +35,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task<EmailOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("EmailOrderProcessingService.ProcessOrder");
         ArgumentNullException.ThrowIfNull(order);
 
         var recipients = await UpdateRecipientsWithContactPointsAsync(order);
