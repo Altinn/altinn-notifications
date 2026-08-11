@@ -338,6 +338,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
 
     private static NotificationOrderChainResponse CreateOrderChainResponse() => new()
     {
+        IsNewlyCreated = true,
         OrderChainId = Guid.NewGuid(),
         OrderChainReceipt = new NotificationOrderChainReceipt
         {

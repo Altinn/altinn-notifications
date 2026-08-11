@@ -476,14 +476,13 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var (newOrders, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
-        var result = newOrders;
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(orderId, result[0].Id);
-        Assert.NotEqual(orderChainId, result[0].Id);
+        Assert.True(result.IsNewlyCreated);
+        Assert.Equal(orderId, result.ShipmentId);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
         int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
@@ -651,18 +650,13 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
-        var result = newOrders;
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(mainOrderId, result[0].Id);
-        Assert.NotEqual(orderChainId, result[0].Id);
-        Assert.NotEqual(orderChainId, result[1].Id);
-        Assert.NotEqual(orderChainId, result[2].Id);
-        Assert.Equal(firstReminderOrderId, result[1].Id);
-        Assert.Equal(secondReminderOrderId, result[2].Id);
+        Assert.True(result.IsNewlyCreated);
+        Assert.Equal(mainOrderId, result.ShipmentId);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
         string mainOrdersChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type ='Notification'";
@@ -888,20 +882,13 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
-        var result = newOrders;
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(mainOrderId, result[0].Id);
-        Assert.NotEqual(mainOrderId, result[1].Id);
-        Assert.NotEqual(mainOrderId, result[2].Id);
-        Assert.NotEqual(orderChainId, result[0].Id);
-        Assert.NotEqual(orderChainId, result[1].Id);
-        Assert.NotEqual(orderChainId, result[2].Id);
-        Assert.Equal(firstReminderOrderId, result[1].Id);
-        Assert.Equal(secondReminderOrderId, result[2].Id);
+        Assert.True(result.IsNewlyCreated);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(mainOrderId, result.ShipmentId);
 
         string mainOrdersChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
@@ -1140,20 +1127,13 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var (newOrders, _) = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
-        var result = newOrders;
+        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(mainOrderId, result[0].Id);
-        Assert.NotEqual(mainOrderId, result[1].Id);
-        Assert.NotEqual(mainOrderId, result[2].Id);
-        Assert.NotEqual(orderChainId, result[0].Id);
-        Assert.NotEqual(orderChainId, result[1].Id);
-        Assert.NotEqual(orderChainId, result[2].Id);
-        Assert.Equal(firstReminderOrderId, result[1].Id);
-        Assert.Equal(secondReminderOrderId, result[2].Id);
+        Assert.True(result.IsNewlyCreated);
+        Assert.Equal(mainOrderId, result.ShipmentId);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
         string mainOrdersChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type = 'Notification'";
@@ -2711,7 +2691,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         // Create the normal order
-        var (normalOrderResult, _) = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
+        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
 
         // Create the instant order
         var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1, TestContext.Current.CancellationToken);
@@ -2721,8 +2701,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(normalOrderResult);
-        Assert.Single(normalOrderResult);
-        Assert.Equal(normalOrderId, normalOrderResult[0].Id);
+        Assert.True(normalOrderResult.IsNewlyCreated);
+        Assert.Equal(normalOrderId, normalOrderResult.ShipmentId);
 
         Assert.NotNull(instantOrderResult);
         Assert.Equal(instantOrderChainId, instantOrderResult.OrderChainId);
@@ -2930,18 +2910,18 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var (result1, _) = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
-        var (result2, existingChain) = await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken);
+        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
+        var result2 = await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken);
 
         // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(result1);
-        Assert.Single(result1);
-        Assert.Equal(firstOrderId, result1[0].Id);
+        Assert.True(result1.IsNewlyCreated);
+        Assert.Equal(firstOrderId, result1.ShipmentId);
 
-        Assert.Null(result2);
-        Assert.NotNull(existingChain);
-        Assert.Equal(firstOrderChainId, existingChain.OrderChainId);
-        Assert.Equal(firstOrderId, existingChain.OrderChainReceipt.ShipmentId);
+        Assert.NotNull(result2);
+        Assert.False(result2.IsNewlyCreated);
+        Assert.Equal(firstOrderChainId, result2.OrderChainId);
+        Assert.Equal(firstOrderId, result2.ShipmentId);
     }
 
     [Fact]
@@ -4118,13 +4098,12 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var (newOrders, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
-        var result = newOrders;
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Assert — ordersResult contains only the main order, no reminders
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(orderId, result[0].Id);
+        Assert.True(result.IsNewlyCreated);
+        Assert.Equal(orderId, result.ShipmentId);
 
         // Order chain record persisted
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
@@ -4208,11 +4187,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var (ordersResult, _) = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(ordersResult);
-        Assert.Single(ordersResult);
+        Assert.NotNull(result);
+        Assert.True(result.IsNewlyCreated);
 
         // Both file references stored in JSONB
         string attachmentSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' AND jsonb_array_length(notificationorder->'EmailAttachments') = 2";
@@ -4315,18 +4294,18 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var (originalResult, _) = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
-        var (duplicateResult, existingChain) = await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken);
+        var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
+        var duplicateResult = await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken);
 
         // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(originalResult);
-        Assert.Single(originalResult);
-        Assert.Equal(originalOrderId, originalResult[0].Id);
+        Assert.True(originalResult.IsNewlyCreated);
+        Assert.Equal(originalOrderId, originalResult.ShipmentId);
 
-        Assert.Null(duplicateResult);
-        Assert.NotNull(existingChain);
-        Assert.Equal(originalOrderChainId, existingChain.OrderChainId);
-        Assert.Equal(originalOrderId, existingChain.OrderChainReceipt.ShipmentId);
+        Assert.NotNull(duplicateResult);
+        Assert.False(duplicateResult.IsNewlyCreated);
+        Assert.Equal(originalOrderChainId, duplicateResult.OrderChainId);
+        Assert.Equal(originalOrderId, duplicateResult.ShipmentId);
     }
 
     [Fact]

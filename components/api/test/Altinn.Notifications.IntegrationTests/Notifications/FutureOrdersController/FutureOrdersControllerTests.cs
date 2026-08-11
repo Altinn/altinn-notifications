@@ -197,6 +197,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -240,6 +241,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateOrderChainRequestForPerson();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -291,6 +293,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateOrderChainRequestForOrganization();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -329,6 +332,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -1164,6 +1168,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var guid = Guid.NewGuid();
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = guid,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -1220,6 +1225,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         {
             var response = expectedResponse ?? new NotificationOrderChainResponse
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt
                 {
@@ -1275,6 +1281,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = orderId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {

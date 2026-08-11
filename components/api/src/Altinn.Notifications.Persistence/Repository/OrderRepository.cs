@@ -51,7 +51,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
     private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
-    private const string _insertOrderChainIdempotencySql = "select notifications.insertorderchain_idempotency($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
+    private const string _insertOrderChainIdempotencySql = "SELECT * FROM notifications.insertorderchain_v3($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking_v2($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _getComposedOrderChainTrackingSql = "SELECT * FROM notifications.get_composed_order_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
@@ -127,36 +127,26 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<(List<NotificationOrder>? NewOrders, NotificationOrderChainResponse? ExistingChain)> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
+    public async Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
+        OrderChainCreateResult result;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            long? chainDbId = await TryInsertOrderChainIdAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+            result = await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
 
-            if (chainDbId is null)
+            if (!result.IsNewlyCreated)
             {
-                // ON CONFLICT DO NOTHING fired — a concurrent request already committed this chain.
-                var existingChain = orderChain.Type == OrderType.Composed
-                    ? await GetComposedOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken)
-                    : await GetOrderChainTracking(orderChain.Creator.ShortName, orderChain.IdempotencyId, cancellationToken);
-
-                if (existingChain is null)
-                {
-                    throw new InvalidOperationException(
-                        $"Duplicate idempotency key detected but no existing chain found for creator '{orderChain.Creator.ShortName}' and idempotencyId '{orderChain.IdempotencyId}'.");
-                }
-
-                return (null, existingChain);
+                return result;
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId.Value, cancellationToken);
+            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
             if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
             {
@@ -176,7 +166,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, chainDbId.Value, cancellationToken);
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {
@@ -206,7 +196,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             throw;
         }
 
-        return (reminders == null ? [mainOrder] : [mainOrder, .. reminders], null);
+        return result;
     }
 
     /// <inheritdoc/>
@@ -350,6 +340,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = false,
             OrderChainId = header.Value.OrderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -631,7 +622,17 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<long?> TryInsertOrderChainIdAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Inserts a notification order chain into the database using the idempotent <c>insertorderchain_v3</c> function.
+    /// If a row with the same idempotency key already exists, the existing row's tracking data is returned instead.
+    /// </summary>
+    /// <param name="orderChain">The order chain request to persist.</param>
+    /// <param name="creationDateTime">The creation timestamp to record on the row.</param>
+    /// <param name="connection">The active database connection.</param>
+    /// <param name="transaction">The transaction context for the operation.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>An <see cref="OrderChainCreateResult"/> indicating whether the row was newly created and its tracking data.</returns>
+    private static async Task<OrderChainCreateResult> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainIdempotencySql, connection, transaction);
 
@@ -644,9 +645,63 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
 
-        // NULL is returned when ON CONFLICT DO NOTHING fires — the chain already exists
-        object value = reader.GetValue(0);
-        return value is DBNull ? null : (long)value;
+        return ReadOrderChainCreateResult(reader);
+    }
+
+    /// <summary>
+    /// Maps a single data reader row from <c>insertorderchain_v3</c> into an <see cref="OrderChainCreateResult"/>.
+    /// </summary>
+    private static OrderChainCreateResult ReadOrderChainCreateResult(NpgsqlDataReader reader)
+    {
+        return new OrderChainCreateResult
+        {
+            ShipmentId = reader.GetGuid(reader.GetOrdinal("shipment_id")),
+            InternalId = reader.GetInt64(reader.GetOrdinal("internal_id")),
+            OrderChainId = reader.GetGuid(reader.GetOrdinal("order_chain_id")),
+            IsNewlyCreated = reader.GetBoolean(reader.GetOrdinal("is_newly_created")),
+            SendersReference = reader.IsDBNull(reader.GetOrdinal("senders_reference"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("senders_reference")),
+            Reminders = ParseReminderShipments(reader)
+        };
+    }
+
+    /// <summary>
+    /// Parses the <c>reminders</c> JSONB column into a list of <see cref="NotificationOrderChainShipment"/>.
+    /// Returns <c>null</c> when the column is <c>NULL</c> or contains an empty array.
+    /// </summary>
+    private static List<NotificationOrderChainShipment>? ParseReminderShipments(NpgsqlDataReader reader)
+    {
+        int ordinal = reader.GetOrdinal("reminders");
+
+        if (reader.IsDBNull(ordinal))
+        {
+            return null;
+        }
+
+        var json = reader.GetFieldValue<JsonElement>(ordinal);
+
+        if (json.ValueKind != JsonValueKind.Array || json.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var shipments = new List<NotificationOrderChainShipment>(json.GetArrayLength());
+
+        foreach (var element in json.EnumerateArray())
+        {
+            shipments.Add(new NotificationOrderChainShipment
+            {
+                ShipmentId = element.TryGetProperty("ShipmentId", out var sid) && sid.ValueKind != JsonValueKind.Null
+                    ? Guid.Parse(sid.GetString()!)
+                    : Guid.Empty,
+                SendersReference = element.TryGetProperty("SendersReference", out var sr) && sr.ValueKind != JsonValueKind.Null
+                    ? sr.GetString()
+                    : null
+            });
+        }
+
+        return shipments;
     }
 
     /// <summary>
@@ -664,6 +719,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = false,
             OrderChainId = orderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {

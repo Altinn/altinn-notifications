@@ -642,31 +642,23 @@ public class OrderRequestService : IOrderRequestService
     /// </exception>
     private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
-        var (savedOrders, existingChain) = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
-
-        if (existingChain != null)
-        {
-            return existingChain;
-        }
-
-        var savedMain = savedOrders![0];
+        var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
         return new NotificationOrderChainResponse
         {
-            OrderChainId = orderRequest.OrderChainId,
+            OrderChainId = result.OrderChainId,
+            IsNewlyCreated = result.IsNewlyCreated,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = savedMain.Id,
-                SendersReference = savedMain.SendersReference,
-                Reminders = savedOrders.Count > 1
-                    ? [.. savedOrders
-                        .Where(o => o.Id != savedMain.Id)
-                        .Select(o => new NotificationOrderChainShipment
-                        {
-                            ShipmentId = o.Id,
-                            SendersReference = o.SendersReference
-                        })]
-                    : null
+                ShipmentId = result.ShipmentId,
+                SendersReference = result.SendersReference,
+                Reminders = result.IsNewlyCreated
+                    ? reminderOrders?.Select(o => new NotificationOrderChainShipment
+                    {
+                        ShipmentId = o.Id,
+                        SendersReference = o.SendersReference
+                    }).ToList()
+                    : result.Reminders
             }
         };
     }
