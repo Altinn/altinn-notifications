@@ -159,14 +159,29 @@ function getComposedEmailShipment(data, shipmentId) {
         get_composed_email_shipment
     );
 
-    check(response, {
+    const statusOk = check(response, {
         "GET composed-email shipment. Status is 200 OK": (r) =>
             r.status === 200,
     });
 
-    check(JSON.parse(response.body), {
-        "GET composed-email shipment. ShipmentId matches": (body) =>
-            body.shipmentId === shipmentId,
+    if (!statusOk) {
+        return;
+    }
+
+    let body;
+    try {
+        body = JSON.parse(response.body);
+    } catch (_) {
+        check(null, {
+            "GET composed-email shipment. Response body is valid JSON": () =>
+                false,
+        });
+        return;
+    }
+
+    check(body, {
+        "GET composed-email shipment. ShipmentId matches": (b) =>
+            b.shipmentId === shipmentId,
     });
 }
 
