@@ -44,5 +44,15 @@
         /// The operationId returned by the email provider.
         /// </summary>
         public string OperationId { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Indicates whether the email has attachments.
+        /// </summary>
+        public bool HasAttachments { get; set; }
+
+        /// <summary>
+        /// The total size of all encoded attachments associated with this email, in bytes.
+        /// </summary>
+        public long EncodedAttachmentsSize { get; set; }
     }
 }

@@ -34,5 +34,15 @@
         /// Number of successfully sent sms notifications
         /// </summary>
         public int SuccessfulSmsNotifications { get; set; }
+
+        /// <summary>
+        /// The number of emails with attachments associated with this organization.
+        /// </summary>
+        public int EmailsWithAttachmentsCount { get; set; }
+
+        /// <summary>
+        /// The total size of all encoded attachments associated with this organization, in bytes.
+        /// </summary>
+        public long TotalEncodedAttachmentsSize { get; set; }
     }
 }
