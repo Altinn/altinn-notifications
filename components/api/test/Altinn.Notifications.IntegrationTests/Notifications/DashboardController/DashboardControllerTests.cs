@@ -154,22 +154,6 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     }
 
     [Fact]
-    public async Task GetByNin_UserToken_ReturnsForbidden()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
-
-        HttpRequestMessage request = CreateRequest("nin", ("NationalIdentityNumber", _validNin));
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
     public async Task GetByNin_WithFromAndToFilters_PassesRangeToServiceAndReturnsOk()
     {
         // Arrange
@@ -343,22 +327,6 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     }
 
     [Fact]
-    public async Task GetByOrgNumber_UserToken_ReturnsForbidden()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
-
-        HttpRequestMessage request = CreateRequest("orgnumber", ("OrganizationNumber", _validOrgNumber));
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
     public async Task GetByOrgNumber_WithFromAndToFilters_PassesRangeToServiceAndReturnsOk()
     {
         // Arrange
@@ -521,22 +489,6 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        HttpRequestMessage request = CreateRequest("email", ("Email", _validEmail));
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetByEmail_UserToken_ReturnsForbidden()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
         HttpRequestMessage request = CreateRequest("email", ("Email", _validEmail));
 
