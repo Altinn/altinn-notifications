@@ -237,9 +237,10 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
     {
         var request = ValidRequest();
         var existingResponse = CreateOrderChainResponse();
+        existingResponse.IsNewlyCreated = false;
 
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
         var client = GetTestClient(composedEmailService: serviceMock.Object);
@@ -252,7 +253,6 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(existingResponse.OrderChainId, responseObject.OrderChainId);
-        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -365,8 +365,6 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         {
             var response = expectedResponse ?? CreateOrderChainResponse();
             var mock = new Mock<IComposedEmailOrderRequestService>();
-            mock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((NotificationOrderChainResponse?)null);
             mock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(response);
             composedEmailService = mock.Object;
