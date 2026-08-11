@@ -25,3 +25,11 @@ DROP FUNCTION IF EXISTS notifications.getsms_statusnew_updatestatus(integer);
 DROP FUNCTION IF EXISTS notifications.updatesmsnotification_v2(text, text, uuid);
 
 DROP PROCEDURE IF EXISTS notifications.updateemailstatus(uuid, text, text);
+
+DROP FUNCTION IF EXISTS notifications.updateemailnotification(text, text, uuid);          -- v1
+
+DROP FUNCTION IF EXISTS notifications.updateemailnotification_v2(text, text, uuid);       -- v2
+
+DROP FUNCTION IF EXISTS notifications.updateemailnotification_v3(text, text, uuid, jsonb); -- v3
+
+DROP FUNCTION IF EXISTS notifications.updatesmsnotification_v2(text, text, uuid); -- v2
