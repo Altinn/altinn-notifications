@@ -137,7 +137,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            long? chainDbId = await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+            long? chainDbId = await TryInsertOrderChainIdAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
 
             if (chainDbId is null)
             {
@@ -631,7 +631,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<long?> InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task<long?> TryInsertOrderChainIdAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderChainIdempotencySql, connection, transaction);
 
