@@ -23,7 +23,7 @@ import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { getEmailRecipient } from "../shared/functions.js";
-import { composedEmailScope } from "../shared/variables.js";
+import { composedEmailScope, scopes } from "../shared/variables.js";
 import {
     post_composed_email_order_v2,
     get_composed_email_shipment,
@@ -69,7 +69,7 @@ export async function setup() {
         );
     }
 
-    const token = await setupToken.getAltinnTokenForOrg(composedEmailScope);
+    const token = await setupToken.getAltinnTokenForOrg(`${composedEmailScope} ${scopes}`);
 
     const idempotencyId = uuidv4();
     const sendersReference = `k6-composed-email-${uuidv4().substring(0, 8)}`;
