@@ -36,7 +36,7 @@ $BODY$;
 
 COMMENT ON FUNCTION notifications.insertorderchain_idempotency(UUID, TEXT, TEXT, TIMESTAMP with time zone, JSONB) IS
 'Inserts a new order chain row and returns its internal _id, or NULL if a row
-with the same (idempotencyid, creatorname, (orderchain ->> 'Type')) already exists.
+with the same (idempotencyid, creatorname, (orderchain ->> ''Type'')) already exists.
 
 A NULL return value means ON CONFLICT DO NOTHING fired — the chain was already
 committed by a concurrent request. The caller must treat NULL as a duplicate
