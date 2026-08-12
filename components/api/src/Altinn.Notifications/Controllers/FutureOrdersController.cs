@@ -95,7 +95,7 @@ public class FutureOrdersController : ControllerBase
                 return StatusCode(problemDetails.Status!.Value, problemDetails);
             }
 
-            var response = result.Value!;
+            var response = result.Value;
             var responseExt = response.MapToNotificationOrderChainResponseExt();
 
             if (response.IsNewlyCreated)
