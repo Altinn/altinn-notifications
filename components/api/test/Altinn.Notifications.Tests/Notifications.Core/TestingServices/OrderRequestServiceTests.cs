@@ -2433,6 +2433,90 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrderChain_WhenChainAlreadyExists_ReturnsExistingChainWithoutContactLookupOrInsert()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        string idempotencyId = "existing-chain-idempotency-id";
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(idempotencyId)
+            .SetSendersReference("existing-ref")
+            .SetRequestedSendTime(currentTime.AddMinutes(10))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientPerson = new RecipientPerson
+                {
+                    NationalIdentityNumber = "29105573746",
+                    ChannelSchema = NotificationChannel.Email,
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Subject = "Test",
+                        Body = "Test body",
+                        ContentType = EmailContentType.Plain,
+                        SenderEmailAddress = "noreply@altinn.no"
+                    }
+                }
+            })
+            .Build();
+
+        var existingChain = new NotificationOrderChainResponse
+        {
+            IsNewlyCreated = false,
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = orderId,
+                SendersReference = "existing-ref"
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == "ttd"),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingChain);
+
+        // If the pre-check fails to short-circuit, any contact-point call will throw —
+        // making the regression immediately visible rather than silently passing.
+        var contactPointServiceMock = new Mock<IContactPointService>(MockBehavior.Strict);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert — existing chain is returned as-is
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.False(result.Value.IsNewlyCreated);
+        Assert.Equal(orderChainId, result.Value.OrderChainId);
+        Assert.Equal(orderId, result.Value.OrderChainReceipt.ShipmentId);
+        Assert.Equal("existing-ref", result.Value.OrderChainReceipt.SendersReference);
+
+        // Verify no insert was attempted
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // MockBehavior.Strict already guarantees no contact-point methods were called,
+        // but this makes the intent explicit.
+        contactPointServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task RetrieveOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange
