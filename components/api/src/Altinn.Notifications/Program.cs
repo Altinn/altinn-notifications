@@ -177,6 +177,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddNpgsql();
 
             tracing.AddSource("Wolverine");
+            tracing.AddSource("Altinn.Notifications.EmailPublish");
         });
 
     AddAzureMonitorTelemetryExporters(services, config);
