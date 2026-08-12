@@ -15,6 +15,7 @@ using Altinn.Notifications.Integrations.ShortMessageService;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -55,7 +56,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
         services.AddTransient<ISigningCredentialsResolver, SigningCredentialsResolver>();
 
-        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"))
-            .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.Configure<SendConditionSettings>(config.GetSection("SendConditionClient"));
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(
+            config.GetSection("SendConditionClient:MaskinportenSettings"))
+            .ConfigureHttpClient((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<SendConditionSettings>>();
+                client.Timeout = TimeSpan.FromSeconds(settings.Value.MaskinportenHttpClientTimeoutSeconds);
+            });
     }
 }
