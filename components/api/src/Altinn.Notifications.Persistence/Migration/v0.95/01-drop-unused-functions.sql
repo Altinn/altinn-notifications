@@ -31,5 +31,3 @@ DROP FUNCTION IF EXISTS notifications.updateemailnotification(text, text, uuid);
 DROP FUNCTION IF EXISTS notifications.updateemailnotification_v2(text, text, uuid);       -- v2
 
 DROP FUNCTION IF EXISTS notifications.updateemailnotification_v3(text, text, uuid, jsonb); -- v3
-
-DROP FUNCTION IF EXISTS notifications.updatesmsnotification_v2(text, text, uuid); -- v2
