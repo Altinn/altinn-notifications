@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
         services.AddTransient<ISigningCredentialsResolver, SigningCredentialsResolver>();
 
-        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"));
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"))
+            .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
     }
 }
