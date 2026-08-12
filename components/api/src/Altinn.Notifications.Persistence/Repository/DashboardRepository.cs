@@ -16,6 +16,7 @@ public class DashboardRepository : IDashboardRepository
 
     private const string _getNotificationsByOrgNo = "SELECT * from notifications.get_notifications_by_organization_number($1,$2,$3)"; // (_recipientorgno, _from_date,_to_date)
     private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
+    private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email($1,$2,$3)"; // (_email, _from_date,_to_date)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
@@ -38,6 +39,22 @@ public class DashboardRepository : IDashboardRepository
         return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByEmailAsync(string email, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the given SQL command to fetch dashboard notifications for a recipient within a date range,
+    /// grouping delivery attempts by shipment.
+    /// </summary>
+    /// <param name="sqlCommand">The SQL command to execute. Must accept the recipient value, 'from', and 'to' as its three parameters, in that order.</param>
+    /// <param name="recipientValue">The recipient identifier to filter by (e.g. national identity number, organization number, or email address).</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if not provided.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if not provided.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> in the order first seen in the result set, each with its associated delivery attempts.</returns>
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
         string sqlCommand,
         string recipientValue,
@@ -60,12 +77,13 @@ public class DashboardRepository : IDashboardRepository
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            bool isNin = recipientValue.Length == 11;
+            bool hasRecipientNin = HasColumn(reader, "recipientnin");
+            bool hasRecipientOrgNo = HasColumn(reader, "recipientorgno");
 
             while (await reader.ReadAsync(cancellationToken))
             {
-                string? recipientNin = isNin ? reader.GetValue<string?>("recipientnin") : null;
-                string? recipientOrgNo = isNin ? null : reader.GetValue<string?>("recipientorgno");
+                string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
+                string? recipientOrgNo = hasRecipientOrgNo ? reader.GetValue<string?>("recipientorgno") : null;
 
                 var shipmentId = reader.GetValue<Guid>("shipmentid");
                 string channel = reader.GetValue<string>("channel");
@@ -107,5 +125,21 @@ public class DashboardRepository : IDashboardRepository
             var e = groups[id];
             return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
         })];
+    }
+
+    /// <summary>
+    /// Determines whether the given data reader's result set contains a column with the given name.
+    /// </summary>
+    private static bool HasColumn(NpgsqlDataReader reader, string colName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), colName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

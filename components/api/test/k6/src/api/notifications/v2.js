@@ -38,6 +38,15 @@ export function postEmailInstantNotificationOrderRequest(data, token, label) {
     return http.post(endpoint, data, params);
 }
 
+export function postComposedEmailNotificationOrder(serializedOrder, token, label) {
+    const endpoint = config.notifications.orders_composed_email_v2;
+
+    const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+    params.tags = { name: label };
+
+    return http.post(endpoint, serializedOrder, params);
+}
+
 export function getShipment(orderId, token, label) {
     const params = apiHelpers.buildHeaderWithBearer(token);
     params.tags = { name: label };

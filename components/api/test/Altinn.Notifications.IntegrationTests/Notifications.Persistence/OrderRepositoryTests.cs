@@ -3504,7 +3504,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SetOrderSendConditionNotMetAsync_OrderProcessedTwice_SecondCallIsIdempotentNoOp()
+    public async Task SetOrderSendConditionNotMetAsync_WhenAlreadySendConditionNotMet_IsIdempotentNoOp()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -3516,7 +3516,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Created = DateTime.UtcNow,
             Creator = new("ttd"),
-            SendersReference = "tx-test-processed-twice",
+            SendersReference = "idempotency-test-already-not-met",
             Type = OrderType.Notification,
             Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
         };
@@ -3525,18 +3525,56 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.Create(order);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
-        // Act - first call completes normally
+        // First delivery — normal path
         await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
 
-        // Simulate the order somehow being reprocessed: reset it back to Processing so the
-        // second call reaches the status feed insert instead of failing on the state guard.
-        await PostgreUtil.RunSql($"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid = '{order.Id}'");
-
+        // Act — second delivery, order is already SendConditionNotMet (real duplicate-delivery race)
+        // Should not throw and should not write a second status feed entry
         await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
 
-        // Assert - second call did not throw, and only one status feed entry exists
+        // Assert
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.SendConditionNotMet.ToString(), actualStatus);
+
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, statusFeedCount); // only one entry, not two
+    }
+
+    [Fact]
+    public async Task SetOrderSendConditionNotMetAsync_WhenAlreadyCompleted_IsIdempotentNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "idempotency-test-already-completed",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+
+        // Act — condition-not-met arrives after the order is already Completed
+        // Should not throw and should not overwrite the Completed status
+        await repo.SetOrderSendConditionNotMetAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert — status stays Completed, no status feed entry written for SendConditionNotMet
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(0, statusFeedCount);
     }
 
     [Fact]
@@ -3566,6 +3604,135 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string orderCountSql = $"SELECT count(1) FROM notifications.orders WHERE alternateid = '{ghostOrder.Id}'";
         int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderCountSql);
         Assert.Equal(0, orderCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenOrderAlreadyCompleted_IsIdempotentNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "idempotency-test-already-completed",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailResult = new EmailOrderProcessingResult(
+            [new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow)
+        }
+            ],
+            ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // First delivery — completes normally
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Act — second delivery, order is already Completed (real duplicate-delivery race)
+        // New notification GUIDs are generated so there is no unique constraint conflict on insert.
+        var duplicateEmailResult = new EmailOrderProcessingResult(
+            [new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow)
+        }
+            ],
+            ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+
+        await repo.PersistProcessingResultAsync(order, duplicateEmailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert — status still Completed, no duplicate notifications persisted
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), actualStatus);
+
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(1, notificationCount); // only from first delivery
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_WhenOrderAlreadyProcessed_IsIdempotentNoOp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "idempotency-test-already-processed",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var emailResult = new EmailOrderProcessingResult(
+            [new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        }
+            ],
+            ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+        var smsResult = new SmsOrderProcessingResult([], ExpirationDateTime: null);
+
+        // First delivery — sets order to Processed (notification is New, not terminal)
+        await repo.PersistProcessingResultAsync(order, emailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Act — second delivery, order is already Processed
+        var duplicateEmailResult = new EmailOrderProcessingResult(
+            [new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
+        }
+            ],
+            ExpirationDateTime: DateTime.UtcNow.AddDays(1));
+
+        await repo.PersistProcessingResultAsync(order, duplicateEmailResult, smsResult, TestContext.Current.CancellationToken);
+
+        // Assert — status still Processed, no duplicate notifications persisted
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Processed.ToString(), actualStatus);
+
+        string notificationCountSql = $@"SELECT count(1) FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON e._orderid = o._id WHERE o.alternateid = '{order.Id}'";
+        int notificationCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationCountSql);
+        Assert.Equal(1, notificationCount); // only from first delivery
     }
 
     [Fact]
