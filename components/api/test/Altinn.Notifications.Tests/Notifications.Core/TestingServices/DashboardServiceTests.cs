@@ -419,4 +419,35 @@ public class DashboardServiceTests
                 cts.Token),
             Times.Once);
     }
+
+    [Theory]
+    [InlineData("0047999999999", "+47999999999")]
+    [InlineData("99999999", "+4799999999")]
+    [InlineData("+4799999999", "+4799999999")]
+    public async Task GetNotificationsByPhoneNumberAsync_NormalizesPhoneNumberBeforeCallingRepository(string input, string expectedNormalizedNumber)
+    {
+        // Arrange
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByPhoneNumberAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new DashboardService(repository.Object);
+
+        // Act
+        await sut.GetNotificationsByPhoneNumberAsync(input, null, null, CancellationToken.None);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByPhoneNumberAsync(
+                expectedNormalizedNumber,
+                null,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }
