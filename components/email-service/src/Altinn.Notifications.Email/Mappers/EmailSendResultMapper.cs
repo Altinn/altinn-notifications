@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Email.Mappers;
 
 /// <summary>
-/// Mapper handling parsing to EmailSendResult
+/// Mapper handling parsing to EmailSendResult.
 /// </summary>
 public static class EmailSendResultMapper
 {
