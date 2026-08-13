@@ -2497,7 +2497,9 @@ BEGIN
 END;
 $BODY$;
 
-CREATE OR REPLACE FUNCTION notifications.insertorderchain_v3(
+
+-- insertorderchainidempotent.sql:
+CREATE OR REPLACE FUNCTION notifications.insertorderchain_idempotent(
     _orderchainid UUID,
     _idempotencyid TEXT,
     _creatorname TEXT,
@@ -2577,7 +2579,7 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION notifications.insertorderchain_v3(UUID, TEXT, TEXT, TIMESTAMP with time zone, JSONB) IS
+COMMENT ON FUNCTION notifications.insertorderchain_idempotent(UUID, TEXT, TEXT, TIMESTAMP with time zone, JSONB) IS
 'Atomically inserts a new order chain row or detects a conflict with an existing row.
 
 Returns a single row with:
