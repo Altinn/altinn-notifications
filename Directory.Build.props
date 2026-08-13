@@ -6,4 +6,10 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- SSH.NET <= 2025.1.0, pulled in transitively via Testcontainers 4.13.0 (test-only, no ScpClient usage).
+		     Testcontainers has not yet released a version referencing a patched SSH.NET (>= 2026.0.0). Remove once it does. -->
+		<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-q939-rpr3-3284" />
+	</ItemGroup>
 </Project>
