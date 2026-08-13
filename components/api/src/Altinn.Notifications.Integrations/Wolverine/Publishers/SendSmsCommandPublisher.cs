@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
@@ -95,6 +97,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            using Activity? activity = Activity.Current?.Source.StartActivity("SendSmsCommandPublisher.SendAsync");
             await messageBus.SendAsync(sendSmsCommand);
 
             return null;

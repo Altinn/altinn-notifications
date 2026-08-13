@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -100,6 +101,7 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
 
         try
         {
+            using Activity? activity = Activity.Current?.Source.StartActivity("ComposedEmailCommandPublisher.SendAsync");
             await messageBus.SendAsync(command);
 
             return true;

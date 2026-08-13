@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Configuration;
@@ -83,6 +85,7 @@ public class PastDueOrderPublisher(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            using Activity? activity = Activity.Current?.Source.StartActivity("PastDueOrderPublisher.SendAsync");
             await messageBus.SendAsync(new ProcessPastDueOrderCommand { Order = order });
             return null;
         }

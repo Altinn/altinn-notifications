@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -96,6 +97,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            using Activity? activity = Activity.Current?.Source.StartActivity("EmailCommandPublisher.SendAsync");
             await messageBus.SendAsync(sendEmailCommand);
 
             return null;
