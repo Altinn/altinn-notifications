@@ -7,7 +7,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Altinn.Notifications.Sms.Controllers;
 
 /// <summary>
-/// Controller for handling delivery reports from Link Mobility.
+/// Controller for handling delivery reports from Link Mobility
 /// </summary>
 [Authorize]
 [Route("notifications/sms/api/v1/reports")]

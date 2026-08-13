@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Shared.Commands;
 
 /// <summary>
-/// Defines the common properties shared by all email send commands
+/// Defines the common properties shared by all email send commands.
 /// </summary>
 public abstract record EmailCommandBase
 {

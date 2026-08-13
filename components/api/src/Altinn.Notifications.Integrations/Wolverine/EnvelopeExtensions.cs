@@ -3,7 +3,7 @@ using Wolverine;
 namespace Altinn.Notifications.Integrations.Wolverine;
 
 /// <summary>
-/// Extension methods for <see cref="Envelope"/> to expose custom metadata
+/// Extension methods for <see cref="Envelope"/> to expose custom metadata.
 /// </summary>
 public static class EnvelopeExtensions
 {
