@@ -15,6 +15,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     private readonly string _recipientNin = Random.Shared.NextInt64(10_000_000_000, 99_999_999_999).ToString();
     private readonly string _recipientOrgNumber = Random.Shared.NextInt64(100_000_000, 999_999_999).ToString();
     private readonly string _recipientEmail = $"dashboard-{Guid.NewGuid():N}@example.com";
+    private readonly string _recipientPhoneNumber = $"+479{Random.Shared.NextInt64(1_000_000, 9_999_999)}";
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
@@ -431,6 +432,146 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         Assert.Null(attempt.NationalIdentityNumber);
     }
 
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_ReturnsNotificationForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "sms" && r.MobileNumber == _recipientPhoneNumber));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_UnknownPhoneNumber_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our phone number so the table is non-empty
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different phone number
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            $"+4790{Random.Shared.NextInt64(100_000, 999_999)}",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithSmsNotification(DateTime.UtcNow.AddDays(-1), mobileNumber: _recipientPhoneNumber);
+        await SeedOrderWithSmsNotification(DateTime.UtcNow.AddDays(-30), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(_recipientPhoneNumber, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("sms", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), orderType: orderType, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_RecipientNinIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientNin, attempt.NationalIdentityNumber);
+        Assert.Null(attempt.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_RecipientOrgNoIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientOrgNumber, attempt.OrganizationNumber);
+        Assert.Null(attempt.NationalIdentityNumber);
+    }
+
     private static DashboardRepository GetRepository() =>
         ServiceUtil.GetServices([typeof(IDashboardRepository)])
             .OfType<DashboardRepository>()
@@ -463,7 +604,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         return order.Id;
     }
 
-    private async Task<Guid> SeedOrderWithSmsNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null)
+    private async Task<Guid> SeedOrderWithSmsNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, OrderType orderType = OrderType.Notification, string mobileNumber = "+4799999999")
     {
         var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
         var smsRepo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).OfType<SmsNotificationRepository>().First();
@@ -471,6 +612,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         NotificationOrder order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
         order.RequestedSendTime = requestedSendTime;
+        order.Type = orderType;
 
         await orderRepo.Create(order);
 
@@ -480,7 +622,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     RequestedSendTime = requestedSendTime,
-                    Recipient = new() { MobileNumber = "+4799999999", NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    Recipient = new() { MobileNumber = mobileNumber, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
                     SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
                 },
                 requestedSendTime.AddDays(1));
