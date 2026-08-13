@@ -1,5 +1,4 @@
 import * as maskinporten from "./api/maskinporten.js";
-import { stopIterationOnFail } from "./errorhandler.js";
 import * as authentication from "./api/authentication.js";
 import * as tokenGenerator from "./api/token-generator.js";
 import { environment } from "./shared/variables.js";
