@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Hosting;
@@ -12,6 +13,7 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class EmailPublishBackgroundService : BackgroundService
 {
+    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.Publish");
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ILogger<EmailPublishBackgroundService> _logger;
@@ -59,6 +61,7 @@ public class EmailPublishBackgroundService : BackgroundService
 
             try
             {
+                using Activity? activity = _activitySource.StartActivity("EmailPublishBackgroundService.SendNotifications");
                 await _emailNotificationService.SendNotifications(cancellationToken);
             }
             catch (OperationCanceledException)

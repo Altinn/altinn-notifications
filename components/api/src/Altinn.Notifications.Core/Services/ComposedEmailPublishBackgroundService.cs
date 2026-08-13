@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -18,6 +19,7 @@ public class ComposedEmailPublishBackgroundService(
     IComposedEmailPublishSignal composedEmailPublishSignal,
     ILogger<ComposedEmailPublishBackgroundService> logger) : BackgroundService
 {
+    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.Publish");
     private readonly ILogger<ComposedEmailPublishBackgroundService> _logger = logger;
     private readonly IEmailNotificationService _emailNotificationService = emailNotificationService;
     private readonly IComposedEmailPublishSignal _composedEmailPublishSignal = composedEmailPublishSignal;
@@ -48,6 +50,7 @@ public class ComposedEmailPublishBackgroundService(
 
             try
             {
+                using Activity? activity = _activitySource.StartActivity("ComposedEmailPublishBackgroundService.SendComposedNotifications");
                 await _emailNotificationService.SendComposedNotifications(cancellationToken);
             }
             catch (OperationCanceledException)

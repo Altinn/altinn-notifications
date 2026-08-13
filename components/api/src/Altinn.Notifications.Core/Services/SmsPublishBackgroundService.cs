@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -13,6 +14,7 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class SmsPublishBackgroundService : BackgroundService
 {
+    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.Publish");
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
     private readonly ILogger<SmsPublishBackgroundService> _logger;
     private readonly ISmsNotificationService _smsNotificationService;
@@ -76,6 +78,7 @@ public class SmsPublishBackgroundService : BackgroundService
 
             try
             {
+                using Activity? activity = _activitySource.StartActivity($"SmsPublishBackgroundService.SendNotifications.{sendingTimePolicy}");
                 await _smsNotificationService.SendNotifications(cancellationToken, sendingTimePolicy);
             }
             catch (OperationCanceledException)
