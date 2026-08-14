@@ -3,9 +3,9 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
