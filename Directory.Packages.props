@@ -10,8 +10,8 @@
 		<PackageVersion Include="Altinn.ApiClients.Maskinporten" Version="10.1.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails" Version="5.4.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="5.4.0" />
-		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.10" />
-		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.10" />
+		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.11" />
+		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.11" />
 		<PackageVersion Include="Altinn.Common.PEP" Version="4.2.3" />
 		<PackageVersion Include="Altinn.Urn" Version="5.0.0" />
 
@@ -60,7 +60,7 @@
 
 		<!-- Other -->
 		<PackageVersion Include="JWTCookieAuthentication" Version="4.0.4" />
-		<PackageVersion Include="libphonenumber-csharp" Version="9.0.35" />
+		<PackageVersion Include="libphonenumber-csharp" Version="9.0.36" />
 		<PackageVersion Include="Parquet.Net" Version="6.0.3" />
 		<PackageVersion Include="RandomString4Net" Version="1.10.0" />
 		<PackageVersion Include="System.Memory.Data" Version="10.0.10" />
@@ -79,9 +79,9 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
 
 		<!-- Wolverine -->
-		<PackageVersion Include="WolverineFx" Version="6.24.4" />
-		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.24.4" />
-		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.24.4" />
+		<PackageVersion Include="WolverineFx" Version="6.25.3" />
+		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.25.3" />
+		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.25.3" />
 
 		<!-- xUnit -->
 		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
