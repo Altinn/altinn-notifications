@@ -1,22 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
-
+using Altinn.Notifications.Shared.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
-
 using Wolverine;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
@@ -396,10 +388,10 @@ public class SendSmsCommandPublisherTests
 
         var services = new ServiceCollection();
         services.AddScoped(_ => messageBusMock.Object);
-        var serviceProvider = services.BuildServiceProvider();
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
 
         var options = Options.Create(new WolverineSettings { SmsPublishConcurrency = publishConcurrency });
 
-        return new SendSmsCommandPublisher(loggerMock.Object, serviceProvider, options);
+        return new SendSmsCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
     }
 }
