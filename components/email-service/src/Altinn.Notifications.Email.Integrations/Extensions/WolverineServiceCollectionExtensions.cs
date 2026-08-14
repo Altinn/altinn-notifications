@@ -7,7 +7,7 @@ using Altinn.Notifications.Email.Integrations.Publishers;
 using Altinn.Notifications.Email.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
-
+using Altinn.Notifications.Shared.Publishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -50,6 +50,7 @@ public static class WolverineServiceCollectionExtensions
             AddEmailSendResultPublisher(services, wolverineSettings, opts);
             AddEmailStatusCheckPublisher(services, wolverineSettings, opts);
             AddEmailServiceRateLimitPublisher(services, wolverineSettings, opts);
+            services.AddSingleton<IMessageBusPublisher, WolverinePublisher>();
         });
     }
 
