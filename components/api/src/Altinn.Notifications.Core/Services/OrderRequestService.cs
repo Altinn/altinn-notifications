@@ -92,27 +92,52 @@ public class OrderRequestService : IOrderRequestService
     /// <inheritdoc/>
     public async Task<Result<NotificationOrderChainResponse>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
-        // 1. Get the current time
+        // 1. Early cancellation check.
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        // 2. Idempotency pre-check for retries: if this idempotency key was already
+        //    committed by a previous request, return the existing chain immediately.
+        //
+        //    This serves three purposes:
+        //    - Avoids redundant contact-point lookups against external registries (KRR etc.)
+        //    - Avoids redundant construction of order and reminder objects
+        //    - Prevents a retry from failing with MissingContactInformation when the
+        //      recipient's contact data (e.g. KRR reservation status) has changed
+        //      since the original successful request
+        //
+        //    This is intentionally NOT the TOCTOU guard. Two genuinely concurrent
+        //    first-time requests will both pass this check, but the atomic
+        //    ON CONFLICT DO NOTHING in the database insert handles that narrow window.
+        var existingChain = await _repository.GetOrderChainTracking(
+            orderRequest.Creator.ShortName,
+            orderRequest.IdempotencyId,
+            cancellationToken);
+
+        if (existingChain != null)
+        {
+            return existingChain;
+        }
+
+        // 3. Get the current time.
         DateTime currentTime = _dateTime.UtcNow();
 
-        // 2. Early cancellation if someone’s already cancelled
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 3. Create the main order
+        // 4. Create the main order (performs contact-point lookup).
         var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
         if (mainOrderResult.IsProblem)
         {
             return mainOrderResult.Problem;
         }
 
-        // 4. Create reminders
+        // 5. Create reminders (performs contact-point lookup).
         var remindersResult = await CreateReminderNotificationOrdersAsync(orderRequest.Reminders, orderRequest.Creator, currentTime, cancellationToken);
         if (remindersResult.IsProblem)
         {
             return remindersResult.Problem;
         }
 
-        // 5. Create the response
+        // 6. Persist atomically and return the response.
+        //    If a concurrent first-time request won the race, result.IsNewlyCreated
+        //    will be false and the existing chain's data is returned directly.
         return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
     }
 
@@ -642,31 +667,24 @@ public class OrderRequestService : IOrderRequestService
     /// </exception>
     private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
-        var savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
-        // The first is the main shipment
-        var savedMain = savedOrders[0];
-
-        // Build response
-        var response = new NotificationOrderChainResponse
+        return new NotificationOrderChainResponse
         {
-            OrderChainId = orderRequest.OrderChainId,
+            OrderChainId = result.OrderChainId,
+            IsNewlyCreated = result.IsNewlyCreated,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = savedMain.Id,
-                SendersReference = savedMain.SendersReference,
-                Reminders = savedOrders.Count > 1
-                    ? [.. savedOrders
-                        .Where(o => o.Id != savedMain.Id)
-                        .Select(o => new NotificationOrderChainShipment
-                        {
-                            ShipmentId = o.Id,
-                            SendersReference = o.SendersReference
-                        })]
-                    : null
+                ShipmentId = result.ShipmentId,
+                SendersReference = result.SendersReference,
+                Reminders = result.IsNewlyCreated
+                    ? reminderOrders?.Select(o => new NotificationOrderChainShipment
+                    {
+                        ShipmentId = o.Id,
+                        SendersReference = o.SendersReference
+                    }).ToList()
+                    : result.Reminders
             }
         };
-
-        return response;
     }
 }

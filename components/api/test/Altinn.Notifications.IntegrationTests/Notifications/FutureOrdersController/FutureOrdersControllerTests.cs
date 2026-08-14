@@ -197,6 +197,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -240,6 +241,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateOrderChainRequestForPerson();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -291,6 +293,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateOrderChainRequestForOrganization();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -329,6 +332,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -773,10 +777,11 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Arrange
         var request = CreateFutureEmailOrderChainRequest();
         var existingResponse = CreateOrderChainResponse();
+        existingResponse.IsNewlyCreated = false;
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
         var httpContext = new DefaultHttpContext();
@@ -794,9 +799,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var objectResult = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<NotificationOrderChainResponseExt>(objectResult.Value);
         Assert.Equal(existingResponse.OrderChainId, response.OrderChainId);
-        orderServiceMock.Verify(
-            s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]
@@ -808,9 +810,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var expectedUrl = newResponse.OrderChainId.GetSelfLinkFromOrderChainId();
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
-
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
 
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newResponse);
@@ -841,7 +840,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var httpContext = new DefaultHttpContext();
@@ -873,8 +872,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var request = CreateFutureEmailOrderChainRequest();
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Problems.MissingContactInformation);
         var httpContext = new DefaultHttpContext();
@@ -904,9 +901,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var request = CreateFutureEmailOrderChainRequest();
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
-
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
 
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
@@ -984,9 +978,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
-
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, CancellationToken>((r, _) => capturedRequest = r)
             .ReturnsAsync(CreateOrderChainResponse());
@@ -1025,10 +1016,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var orderServiceMock = new Mock<IOrderRequestService>();
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
-            .ReturnsAsync((NotificationOrderChainResponse?)null)
-            .Verifiable();
-
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken))
             .ReturnsAsync(CreateOrderChainResponse())
             .Verifiable();
@@ -1045,7 +1032,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         await controller.Post(request, cancellationToken);
 
         // Assert
-        orderServiceMock.Verify(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
     }
 
@@ -1164,6 +1150,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var guid = Guid.NewGuid();
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = guid,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -1220,6 +1207,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         {
             var response = expectedResponse ?? new NotificationOrderChainResponse
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt
                 {
@@ -1275,6 +1263,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         return new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = orderId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {

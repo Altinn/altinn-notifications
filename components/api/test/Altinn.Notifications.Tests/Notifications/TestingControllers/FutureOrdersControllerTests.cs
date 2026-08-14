@@ -72,6 +72,7 @@ public class FutureOrdersControllerTests
         _orderRequestService.Setup(x => x.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NotificationOrderChainResponse()
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt
                 {
