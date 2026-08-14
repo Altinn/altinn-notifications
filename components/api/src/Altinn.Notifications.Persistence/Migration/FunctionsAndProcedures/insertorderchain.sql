@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.insertorderchain_v2(
+﻿CREATE OR REPLACE FUNCTION notifications.insertorderchain_v2(
     _orderid UUID,
     _idempotencyid TEXT,
     _creatorname TEXT,
