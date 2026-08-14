@@ -57,6 +57,7 @@ public class ComposedEmailOrderRequestServiceTests
         var shipmentId = Guid.NewGuid();
         var existingResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = false,
             OrderChainId = chainId,
             OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = shipmentId }
         };
@@ -120,7 +121,15 @@ public class ComposedEmailOrderRequestServiceTests
                 It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) =>
                 Assert.Equivalent(expectedOrder, o))
-            .ReturnsAsync([new NotificationOrder { Id = orderId, SendersReference = "ref-001" }]);
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = chainId,
+                ShipmentId = orderId,
+                SendersReference = "ref-001",
+                Reminders = null
+            });
 
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(d => d.UtcNow()).Returns(currentTime);
@@ -174,7 +183,15 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = chainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
 
         var service = GetTestService(repoMock.Object);
 
@@ -219,7 +236,15 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = chainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
 
         var service = GetTestService(repoMock.Object);
 
@@ -268,7 +293,15 @@ public class ComposedEmailOrderRequestServiceTests
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = chainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
 
         var service = GetTestService(repoMock.Object);
 
@@ -278,24 +311,6 @@ public class ComposedEmailOrderRequestServiceTests
         // Assert
         Assert.NotNull(capturedOrder);
         Assert.Null(capturedOrder.EmailAttachments);
-    }
-
-    [Fact]
-    public async Task RegisterComposedEmailOrderChain_ThrowsInvalidOperationException_WhenRepositoryReturnsEmpty()
-    {
-        // Arrange
-        var request = ValidComposedEmailRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(1));
-
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        var service = GetTestService(repoMock.Object);
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -357,7 +372,15 @@ public class ComposedEmailOrderRequestServiceTests
                 null,
                 It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, o, _, _) => capturedOrder = o)
-            .ReturnsAsync([new NotificationOrder { Id = orderId }]);
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = chainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
 
         var service = GetTestService(repoMock.Object);
 

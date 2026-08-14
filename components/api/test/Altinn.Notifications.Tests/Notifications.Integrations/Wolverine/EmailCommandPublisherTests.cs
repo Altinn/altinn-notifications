@@ -9,7 +9,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
-
+using Altinn.Notifications.Shared.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -447,10 +447,10 @@ public class EmailCommandPublisherTests
 
         var services = new ServiceCollection();
         services.AddScoped(_ => messageBusMock.Object);
-        var serviceProvider = services.BuildServiceProvider();
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
 
         var options = Options.Create(new WolverineSettings { EmailPublishConcurrency = publishConcurrency });
 
-        return new EmailCommandPublisher(loggerMock.Object, serviceProvider, options);
+        return new EmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
     }
 }

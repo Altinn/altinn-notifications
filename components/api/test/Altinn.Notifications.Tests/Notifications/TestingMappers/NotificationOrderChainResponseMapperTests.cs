@@ -27,6 +27,7 @@ public class NotificationOrderChainResponseMapperTests
 
         var response = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = orderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -74,6 +75,7 @@ public class NotificationOrderChainResponseMapperTests
 
         var response = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = expectedOrderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -106,6 +108,7 @@ public class NotificationOrderChainResponseMapperTests
 
         var response = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = orderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
@@ -140,6 +143,7 @@ public class NotificationOrderChainResponseMapperTests
 
         var response = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = orderChainId,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {

@@ -11,6 +11,12 @@
 public class NotificationOrderChainResponse
 {
     /// <summary>
+    /// Gets or sets a value indicating whether the order chain was newly created.
+    /// When <c>false</c>, an existing order chain with the same idempotency key was returned instead.
+    /// </summary>
+    public required bool IsNewlyCreated { get; set; }
+
+    /// <summary>
     /// Gets or sets the unique identifier for the notification order chain itself.
     /// </summary>
     /// <remarks>
