@@ -70,7 +70,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
             concurrency: _publishConcurrency,
             onError: (sms, ex) =>
             {
-                _logger.LogError(ex, "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue. Exception: {Exception}", sms.NotificationId, ex);
+                _logger.LogError(ex, "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.", sms.NotificationId);
             },
             cancellationToken: cancellationToken);
     }
