@@ -67,6 +67,15 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
             _publishConcurrency,
             onError: (email, exception) =>
             {
+                if (exception is OperationCanceledException)
+                {
+                    _logger.LogInformation(
+                        exception,
+                        "EmailCommandPublisher cancelled before publishing email notification {NotificationId}; reporting as unpublished.",
+                        email.NotificationId);
+                    return;
+                }
+
                 _logger.LogError(exception, "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.", email.NotificationId);
             },
             cancellationToken: cancellationToken);
