@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 
 using Microsoft.Extensions.DependencyInjection;
-
 using Wolverine;
 
 namespace Altinn.Notifications.Shared.Publishers;
@@ -70,7 +69,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await messageBus.SendAsync(command);
-       }
+    }
 
     /// <summary>
     /// Sends <paramref name="command"/> to Azure Service Bus via a short-lived scoped <see cref="IMessageBus"/>.
