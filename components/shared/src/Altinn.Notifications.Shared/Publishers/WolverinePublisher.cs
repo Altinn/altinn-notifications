@@ -27,6 +27,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        ArgumentOutOfRangeException.ThrowIfLessThan(concurrency, 1);
 
         var failed = new ConcurrentBag<TItem>();
         using var semaphore = new SemaphoreSlim(concurrency);
