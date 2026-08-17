@@ -64,7 +64,7 @@
 		<PackageVersion Include="Parquet.Net" Version="6.0.3" />
 		<PackageVersion Include="RandomString4Net" Version="1.10.0" />
 		<PackageVersion Include="System.Memory.Data" Version="10.0.10" />
-		<PackageVersion Include="Testcontainers" Version="4.13.0" />
+		<PackageVersion Include="Testcontainers" Version="4.14.0" />
 
 		<!-- Quality / Testing -->
 		<PackageVersion Include="coverlet.collector" Version="10.0.1" />
