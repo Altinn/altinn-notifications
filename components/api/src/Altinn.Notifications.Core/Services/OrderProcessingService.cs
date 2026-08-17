@@ -63,6 +63,7 @@ public class OrderProcessingService : IOrderProcessingService
             try
             {
                 pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
+                Activity.Current?.SetTag("PastDueOrdersCount", pastDueOrders.Count);
                 if (pastDueOrders.Count == 0)
                 {
                     break;
