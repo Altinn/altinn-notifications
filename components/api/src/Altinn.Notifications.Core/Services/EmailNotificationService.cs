@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -80,6 +82,7 @@ public class EmailNotificationService(
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
         List<Email> claimedNotifications;
+        int totalCount = 0;
 
         do
         {
@@ -87,9 +90,12 @@ public class EmailNotificationService(
 
             try
             {
+                using Activity? activity = Activity.Current?.Source.StartActivity("EmailPublishBackgroundService.SendNotifications.Batch");
                 unpublishedNotifications =
                     claimedNotifications =
                     await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                totalCount += unpublishedNotifications.Count;
+                activity?.SetTag("Count", claimedNotifications.Count);
                 if (claimedNotifications.Count == 0)
                 {
                     break;
@@ -103,12 +109,14 @@ public class EmailNotificationService(
             }
             catch (Exception)
             {
+                Activity.Current?.Parent?.SetTag("Count", totalCount);
                 await ResetSendStatusToNewAsync(unpublishedNotifications);
 
                 throw;
             }
         }
         while (claimedNotifications.Count > 0);
+        Activity.Current?.Parent?.SetTag("Count", totalCount);
     }
 
     /// <inheritdoc/>

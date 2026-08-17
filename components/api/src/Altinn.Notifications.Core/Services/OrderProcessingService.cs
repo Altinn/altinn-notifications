@@ -55,15 +55,20 @@ public class OrderProcessingService : IOrderProcessingService
         List<NotificationOrder> pastDueOrders;
         Stopwatch stopwatch = Stopwatch.StartNew();
         int totalOrdersProcessed = 0;
+        int batchNumber = 0;
+        using Activity? activityTotal = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersTotal");
 
         do
         {
+            using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersBatch");
             pastDueOrders = [];
 
             IReadOnlyList<NotificationOrder>? failedOrders = null;
             try
             {
                 pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
+                Activity.Current?.SetTag("BatchCount", pastDueOrders.Count);
+                Activity.Current?.SetTag("BatchNr", ++batchNumber);
                 totalOrdersProcessed += pastDueOrders.Count;
                 if (pastDueOrders.Count == 0)
                 {
@@ -80,7 +85,7 @@ public class OrderProcessingService : IOrderProcessingService
                 // If PublishAsync completed, only reset orders it reported as failed — published orders
                 // must not be reset or they will be re-enqueued and processed twice.
                 // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
-                Activity.Current?.SetTag("PastDueOrdersCount", totalOrdersProcessed);
+                Activity.Current?.Parent?.SetTag("TotalCount", totalOrdersProcessed);
                 var ordersToReset = failedOrders ?? pastDueOrders;
                 await ResetOrdersToRegistered(ordersToReset);
 
@@ -89,7 +94,7 @@ public class OrderProcessingService : IOrderProcessingService
         }
         while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
-        Activity.Current?.SetTag("PastDueOrdersCount", totalOrdersProcessed);
+        Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
         stopwatch.Stop();
     }
 

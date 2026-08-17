@@ -61,7 +61,7 @@ public class EmailPublishBackgroundService : BackgroundService
 
             try
             {
-                using Activity? activity = _activitySource.StartActivity("EmailPublishBackgroundService.SendNotifications");
+                using Activity? activity = _activitySource.StartActivity("EmailPublishBackgroundService.SendNotifications.Root");
                 await _emailNotificationService.SendNotifications(cancellationToken);
             }
             catch (OperationCanceledException)
