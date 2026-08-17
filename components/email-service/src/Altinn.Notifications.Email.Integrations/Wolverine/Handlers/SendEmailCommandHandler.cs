@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Shared.Commands;
 
@@ -19,6 +21,7 @@ public static class SendEmailCommandHandler
     /// <param name="logger">The logger used to record processing errors.</param>
     public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("SendEmailCommandHandler");
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
             logger.LogError(

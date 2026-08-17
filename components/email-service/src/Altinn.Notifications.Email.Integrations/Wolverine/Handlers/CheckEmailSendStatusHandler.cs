@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Email.Core;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
@@ -29,6 +31,7 @@ public static class CheckEmailSendStatusHandler
         IEmailServiceClient emailService,
         IEmailSendResultDispatcher sendResultDispatcher)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("CheckEmailSendStatusHandler");
         if (checkEmailSendStatusCommand.NotificationId == Guid.Empty)
         {
             throw new ArgumentException("NotificationId cannot be empty.", nameof(checkEmailSendStatusCommand));

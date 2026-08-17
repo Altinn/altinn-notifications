@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Shared.Commands;
 
@@ -23,6 +25,7 @@ public static class SendComposedEmailCommandHandler
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     public static async Task Handle(SendComposedEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("SendComposedEmailCommandHandler");
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
             logger.LogError(
