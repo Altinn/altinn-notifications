@@ -76,12 +76,6 @@ public class FutureOrdersController : ControllerBase
                 return Forbid();
             }
 
-            var orderChainTracking = await _orderRequestService.RetrieveOrderChainTracking(creator, notificationOrderRequest.IdempotencyId, cancellationToken);
-            if (orderChainTracking != null)
-            {
-                return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());
-            }
-
             /* The tax administration is demanding that we use stale contact information for all recipients.
              * This is a temporary override until they've managed to implement a client that sets the correct flag. */
 
@@ -101,7 +95,15 @@ public class FutureOrdersController : ControllerBase
                 return StatusCode(problemDetails.Status!.Value, problemDetails);
             }
 
-            return Created(result.Value!.OrderChainId.GetSelfLinkFromOrderChainId(), result.Value.MapToNotificationOrderChainResponseExt());
+            var response = result.Value;
+            var responseExt = response.MapToNotificationOrderChainResponseExt();
+
+            if (response.IsNewlyCreated)
+            {
+                return Created(response.OrderChainId.GetSelfLinkFromOrderChainId(), responseExt);
+            }
+
+            return Ok(responseExt);
         }
         catch (OperationCanceledException)
         {

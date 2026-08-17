@@ -68,17 +68,17 @@ public class ComposedEmailOrdersController(
                 return Forbid();
             }
 
-            var orderChainTracking = await _service.RetrieveOrderChainTracking(creator, orderRequest.IdempotencyId, cancellationToken);
-            if (orderChainTracking != null)
-            {
-                return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());
-            }
-
             var notificationOrderChainRequest = orderRequest.MapToNotificationOrderChainRequest(creator);
 
             var response = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
+            var responseExt = response.MapToNotificationOrderChainResponseExt();
 
-            return Created(response.OrderChainId.GetSelfLinkFromOrderChainId(), response.MapToNotificationOrderChainResponseExt());
+            if (response.IsNewlyCreated)
+            {
+                return Created(response.OrderChainId.GetSelfLinkFromOrderChainId(), responseExt);
+            }
+
+            return Ok(responseExt);
         }
         catch (OperationCanceledException)
         {

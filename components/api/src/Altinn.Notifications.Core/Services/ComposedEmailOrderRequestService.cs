@@ -61,20 +61,16 @@ public class ComposedEmailOrderRequestService(
             Templates = [new EmailTemplate(fromAddress, composedEmailSettings.Subject, composedEmailSettings.Body, composedEmailSettings.ContentType)]
         };
 
-        var savedOrders = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);
-        var savedMainNotificationOrder = savedOrders.FirstOrDefault();
-        if (savedMainNotificationOrder == null)
-        {
-            throw new InvalidOperationException("Could not create the notification order");
-        }
+        var result = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);
 
         return new NotificationOrderChainResponse
         {
-            OrderChainId = orderRequest.OrderChainId,
+            OrderChainId = result.OrderChainId,
+            IsNewlyCreated = result.IsNewlyCreated,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = savedMainNotificationOrder.Id,
-                SendersReference = savedMainNotificationOrder.SendersReference
+                ShipmentId = result.ShipmentId,
+                SendersReference = result.SendersReference
             }
         };
     }
