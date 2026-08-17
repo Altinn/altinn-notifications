@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -23,6 +25,7 @@ public static class SmsDeliveryReportHandler
         DeliveryReportMetrics metrics,
         ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("SmsDeliveryReportHandler");
         if (string.IsNullOrWhiteSpace(command.GatewayReference))
         {
             logger.LogError("Received SMS delivery report with missing GatewayReference.");

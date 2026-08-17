@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
@@ -25,6 +27,7 @@ public static class SmsSendResultHandler
         ISmsNotificationService smsNotificationService,
         ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("SmsSendResultHandler");
         if (!Enum.TryParse<SmsNotificationResultType>(command.SendResult, ignoreCase: false, out var sendResult))
         {
             logger.LogError(

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Shared.Commands;
@@ -17,6 +19,7 @@ public static class EmailServiceRateLimitHandler
     /// </summary>
     public static async Task Handle(EmailServiceRateLimitCommand command, IAltinnServiceUpdateService serviceUpdateService, ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("EmailServiceRateLimitHandler");
         logger.LogInformation(
             "Received email service rate limit signal from source: {Source}.",
             command.Source);

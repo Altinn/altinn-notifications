@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
@@ -25,6 +27,7 @@ public static class EmailSendResultHandler
         IEmailNotificationService emailNotificationService,
         ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("EmailSendResultHandler");
         if (!Enum.TryParse<EmailNotificationResultType>(command.SendResult, ignoreCase: true, out var sendResult))
         {
             logger.LogError(

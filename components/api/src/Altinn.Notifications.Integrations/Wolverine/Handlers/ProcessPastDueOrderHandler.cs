@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
@@ -31,6 +33,7 @@ public static class ProcessPastDueOrderHandler
         IOrderProcessingService orderProcessingService,
         ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("ProcessPastDueOrderHandler");
         if (command.IsProcessOrderRetry)
         {
             await orderProcessingService.ProcessOrderRetry(command.Order);

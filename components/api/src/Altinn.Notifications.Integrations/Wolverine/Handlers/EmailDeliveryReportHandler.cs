@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 using Altinn.Notifications.Core;
@@ -29,6 +30,7 @@ public static class EmailDeliveryReportHandler
         DeliveryReportMetrics metrics,
         ILogger logger)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("EmailDeliveryReportHandler");
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
         // If the event is a system event, TryGetSystemEventData will return the deserialized system event
