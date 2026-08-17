@@ -76,12 +76,13 @@ public class ComposedEmailOrdersControllerTests
         var request = ValidRequest();
         var existingResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = false,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = Guid.NewGuid() }
         };
 
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
@@ -93,7 +94,6 @@ public class ComposedEmailOrdersControllerTests
         var result200 = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<NotificationOrderChainResponseExt>(result200.Value);
         Assert.Equal(existingResponse.OrderChainId, response.OrderChainId);
-        serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -103,14 +103,13 @@ public class ComposedEmailOrdersControllerTests
         var request = ValidRequest();
         var newResponse = new NotificationOrderChainResponse
         {
+            IsNewlyCreated = true,
             OrderChainId = Guid.NewGuid(),
             OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = Guid.NewGuid() }
         };
         var expectedUrl = newResponse.OrderChainId.GetSelfLinkFromOrderChainId();
 
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
         serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newResponse);
 
@@ -131,7 +130,7 @@ public class ComposedEmailOrdersControllerTests
     {
         // Arrange
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object);
@@ -154,12 +153,10 @@ public class ComposedEmailOrdersControllerTests
         var cancellationToken = TestContext.Current.CancellationToken;
 
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
-            .ReturnsAsync((NotificationOrderChainResponse?)null)
-            .Verifiable();
         serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken))
             .ReturnsAsync(new NotificationOrderChainResponse
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = Guid.NewGuid() }
             })
@@ -171,7 +168,6 @@ public class ComposedEmailOrdersControllerTests
         await controller.Post(request, cancellationToken);
 
         // Assert
-        serviceMock.Verify(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
         serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
     }
 
@@ -183,12 +179,11 @@ public class ComposedEmailOrdersControllerTests
         NotificationOrderChainRequest? captured = null;
 
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        serviceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationOrderChainResponse?)null);
         serviceMock.Setup(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .Callback<NotificationOrderChainRequest, CancellationToken>((r, _) => captured = r)
             .ReturnsAsync(new NotificationOrderChainResponse
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt { ShipmentId = Guid.NewGuid() }
             });
