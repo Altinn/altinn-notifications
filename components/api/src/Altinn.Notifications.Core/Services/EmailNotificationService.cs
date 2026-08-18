@@ -116,7 +116,7 @@ public class EmailNotificationService(
             }
         }
         while (claimedNotifications.Count > 0);
-        Activity.Current?.Parent?.SetTag("Count", totalCount);
+        Activity.Current?.SetTag("Count", totalCount);
     }
 
     /// <inheritdoc/>
