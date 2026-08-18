@@ -108,15 +108,8 @@ public class OrderRequestService : IOrderRequestService
         //    This is intentionally NOT the TOCTOU guard. Two genuinely concurrent
         //    first-time requests will both pass this check, but the atomic
         //    ON CONFLICT DO NOTHING in the database insert handles that narrow window.
-        var existingChain = await _repository.GetOrderChainTracking(
-            orderRequest.Creator.ShortName,
-            orderRequest.IdempotencyId,
-            cancellationToken);
-
-        if (existingChain != null)
-        {
-            return existingChain;
-        }
+        
+        // removed the pre-check for testing
 
         // 3. Get the current time.
         DateTime currentTime = _dateTime.UtcNow();
