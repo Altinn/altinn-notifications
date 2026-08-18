@@ -31,6 +31,7 @@ public class DashboardController : ControllerBase
     private readonly IValidator<NotificationsByNinRequestExt> _ninValidator;
     private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
     private readonly IValidator<NotificationsByEmailRequestExt> _emailValidator;
+    private readonly IValidator<NotificationsByPhoneNumberRequestExt> _phoneNumberValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
@@ -39,16 +40,19 @@ public class DashboardController : ControllerBase
     /// <param name="ninValidator">The validator for NIN lookup requests.</param>
     /// <param name="orgNumberValidator">The validator for organization number lookup requests.</param>
     /// <param name="emailValidator">The validator for email lookup requests.</param>
+    /// <param name="phoneNumberValidator">The validator for phone number lookup requests.</param>
     public DashboardController(
         IDashboardService dashboardService,
         IValidator<NotificationsByNinRequestExt> ninValidator,
         IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator,
-        IValidator<NotificationsByEmailRequestExt> emailValidator)
+        IValidator<NotificationsByEmailRequestExt> emailValidator,
+        IValidator<NotificationsByPhoneNumberRequestExt> phoneNumberValidator)
     {
         _dashboardService = dashboardService;
         _ninValidator = ninValidator;
         _orgNumberValidator = orgNumberValidator;
         _emailValidator = emailValidator;
+        _phoneNumberValidator = phoneNumberValidator;
     }
 
     /// <summary>
@@ -114,6 +118,28 @@ public class DashboardController : ControllerBase
             request,
             _emailValidator,
             (req, ct) => _dashboardService.GetNotificationsByEmailAsync(req.Email, req.From, req.To, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves all notifications for a recipient identified by their phone number.
+    /// </summary>
+    /// <param name="request">The request containing the phone number and optional date range filters.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A list of notifications matching the search criteria.</returns>
+    [HttpGet("recipients/notifications/phonenumber")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByPhoneNumber(
+        NotificationsByPhoneNumberRequestExt request,
+        CancellationToken cancellationToken = default)
+    {
+        return await ProcessDashboardRequestAsync(
+            request,
+            _phoneNumberValidator,
+            (req, ct) => _dashboardService.GetNotificationsByPhoneNumberAsync(req.PhoneNumber, req.From, req.To, ct),
             cancellationToken);
     }
 

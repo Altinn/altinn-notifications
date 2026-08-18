@@ -34,6 +34,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     private const string _validNin = "16069412345";
     private const string _validOrgNumber = "123456789";
     private const string _validEmail = "recipient@example.com";
+    private const string _validPhoneNumber = "+4799999999";
 
     private readonly JsonSerializerOptions _options;
     private readonly Mock<IDashboardService> _serviceMock;
@@ -575,6 +576,179 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
     }
 
+    // GET recipients/notifications/phonenumber
+    [Fact]
+    public async Task GetByPhoneNumber_ValidRequest_ReturnsOkWithExpectedPayload()
+    {
+        // Arrange
+        var notification = CreateNotification(phoneNumber: _validPhoneNumber);
+        _serviceMock
+            .Setup(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification> { notification });
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+        var item = Assert.Single(result);
+        Assert.Equal(notification.ShipmentId, item.ShipmentId);
+
+        _serviceMock.Verify(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, null, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_MissingRequiredHeader_ReturnsBadRequest()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("phonenumber");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_InvalidPhoneNumberFormat_ReturnsBadRequestWithValidationError()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", "40000001"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("valid mobile number", content, StringComparison.OrdinalIgnoreCase);
+        _serviceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_NoBearerToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_InvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_WithFromAndToFilters_PassesRangeToServiceAndReturnsOk()
+    {
+        // Arrange
+        var from = DateTime.UtcNow.AddDays(-3);
+        var to = DateTime.UtcNow.AddDays(-1);
+        var notification = CreateNotification(phoneNumber: _validPhoneNumber);
+
+        _serviceMock
+            .Setup(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification> { notification });
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest(
+            $"phonenumber?From={Uri.EscapeDataString(from.ToString("O"))}&To={Uri.EscapeDataString(to.ToString("O"))}",
+            ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _serviceMock.Verify(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, from, to, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_NoMatchingNotifications_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification>());
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetByPhoneNumber_ServiceThrowsOperationCanceled_Returns499WithProblemDetails()
+    {
+        // Arrange
+        var serviceMock = new Mock<IDashboardService>();
+        serviceMock
+            .Setup(s => s.GetNotificationsByPhoneNumberAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        HttpClient client = GetTestClient(serviceMock.Object);
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", _validPhoneNumber));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal((HttpStatusCode)499, response.StatusCode);
+        Assert.NotNull(problemDetails);
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
+    }
+
     private static HttpRequestMessage CreateRequest(string pathAndQuery, params (string Name, string Value)[] headers)
     {
         HttpRequestMessage request = new(HttpMethod.Get, $"{_basePath}/recipients/notifications/{pathAndQuery}");
@@ -597,25 +771,23 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     private static DashboardNotification CreateNotification(
         string? nationalIdentityNumber = null,
         string? organizationNumber = null,
-        string? emailAddress = null) =>
-        new(
+        string? emailAddress = null,
+        string? phoneNumber = null)
+    {
+        List<DashboardDeliveryAttempt> deliveryAttempts = phoneNumber != null
+            ? [new DashboardDeliveryAttempt(nationalIdentityNumber, organizationNumber, "sms", null, phoneNumber, "Delivered", DateTime.UtcNow)]
+            : [new DashboardDeliveryAttempt(nationalIdentityNumber, organizationNumber, "email", emailAddress ?? "recipient@example.com", null, "Delivered", DateTime.UtcNow)];
+
+        return new(
             Guid.NewGuid(),
             "digdir",
             "urn:altinn:resource:some-app",
             "senders-ref-001",
             DateTime.UtcNow.AddDays(-1),
-            NotificationChannel.Email,
+            phoneNumber != null ? NotificationChannel.Sms : NotificationChannel.Email,
             "notification",
-            [
-                new DashboardDeliveryAttempt(
-                    nationalIdentityNumber,
-                    organizationNumber,
-                    "email",
-                    emailAddress ?? "recipient@example.com",
-                    null,
-                    "Delivered",
-                    DateTime.UtcNow)
-            ]);
+            deliveryAttempts);
+    }
 
     private HttpClient GetTestClient(IDashboardService? service = null)
     {
