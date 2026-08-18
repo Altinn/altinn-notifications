@@ -30,7 +30,8 @@ public class DashboardControllerTests
             _dashboardServiceMock.Object,
             new NotificationsByNinRequestValidator(),
             new NotificationsByOrgNumberRequestValidator(),
-            new NotificationsByEmailRequestValidator());
+            new NotificationsByEmailRequestValidator(),
+            new NotificationsByPhoneNumberRequestValidator());
     }
 
     [Theory]
@@ -693,6 +694,161 @@ public class DashboardControllerTests
         // Act
         var result = await _controller.GetNotificationsByEmail(
             new NotificationsByEmailRequestExt { Email = "recipient@example.com" },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetNotificationsByPhoneNumber_PhoneNumberNullEmptyOrWhitespace_ReturnsValidationProblem(string? phoneNumber)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = phoneNumber! },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData("40000001")]
+    [InlineData("111100000")]
+    [InlineData("dasdsadSASA")]
+    public async Task GetNotificationsByPhoneNumber_InvalidPhoneNumberFormat_ReturnsValidationProblem(string phoneNumber)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = phoneNumber },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_FromEqualToTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999", From = instant, To = instant },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_FromAfterTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_OnlyFromProvided_PassesValidationAndCallsService()
+    {
+        // Arrange — only one side of the range provided, so the from >= to check must not trigger
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByPhoneNumberAsync("+4799999999", from, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999", From = from },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_ValidInput_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByPhoneNumberAsync("+4799999999", from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999", From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+        _dashboardServiceMock.Verify(
+            x => x.GetNotificationsByPhoneNumberAsync("+4799999999", from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_NoNotificationsFound_Returns200WithEmptyList()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByPhoneNumberAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999" },
+            CancellationToken.None);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByPhoneNumber_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByPhoneNumberAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByPhoneNumber(
+            new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999" },
             CancellationToken.None);
 
         // Assert

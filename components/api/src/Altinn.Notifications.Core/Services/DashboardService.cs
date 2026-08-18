@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -37,5 +38,12 @@ public class DashboardService : IDashboardService
     public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByEmailAsync(string email, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         return await _dashboardRepository.GetDashboardNotificationsByEmailAsync(email, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByPhoneNumberAsync(string phoneNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        string normalizedPhoneNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(phoneNumber);
+        return await _dashboardRepository.GetDashboardNotificationsByPhoneNumberAsync(normalizedPhoneNumber, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 }
