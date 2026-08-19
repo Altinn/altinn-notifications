@@ -95,6 +95,7 @@ public class OrderProcessingService : IOrderProcessingService
         while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
         Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
+        Activity.Current?.Parent?.SetTag("Count", totalOrdersProcessed);
         stopwatch.Stop();
     }
 
