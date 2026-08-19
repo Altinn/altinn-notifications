@@ -43,14 +43,18 @@ public class EmailPublishBackgroundService : BackgroundService
 
     private async Task RunPolicyLoopAsync(CancellationToken cancellationToken)
     {
+        _logger.LogError("RunPolicyLoopAsync debug init");
         while (!cancellationToken.IsCancellationRequested)
         {
+            _logger.LogError("RunPolicyLoopAsync debug start while");
             try
             {
                 await _emailPublishTaskQueue.WaitAsync(cancellationToken);
+                _logger.LogError("RunPolicyLoopAsync wait completed");
             }
             catch (OperationCanceledException)
             {
+                _logger.LogError("RunPolicyLoopAsync debug OperationCanceledException1");
                 break;
             }
             catch (Exception ex)
@@ -63,15 +67,19 @@ public class EmailPublishBackgroundService : BackgroundService
             {
                 using Activity? activity = _activitySource.StartActivity("EmailPublishBackgroundService.SendNotifications.Root");
                 await _emailNotificationService.SendNotifications(cancellationToken);
+                _logger.LogError("RunPolicyLoopAsync debug SendNotifications finished");
             }
             catch (OperationCanceledException)
             {
+                _logger.LogError("RunPolicyLoopAsync debug OperationCanceledException2");
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while sending email notifications.");
             }
+
+            _logger.LogError("RunPolicyLoopAsync debug end while");
         }
     }
 }
