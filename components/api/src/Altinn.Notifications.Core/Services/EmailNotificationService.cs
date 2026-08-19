@@ -108,8 +108,9 @@ public class EmailNotificationService(
 
                 await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.LogError(ex, "RunPolicyLoopAsync debug SendNotifications exception");
                 Activity.Current?.Parent?.SetTag("Count", totalCount);
                 await ResetSendStatusToNewAsync(unpublishedNotifications);
 
