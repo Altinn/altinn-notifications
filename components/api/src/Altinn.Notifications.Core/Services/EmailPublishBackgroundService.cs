@@ -65,6 +65,7 @@ public class EmailPublishBackgroundService : BackgroundService
 
             try
             {
+                _logger.LogError("RunPolicyLoopAsync debug SendNotifications starting");
                 using Activity? activity = _activitySource.StartActivity("EmailPublishBackgroundService.SendNotifications.Root");
                 await _emailNotificationService.SendNotifications(cancellationToken);
                 _logger.LogError("RunPolicyLoopAsync debug SendNotifications finished");
