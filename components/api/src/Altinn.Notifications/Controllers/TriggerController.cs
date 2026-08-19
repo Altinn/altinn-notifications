@@ -59,9 +59,17 @@ public class TriggerController(
     [Consumes("application/json")]
     public ActionResult Trigger_SendEmailNotifications()
     {
-        _emailPublishTaskQueue.TryEnqueue();
-        _composedEmailPublishSignal.TryEnqueue();
-        return Ok();
+        try
+        {
+            _emailPublishTaskQueue.TryEnqueue();
+            _composedEmailPublishSignal.TryEnqueue();
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to trigger email notifications");
+            return StatusCode(500, "Failed to trigger email notifications");
+        }
     }
 
     /// <summary>
