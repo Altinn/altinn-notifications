@@ -161,6 +161,14 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
+
+    var useMock = configuration.GetValue<string>("WolverineSettings:UseMockEmailServiceClient");
+    if (useMock?.ToLower() == "true")
+    {
+        // Override Azure Communication Services client with a mock for local dev.
+        services.AddSingleton<Altinn.Notifications.Email.Core.Dependencies.IEmailServiceClient, Altinn.Notifications.Email.Integrations.Clients.MockEmailServiceClient>();
+    }
+
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
