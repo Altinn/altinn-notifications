@@ -12,6 +12,11 @@ namespace Altinn.Notifications.Email.Integrations.Wolverine.Handlers;
 /// </summary>
 public static class SendEmailCommandHandler
 {
+    private static int _globalInitCount = 0;
+    private static int _globalExitCount = 0;
+    private static int _globalErrorInitCount = 0;
+    private static int _globalErrorExitCount = 0;
+
     /// <summary>
     /// Handles a <see cref="SendEmailCommand"/> by mapping it to an <see cref="Core.Sending.Email"/>
     /// and delegating sending to <see cref="ISendingService"/>.
@@ -21,6 +26,7 @@ public static class SendEmailCommandHandler
     /// <param name="logger">The logger used to record processing errors.</param>
     public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger)
     {
+        var globalInitCount = Interlocked.Increment(ref _globalInitCount);
         using Activity? activity = Activity.Current?.Source.StartActivity("SendEmailCommandHandler");
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
@@ -50,10 +56,15 @@ public static class SendEmailCommandHandler
             logger.LogInformation(
                 "Successfully dispatched email for NotificationId: {NotificationId}",
                 command.NotificationId);
+
+            var globalExitCount = Interlocked.Increment(ref _globalExitCount);
+            logger.LogError($"RunPolicyLoopAsync debug SendEmailCommandHandler {globalInitCount}, {globalExitCount}, {_globalErrorInitCount}, {_globalErrorExitCount}");
         }
         catch (Exception)
         {
+            var globalErrorInitCount = Interlocked.Increment(ref _globalErrorInitCount);
             LogOnSendEmailFailed(logger, command.NotificationId);
+            var globalErrorExitCount = Interlocked.Increment(ref _globalErrorExitCount);
 
             throw;
         }
