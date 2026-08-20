@@ -25,18 +25,10 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
-        var sendSmsCommand = new SendSmsCommand
-        {
-            MobileNumber = sms.Recipient,
-            Body = sms.Message,
-            SenderNumber = sms.Sender,
-            NotificationId = sms.NotificationId
-        };
-
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await _messageBusPublisher.PublishCommandAsync(sendSmsCommand, cancellationToken);
+            await _messageBusPublisher.PublishCommandAsync(CreateCommand(sms), cancellationToken);
 
             return null;
         }
@@ -60,13 +52,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
     {
         return _messageBusPublisher.PublishBatchAsync(
             smsList,
-            commandFactory: sms => new SendSmsCommand
-            {
-                MobileNumber = sms.Recipient,
-                Body = sms.Message,
-                SenderNumber = sms.Sender,
-                NotificationId = sms.NotificationId
-            },
+            commandFactory: CreateCommand,
             concurrency: _publishConcurrency,
             onError: (sms, exception) =>
             {
@@ -82,5 +68,21 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
                 _logger.LogError(exception, "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.", sms.NotificationId);
             },
             cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SendSmsCommand"/> from the provided <see cref="Sms"/> instance.
+    /// </summary>
+    /// <param name="sms">The SMS message to convert into a command.</param>
+    /// <returns>A <see cref="SendSmsCommand"/> representing the SMS message.</returns>
+    private static SendSmsCommand CreateCommand(Sms sms)
+    {
+        return new SendSmsCommand
+        {
+            MobileNumber = sms.Recipient,
+            Body = sms.Message,
+            SenderNumber = sms.Sender,
+            NotificationId = sms.NotificationId
+        };
     }
 }

@@ -362,15 +362,48 @@ public class EmailCommandPublisherTests
             Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task PublishAsync_Batch_MapsEmailFieldsToCommand()
+    {
+        // Arrange
+        var email = new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain);
+        var emails = new List<Email> { email };
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var capturedCommands = new List<SendEmailCommand>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null, capturedCommands);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+
+        // Assert
+        var command = Assert.Single(capturedCommands);
+        Assert.Equal(email.Body, command.Body);
+        Assert.Equal(email.Subject, command.Subject);
+        Assert.Equal(email.ToAddress, command.ToAddress);
+        Assert.Equal(email.FromAddress, command.FromAddress);
+        Assert.Equal(email.NotificationId, command.NotificationId);
+        Assert.Equal(email.ContentType.ToString(), command.ContentType);
+    }
+
     /// <summary>
     /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
     /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
     /// <see cref="WolverinePublisher"/> would, without exercising its concurrency internals
     /// (those are covered by the shared <c>WolverinePublisherTests</c>).
     /// </summary>
+    /// <param name="messageBusPublisherMock">The mock to configure.</param>
+    /// <param name="failurePredicate">Optional predicate selecting which items should be reported as failed.</param>
+    /// <param name="capturedCommands">
+    /// Optional list that receives every <see cref="SendEmailCommand"/> produced by the real
+    /// <c>commandFactory</c>, in item order, so tests can assert field-level mapping.
+    /// </param>
     private static void SetupPublishBatch(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Func<Email, bool>? failurePredicate)
+        Func<Email, bool>? failurePredicate,
+        List<SendEmailCommand>? capturedCommands = null)
     {
         messageBusPublisherMock
             .Setup(m => m.PublishBatchAsync(
@@ -385,7 +418,8 @@ public class EmailCommandPublisherTests
 
                 foreach (var item in items)
                 {
-                    commandFactory(item);
+                    var command = commandFactory(item);
+                    capturedCommands?.Add(command);
 
                     if (failurePredicate is not null && failurePredicate(item))
                     {

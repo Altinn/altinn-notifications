@@ -26,17 +26,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
 
         try
         {
-            var sendEmailCommand = new SendEmailCommand
-            {
-                Body = email.Body,
-                Subject = email.Subject,
-                ToAddress = email.ToAddress,
-                FromAddress = email.FromAddress,
-                NotificationId = email.NotificationId,
-                ContentType = email.ContentType.ToString()
-            };
-
-            await _messageBusPublisher.PublishCommandAsync(sendEmailCommand, cancellationToken);
+            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
             return null;
         }
         catch (OperationCanceledException)
@@ -55,15 +45,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
     {
         return _messageBusPublisher.PublishBatchAsync(
             emails,
-            commandFactory: email => new SendEmailCommand
-            {
-                Body = email.Body,
-                Subject = email.Subject,
-                ToAddress = email.ToAddress,
-                FromAddress = email.FromAddress,
-                NotificationId = email.NotificationId,
-                ContentType = email.ContentType.ToString()
-            },
+            commandFactory: CreateCommand,
             _publishConcurrency,
             onError: (email, exception) =>
             {
@@ -79,5 +61,23 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
                 _logger.LogError(exception, "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.", email.NotificationId);
             },
             cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SendEmailCommand"/> instance from the given <see cref="Email"/>.
+    /// </summary>
+    /// <param name="email">The email message to convert into a command.</param>
+    /// <returns>A <see cref="SendEmailCommand"/> representing the email message.</returns>
+    private static SendEmailCommand CreateCommand(Email email)
+    {
+        return new SendEmailCommand
+        {
+            Body = email.Body,
+            Subject = email.Subject,
+            ToAddress = email.ToAddress,
+            FromAddress = email.FromAddress,
+            NotificationId = email.NotificationId,
+            ContentType = email.ContentType.ToString()
+        };
     }
 }

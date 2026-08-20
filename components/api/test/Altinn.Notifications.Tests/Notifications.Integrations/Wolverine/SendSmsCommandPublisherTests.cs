@@ -313,15 +313,46 @@ public class SendSmsCommandPublisherTests
             Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task PublishAsync_Batch_MapsSmsFieldsToCommand()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Sender", "+4799999999", "Body");
+        var smsList = new List<Sms> { sms };
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var capturedCommands = new List<SendSmsCommand>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null, capturedCommands);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
+
+        // Assert
+        var command = Assert.Single(capturedCommands);
+        Assert.Equal(sms.Recipient, command.MobileNumber);
+        Assert.Equal(sms.Message, command.Body);
+        Assert.Equal(sms.Sender, command.SenderNumber);
+        Assert.Equal(sms.NotificationId, command.NotificationId);
+    }
+
     /// <summary>
     /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
     /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
     /// <see cref="WolverinePublisher"/> would, without exercising its concurrency internals
     /// (those are covered by the shared <c>WolverinePublisherTests</c>).
     /// </summary>
+    /// <param name="messageBusPublisherMock">The mock to configure.</param>
+    /// <param name="failurePredicate">Optional predicate selecting which items should be reported as failed.</param>
+    /// <param name="capturedCommands">
+    /// Optional list that receives every <see cref="SendSmsCommand"/> produced by the real
+    /// <c>commandFactory</c>, in item order, so tests can assert field-level mapping.
+    /// </param>
     private static void SetupPublishBatch(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Func<Sms, bool>? failurePredicate)
+        Func<Sms, bool>? failurePredicate,
+        List<SendSmsCommand>? capturedCommands = null)
     {
         messageBusPublisherMock
             .Setup(m => m.PublishBatchAsync(
@@ -336,7 +367,8 @@ public class SendSmsCommandPublisherTests
 
                 foreach (var item in items)
                 {
-                    commandFactory(item);
+                    var command = commandFactory(item);
+                    capturedCommands?.Add(command);
 
                     if (failurePredicate is not null && failurePredicate(item))
                     {
