@@ -25,7 +25,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
     {
-        string operationId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString() + "_" + email.NotificationId.ToString();
         _logger.LogError("MockEmailServiceClient: Simulated email send for {NotificationId}, operationId={OperationId}", email.NotificationId, operationId);
         Result<string, EmailClientErrorResponse> result = operationId;
         await Task.Delay(70);
@@ -35,7 +35,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
     {
-        string operationId = Guid.NewGuid().ToString();
+        string operationId = Guid.NewGuid().ToString() + "_" + email.NotificationId.ToString();
         _logger.LogError("MockEmailServiceClient: Simulated composed email send for {NotificationId}, operationId={OperationId}", email.NotificationId, operationId);
         await Task.Delay(70);
 
