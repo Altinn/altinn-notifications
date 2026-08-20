@@ -151,7 +151,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         })
         .WithTracing(tracing => 
         {
-            if (appBuilder.Environment.IsDevelopment())
+            if (appBuilder.Environment.IsDevelopment() || true)
             {
                 tracing.SetSampler(new AlwaysOnSampler());
             }

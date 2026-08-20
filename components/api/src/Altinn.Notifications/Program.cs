@@ -163,7 +163,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         })
         .WithTracing(tracing =>
         {
-            if (builder.Environment.IsDevelopment())
+            if (builder.Environment.IsDevelopment() || true)
             {
                 tracing.SetSampler(new AlwaysOnSampler());
             }
