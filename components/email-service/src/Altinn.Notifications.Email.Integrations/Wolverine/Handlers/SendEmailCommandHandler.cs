@@ -58,7 +58,7 @@ public static class SendEmailCommandHandler
                 command.NotificationId);
 
             var globalExitCount = Interlocked.Increment(ref _globalExitCount);
-            logger.LogError($"RunPolicyLoopAsync debug SendEmailCommandHandler {globalInitCount}, {globalExitCount}, {_globalErrorInitCount}, {_globalErrorExitCount}");
+            Activity.Current?.SetTag("Counters", $"{globalInitCount}, {globalExitCount}, {_globalErrorInitCount}, {_globalErrorExitCount}");
         }
         catch (Exception)
         {

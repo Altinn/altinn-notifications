@@ -1,4 +1,5 @@
 using System.Diagnostics;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -8,7 +9,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Microsoft.Extensions.Logging;
+
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -25,8 +26,7 @@ public class EmailNotificationService(
     IEmailCommandPublisher emailCommandPublisher,
     IOptions<NotificationConfig> notificationConfig,
     IEmailNotificationRepository emailNotificationRepository,
-    IComposedEmailCommandPublisher composedEmailCommandPublisher,
-    ILogger<EmailNotificationService> logger) : IEmailNotificationService
+    IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
 {
     private readonly IGuidService _guidService = guidService;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -95,7 +95,6 @@ public class EmailNotificationService(
                     claimedNotifications =
                     await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
                 totalCount += unpublishedNotifications.Count;
-                logger.LogError($"RunPolicyLoopAsync debug SendNotifications count {unpublishedNotifications.Count}");
                 activity?.SetTag("Count", claimedNotifications.Count);
                 if (claimedNotifications.Count == 0)
                 {
@@ -108,9 +107,8 @@ public class EmailNotificationService(
 
                 await ResetSendStatusToNewAsync(unpublishedNotifications);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                logger.LogError(ex, "RunPolicyLoopAsync debug SendNotifications exception");
                 Activity.Current?.Parent?.SetTag("Count", totalCount);
                 await ResetSendStatusToNewAsync(unpublishedNotifications);
 
@@ -131,7 +129,7 @@ public class EmailNotificationService(
         {
             try
             {
-                unpublishedNotifications = 
+                unpublishedNotifications =
                     claimedNotifications =
                     await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
                 if (claimedNotifications.Count == 0)
