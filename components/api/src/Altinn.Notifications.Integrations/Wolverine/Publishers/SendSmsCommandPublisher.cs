@@ -55,20 +55,20 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
 
         await Task.WhenAll(smsList.Select(async sms =>
         {
-            await semaphore.WaitAsync(cancellationToken);
+            ////await semaphore.WaitAsync(cancellationToken);
 
-            try
-            {
+            ////try
+            ////{
                 var failedMessage = await SendAsync(sms, messageBus, cancellationToken);
                 if (failedMessage is not null)
                 {
                     failedSms.Add(failedMessage);
                 }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+            ////}
+            ////finally
+            ////{
+            ////    semaphore.Release();
+            ////}
         }));
 
         return [.. failedSms];

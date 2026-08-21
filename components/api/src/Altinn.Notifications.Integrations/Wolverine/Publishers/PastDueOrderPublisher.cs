@@ -50,28 +50,28 @@ public class PastDueOrderPublisher(
         // Callers depend on that guarantee to safely retry only the orders that need it.
         await Task.WhenAll(orders.Select(async order =>
         {
-            try
-            {
-                await semaphore.WaitAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                failed.Add(order);
-                return;
-            }
+            ////try
+            ////{
+            ////    await semaphore.WaitAsync(cancellationToken);
+            ////}
+            ////catch (OperationCanceledException)
+            ////{
+            ////    failed.Add(order);
+            ////    return;
+            ////}
 
-            try
-            {
+            ////try
+            ////{
                 var failedOrder = await SendAsync(order, messageBus, cancellationToken);
                 if (failedOrder is not null)
                 {
                     failed.Add(failedOrder);
                 }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+            ////}
+            ////finally
+            ////{
+            ////    semaphore.Release();
+            ////}
         }));
 
         return [.. failed];

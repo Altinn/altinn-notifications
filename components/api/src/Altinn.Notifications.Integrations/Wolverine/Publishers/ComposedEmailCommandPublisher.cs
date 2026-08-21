@@ -42,31 +42,31 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
 
         await Task.WhenAll(emails.Select(async email =>
         {
-            try
-            {
-                // Cancellation is only observed before acquiring a slot.
-                // Once a send has started, it is allowed to complete to avoid
-                // an ambiguous published/not-published state on the broker.
-                await semaphore.WaitAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                unpublished.Add(email);
+            ////try
+            ////{
+            ////    // Cancellation is only observed before acquiring a slot.
+            ////    // Once a send has started, it is allowed to complete to avoid
+            ////    // an ambiguous published/not-published state on the broker.
+            ////    await semaphore.WaitAsync(cancellationToken);
+            ////}
+            ////catch (OperationCanceledException)
+            ////{
+            ////    unpublished.Add(email);
 
-                return;
-            }
+            ////    return;
+            ////}
 
-            try
-            {
+            ////try
+            ////{
                 if (!await SendAsync(email, messageBus))
                 {
                     unpublished.Add(email);
                 }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+            ////}
+            ////finally
+            ////{
+            ////    semaphore.Release();
+            ////}
         }));
 
         return [.. unpublished];

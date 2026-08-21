@@ -53,20 +53,20 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
 
         await Task.WhenAll(emails.Select(async email =>
         {
-            await semaphore.WaitAsync(cancellationToken);
+            ////await semaphore.WaitAsync(cancellationToken);
 
-            try
-            {
+            ////try
+            ////{
                 var failedEmail = await SendAsync(email, messageBus, cancellationToken);
                 if (failedEmail is not null)
                 {
                     failedEmails.Add(failedEmail);
                 }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+            ////}
+            ////finally
+            ////{
+            ////    semaphore.Release();
+            ////}
         }));
 
         return [.. failedEmails];
