@@ -1,22 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
-
-using Wolverine;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
@@ -32,12 +23,12 @@ public class SendSmsCommandPublisherTests
     public async Task PublishAsync_SuccessfulPublish_ReturnsNull()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
@@ -50,12 +41,12 @@ public class SendSmsCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsException_ReturnsFailedSms()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
@@ -68,13 +59,13 @@ public class SendSmsCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsException_LogsError()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
         var loggerMock = new Mock<ILogger<SendSmsCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         // Act
         await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
@@ -94,8 +85,8 @@ public class SendSmsCommandPublisherTests
     public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -104,8 +95,8 @@ public class SendSmsCommandPublisherTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => publisher.PublishAsync(_sms, cts.Token));
 
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()),
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -113,12 +104,12 @@ public class SendSmsCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsOperationCanceledException_Rethrows()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
@@ -133,13 +124,13 @@ public class SendSmsCommandPublisherTests
         var sms = new Sms(notificationId, "TestSender", "+4791234567", "Hello World");
 
         SendSmsCommand? capturedCommand = null;
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Callback<SendSmsCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<SendSmsCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
+            .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
@@ -162,19 +153,16 @@ public class SendSmsCommandPublisherTests
             new(Guid.NewGuid(), "Altinn", "+4791000002", "Msg 2")
         };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -185,12 +173,10 @@ public class SendSmsCommandPublisherTests
         var sms2 = new Sms(Guid.NewGuid(), "Altinn", "+4791000002", "Msg 2");
         var smsList = new List<Sms> { sms1, sms2 };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: _ => true);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
@@ -209,15 +195,10 @@ public class SendSmsCommandPublisherTests
         var failSms = new Sms(Guid.NewGuid(), "Altinn", "+4791000002", "Msg");
         var smsList = new List<Sms> { successSms, failSms };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendSmsCommand>(c => c.NotificationId == successSms.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendSmsCommand>(c => c.NotificationId == failSms.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: sms => sms.NotificationId == failSms.NotificationId);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
@@ -229,114 +210,56 @@ public class SendSmsCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutCallingMessageBus()
+    public async Task PublishAsync_Batch_EmptyList_DelegatesToMessageBusPublisher()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
+        messageBusPublisherMock.Verify(
+            m => m.PublishBatchAsync(
+                It.Is<IReadOnlyList<Sms>>(items => items.Count == 0),
+                It.IsAny<Func<Sms, SendSmsCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Sms, Exception>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
     {
         // Arrange
+        const int configuredConcurrency = 7;
         var smsList = new List<Sms> { _sms };
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
 
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
+        int? capturedConcurrency = null;
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Sms>>(),
+                It.IsAny<Func<Sms, SendSmsCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Sms, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<Sms>, Func<Sms, SendSmsCommand>, int, Action<Sms, Exception>?, CancellationToken>(
+                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
+            .ReturnsAsync((IReadOnlyList<Sms>)[]);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(smsList, cts.Token));
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_TokenCancelledMidBatch_ThrowsOperationCanceledException()
-    {
-        // Arrange
-        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "Msg");
-        var smsList = Enumerable.Repeat(sms, 500).ToList();
-
-        using var cts = new CancellationTokenSource();
-
-        var firstSmsStarted = new TaskCompletionSource();
-        var firstSmsCanProceed = new TaskCompletionSource();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendSmsCommand>(c => c.NotificationId == sms.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .Returns<SendSmsCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                firstSmsStarted.TrySetResult();
-                await firstSmsCanProceed.Task;
-            })));
-
-        var publisher = CreatePublisher(messageBusMock, publishConcurrency: 1);
-
-        // Act
-        var publishTask = publisher.PublishAsync(smsList, cts.Token);
-
-        await firstSmsStarted.Task;
-        await cts.CancelAsync();
-        firstSmsCanProceed.SetResult();
-
-        // Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => publishTask);
-
-        messageBusMock.Verify(
-            m => m.SendAsync(It.Is<SendSmsCommand>(c => c.NotificationId == sms.NotificationId), It.IsAny<DeliveryOptions?>()),
-            Times.AtLeastOnce);
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_RespectsSmsPublishConcurrency()
-    {
-        // Arrange
-        const int concurrency = 3;
-        const int smsCount = 12;
-
-        var lockObj = new object();
-        int currentConcurrent = 0;
-        int maxObservedConcurrent = 0;
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<SendSmsCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                int current = Interlocked.Increment(ref currentConcurrent);
-                lock (lockObj)
-                {
-                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
-                }
-
-                await Task.Delay(30);
-                Interlocked.Decrement(ref currentConcurrent);
-            })));
-
-        var smsList = Enumerable.Range(0, smsCount)
-            .Select(_ => new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "Msg"))
-            .ToList();
-
-        var publisher = CreatePublisher(messageBusMock, publishConcurrency: concurrency);
+        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
 
         // Act
         await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {smsCount} SMS were processed sequentially.");
-        Assert.True(maxObservedConcurrent <= concurrency, $"Max concurrent sends ({maxObservedConcurrent}) exceeded the configured limit ({concurrency}).");
-
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(smsCount));
+        Assert.Equal(configuredConcurrency, capturedConcurrency);
     }
 
     [Fact]
@@ -345,12 +268,17 @@ public class SendSmsCommandPublisherTests
         // Arrange
         var smsList = new List<Sms> { _sms };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Sms>>(),
+                It.IsAny<Func<Sms, SendSmsCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Sms, Exception>?>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
@@ -358,20 +286,18 @@ public class SendSmsCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_MessageBusThrowsException_LogsErrorPerFailure()
+    public async Task PublishAsync_Batch_OnErrorCallback_LogsErrorWithNotificationId()
     {
         // Arrange
         var sms1 = new Sms(Guid.NewGuid(), "Altinn", "+4791000001", "Msg 1");
         var sms2 = new Sms(Guid.NewGuid(), "Altinn", "+4791000002", "Msg 2");
         var smsList = new List<Sms> { sms1, sms2 };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendSmsCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: _ => true);
 
         var loggerMock = new Mock<ILogger<SendSmsCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         // Act
         await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
@@ -387,19 +313,83 @@ public class SendSmsCommandPublisherTests
             Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task PublishAsync_Batch_MapsSmsFieldsToCommand()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Sender", "+4799999999", "Body");
+        var smsList = new List<Sms> { sms };
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var capturedCommands = new List<SendSmsCommand>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null, capturedCommands);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
+
+        // Assert
+        var command = Assert.Single(capturedCommands);
+        Assert.Equal(sms.Recipient, command.MobileNumber);
+        Assert.Equal(sms.Message, command.Body);
+        Assert.Equal(sms.Sender, command.SenderNumber);
+        Assert.Equal(sms.NotificationId, command.NotificationId);
+    }
+
+    /// <summary>
+    /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
+    /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
+    /// <see cref="WolverinePublisher"/> would, without exercising its concurrency internals
+    /// (those are covered by the shared <c>WolverinePublisherTests</c>).
+    /// </summary>
+    /// <param name="messageBusPublisherMock">The mock to configure.</param>
+    /// <param name="failurePredicate">Optional predicate selecting which items should be reported as failed.</param>
+    /// <param name="capturedCommands">
+    /// Optional list that receives every <see cref="SendSmsCommand"/> produced by the real
+    /// <c>commandFactory</c>, in item order, so tests can assert field-level mapping.
+    /// </param>
+    private static void SetupPublishBatch(
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
+        Func<Sms, bool>? failurePredicate,
+        List<SendSmsCommand>? capturedCommands = null)
+    {
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Sms>>(),
+                It.IsAny<Func<Sms, SendSmsCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Sms, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<Sms> items, Func<Sms, SendSmsCommand> commandFactory, int _, Action<Sms, Exception>? onError, CancellationToken _) =>
+            {
+                var failed = new List<Sms>();
+
+                foreach (var item in items)
+                {
+                    var command = commandFactory(item);
+                    capturedCommands?.Add(command);
+
+                    if (failurePredicate is not null && failurePredicate(item))
+                    {
+                        failed.Add(item);
+                        onError?.Invoke(item, new InvalidOperationException("Service Bus unavailable"));
+                    }
+                }
+
+                return (IReadOnlyList<Sms>)failed;
+            });
+    }
+
     private static SendSmsCommandPublisher CreatePublisher(
-        Mock<IMessageBus> messageBusMock,
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
         Mock<ILogger<SendSmsCommandPublisher>>? loggerMock = null,
         int publishConcurrency = 10)
     {
         loggerMock ??= new Mock<ILogger<SendSmsCommandPublisher>>();
 
-        var services = new ServiceCollection();
-        services.AddScoped(_ => messageBusMock.Object);
-        var serviceProvider = services.BuildServiceProvider();
-
         var options = Options.Create(new WolverineSettings { SmsPublishConcurrency = publishConcurrency });
 
-        return new SendSmsCommandPublisher(loggerMock.Object, serviceProvider, options);
+        return new SendSmsCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
     }
 }
