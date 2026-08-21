@@ -185,6 +185,7 @@ static void AddAzureMonitorTelemetryExporters(IServiceCollection services, strin
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.StorageDirectory = "/var/telemetry";
     }));
 }
 
