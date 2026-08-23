@@ -160,6 +160,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName);
+            metrics.AddMeter("OpenTelemetry.Instrumentation.*");
         })
         .WithTracing(tracing =>
         {

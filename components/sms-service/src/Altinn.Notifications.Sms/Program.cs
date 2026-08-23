@@ -148,6 +148,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http");
+            metrics.AddMeter("OpenTelemetry.Instrumentation.*");
         })
         .WithTracing(tracing => 
         {
