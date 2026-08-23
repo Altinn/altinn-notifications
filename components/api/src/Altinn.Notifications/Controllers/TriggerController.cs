@@ -44,7 +44,9 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
+        Console.WriteLine($"{DateTime.Now} Start triggering processing of past due orders");
         await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
+        Console.WriteLine($"{DateTime.Now} Finished triggering processing of past due orders");
         return Ok();
     }
 
