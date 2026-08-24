@@ -2,11 +2,10 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
-
+using Altinn.Notifications;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
@@ -18,26 +17,19 @@ using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-
 using AltinnCore.Authentication.JwtCookie;
-
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;                 
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-
 using Npgsql;
-
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -100,6 +92,8 @@ builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
+app.Services.GetRequiredService<AzureMonitorExporterListener>();
+
 app.SetUpPostgreSql(builder.Environment.IsDevelopment(), builder.Configuration);
 
 // Configure the HTTP request pipeline.
@@ -144,6 +138,9 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
     logging.AddFilter("Azure", LogLevel.Debug);
     logging.AddFilter("OpenTelemetry", LogLevel.Debug);
     logging.AddConsole();
+
+    // Enable EventSource-based OpenTelemetry internal logging
+    logging.AddEventSourceLogger();
 }
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
@@ -233,6 +230,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+    services.AddSingleton<Altinn.Notifications.AzureMonitorExporterListener>();
+
     services.AddAuthorizationService(config);
     services.AddWolverineServices(config, builder.Environment);
 
