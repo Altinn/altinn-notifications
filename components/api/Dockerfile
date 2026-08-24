@@ -38,6 +38,7 @@ COPY --from=build /app/components/api/src/Altinn.Notifications.Persistence/Migra
 COPY components/api/src/Altinn.Notifications/Views ./Views
 
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
+RUN chmod 777 /app
 
 USER dotnet
 
