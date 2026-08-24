@@ -9,11 +9,11 @@ using Altinn.Notifications.Integrations.Wolverine.Policies;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Publishers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -62,6 +62,7 @@ public static class WolverineServiceCollectionExtensions
             AddSendEmailPublisher(services, wolverineSettings, opts);
             AddPastDueOrderPublisher(services, wolverineSettings, opts);
             AddSendComposedEmailPublisher(services, wolverineSettings, opts);
+            services.AddSingleton<IMessageBusPublisher, WolverinePublisher>();
         });
     }
 

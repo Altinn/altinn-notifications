@@ -1,21 +1,80 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 
+using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
 
 namespace Altinn.Notifications.Shared.Publishers;
 
 /// <summary>
-/// Abstract base class for Wolverine ASB publishers.
+/// Concrete implementation of <see cref="IMessageBusPublisher"/> for Wolverine ASB publishers.
 /// Resolves a scoped <see cref="IMessageBus"/> per publish call to avoid capturing a singleton bus.
 /// </summary>
-public abstract class WolverinePublisher(IServiceProvider serviceProvider)
+public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusPublisher
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TItem>> PublishBatchAsync<TItem, TCommand>(IReadOnlyList<TItem> items, Func<TItem, TCommand> commandFactory, int concurrency, Action<TItem, Exception>? onError, CancellationToken cancellationToken)
+        where TCommand : notnull
+    {
+        if (items.Count == 0)
+        {
+            return [];
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        ArgumentOutOfRangeException.ThrowIfLessThan(concurrency, 1);
+
+        var failed = new ConcurrentBag<TItem>();
+        using var semaphore = new SemaphoreSlim(concurrency);
+
+        await Task.WhenAll(items.Select(async item =>
+        {
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                failed.Add(item);
+                return;
+            }
+
+            try
+            {
+                await messageBus.SendAsync(commandFactory(item));
+            }
+            catch (Exception ex)
+            {
+                failed.Add(item);
+                onError?.Invoke(item, ex);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
+
+        return [.. failed];
+    }
+
+    /// <inheritdoc/>
+    public async Task PublishCommandAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
+        where TCommand : notnull
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        await messageBus.SendAsync(command);
+    }
 
     /// <summary>
     /// Sends <paramref name="command"/> to Azure Service Bus via a short-lived scoped <see cref="IMessageBus"/>.
     /// </summary>
-    protected async Task PublishCommandAsync<TCommand>(TCommand command)
+    public async Task PublishCommandAsync<TCommand>(TCommand command)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
@@ -26,7 +85,7 @@ public abstract class WolverinePublisher(IServiceProvider serviceProvider)
     /// Sends <paramref name="command"/> to Azure Service Bus with the given <paramref name="options"/>
     /// via a short-lived scoped <see cref="IMessageBus"/>.
     /// </summary>
-    protected async Task PublishCommandAsync<TCommand>(TCommand command, DeliveryOptions options)
+    public async Task PublishCommandAsync<TCommand>(TCommand command, DeliveryOptions options)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
