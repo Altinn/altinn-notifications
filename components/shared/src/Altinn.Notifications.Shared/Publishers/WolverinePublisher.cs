@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
 
@@ -24,6 +24,8 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.PublishBatchAsync<{typeof(TItem).Name}, {typeof(TCommand).Name}>");
+
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         ArgumentOutOfRangeException.ThrowIfLessThan(concurrency, 1);
@@ -45,6 +47,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
 
             try
             {
+                using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.SendAsync<{typeof(TItem).Name}, {typeof(TCommand).Name}>");
                 await messageBus.SendAsync(commandFactory(item));
             }
             catch (Exception ex)
@@ -65,6 +68,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
     public async Task PublishCommandAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
         where TCommand : notnull
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.PublishCommandAsync<{typeof(TCommand).Name}>");
         cancellationToken.ThrowIfCancellationRequested();
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
@@ -76,6 +80,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
     /// </summary>
     public async Task PublishCommandAsync<TCommand>(TCommand command)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.PublishCommandAsync2<{typeof(TCommand).Name}>");
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await messageBus.SendAsync(command);
@@ -87,6 +92,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
     /// </summary>
     public async Task PublishCommandAsync<TCommand>(TCommand command, DeliveryOptions options)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.PublishCommandAsync3<{typeof(TCommand).Name}>");
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await messageBus.SendAsync(command, options);
