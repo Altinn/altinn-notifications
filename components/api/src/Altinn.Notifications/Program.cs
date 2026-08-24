@@ -140,6 +140,10 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
         builder.IncludeFormattedMessage = true;
         builder.IncludeScopes = true;
     });
+
+    logging.AddFilter("Azure", LogLevel.Debug);
+    logging.AddFilter("OpenTelemetry", LogLevel.Debug);
+    logging.AddConsole();
 }
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
@@ -177,6 +181,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddHttpClientInstrumentation();
 
             tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor<DebugProcessor>();
 
             tracing.AddNpgsql();
 
