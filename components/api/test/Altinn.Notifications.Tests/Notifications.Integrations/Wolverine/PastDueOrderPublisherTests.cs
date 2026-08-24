@@ -8,57 +8,69 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Commands;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
+using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
 
-using Wolverine;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
 
+/// <summary>
+/// Unit tests for <see cref="PastDueOrderPublisher"/>.
+/// </summary>
 public class PastDueOrderPublisherTests
 {
     private static NotificationOrder CreateOrder() => new() { Id = Guid.NewGuid() };
 
     [Fact]
-    public async Task PublishAsync_EmptyList_ReturnsEmptyListWithoutCallingMessageBus()
+    public async Task PublishAsync_EmptyList_DelegatesToMessageBusPublisher()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, exceptionSelector: null);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()),
-            Times.Never);
+        messageBusPublisherMock.Verify(
+            m => m.PublishBatchAsync(
+                It.Is<IReadOnlyList<NotificationOrder>>(items => items.Count == 0),
+                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<NotificationOrder, Exception>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_Rethrows()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var order = CreateOrder();
 
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<NotificationOrder>>(),
+                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<NotificationOrder, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync([CreateOrder()], cts.Token));
-
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()),
-            Times.Never);
+            () => publisher.PublishAsync([order], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -67,148 +79,16 @@ public class PastDueOrderPublisherTests
         // Arrange
         var orders = new List<NotificationOrder> { CreateOrder(), CreateOrder() };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, exceptionSelector: null);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()),
-            Times.Exactly(2));
-    }
-
-    [Fact]
-    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_ReturnsFailedOrderWithoutThrowing()
-    {
-        // Arrange
-        var order = CreateOrder();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new OperationCanceledException());
-
-        var publisher = CreatePublisher(messageBusMock);
-
-        // Act
-
-        // A per-order cancellation must be reported as a failed (unpublished) order rather than
-        // propagating out of PublishAsync — otherwise the caller loses track of which orders in
-        // the batch were actually sent and has to pessimistically reset all of them, even ones
-        // that were already published successfully.
-        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(order.Id, result[0].Id);
-    }
-
-    [Fact]
-    public async Task PublishAsync_CancellationWhileQueuedOnSemaphore_ReturnsQueuedOrderAsFailedWithoutThrowing()
-    {
-        // Arrange
-        var runningOrder = CreateOrder();
-        var queuedOrder = CreateOrder();
-
-        using var cts = new CancellationTokenSource();
-        var releaseRunningOrder = new TaskCompletionSource();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(
-                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == runningOrder.Id),
-                It.IsAny<DeliveryOptions?>()))
-            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(releaseRunningOrder.Task));
-
-        var publisher = CreatePublisher(messageBusMock, concurrency: 1);
-
-        // Act
-
-        // With concurrency capped at 1, runningOrder takes the only slot and suspends (awaiting
-        // releaseRunningOrder) without releasing it, so queuedOrder is deterministically still
-        // waiting on the semaphore — never having started a send — when cancellation fires.
-        var publishTask = publisher.PublishAsync([runningOrder, queuedOrder], cts.Token);
-
-        await cts.CancelAsync();
-        releaseRunningOrder.SetResult();
-
-        var result = await publishTask;
-
-        // Assert: PublishAsync must not throw, and must report exactly the queued order as
-        // failed — it never got a chance to attempt a send, so it definitely was not published.
-        Assert.Single(result);
-        Assert.Equal(queuedOrder.Id, result[0].Id);
-        messageBusMock.Verify(
-            m => m.SendAsync(
-                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == queuedOrder.Id),
-                It.IsAny<DeliveryOptions?>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task PublishAsync_MessageBusThrowsException_LogsErrorAndReturnsFailedOrder()
-    {
-        // Arrange
-        var order = CreateOrder();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
-
-        var loggerMock = new Mock<ILogger<PastDueOrderPublisher>>();
-        var publisher = CreatePublisher(messageBusMock, loggerMock);
-
-        // Act
-        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(order.Id, result[0].Id);
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task PublishAsync_SomeFail_ReturnsOnlyFailedOrders()
-    {
-        // Arrange
-        var successOrder = CreateOrder();
-        var failOrder = CreateOrder();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(
-                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == successOrder.Id),
-                It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
-        messageBusMock
-            .Setup(m => m.SendAsync(
-                It.Is<ProcessPastDueOrderCommand>(c => c.Order.Id == failOrder.Id),
-                It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
-
-        var publisher = CreatePublisher(messageBusMock);
-
-        // Act
-        var result = await publisher.PublishAsync([successOrder, failOrder], TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(failOrder.Id, result[0].Id);
     }
 
     [Fact]
@@ -218,12 +98,10 @@ public class PastDueOrderPublisherTests
         var order1 = CreateOrder();
         var order2 = CreateOrder();
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, exceptionSelector: _ => new InvalidOperationException("Service Bus unavailable"));
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync([order1, order2], TestContext.Current.CancellationToken);
@@ -235,104 +113,208 @@ public class PastDueOrderPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_RespectsConcurrencyLimit()
+    public async Task PublishAsync_SomeFail_ReturnsOnlyFailedOrders()
     {
         // Arrange
-        const int concurrency = 3;
-        const int orderCount = 12;
+        var successOrder = CreateOrder();
+        var failOrder = CreateOrder();
 
-        var lockObj = new object();
-        int currentConcurrent = 0;
-        int maxObservedConcurrent = 0;
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(
+            messageBusPublisherMock,
+            exceptionSelector: order => order.Id == failOrder.Id ? new InvalidOperationException("Service Bus unavailable") : null);
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                int current = Interlocked.Increment(ref currentConcurrent);
-                lock (lockObj)
-                {
-                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
-                }
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
-                await Task.Delay(30);
-                Interlocked.Decrement(ref currentConcurrent);
-            })));
+        // Act
+        var result = await publisher.PublishAsync([successOrder, failOrder], TestContext.Current.CancellationToken);
 
-        var orders = Enumerable.Range(0, orderCount)
-            .Select(_ => CreateOrder())
-            .ToList();
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(failOrder.Id, result[0].Id);
+    }
 
-        var publisher = CreatePublisher(messageBusMock, concurrency: concurrency);
+    [Fact]
+    public async Task PublishAsync_OnError_OperationCanceledException_LogsInformationNotError()
+    {
+        // Arrange
+        var order = CreateOrder();
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, exceptionSelector: _ => new OperationCanceledException());
+
+        var loggerMock = new Mock<ILogger<PastDueOrderPublisher>>();
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+
+        // Act
+        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(order.Id, result[0].Id);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PublishAsync_OnError_OtherException_LogsErrorNotInformation()
+    {
+        // Arrange
+        var order = CreateOrder();
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, exceptionSelector: _ => new InvalidOperationException("Service Bus unavailable"));
+
+        var loggerMock = new Mock<ILogger<PastDueOrderPublisher>>();
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+
+        // Act
+        var result = await publisher.PublishAsync([order], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(order.Id, result[0].Id);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PublishAsync_PassesConfiguredConcurrencyToMessageBusPublisher()
+    {
+        // Arrange
+        const int configuredConcurrency = 7;
+        var orders = new List<NotificationOrder> { CreateOrder() };
+
+        int? capturedConcurrency = null;
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<NotificationOrder>>(),
+                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<NotificationOrder, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<NotificationOrder>, Func<NotificationOrder, ProcessPastDueOrderCommand>, int, Action<NotificationOrder, Exception>?, CancellationToken>(
+                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
+            .ReturnsAsync((IReadOnlyList<NotificationOrder>)[]);
+
+        var publisher = CreatePublisher(messageBusPublisherMock, concurrency: configuredConcurrency);
 
         // Act
         await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {orderCount} orders were processed sequentially.");
-        Assert.True(maxObservedConcurrent <= concurrency, $"Max concurrent sends ({maxObservedConcurrent}) exceeded the configured limit ({concurrency}).");
-
-        messageBusMock.Verify(
-        m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()),
-        Times.Exactly(orderCount));
+        Assert.Equal(configuredConcurrency, capturedConcurrency);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task PublishAsync_ZeroOrNegativeConcurrency_DefaultsToTen(int concurrency)
+    public async Task PublishAsync_ZeroOrNegativeConcurrency_PassesDefaultOfTenToMessageBusPublisher(int configuredConcurrency)
     {
         // Arrange
-        const int orderCount = 20;
+        var orders = new List<NotificationOrder> { CreateOrder() };
 
-        var lockObj = new object();
-        int currentConcurrent = 0;
-        int maxObservedConcurrent = 0;
+        int? capturedConcurrency = null;
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<NotificationOrder>>(),
+                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<NotificationOrder, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<NotificationOrder>, Func<NotificationOrder, ProcessPastDueOrderCommand>, int, Action<NotificationOrder, Exception>?, CancellationToken>(
+                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
+            .ReturnsAsync((IReadOnlyList<NotificationOrder>)[]);
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<ProcessPastDueOrderCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<ProcessPastDueOrderCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                int current = Interlocked.Increment(ref currentConcurrent);
-                lock (lockObj)
-                {
-                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
-                }
+        var publisher = CreatePublisher(messageBusPublisherMock, concurrency: configuredConcurrency);
 
-                await Task.Delay(30);
-                Interlocked.Decrement(ref currentConcurrent);
-            })));                                
-        
-        var publisher = CreatePublisher(messageBusMock, concurrency : concurrency);
-
-        var orders = Enumerable.Range(0, orderCount)
-            .Select(_ => CreateOrder())
-            .ToList();
-        
         // Act
-        var result = await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Empty(result);
-        Assert.True(maxObservedConcurrent > 1, "Expected concurrent processing but all orders ran sequentially.");
-        Assert.True(maxObservedConcurrent <= 10, $"Max concurrent ({maxObservedConcurrent}) exceeded the expected default of 10.");
+        Assert.Equal(10, capturedConcurrency);
+    }
+
+    /// <summary>
+    /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
+    /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
+    /// <see cref="WolverinePublisher"/> would, without exercising its concurrency internals
+    /// (those are covered by the shared <c>WolverinePublisherTests</c>).
+    /// </summary>
+    private static void SetupPublishBatch(
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
+        Func<NotificationOrder, Exception?>? exceptionSelector)
+    {
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<NotificationOrder>>(),
+                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<NotificationOrder, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<NotificationOrder> items, Func<NotificationOrder, ProcessPastDueOrderCommand> commandFactory, int _, Action<NotificationOrder, Exception>? onError, CancellationToken _) =>
+            {
+                var failed = new List<NotificationOrder>();
+
+                foreach (var item in items)
+                {
+                    commandFactory(item);
+
+                    var exception = exceptionSelector?.Invoke(item);
+                    if (exception is not null)
+                    {
+                        failed.Add(item);
+                        onError?.Invoke(item, exception);
+                    }
+                }
+
+                return (IReadOnlyList<NotificationOrder>)failed;
+            });
     }
 
     private static PastDueOrderPublisher CreatePublisher(
-        Mock<IMessageBus> messageBusMock,
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
         Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null,
         int concurrency = 10)
     {
         loggerMock ??= new Mock<ILogger<PastDueOrderPublisher>>();
 
-        var services = new ServiceCollection();
-        services.AddScoped(_ => messageBusMock.Object);
-        var serviceProvider = services.BuildServiceProvider();
-
         var options = Options.Create(new WolverineSettings { PastDueOrdersPublishConcurrency = concurrency });
 
-        return new PastDueOrderPublisher(loggerMock.Object, serviceProvider, options);
+        return new PastDueOrderPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
     }
 }

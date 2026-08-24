@@ -1,104 +1,34 @@
-using System.Collections.Concurrent;
-using System.Diagnostics;
-
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Wolverine;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="ISendSmsPublisher"/> that publishes
-/// SMS notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
+/// SMS notifications to an Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
-/// <param name="serviceProvider">The service provider used to resolve dependencies required for publishing SMS messages.</param>
+/// <param name="messageBusPublisher">The message bus publisher used to dispatch SMS commands.</param>
 /// <param name="options">Configuration options for Wolverine settings, including SMS publish concurrency.</param>
-public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IServiceProvider serviceProvider, IOptions<WolverineSettings> options) : ISendSmsPublisher
+public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IMessageBusPublisher messageBusPublisher, IOptions<WolverineSettings> options) : ISendSmsPublisher
 {
     private readonly ILogger<SendSmsCommandPublisher> _logger = logger;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
     private readonly int _publishConcurrency = options.Value.SmsPublishConcurrency <= 0 ? 10 : options.Value.SmsPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-
-        return await SendAsync(sms, messageBus, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
-    {
-        if (smsList.Count == 0)
-        {
-            return [];
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-
-        var failedSms = new ConcurrentBag<Sms>();
-        using var semaphore = new SemaphoreSlim(_publishConcurrency);
-
-        await Task.WhenAll(smsList.Select(async sms =>
-        {
-            ////await semaphore.WaitAsync(cancellationToken);
-
-            ////try
-            ////{
-                var failedMessage = await SendAsync(sms, messageBus, cancellationToken);
-                if (failedMessage is not null)
-                {
-                    failedSms.Add(failedMessage);
-                }
-            ////}
-            ////finally
-            ////{
-            ////    semaphore.Release();
-            ////}
-        }));
-
-        return [.. failedSms];
-    }
-
-    /// <summary>
-    /// Sends a single SMS notification command to the Azure Service Bus queue via <see cref="IMessageBus"/>.
-    /// </summary>
-    /// <param name="sms">The SMS notification to send.</param>
-    /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
-    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    /// <returns>
-    /// <see langword="null"/> if the command was dispatched successfully;
-    /// otherwise the original <paramref name="sms"/> if an error occurred.
-    /// </returns>
-    private async Task<Sms?> SendAsync(Sms sms, IMessageBus messageBus, CancellationToken cancellationToken)
-    {
-        var sendSmsCommand = new SendSmsCommand
-        {
-            MobileNumber = sms.Recipient,
-            Body = sms.Message,
-            SenderNumber = sms.Sender,
-            NotificationId = sms.NotificationId
-        };
-
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using Activity? activity = Activity.Current?.Source.StartActivity("SendSmsCommandPublisher.SendAsync");
-            await messageBus.SendAsync(sendSmsCommand);
+            await _messageBusPublisher.PublishCommandAsync(CreateCommand(sms), cancellationToken);
 
             return null;
         }
@@ -115,5 +45,44 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IS
 
             return sms;
         }
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
+    {
+        return _messageBusPublisher.PublishBatchAsync(
+            smsList,
+            commandFactory: CreateCommand,
+            concurrency: _publishConcurrency,
+            onError: (sms, exception) =>
+            {
+                if (exception is OperationCanceledException)
+                {
+                    _logger.LogInformation(
+                        exception,
+                        "SendSmsCommandPublisher cancelled before publishing SMS notification {NotificationId}; reporting as unpublished.",
+                        sms.NotificationId);
+                    return;
+                }
+
+                _logger.LogError(exception, "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.", sms.NotificationId);
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SendSmsCommand"/> from the provided <see cref="Sms"/> instance.
+    /// </summary>
+    /// <param name="sms">The SMS message to convert into a command.</param>
+    /// <returns>A <see cref="SendSmsCommand"/> representing the SMS message.</returns>
+    private static SendSmsCommand CreateCommand(Sms sms)
+    {
+        return new SendSmsCommand
+        {
+            MobileNumber = sms.Recipient,
+            Body = sms.Message,
+            SenderNumber = sms.Sender,
+            NotificationId = sms.NotificationId
+        };
     }
 }

@@ -1,22 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
-
-using Wolverine;
 
 using Xunit;
 
@@ -39,12 +31,9 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_SuccessfulPublish_ReturnsNull()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(_email, TestContext.Current.CancellationToken);
@@ -57,12 +46,12 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsException_ReturnsFailedEmail()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(_email, TestContext.Current.CancellationToken);
@@ -75,13 +64,13 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsException_LogsError()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), TestContext.Current.CancellationToken))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
         var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         // Act
         await publisher.PublishAsync(_email, TestContext.Current.CancellationToken);
@@ -101,8 +90,8 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -111,8 +100,8 @@ public class EmailCommandPublisherTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => publisher.PublishAsync(_email, cts.Token));
 
-        messageBusMock.Verify(
-            m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()),
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -120,12 +109,12 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_MessageBusThrowsOperationCanceledException_Rethrows()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), TestContext.Current.CancellationToken))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
@@ -140,13 +129,13 @@ public class EmailCommandPublisherTests
         var email = new Email(notificationId, "Hello", "<p>World</p>", "from@test.no", "to@test.no", EmailContentType.Html);
 
         SendEmailCommand? capturedCommand = null;
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Callback<SendEmailCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), TestContext.Current.CancellationToken))
+            .Callback<SendEmailCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
+            .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
@@ -168,13 +157,13 @@ public class EmailCommandPublisherTests
         var email = new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain);
 
         SendEmailCommand? capturedCommand = null;
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Callback<SendEmailCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), TestContext.Current.CancellationToken))
+            .Callback<SendEmailCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
+            .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
@@ -190,13 +179,13 @@ public class EmailCommandPublisherTests
         var email = new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Html);
 
         SendEmailCommand? capturedCommand = null;
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Callback<SendEmailCommand, DeliveryOptions?>((cmd, _) => capturedCommand = cmd)
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), TestContext.Current.CancellationToken))
+            .Callback<SendEmailCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
+            .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
@@ -213,19 +202,16 @@ public class EmailCommandPublisherTests
         var email2 = new Email(Guid.NewGuid(), "Subject 2", "Body 2", "from@test.no", "to2@test.no", EmailContentType.Plain);
         var emails = new List<Email> { email1, email2 };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -236,12 +222,10 @@ public class EmailCommandPublisherTests
         var email2 = new Email(Guid.NewGuid(), "Subject 2", "Body 2", "from@test.no", "to2@test.no", EmailContentType.Plain);
         var emails = new List<Email> { email1, email2 };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: _ => true);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
@@ -260,15 +244,10 @@ public class EmailCommandPublisherTests
         var failEmail = new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "fail@test.no", EmailContentType.Plain);
         var emails = new List<Email> { successEmail, failEmail };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == successEmail.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .Returns(ValueTask.CompletedTask);
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == failEmail.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: email => email.NotificationId == failEmail.NotificationId);
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
@@ -280,114 +259,56 @@ public class EmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutCallingMessageBus()
+    public async Task PublishAsync_Batch_EmptyList_DelegatesToMessageBusPublisher()
     {
         // Arrange
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
+        messageBusPublisherMock.Verify(
+            m => m.PublishBatchAsync(
+                It.Is<IReadOnlyList<Email>>(items => items.Count == 0),
+                It.IsAny<Func<Email, SendEmailCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Email, Exception>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
     {
         // Arrange
+        const int configuredConcurrency = 7;
         var emails = new List<Email> { _email };
-        var messageBusMock = new Mock<IMessageBus>();
-        var publisher = CreatePublisher(messageBusMock);
 
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
+        int? capturedConcurrency = null;
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Email>>(),
+                It.IsAny<Func<Email, SendEmailCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Email, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<Email>, Func<Email, SendEmailCommand>, int, Action<Email, Exception>?, CancellationToken>(
+                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
+            .ReturnsAsync((IReadOnlyList<Email>)[]);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(emails, cts.Token));
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_TokenCancelledMidBatch_ThrowsOperationCanceledException()
-    {
-        // Arrange
-        var email = new Email(Guid.NewGuid(), "Subject 1", "Body 1", "from@test.no", "to@test.no", EmailContentType.Plain);
-        var emails = Enumerable.Repeat(email, 500).ToList();
-
-        using var cts = new CancellationTokenSource();
-
-        var firstEmailStarted = new TaskCompletionSource();
-        var firstEmailCanProceed = new TaskCompletionSource();
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()))
-            .Returns<SendEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                firstEmailStarted.SetResult();
-                await firstEmailCanProceed.Task;
-            })));
-
-        var publisher = CreatePublisher(messageBusMock, publishConcurrency: 1);
-
-        // Act
-        var publishTask = publisher.PublishAsync(emails, cts.Token);
-
-        await firstEmailStarted.Task;
-        await cts.CancelAsync();
-        firstEmailCanProceed.SetResult();
-
-        // Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => publishTask);
-
-        messageBusMock.Verify(
-            m => m.SendAsync(It.Is<SendEmailCommand>(c => c.NotificationId == email.NotificationId), It.IsAny<DeliveryOptions?>()),
-            Times.AtLeastOnce);
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_RespectsEmailPublishConcurrency()
-    {
-        // Arrange
-        const int concurrency = 3;
-        const int emailCount = 12;
-
-        var lockObj = new object();
-        int currentConcurrent = 0;
-        int maxObservedConcurrent = 0;
-
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .Returns<SendEmailCommand, DeliveryOptions?>((_, _) => new ValueTask(Task.Run(async () =>
-            {
-                int current = Interlocked.Increment(ref currentConcurrent);
-                lock (lockObj)
-                {
-                    maxObservedConcurrent = Math.Max(maxObservedConcurrent, current);
-                }
-                
-                await Task.Delay(30);
-                Interlocked.Decrement(ref currentConcurrent);
-            })));
-
-        var emails = Enumerable.Range(0, emailCount)
-            .Select(_ => new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain))
-            .ToList();
-
-        var publisher = CreatePublisher(messageBusMock, publishConcurrency: concurrency);
+        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
 
         // Act
         await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {emailCount} emails were processed sequentially.");
-        Assert.True(maxObservedConcurrent <= concurrency, $"Max concurrent sends ({maxObservedConcurrent}) exceeded the configured limit ({concurrency}).");
-
-        messageBusMock.Verify(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()), Times.Exactly(emailCount));
+        Assert.Equal(configuredConcurrency, capturedConcurrency);
     }
 
     [Fact]
@@ -396,12 +317,17 @@ public class EmailCommandPublisherTests
         // Arrange
         var emails = new List<Email> { _email };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Email>>(),
+                It.IsAny<Func<Email, SendEmailCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Email, Exception>?>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = CreatePublisher(messageBusMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
@@ -409,20 +335,18 @@ public class EmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_MessageBusThrowsException_LogsErrorPerFailure()
+    public async Task PublishAsync_Batch_OnErrorCallback_LogsErrorWithNotificationId()
     {
         // Arrange
         var firstEmail = new Email(Guid.NewGuid(), "Subject 1", "Body 1", "from@test.no", "to1@test.no", EmailContentType.Plain);
         var secondEmail = new Email(Guid.NewGuid(), "Subject 2", "Body 2", "from@test.no", "to2@test.no", EmailContentType.Plain);
         var emails = new List<Email> { firstEmail, secondEmail };
 
-        var messageBusMock = new Mock<IMessageBus>();
-        messageBusMock
-            .Setup(m => m.SendAsync(It.IsAny<SendEmailCommand>(), It.IsAny<DeliveryOptions?>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: _ => true);
 
         var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         // Act
         await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
@@ -438,19 +362,85 @@ public class EmailCommandPublisherTests
             Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task PublishAsync_Batch_MapsEmailFieldsToCommand()
+    {
+        // Arrange
+        var email = new Email(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain);
+        var emails = new List<Email> { email };
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var capturedCommands = new List<SendEmailCommand>();
+        SetupPublishBatch(messageBusPublisherMock, failurePredicate: null, capturedCommands);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+
+        // Assert
+        var command = Assert.Single(capturedCommands);
+        Assert.Equal(email.Body, command.Body);
+        Assert.Equal(email.Subject, command.Subject);
+        Assert.Equal(email.ToAddress, command.ToAddress);
+        Assert.Equal(email.FromAddress, command.FromAddress);
+        Assert.Equal(email.NotificationId, command.NotificationId);
+        Assert.Equal(email.ContentType.ToString(), command.ContentType);
+    }
+
+    /// <summary>
+    /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
+    /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
+    /// <see cref="WolverinePublisher"/> would, without exercising its concurrency internals
+    /// (those are covered by the shared <c>WolverinePublisherTests</c>).
+    /// </summary>
+    /// <param name="messageBusPublisherMock">The mock to configure.</param>
+    /// <param name="failurePredicate">Optional predicate selecting which items should be reported as failed.</param>
+    /// <param name="capturedCommands">
+    /// Optional list that receives every <see cref="SendEmailCommand"/> produced by the real
+    /// <c>commandFactory</c>, in item order, so tests can assert field-level mapping.
+    /// </param>
+    private static void SetupPublishBatch(
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
+        Func<Email, bool>? failurePredicate,
+        List<SendEmailCommand>? capturedCommands = null)
+    {
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<Email>>(),
+                It.IsAny<Func<Email, SendEmailCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<Email, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<Email> items, Func<Email, SendEmailCommand> commandFactory, int _, Action<Email, Exception>? onError, CancellationToken _) =>
+            {
+                var failed = new List<Email>();
+
+                foreach (var item in items)
+                {
+                    var command = commandFactory(item);
+                    capturedCommands?.Add(command);
+
+                    if (failurePredicate is not null && failurePredicate(item))
+                    {
+                        failed.Add(item);
+                        onError?.Invoke(item, new InvalidOperationException("Service Bus unavailable"));
+                    }
+                }
+
+                return (IReadOnlyList<Email>)failed;
+            });
+    }
+
     private static EmailCommandPublisher CreatePublisher(
-        Mock<IMessageBus> messageBusMock,
+        Mock<IMessageBusPublisher> messageBusPublisherMock,
         Mock<ILogger<EmailCommandPublisher>>? loggerMock = null,
         int publishConcurrency = 10)
     {
         loggerMock ??= new Mock<ILogger<EmailCommandPublisher>>();
 
-        var services = new ServiceCollection();
-        services.AddScoped(_ => messageBusMock.Object);
-        var serviceProvider = services.BuildServiceProvider();
-
         var options = Options.Create(new WolverineSettings { EmailPublishConcurrency = publishConcurrency });
 
-        return new EmailCommandPublisher(loggerMock.Object, serviceProvider, options);
+        return new EmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
     }
 }
