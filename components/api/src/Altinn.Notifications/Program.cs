@@ -22,7 +22,7 @@ using Altinn.Notifications.Telemetry;
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
-using Azure.Monitor.OpenTelemetry.Exporter;
+using Azure.Monitor.OpenTelemetry.Exporter;                 
 
 using FluentValidation;
 
@@ -32,6 +32,7 @@ using Microsoft.OpenApi;
 
 using Npgsql;
 
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -124,6 +125,8 @@ void ConfigureWebHostCreationLogging()
     {
         builder
             .AddFilter("Altinn.Platform.Notifications.Program", LogLevel.Debug)
+            .AddFilter("Azure", LogLevel.Debug)
+            .AddFilter("OpenTelemetry", LogLevel.Debug)
             .AddConsole();
     });
 
