@@ -64,6 +64,17 @@
       ],
       "versioningTemplate": "regex:^(?<compatibility>[\\S]*\\d+\\.\\d+(?:\\.\\d+)?(?:[\\S]*)?-alpine-?)(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?$",
       "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Manage Docker container images in test configuration files",
+      "managerFilePatterns": [
+        "/container-images\\.json$/"
+      ],
+      "matchStrings": [
+        "\"(?<depName>[^:\"]+):(?<currentValue>[^@\"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\""
+      ],
+      "datasourceTemplate": "docker"
     }
   ]
 }
