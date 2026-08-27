@@ -3,4 +3,7 @@
     "version": "10.0.400",
     "rollForward": "latestFeature"
   }
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
 }
