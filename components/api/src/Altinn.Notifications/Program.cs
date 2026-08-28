@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
-using Altinn.Notifications;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
@@ -92,8 +91,6 @@ builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
-app.Services.GetRequiredService<AzureMonitorExporterListener>();
-
 app.SetUpPostgreSql(builder.Environment.IsDevelopment(), builder.Configuration);
 
 // Configure the HTTP request pipeline.
@@ -119,8 +116,6 @@ void ConfigureWebHostCreationLogging()
     {
         builder
             .AddFilter("Altinn.Platform.Notifications.Program", LogLevel.Debug)
-            .AddFilter("Azure", LogLevel.Debug)
-            .AddFilter("OpenTelemetry", LogLevel.Debug)
             .AddConsole();
     });
 
@@ -135,12 +130,7 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
         builder.IncludeScopes = true;
     });
 
-    logging.AddFilter("Azure", LogLevel.Debug);
-    logging.AddFilter("OpenTelemetry", LogLevel.Debug);
     logging.AddConsole();
-
-    // Enable EventSource-based OpenTelemetry internal logging
-    logging.AddEventSourceLogger();
 }
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
@@ -164,7 +154,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName);
-            metrics.AddMeter("OpenTelemetry.Instrumentation.*");
         })
         .WithTracing(tracing =>
         {
@@ -229,7 +218,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
-    services.AddSingleton<Altinn.Notifications.AzureMonitorExporterListener>();
 
     services.AddAuthorizationService(config);
     services.AddWolverineServices(config, builder.Environment);
