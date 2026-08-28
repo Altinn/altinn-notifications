@@ -148,10 +148,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddSource("Wolverine");
         });
 
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
-    }
+    string? otelEndpoint = configuration.GetValue<string>("PlatformSettings:OtelEndpoint");
+    AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString, otelEndpoint);
 
     services.AddControllers()
         .AddJsonOptions(options =>
@@ -173,8 +171,21 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
-static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString, string? otelEndpoint)
 {
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // Jaeger's OTLP gRPC endpoint http://localhost:4377, default 4317
+        }));
+    }
+
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
+    {
+        return;
+    }
+
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
