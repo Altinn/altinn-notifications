@@ -17,6 +17,9 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class OrderProcessingService : IOrderProcessingService
 {
+    private static StreamWriter? _sw = null;
+    private static readonly object _lock = new();
+
     private readonly IOrderRepository _orderRepository;
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
@@ -25,6 +28,20 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IConditionClient _conditionClient;
     private readonly IPastDueOrderPublisher _pastDueOrderPublisher;
     private readonly ILogger<OrderProcessingService> _logger;
+
+    private static void LogToFile(string message)
+    {
+        lock (_lock)
+        {
+            if (_sw == null)
+            {
+                _sw = new StreamWriter("orderprocessingservice.log", append: true);
+            }
+
+            _sw.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} - {message}");
+            _sw.Flush();
+        }
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
@@ -54,6 +71,7 @@ public class OrderProcessingService : IOrderProcessingService
     {
         try
         {
+            LogToFile($"Starting");
             List<NotificationOrder> pastDueOrders;
             Stopwatch stopwatch = Stopwatch.StartNew();
             int totalOrdersProcessed = 0;
@@ -99,10 +117,12 @@ public class OrderProcessingService : IOrderProcessingService
             Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
             Activity.Current?.Parent?.SetTag("Count", totalOrdersProcessed);
             stopwatch.Stop();
+            LogToFile($"Completed. Total orders processed: {totalOrdersProcessed:N0}. Elapsed time: {stopwatch.ElapsedMilliseconds:N0} ms.");
             Console.WriteLine($"\r\n{DateTime.Now} ****** StartProcessingPastDueOrders ({totalOrdersProcessed:N0}): {stopwatch.ElapsedMilliseconds:N0}\r\n");
         }
         catch (Exception ex)
         {
+            LogToFile($"Failed: {ex}");
             Console.WriteLine($"\r\n\r\n\r\n{DateTime.Now} $$$$$$ StartProcessingPastDueOrders failed: {ex}\r\n\r\n\r\n");
             _logger.LogError(ex, "An error occurred while processing past due orders.");
             throw;
