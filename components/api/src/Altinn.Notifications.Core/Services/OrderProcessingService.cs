@@ -52,52 +52,61 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> pastDueOrders;
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        int totalOrdersProcessed = 0;
-        int batchNumber = 0;
-        using Activity? activityTotal = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersTotal");
-
-        do
+        try
         {
-            using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersBatch");
-            pastDueOrders = [];
+            List<NotificationOrder> pastDueOrders;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            int totalOrdersProcessed = 0;
+            int batchNumber = 0;
+            using Activity? activityTotal = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersTotal");
 
-            IReadOnlyList<NotificationOrder>? failedOrders = null;
-            try
+            do
             {
-                pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
-                Activity.Current?.SetTag("BatchCount", pastDueOrders.Count);
-                Activity.Current?.SetTag("BatchNr", ++batchNumber);
-                totalOrdersProcessed += pastDueOrders.Count;
-                if (pastDueOrders.Count == 0)
+                using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrdersBatch");
+                pastDueOrders = [];
+
+                IReadOnlyList<NotificationOrder>? failedOrders = null;
+                try
                 {
-                    break;
+                    pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
+                    Activity.Current?.SetTag("BatchCount", pastDueOrders.Count);
+                    Activity.Current?.SetTag("BatchNr", ++batchNumber);
+                    totalOrdersProcessed += pastDueOrders.Count;
+                    if (pastDueOrders.Count == 0)
+                    {
+                        break;
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
+                    await ResetOrdersToRegistered(failedOrders);
                 }
+                catch (OperationCanceledException)
+                {
+                    // If PublishAsync completed, only reset orders it reported as failed — published orders
+                    // must not be reset or they will be re-enqueued and processed twice.
+                    // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
+                    Activity.Current?.Parent?.SetTag("TotalCount", totalOrdersProcessed);
+                    var ordersToReset = failedOrders ?? pastDueOrders;
+                    await ResetOrdersToRegistered(ordersToReset);
 
-                cancellationToken.ThrowIfCancellationRequested();
-
-                failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
-                await ResetOrdersToRegistered(failedOrders);
+                    throw;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // If PublishAsync completed, only reset orders it reported as failed — published orders
-                // must not be reset or they will be re-enqueued and processed twice.
-                // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
-                Activity.Current?.Parent?.SetTag("TotalCount", totalOrdersProcessed);
-                var ordersToReset = failedOrders ?? pastDueOrders;
-                await ResetOrdersToRegistered(ordersToReset);
+            while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
-                throw;
-            }
+            Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
+            Activity.Current?.Parent?.SetTag("Count", totalOrdersProcessed);
+            stopwatch.Stop();
+            Console.WriteLine($"\r\n{DateTime.Now} ****** StartProcessingPastDueOrders ({totalOrdersProcessed:N0}): {stopwatch.ElapsedMilliseconds:N0}\r\n");
         }
-        while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
-
-        Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
-        Activity.Current?.Parent?.SetTag("Count", totalOrdersProcessed);
-        stopwatch.Stop();
-        Console.WriteLine($"{DateTime.Now} ****** StartProcessingPastDueOrders ({totalOrdersProcessed:N0}): {stopwatch.ElapsedMilliseconds:N0}");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\r\n\r\n\r\n{DateTime.Now} $$$$$$ StartProcessingPastDueOrders failed: {ex}\r\n\r\n\r\n");
+            _logger.LogError(ex, "An error occurred while processing past due orders.");
+            throw;
+        }
     }
 
     /// <summary>
