@@ -97,6 +97,7 @@ public class OrderProcessingService : IOrderProcessingService
         Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
         Activity.Current?.Parent?.SetTag("Count", totalOrdersProcessed);
         stopwatch.Stop();
+        Console.WriteLine($"{DateTime.Now} ****** StartProcessingPastDueOrders ({totalOrdersProcessed:N0}): {stopwatch.ElapsedMilliseconds:N0}");
     }
 
     /// <summary>
