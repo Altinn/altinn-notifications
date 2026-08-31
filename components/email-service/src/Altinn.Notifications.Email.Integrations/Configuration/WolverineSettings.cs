@@ -66,4 +66,10 @@ public class WolverineSettings : WolverineSettingsBase
     /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ASB queue name for receiving email delivery reports.
+    /// The mock email client publishes delivery reports to this queue, which are consumed by the Notifications API.
+    /// </summary>
+    public string EmailDeliveryReportQueueName { get; set; } = string.Empty;
 }
