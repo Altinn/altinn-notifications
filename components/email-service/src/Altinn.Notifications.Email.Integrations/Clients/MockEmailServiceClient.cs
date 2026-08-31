@@ -42,7 +42,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
     {
         string operationId = Guid.NewGuid().ToString() + "_" + email.NotificationId.ToString();
-        await Task.Delay(AcsSendExecutionTimeMs);
+        await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
 
         return new ComposedEmailSendResult
         {
