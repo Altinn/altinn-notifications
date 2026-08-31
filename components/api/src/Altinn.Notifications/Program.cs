@@ -258,7 +258,8 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
     var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
-    Console.WriteLine($"\r\n\r\n\r\n*******************Program // AddAzureMonitorTelemetryExporters // applicationInsightsConnectionString: {applicationInsightsConnectionString}\r\n\r\n\r\n");
+    var applicationInsightsConnectionString2 = config.GetValue<string>("ApplicationInsights:ConnectionString2");
+    Console.WriteLine($"\r\n\r\n\r\n*******************Program // AddAzureMonitorTelemetryExporters // applicationInsightsConnectionString: {applicationInsightsConnectionString2}\r\n\r\n\r\n");
     var otelEndpoint = config.GetValue<string>("PlatformSettings:OtelEndpoint");
 
     if (!string.IsNullOrEmpty(otelEndpoint))
@@ -269,7 +270,7 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
         }));
     }
 
-    if (string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
+    if (string.IsNullOrWhiteSpace(applicationInsightsConnectionString2))
     {
         return;
     }
