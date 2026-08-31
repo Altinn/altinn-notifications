@@ -269,7 +269,7 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
         }));
     }
 
-    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
+    if (string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
     {
         return;
     }
