@@ -172,7 +172,7 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
         }));
     }
 
-    if (config.GetValue<bool>("ApplicationInsights:Disable"))
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }

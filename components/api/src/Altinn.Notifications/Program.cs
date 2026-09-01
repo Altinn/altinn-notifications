@@ -269,12 +269,12 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
         }));
     }
 
-    if (config.GetValue<bool>("ApplicationInsights:Disable"))
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }
 
-    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
