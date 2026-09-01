@@ -68,13 +68,12 @@ jobs:
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_URN_RESOURCE_ID }}
           inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
 
-      # Disabled until Maskinporten scope is registered for TT02 (#1815)
-      # - name: Run composed-email notification order regression tests
-      #   uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
-      #   with:
-      #     path: components/api/test/k6/src/tests/orders-composed-email-v2.js
-      #     flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }}
-      #     inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
+      - name: Run composed-email notification order regression tests
+        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        with:
+          path: components/api/test/k6/src/tests/orders-composed-email-v2.js
+          flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }}
+          inspect-flags: -e altinn_env=TT02 # Supplies the value for pre-run validation, when env vars / flags are not yet defined
   slack-notify:
     if: failure()
     needs: test
