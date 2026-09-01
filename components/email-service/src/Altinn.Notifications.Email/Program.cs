@@ -158,15 +158,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
-
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-
-    if (configuration.GetValue<bool>("CommunicationServicesSettings:MockEmailClient"))
-    {
-        services.AddSingleton<Altinn.Notifications.Email.Core.Dependencies.IEmailServiceClient, Altinn.Notifications.Email.Integrations.Clients.MockEmailServiceClient>();
-    }
-
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
