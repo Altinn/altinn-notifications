@@ -158,7 +158,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
-
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
