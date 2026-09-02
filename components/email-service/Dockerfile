@@ -42,6 +42,7 @@ RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
 USER dotnet
 
 RUN mkdir /tmp/logtelemetry
+RUN chmod 777 /tmp/logtelemetry
 
 # Run the application
 ENTRYPOINT [ "dotnet", "Altinn.Notifications.Email.dll" ]

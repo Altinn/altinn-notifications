@@ -43,5 +43,6 @@ RUN chmod 777 /app
 USER dotnet
 
 RUN mkdir /tmp/logtelemetry
+RUN chmod 777 /tmp/logtelemetry
 
 ENTRYPOINT [ "dotnet", "Altinn.Notifications.dll" ]

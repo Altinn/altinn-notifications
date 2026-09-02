@@ -188,7 +188,7 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
-        o.StorageDirectory = "/var/telemetry";
+        o.StorageDirectory = "/tmp/logtelemetry";
     }));
 }
 
