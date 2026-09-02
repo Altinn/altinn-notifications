@@ -133,7 +133,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http");
-            metrics.AddMeter("OpenTelemetry.Instrumentation.*");
         })
         .WithTracing(tracing => 
         {
@@ -158,13 +157,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-
-    var useMock = configuration.GetValue<string>("WolverineSettings:UseMockEmailServiceClient");
-    if (useMock?.ToLower() == "true")
-    {
-        // Override Azure Communication Services client with a mock for local dev.
-        services.AddSingleton<Altinn.Notifications.Email.Core.Dependencies.IEmailServiceClient, Altinn.Notifications.Email.Integrations.Clients.MockEmailServiceClient>();
-    }
 
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
