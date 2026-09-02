@@ -257,11 +257,7 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
-    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
-    var applicationInsightsConnectionString2 = config.GetValue<string>("ApplicationInsights:ConnectionString2");
-    Console.WriteLine($"\r\n\r\n\r\n*******************Program // AddAzureMonitorTelemetryExporters // applicationInsightsConnectionString: {applicationInsightsConnectionString2}\r\n\r\n\r\n");
-    var otelEndpoint = config.GetValue<string>("PlatformSettings:OtelEndpoint");
-
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
     if (!string.IsNullOrEmpty(otelEndpoint))
     {
         services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
@@ -270,7 +266,8 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
         }));
     }
 
-    if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString2))
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }

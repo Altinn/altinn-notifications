@@ -31,20 +31,9 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
         ArgumentOutOfRangeException.ThrowIfLessThan(concurrency, 1);
 
         var failed = new ConcurrentBag<TItem>();
-        ////using var semaphore = new SemaphoreSlim(concurrency);
 
         await Task.WhenAll(items.Select(async item =>
         {
-            ////try
-            ////{
-            ////    await semaphore.WaitAsync(cancellationToken);
-            ////}
-            ////catch (OperationCanceledException)
-            ////{
-            ////    failed.Add(item);
-            ////    return;
-            ////}
-
             try
             {
                 using Activity? activity = Activity.Current?.Source.StartActivity($"WolverinePublisher.SendAsync<{typeof(TItem).Name}, {typeof(TCommand).Name}>");
@@ -55,10 +44,6 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
                 failed.Add(item);
                 onError?.Invoke(item, ex);
             }
-            ////finally
-            ////{
-            ////    semaphore.Release();
-            ////}
         }));
 
         return [.. failed];

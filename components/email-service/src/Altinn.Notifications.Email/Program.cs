@@ -148,8 +148,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddSource("Wolverine");
         });
 
-    string? otelEndpoint = configuration.GetValue<string>("PlatformSettings:OtelEndpoint");
-    AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString, otelEndpoint);
+    AddAzureMonitorTelemetryExporters(configuration, services, applicationInsightsConnectionString);
 
     services.AddControllers()
         .AddJsonOptions(options =>
@@ -157,7 +156,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
-
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
 
@@ -171,17 +169,18 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
-static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString, string? otelEndpoint)
+static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServiceCollection services, string applicationInsightsConnectionString)
 {
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
     if (!string.IsNullOrEmpty(otelEndpoint))
     {
         services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
         {
-            otlpOptions.Endpoint = new Uri(otelEndpoint); // Jaeger's OTLP gRPC endpoint http://localhost:4377, default 4317
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
         }));
     }
 
-    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }

@@ -50,7 +50,7 @@ public static class WolverineServiceCollectionExtensions
             AddEmailSendResultPublisher(services, wolverineSettings, opts);
             AddEmailStatusCheckPublisher(services, wolverineSettings, opts);
             AddEmailServiceRateLimitPublisher(services, wolverineSettings, opts);
-            AddMockEmailDeliveryReportPublisher(services, wolverineSettings, opts);
+            AddMockEmailDeliveryReportPublisher(wolverineSettings, opts);
         });
     }
 
@@ -104,11 +104,11 @@ public static class WolverineServiceCollectionExtensions
         wolverineOptions.Policies.Add(new SendComposedEmailCommandHandlerPolicy(wolverineSettings));
     }
 
-    private static void AddMockEmailDeliveryReportPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    private static void AddMockEmailDeliveryReportPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         wolverineOptions
             .PublishMessage<Clients.MockEmailDeliveryReportCommand>()
-            .ToAzureServiceBusQueue("altinn.notifications.email.deliveryreports");
+            .ToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName);
     }
 
     /// <summary>

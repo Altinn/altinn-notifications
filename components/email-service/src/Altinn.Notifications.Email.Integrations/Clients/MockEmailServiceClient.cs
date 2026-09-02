@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
@@ -19,15 +19,13 @@ public class MockEmailServiceClient : IEmailServiceClient
     private const int AcsUpdateExecutionTimeMs = 40;
     private const int AcsDeliveryReportDelayTimeMs = 2000;
 
-    private readonly ILogger<MockEmailServiceClient> _logger;
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MockEmailServiceClient"/> class.
     /// </summary>
-    public MockEmailServiceClient(IServiceProvider serviceProvider, ILogger<MockEmailServiceClient> logger)
+    public MockEmailServiceClient(IServiceProvider serviceProvider)
     {
-        _logger = logger;
         _serviceProvider = serviceProvider;
     }
 
@@ -35,7 +33,6 @@ public class MockEmailServiceClient : IEmailServiceClient
     public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
     {
         string operationId = email.NotificationId.ToString();
-        _logger.LogError("MockEmailServiceClient: Simulated email send for {NotificationId}, operationId={OperationId}", email.NotificationId, operationId);
         Result<string, EmailClientErrorResponse> result = operationId;
         await Task.Delay(AcsSendExecutionTimeMs);
         return result;
@@ -45,8 +42,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
     {
         string operationId = Guid.NewGuid().ToString() + "_" + email.NotificationId.ToString();
-        ////_logger.LogError("MockEmailServiceClient: Simulated composed email send for {NotificationId}, operationId={OperationId}", email.NotificationId, operationId);
-        await Task.Delay(AcsSendExecutionTimeMs);
+        await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
 
         return new ComposedEmailSendResult
         {
@@ -58,7 +54,6 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Core.Status.EmailSendResult> GetOperationUpdate(string operationId)
     {
-        ////_logger.LogError("MockEmailServiceClient: Returning Delivered for operationId={OperationId}", operationId);
         await Task.Delay(AcsUpdateExecutionTimeMs);
 
         _ = Task.Run(async () =>
@@ -74,7 +69,7 @@ public class MockEmailServiceClient : IEmailServiceClient
 /// <summary>
 /// Mock of ACS delivery report publisher
 /// </summary>
-public class DeliveryReportPublisher : Altinn.Notifications.Shared.Publishers.WolverinePublisher
+public class DeliveryReportPublisher : Shared.Publishers.WolverinePublisher
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryReportPublisher"/> class.
@@ -98,7 +93,7 @@ public class DeliveryReportPublisher : Altinn.Notifications.Shared.Publishers.Wo
             {
                 Sender = "noreply@altinn.cloud",
                 Recipient = "nullstilt@altinn.xyz",
-                InternetMessageId = "long string",
+                InternetMessageId = $"InternetMessageId-{operationId}",
                 MessageId = Guid.Parse(operationId),
                 Status = "Delivered",
                 DeliveryStatusDetails = new DeliveryStatusDetails
