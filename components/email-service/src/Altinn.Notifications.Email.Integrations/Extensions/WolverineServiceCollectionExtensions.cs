@@ -50,6 +50,7 @@ public static class WolverineServiceCollectionExtensions
             AddEmailSendResultPublisher(services, wolverineSettings, opts);
             AddEmailStatusCheckPublisher(services, wolverineSettings, opts);
             AddEmailServiceRateLimitPublisher(services, wolverineSettings, opts);
+            AddMockEmailDeliveryReportPublisher(wolverineSettings, opts);
         });
     }
 
@@ -101,6 +102,13 @@ public static class WolverineServiceCollectionExtensions
                         .ListenerCount(wolverineSettings.ComposedEmailSendListenerCount);
 
         wolverineOptions.Policies.Add(new SendComposedEmailCommandHandlerPolicy(wolverineSettings));
+    }
+
+    private static void AddMockEmailDeliveryReportPublisher(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
+    {
+        wolverineOptions
+            .PublishMessage<Clients.MockEmailDeliveryReportCommand>()
+            .ToAzureServiceBusQueue(wolverineSettings.EmailDeliveryReportQueueName);
     }
 
     /// <summary>

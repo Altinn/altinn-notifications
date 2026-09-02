@@ -49,9 +49,18 @@ public static class ServiceCollectionExtensions
                 client.Timeout = TimeSpan.FromSeconds(emailServiceAdminSettings.BlobDownloadTimeoutInSeconds);
             })
             .Services
-            .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton(emailServiceAdminSettings)
             .AddSingleton(communicationServicesSettings);
+
+        if (config.GetValue<bool>("CommunicationServicesSettings:MockEmailClient"))
+        {
+            // Should only be used for local development and testing, not in production.
+            services.AddSingleton<IEmailServiceClient, MockEmailServiceClient>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailServiceClient, EmailServiceClient>();
+        }
 
         return services;
     }

@@ -262,9 +262,17 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
-    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
+        }));
+    }
 
-    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }
