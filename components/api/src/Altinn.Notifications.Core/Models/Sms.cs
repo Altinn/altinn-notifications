@@ -31,18 +31,29 @@ public class Sms
     public string Message { get; set; }
 
     /// <summary>
+    /// Gets or sets the short name of the creator (service owner) that requested the notification.
+    /// </summary>
+    /// <remarks>
+    /// Used to resolve SMS sender substitution rules on a per service-owner basis. Defaults
+    /// to an empty string for backward compatibility with call sites that do not supply it.
+    /// </remarks>
+    public string Creator { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
     /// </summary>
     /// <param name="notificationId">The unique identifier of the SMS.</param>
     /// <param name="sender">The sender of the SMS message.</param>
     /// <param name="recipient">The recipient of the SMS message.</param>
     /// <param name="message">The content of the SMS message.</param>
-    public Sms(Guid notificationId, string sender, string recipient, string message)
+    /// <param name="creator">The short name of the creator (service owner) that requested the notification.</param>
+    public Sms(Guid notificationId, string sender, string recipient, string message, string creator = "")
     {
         Sender = sender;
         Message = message;
         Recipient = recipient;
         NotificationId = notificationId;
+        Creator = creator;
     }
 
     /// <summary>

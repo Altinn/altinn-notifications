@@ -1,12 +1,13 @@
--- FUNCTION: notifications.claim_anytime_sms_batch(integer)
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_batch (
+-- FUNCTION: notifications.claim_anytime_sms_batch_v2(integer)
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_batch_v2 (
   _batchsize integer DEFAULT NULL
 )
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
-  body text
+  body text,
+  creatorname text
 )
 LANGUAGE plpgsql
 VOLATILE
@@ -16,7 +17,7 @@ DECLARE
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid
+    SELECT sms._id, sms._orderid, ord.creatorname
     FROM notifications.smsnotifications sms
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
@@ -36,13 +37,15 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody
+      sms.customizedbody,
+      claimed.creatorname
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body
+    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
+    upd.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
 END;
@@ -50,4 +53,5 @@ $$;
 
 COMMENT ON FUNCTION notifications.claim_anytime_sms_batch(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 1).
-_batchsize: requested batch size (defaults to 500 if NULL or <1).';
+_batchsize: requested batch size (defaults to 500 if NULL or <1).
+Includes the order creatorname to support per-service-owner SMS sender substitution.';

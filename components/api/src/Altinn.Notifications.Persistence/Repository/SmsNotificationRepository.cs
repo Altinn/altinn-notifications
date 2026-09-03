@@ -24,8 +24,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
-    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
+    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch_v2(_batchsize := @batchsize)";
+    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch_v2(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
 
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
