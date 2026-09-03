@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
+            .AddSingleton<ISmsSenderSubstitutionService, SmsSenderSubstitutionService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
