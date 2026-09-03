@@ -238,7 +238,7 @@ public class ComposedEmailCommandPublisherTests
 
             Interlocked.Exchange(ref maxObservedConcurrent, Math.Max(Volatile.Read(ref maxObservedConcurrent), current));
 
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
 
             Interlocked.Decrement(ref currentConcurrent);
         });
