@@ -29,6 +29,14 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
 
         await Task.WhenAll(items.Select(async item =>
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                var cancelledException = new OperationCanceledException(cancellationToken);
+                failed.Add(item);
+                onError?.Invoke(item, cancelledException);
+                return;
+            }
+
             try
             {
                 await messageBus.SendAsync(commandFactory(item));

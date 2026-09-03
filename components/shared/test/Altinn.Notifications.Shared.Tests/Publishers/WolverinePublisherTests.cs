@@ -205,6 +205,57 @@ public class WolverinePublisherTests
         Assert.Equal(item.Id, result[0].Id);
     }
 
+    [Fact]
+    public async Task PublishBatchAsync_TokenCancelledMidBatch_StopsAdmittingNewSendsAndReturnsUnsentItemsAsFailed()
+    {
+        // Arrange
+        var firstItem = new TestItem(Guid.NewGuid());
+        var secondItem = new TestItem(Guid.NewGuid());
+        IReadOnlyList<TestItem> items = [firstItem, secondItem];
+
+        using var cts = new CancellationTokenSource();
+
+        var firstSendStarted = new TaskCompletionSource();
+        var firstSendCanProceed = new TaskCompletionSource();
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.Is<TestCommand>(c => c.Id == firstItem.Id), It.IsAny<DeliveryOptions?>()))
+            .Returns(new ValueTask(Task.Run(
+                async () =>
+            {
+                firstSendStarted.TrySetResult();
+                await firstSendCanProceed.Task;
+            },
+                TestContext.Current.CancellationToken)));
+
+        var publisher = CreatePublisher(messageBusMock);
+
+        var errors = new List<(TestItem Item, Exception Exception)>();
+
+        // Act
+        var publishTask = publisher.PublishBatchAsync(
+            items,
+            item => new TestCommand(item.Id),
+            (item, ex) => errors.Add((item, ex)),
+            cts.Token);
+
+        // Wait for the first send to be in flight, then cancel before the second item is admitted.
+        await firstSendStarted.Task;
+        await cts.CancelAsync();
+        firstSendCanProceed.SetResult();
+
+        var result = await publishTask;
+
+        // Assert: the second item must never reach SendAsync once cancellation is observed.
+        messageBusMock.Verify(
+            m => m.SendAsync(It.Is<TestCommand>(c => c.Id == secondItem.Id), It.IsAny<DeliveryOptions?>()),
+            Times.Never);
+
+        Assert.Contains(secondItem, result);
+        Assert.Contains(errors, e => e.Item.Id == secondItem.Id && e.Exception is OperationCanceledException);
+    }
+
     private static WolverinePublisher CreatePublisher(Mock<IMessageBus> messageBusMock)
     {
         var services = new ServiceCollection();
