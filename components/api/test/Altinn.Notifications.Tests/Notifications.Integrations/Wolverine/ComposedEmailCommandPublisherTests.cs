@@ -172,89 +172,32 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_TokenCancelledMidBatch_ReturnsUnpublishedEmails()
+    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
     {
         // Arrange
-        var firstEmail = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "first@test.no", EmailContentType.Plain, []);
-        var secondEmail = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "second@test.no", EmailContentType.Plain, []);
-        var emails = new List<ComposedEmail> { firstEmail, secondEmail };
+        const int configuredConcurrency = 7;
+        var emails = new List<ComposedEmail> { _composedEmail };
 
-        int invocationCount = 0;
-        Guid firstPublishedNotificationId = Guid.Empty;
-        var firstEmailStarted = new TaskCompletionSource();
-        var firstEmailCanProceed = new TaskCompletionSource();
-
+        int? observedConcurrency = null;
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        SetupPublishBatch(messageBusPublisherMock, async (command, _) =>
-        {
-            if (Interlocked.Increment(ref invocationCount) == 1)
-            {
-                firstPublishedNotificationId = command.NotificationId;
-                firstEmailStarted.TrySetResult();
-                await firstEmailCanProceed.Task;
-            }
-        });
+        messageBusPublisherMock
+            .Setup(m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<ComposedEmail>>(),
+                It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
+                It.IsAny<int>(),
+                It.IsAny<Action<ComposedEmail, Exception>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, int, Action<ComposedEmail, Exception>?, CancellationToken>(
+                (_, _, concurrency, _, _) => observedConcurrency = concurrency)
+            .ReturnsAsync((IReadOnlyList<ComposedEmail>)[]);
 
-        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: 1);
-
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        var publishTask = publisher.PublishAsync(emails, cts.Token);
-
-        await firstEmailStarted.Task;
-        await cts.CancelAsync();
-        firstEmailCanProceed.SetResult();
-
-        var result = await publishTask;
-
-        // Assert
-        ComposedEmail publishedEmail = emails.Single(e => e.NotificationId == firstPublishedNotificationId);
-        ComposedEmail unpublishedEmail = emails.Single(e => e.NotificationId != firstPublishedNotificationId);
-
-        Assert.DoesNotContain(publishedEmail, result);
-        Assert.True(result.Count <= 1, $"Expected at most one unpublished email in a two-email batch, got {result.Count}.");
-
-        if (result.Count == 1)
-        {
-            Assert.Contains(unpublishedEmail, result);
-        }
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_RespectsComposedEmailPublishConcurrency()
-    {
-        // Arrange
-        const int concurrency = 5;
-        const int emailCount = 500;
-
-        int currentConcurrent = 0;
-        int maxObservedConcurrent = 0;
-
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        SetupPublishBatch(messageBusPublisherMock, async (_, _) =>
-        {
-            int current = Interlocked.Increment(ref currentConcurrent);
-
-            Interlocked.Exchange(ref maxObservedConcurrent, Math.Max(Volatile.Read(ref maxObservedConcurrent), current));
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
-
-            Interlocked.Decrement(ref currentConcurrent);
-        });
-
-        var emails = Enumerable.Range(0, emailCount)
-            .Select(_ => new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "from@test.no", "to@test.no", EmailContentType.Plain, []))
-            .ToList();
-
-        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: concurrency);
+        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
 
         // Act
         await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(maxObservedConcurrent > 1, $"Expected concurrent sends but all {emailCount} emails were processed sequentially.");
-        Assert.True(maxObservedConcurrent <= concurrency, $"Max concurrent sends ({maxObservedConcurrent}) exceeded the configured limit ({concurrency}).");
+        Assert.Equal(configuredConcurrency, observedConcurrency);
     }
 
     [Fact]
@@ -366,10 +309,11 @@ public class ComposedEmailCommandPublisherTests
     }
 
     /// <summary>
-    /// Configures the <see cref="IMessageBusPublisher.PublishBatchAsync{TItem, TCommand}"/> setup to replicate
-    /// the real Wolverine-backed implementation's per-item send, concurrency limiting and failure tracking,
-    /// while delegating the actual "send" behavior to <paramref name="sendAsync"/> so individual tests can
-    /// control success or failure per invocation.
+    /// Configures the <see cref="IMessageBusPublisher.PublishBatchAsync{TItem, TCommand}"/> setup with a simple
+    /// unbounded fan-out over all items, delegating the actual "send" behavior to <paramref name="sendAsync"/>
+    /// so individual tests can control success or failure per invocation. Concurrency limiting is an
+    /// implementation detail of the real <c>WolverinePublisher</c> and is covered by its own tests, so it is
+    /// intentionally not simulated here.
     /// </summary>
     private static void SetupPublishBatch(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
@@ -383,16 +327,14 @@ public class ComposedEmailCommandPublisherTests
                 It.IsAny<Action<ComposedEmail, Exception>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, int, Action<ComposedEmail, Exception>?, CancellationToken>(
-                async (items, commandFactory, concurrency, onError, cancellationToken) =>
+                async (items, commandFactory, _, onError, cancellationToken) =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var failed = new ConcurrentBag<ComposedEmail>();
-                    using var semaphore = new SemaphoreSlim(concurrency);
 
                     await Task.WhenAll(items.Select(async item =>
                     {
-                        await semaphore.WaitAsync(cancellationToken);
                         try
                         {
                             var command = commandFactory(item);
@@ -402,10 +344,6 @@ public class ComposedEmailCommandPublisherTests
                         {
                             failed.Add(item);
                             onError?.Invoke(item, ex);
-                        }
-                        finally
-                        {
-                            semaphore.Release();
                         }
                     }));
 
