@@ -28,6 +28,9 @@ public static class ServiceCollectionExtensions
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
 
         services
+            .Configure<SmsSenderSubstitutionConfig>(config.GetSection("SmsSenderSubstitution"));
+
+        services
             .AddHostedService<SmsPublishBackgroundService>()
             .AddHostedService<EmailPublishBackgroundService>()
             .AddHostedService<ComposedEmailPublishBackgroundService>();
