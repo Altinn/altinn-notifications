@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Configuration;
@@ -64,12 +61,8 @@ public class WolverineSettingsTests
         Assert.NotNull(settings);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/", settings.ServiceBusConnectionString);
 
-        Assert.Equal(5, settings.EmailPublishConcurrency);
         Assert.Equal("altinn.notifications.email.send", settings.EmailSendQueueName);
-
-        Assert.Equal(3, settings.SmsPublishConcurrency);
         Assert.Equal("altinn.notifications.sms.send", settings.SendSmsQueueName);
-
         Assert.Equal("altinn.notifications.email.deliveryreports", settings.EmailDeliveryReportQueueName);
         Assert.Equal(3, settings.EmailDeliveryReportListenerCount);
         Assert.Contains(TimeSpan.FromMilliseconds(1000), settings.EmailDeliveryReportQueuePolicy.GetCooldownDelays());
@@ -95,7 +88,6 @@ public class WolverineSettingsTests
         Assert.Contains(TimeSpan.FromMilliseconds(500), settings.EmailServiceRateLimitQueuePolicy.GetCooldownDelays());
         Assert.Contains(TimeSpan.FromMilliseconds(30000), settings.EmailServiceRateLimitQueuePolicy.GetScheduleDelays());
 
-        Assert.Equal(8, settings.PastDueOrdersPublishConcurrency);
         Assert.Equal("altinn.notifications.orders.pastdue", settings.PastDueOrdersQueueName);
         Assert.Equal(7, settings.PastDueOrdersListenerCount);
         Assert.Equal(30000, settings.PastDueOrdersRetryDelayMs);
@@ -110,10 +102,8 @@ public class WolverineSettingsTests
 
         Assert.Equal(string.Empty, settings.ServiceBusConnectionString);
 
-        Assert.Equal(10, settings.EmailPublishConcurrency);
         Assert.Equal(string.Empty, settings.EmailSendQueueName);
 
-        Assert.Equal(10, settings.SmsPublishConcurrency);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
 
         Assert.NotNull(settings.EmailDeliveryReportQueuePolicy);
@@ -137,7 +127,6 @@ public class WolverineSettingsTests
         Assert.Equal(1, settings.EmailServiceRateLimitListenerCount);
 
         Assert.NotNull(settings.PastDueOrdersQueuePolicy);
-        Assert.Equal(10, settings.PastDueOrdersPublishConcurrency);
         Assert.Equal(string.Empty, settings.PastDueOrdersQueueName);
         Assert.Equal(10, settings.PastDueOrdersListenerCount);
         Assert.Equal(60_000, settings.PastDueOrdersRetryDelayMs);

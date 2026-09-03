@@ -3,14 +3,12 @@ using System.Collections.Concurrent;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Files;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -56,7 +54,6 @@ public class ComposedEmailCommandPublisherTests
             m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<ComposedEmail>>(),
                 It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<ComposedEmail, Exception>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -130,7 +127,6 @@ public class ComposedEmailCommandPublisherTests
             m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<ComposedEmail>>(),
                 It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<ComposedEmail, Exception>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -184,14 +180,13 @@ public class ComposedEmailCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<ComposedEmail>>(),
                 It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<ComposedEmail, Exception>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, int, Action<ComposedEmail, Exception>?, CancellationToken>(
-                (_, _, concurrency, _, _) => observedConcurrency = concurrency)
+            .Callback<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, Action<ComposedEmail, Exception>?, CancellationToken>(
+                (_, _, onError, _) => { })
             .ReturnsAsync((IReadOnlyList<ComposedEmail>)[]);
 
-        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
@@ -323,11 +318,10 @@ public class ComposedEmailCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<ComposedEmail>>(),
                 It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<ComposedEmail, Exception>?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, int, Action<ComposedEmail, Exception>?, CancellationToken>(
-                async (items, commandFactory, _, onError, cancellationToken) =>
+            .Returns<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, Action<ComposedEmail, Exception>?, CancellationToken>(
+                async (items, commandFactory, onError, cancellationToken) =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -353,16 +347,13 @@ public class ComposedEmailCommandPublisherTests
 
     private static ComposedEmailCommandPublisher CreatePublisher(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<ComposedEmailCommandPublisher>>? loggerMock = null,
-        int publishConcurrency = 5)
+        Mock<ILogger<ComposedEmailCommandPublisher>>? loggerMock = null)
     {
         loggerMock ??= new Mock<ILogger<ComposedEmailCommandPublisher>>();
 
         var services = new ServiceCollection();
         services.AddScoped(_ => messageBusPublisherMock.Object);
 
-        var options = Options.Create(new WolverineSettings { ComposedEmailPublishConcurrency = publishConcurrency });
-
-        return new ComposedEmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
+        return new ComposedEmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
     }
 }

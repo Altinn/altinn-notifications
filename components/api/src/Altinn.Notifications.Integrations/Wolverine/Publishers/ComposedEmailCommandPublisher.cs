@@ -1,11 +1,9 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
@@ -13,11 +11,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// Wolverine-based implementation of <see cref="IComposedEmailCommandPublisher"/> that publishes
 /// composed email notifications to a dedicated Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
-public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher, IOptions<WolverineSettings> options) : IComposedEmailCommandPublisher
+public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
 {
     private readonly ILogger<ComposedEmailCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
-    private readonly int _publishConcurrency = options.Value.ComposedEmailPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<ComposedEmail>> PublishAsync(IReadOnlyList<ComposedEmail> emails, CancellationToken cancellationToken)

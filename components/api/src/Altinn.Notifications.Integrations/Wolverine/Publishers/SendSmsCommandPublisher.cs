@@ -1,11 +1,9 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
@@ -15,12 +13,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// </summary>
 /// <param name="logger">The logger used to record operational events and errors during SMS publishing.</param>
 /// <param name="messageBusPublisher">The message bus publisher used to dispatch SMS commands.</param>
-/// <param name="options">Configuration options for Wolverine settings, including SMS publish concurrency.</param>
-public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IMessageBusPublisher messageBusPublisher, IOptions<WolverineSettings> options) : ISendSmsPublisher
+public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : ISendSmsPublisher
 {
     private readonly ILogger<SendSmsCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
-    private readonly int _publishConcurrency = options.Value.SmsPublishConcurrency <= 0 ? 10 : options.Value.SmsPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)

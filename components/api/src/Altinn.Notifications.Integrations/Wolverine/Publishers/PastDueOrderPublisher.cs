@@ -15,12 +15,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// </summary>
 public class PastDueOrderPublisher(
     ILogger<PastDueOrderPublisher> logger,
-    IMessageBusPublisher messageBusPublisher,
-    IOptions<WolverineSettings> options) : IPastDueOrderPublisher
+    IMessageBusPublisher messageBusPublisher) : IPastDueOrderPublisher
 {
     private readonly ILogger<PastDueOrderPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
-    private readonly int _publishConcurrency = options.Value.PastDueOrdersPublishConcurrency <= 0 ? 10 : options.Value.PastDueOrdersPublishConcurrency;
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<NotificationOrder>> PublishAsync(
