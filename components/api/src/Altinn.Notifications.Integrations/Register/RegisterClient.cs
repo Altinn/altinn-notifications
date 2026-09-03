@@ -22,6 +22,7 @@ public class RegisterClient : IRegisterClient
     private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
 
     private readonly IAccessTokenGenerator _accessTokenGenerator;
+    private readonly string _privateToken;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterClient"/> class.
@@ -33,6 +34,7 @@ public class RegisterClient : IRegisterClient
     {
         _client = client;
         _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+        _privateToken = settings.Value.PrivateToken;
 
         _accessTokenGenerator = accessTokenGenerator;
 
@@ -58,6 +60,14 @@ public class RegisterClient : IRegisterClient
             if (!string.IsNullOrEmpty(accessToken))
             {
                 requestMessage.Headers.Add("PlatformAccessToken", accessToken);
+            }
+            else if (!string.IsNullOrEmpty(_privateToken))
+            {
+                requestMessage.Headers.Add("PlatformAccessToken", _privateToken);
+            }
+            else
+            {
+                throw new PlatformDependencyException("RegisterClient", "GetPartyDetails", new Exception("No access token or private token available."));
             }
 
             var response = await _client.SendAsync(requestMessage, CancellationToken.None);

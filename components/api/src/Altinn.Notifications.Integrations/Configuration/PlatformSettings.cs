@@ -25,4 +25,9 @@ public class PlatformSettings
     /// Gets or sets the URL for the Altinn Notifications Email API.
     /// </summary>
     public string ApiInstantEmailServiceEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the private token used for authenticating with the Altinn Platform APIs.
+    /// </summary>
+    public string PrivateToken { get; set; } = string.Empty;
 }
