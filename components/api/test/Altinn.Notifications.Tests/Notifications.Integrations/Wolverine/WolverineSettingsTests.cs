@@ -16,10 +16,8 @@ public class WolverineSettingsTests
             {
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/",
 
-                ["WolverineSettings:EmailPublishConcurrency"] = "5",
                 ["WolverineSettings:EmailSendQueueName"] = "altinn.notifications.email.send",
 
-                ["WolverineSettings:SmsPublishConcurrency"] = "3",
                 ["WolverineSettings:SendSmsQueueName"] = "altinn.notifications.sms.send",
 
                 ["WolverineSettings:EmailDeliveryReportQueueName"] = "altinn.notifications.email.deliveryreports",
@@ -47,7 +45,6 @@ public class WolverineSettingsTests
                 ["WolverineSettings:EmailServiceRateLimitQueuePolicy:CooldownDelaysMs:0"] = "500",
                 ["WolverineSettings:EmailServiceRateLimitQueuePolicy:ScheduleDelaysMs:0"] = "30000",
 
-                ["WolverineSettings:PastDueOrdersPublishConcurrency"] = "8",
                 ["WolverineSettings:PastDueOrdersQueueName"] = "altinn.notifications.orders.pastdue",
                 ["WolverineSettings:PastDueOrdersListenerCount"] = "7",
                 ["WolverineSettings:PastDueOrdersRetryDelayMs"] = "30000",
