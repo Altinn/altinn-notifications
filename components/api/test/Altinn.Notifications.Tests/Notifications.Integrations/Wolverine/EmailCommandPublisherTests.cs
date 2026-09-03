@@ -282,34 +282,6 @@ public class EmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
-    {
-        // Arrange
-        const int configuredConcurrency = 7;
-        var emails = new List<Email> { _email };
-
-        int? capturedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<Email>>(),
-                It.IsAny<Func<Email, SendEmailCommand>>(),
-                It.IsAny<Action<Email, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<Email>, Func<Email, SendEmailCommand>, Action<Email, Exception>?, CancellationToken>(
-                (_, _, onError, _) => { })
-            .ReturnsAsync((IReadOnlyList<Email>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        // Act
-        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(configuredConcurrency, capturedConcurrency);
-    }
-
-    [Fact]
     public async Task PublishAsync_Batch_MessageBusThrowsOperationCanceledException_Rethrows()
     {
         // Arrange

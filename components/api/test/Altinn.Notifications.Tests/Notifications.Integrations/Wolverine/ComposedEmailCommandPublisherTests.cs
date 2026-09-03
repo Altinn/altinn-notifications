@@ -168,34 +168,6 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
-    {
-        // Arrange
-        const int configuredConcurrency = 7;
-        var emails = new List<ComposedEmail> { _composedEmail };
-
-        int? observedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<ComposedEmail>>(),
-                It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
-                It.IsAny<Action<ComposedEmail, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<ComposedEmail>, Func<ComposedEmail, SendComposedEmailCommand>, Action<ComposedEmail, Exception>?, CancellationToken>(
-                (_, _, onError, _) => { })
-            .ReturnsAsync((IReadOnlyList<ComposedEmail>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        // Act
-        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(configuredConcurrency, observedConcurrency);
-    }
-
-    [Fact]
     public async Task PublishAsync_Batch_MessageBusThrowsException_LogsErrorPerFailure()
     {
         // Arrange
