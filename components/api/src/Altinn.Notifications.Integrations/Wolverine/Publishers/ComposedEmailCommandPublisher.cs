@@ -32,7 +32,6 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
         return await _messageBusPublisher.PublishBatchAsync(
             emails,
             CreateCommand,
-            _publishConcurrency,
             OnPublishError,
             cancellationToken);
     }

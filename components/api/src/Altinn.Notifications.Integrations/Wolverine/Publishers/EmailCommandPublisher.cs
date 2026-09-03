@@ -46,7 +46,6 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
         return _messageBusPublisher.PublishBatchAsync(
             emails,
             commandFactory: CreateCommand,
-            _publishConcurrency,
             onError: (email, exception) =>
             {
                 if (exception is OperationCanceledException)

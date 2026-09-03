@@ -78,7 +78,6 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             (IReadOnlyList<TestItem>)[],
             item => new TestCommand(item.Id),
-            concurrency: 10,
             onError: null,
             TestContext.Current.CancellationToken);
 
@@ -101,7 +100,7 @@ public class WolverinePublisherTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, cts.Token));
+            () => publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, cts.Token));
 
         messageBusMock.Verify(m => m.SendAsync(It.IsAny<TestCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
@@ -120,7 +119,7 @@ public class WolverinePublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, TestContext.Current.CancellationToken);
+        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -146,7 +145,6 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             items,
             item => new TestCommand(item.Id),
-            10,
             (item, ex) => errors.Add((item, ex)),
             TestContext.Current.CancellationToken);
 
@@ -175,7 +173,7 @@ public class WolverinePublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, TestContext.Current.CancellationToken);
+        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -199,7 +197,6 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             [item],
             i => new TestCommand(i.Id),
-            10,
             null,
             TestContext.Current.CancellationToken);
 

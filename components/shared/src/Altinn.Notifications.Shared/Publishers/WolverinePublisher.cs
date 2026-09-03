@@ -13,7 +13,7 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TItem>> PublishBatchAsync<TItem, TCommand>(IReadOnlyList<TItem> items, Func<TItem, TCommand> commandFactory, int concurrency, Action<TItem, Exception>? onError, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TItem>> PublishBatchAsync<TItem, TCommand>(IReadOnlyList<TItem> items, Func<TItem, TCommand> commandFactory, Action<TItem, Exception>? onError, CancellationToken cancellationToken)
         where TCommand : notnull
     {
         if (items.Count == 0)
@@ -25,8 +25,6 @@ public class WolverinePublisher(IServiceProvider serviceProvider) : IMessageBusP
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        ArgumentOutOfRangeException.ThrowIfLessThan(concurrency, 1);
-
         var failed = new ConcurrentBag<TItem>();
 
         await Task.WhenAll(items.Select(async item =>

@@ -53,7 +53,6 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
         return _messageBusPublisher.PublishBatchAsync(
             smsList,
             commandFactory: CreateCommand,
-            concurrency: _publishConcurrency,
             onError: (sms, exception) =>
             {
                 if (exception is OperationCanceledException)

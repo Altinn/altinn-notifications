@@ -30,7 +30,6 @@ public class PastDueOrderPublisher(
         return _messageBusPublisher.PublishBatchAsync(
             orders, 
             commandFactory: order => new ProcessPastDueOrderCommand { Order = order }, 
-            concurrency: _publishConcurrency, 
             onError: (order, ex) =>
             {
                 if (ex is OperationCanceledException)
