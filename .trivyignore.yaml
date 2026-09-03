@@ -1,4 +1,4 @@
 vulnerabilities:
   - id: CVE-2026-14456 # libcrypto3/libssl3
     statement: Not exploitable - application does not have a call to OpenSSL's PKCS7_verify()
-    expired_at: 2026-09-02 # revisit in 1 week
+    expired_at: 2026-09-10 # revisit in 1 week
