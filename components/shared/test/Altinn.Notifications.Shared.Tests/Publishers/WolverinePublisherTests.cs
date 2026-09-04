@@ -256,6 +256,50 @@ public class WolverinePublisherTests
         Assert.Contains(errors, e => e.Item.Id == secondItem.Id && e.Exception is OperationCanceledException);
     }
 
+    [Fact]
+    public async Task PublishBatchAsync_CancellationRequestedDuringBatch_SkipsRemainingItemsAndReportsThemAsFailed()
+    {
+        // Arrange
+        var firstItem = new TestItem(Guid.NewGuid());
+        var secondItem = new TestItem(Guid.NewGuid());
+        IReadOnlyList<TestItem> items = [firstItem, secondItem];
+
+        using var cts = new CancellationTokenSource();
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.Is<TestCommand>(c => c.Id == firstItem.Id), It.IsAny<DeliveryOptions?>()))
+            .Returns(() =>
+            {
+                // Cancelling synchronously here—before the second item's admission check
+                // runs—removes any timing race: Task.WhenAll(items.Select(...)) dispatches
+                // each item's lambda synchronously in order, so by the time item2's check
+                // executes, cancellation is guaranteed to already be visible.
+                cts.Cancel();
+                return ValueTask.CompletedTask;
+            });
+
+        var publisher = CreatePublisher(messageBusMock);
+
+        var errors = new List<(TestItem Item, Exception Exception)>();
+
+        // Act
+        var result = await publisher.PublishBatchAsync(
+            items,
+            item => new TestCommand(item.Id),
+            (item, ex) => errors.Add((item, ex)),
+            cts.Token);
+
+        // Assert: the second item is skipped entirely—SendAsync must never be called for it.
+        messageBusMock.Verify(
+            m => m.SendAsync(It.Is<TestCommand>(c => c.Id == secondItem.Id), It.IsAny<DeliveryOptions?>()),
+            Times.Never);
+
+        Assert.DoesNotContain(firstItem, result);
+        Assert.Contains(secondItem, result);
+        Assert.Contains(errors, e => e.Item.Id == secondItem.Id && e.Exception is OperationCanceledException);
+    }
+
     private static WolverinePublisher CreatePublisher(Mock<IMessageBus> messageBusMock)
     {
         var services = new ServiceCollection();
