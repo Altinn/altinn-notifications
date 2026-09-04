@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Shared;
+using Npgsql;
 
 namespace Altinn.Notifications.Core.Persistence;
 
@@ -120,29 +121,22 @@ public interface IOrderRepository
     /// <summary>
     /// Retrieves notification orders that are past their requested send time and atomically updates their processing status to <see cref="OrderProcessingStatus.Processing"/>.
     /// </summary>
+    /// <param name="unitOfWork">
+    /// The <see cref="UnitOfWork"/> used to execute the query and status update in the current database context.
+    /// </param>
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a list of <see cref="NotificationOrder"/> objects that were retrieved and marked for processing.
-    /// Returns an empty list if no orders are past due or available for processing.
+    /// A <see cref="Task{TResult}"/> The first <see cref="NotificationOrder"/> object that was retrieved and marked for processing.
+    /// Returns null if no orders are past due or available for processing.
     /// </returns>
-    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default);
+    public Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets processing status of an order
     /// </summary>
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
-
-    /// <summary>
-    /// Resets an order that is currently <see cref="OrderProcessingStatus.Processing"/> back to
-    /// <see cref="OrderProcessingStatus.Registered"/> so it can be re-claimed for processing.
-    /// A no-op if the order is no longer in <see cref="OrderProcessingStatus.Processing"/> state
-    /// (for example, if a concurrent/duplicate delivery has already advanced it to a later status),
-    /// preventing an already-completed order from being regressed and reprocessed.
-    /// </summary>
-    /// <param name="orderId">The unique identifier of the order to reset.</param>
-    public Task ResetProcessingToRegistered(Guid orderId);
 
     /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
@@ -271,6 +265,7 @@ public interface IOrderRepository
     /// <c>false</c> if any notifications are still pending delivery.
     /// </returns>
     Task<bool> PersistProcessingResultAsync(
+        UnitOfWork unitOfWork,
         NotificationOrder order,
         EmailOrderProcessingResult emailOrderProcessingResult,
         SmsOrderProcessingResult smsOrderProcessingResult,
@@ -280,5 +275,5 @@ public interface IOrderRepository
     /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
     /// inserts the corresponding status feed entry within a single database transaction.
     /// </summary>
-    Task SetOrderSendConditionNotMetAsync(NotificationOrder order, CancellationToken cancellationToken = default);
+    Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default);
 }

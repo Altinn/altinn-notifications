@@ -7,7 +7,6 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
-
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
@@ -23,8 +22,8 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
     private readonly IEmailAndSmsOrderProcessingService _emailAndSmsProcessingService;
     private readonly IConditionClient _conditionClient;
-    private readonly IPastDueOrderPublisher _pastDueOrderPublisher;
     private readonly ILogger<OrderProcessingService> _logger;
+    private readonly IUnitOfWorkRepository _unitOfWorkRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
@@ -36,8 +35,8 @@ public class OrderProcessingService : IOrderProcessingService
         IPreferredChannelProcessingService preferredChannelProcessingService,
         IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
-        IPastDueOrderPublisher pastDueOrderPublisher,
-        ILogger<OrderProcessingService> logger)
+        ILogger<OrderProcessingService> logger,
+        IUnitOfWorkRepository unitOfWorkRepository)
     {
         _orderRepository = orderRepository;
         _emailProcessingService = emailProcessingService;
@@ -45,83 +44,61 @@ public class OrderProcessingService : IOrderProcessingService
         _preferredChannelProcessingService = preferredChannelProcessingService;
         _emailAndSmsProcessingService = emailAndSmsProcessingService;
         _conditionClient = conditionClient;
-        _pastDueOrderPublisher = pastDueOrderPublisher;
         _logger = logger;
+        _unitOfWorkRepository = unitOfWorkRepository;
     }
 
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> pastDueOrders;
+        // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
+        using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrders");
         Stopwatch stopwatch = Stopwatch.StartNew();
+        int totalOrdersProcessed = 0;
 
-        do
+        while (stopwatch.ElapsedMilliseconds < 60_000)
         {
-            pastDueOrders = [];
+            var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
 
-            IReadOnlyList<NotificationOrder>? failedOrders = null;
             try
             {
-                pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
-                if (pastDueOrders.Count == 0)
+                var pastDueOrder = await _orderRepository.GetNextPastDueOrder(unitOfWork, cancellationToken);
+                if (pastDueOrder == null)
                 {
+                    await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
                     break;
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
+                await ProcessOrder(pastDueOrder!, unitOfWork);
+                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
-                failedOrders = await _pastDueOrderPublisher.PublishAsync(pastDueOrders, cancellationToken);
-                await ResetOrdersToRegistered(failedOrders);
+                cancellationToken.ThrowIfCancellationRequested();
+                ++totalOrdersProcessed;
             }
-            catch (OperationCanceledException)
+            catch (Exception e)
             {
-                // If PublishAsync completed, only reset orders it reported as failed — published orders
-                // must not be reset or they will be re-enqueued and processed twice.
-                // If PublishAsync never returned (threw mid-batch), reset all as we cannot tell which were published.
-                var ordersToReset = failedOrders ?? pastDueOrders;
-                await ResetOrdersToRegistered(ordersToReset);
+                Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
+
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                Console.WriteLine(e.Message);
 
                 throw;
             }
         }
-        while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
         stopwatch.Stop();
     }
 
-    /// <summary>
-    /// Resets each of the given orders back to <see cref="OrderProcessingStatus.Registered"/>, one at a
-    /// time. A failure resetting one order is logged and does not stop the remaining orders from being
-    /// reset — without this, a single transient failure partway through the batch would silently leave
-    /// every subsequent order stuck in <see cref="OrderProcessingStatus.Processing"/> indefinitely.
-    /// </summary>
-    private async Task ResetOrdersToRegistered(IEnumerable<NotificationOrder> orders)
-    {
-        foreach (var orderId in orders.Select(order => order.Id))
-        {
-            try
-            {
-                await _orderRepository.ResetProcessingToRegistered(orderId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed to reset order {OrderId} back to Registered after a failed publish attempt. It may remain stuck in Processing until reconciled.",
-                    orderId);
-            }
-        }
-    }
-
     /// <inheritdoc/>
-    public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
+    public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork)
     {
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetOrderSendConditionNotMetAsync(order);
+                // TODO pastdue poc: Decide how to reprocess orders that have failed the send condition check. For now, we will set the order to "SendConditionNotMet" and not retry it.
+                await _orderRepository.SetOrderSendConditionNotMetAsync(unitOfWork, order);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -154,7 +131,7 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order, emailOrderProcessingResult, smsOrderProcessingResult);
+                await _orderRepository.PersistProcessingResultAsync(unitOfWork, order, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
 
@@ -165,11 +142,11 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetry(NotificationOrder order)
+    public async Task ProcessOrderRetry(NotificationOrder order, UnitOfWork unitOfWork)
     {
         try
         {
-            await ProcessOrderRetryInternal(order);
+            await ProcessOrderRetryInternal(order, unitOfWork);
         }
         catch (PlatformDependencyException e)
         {
@@ -180,19 +157,17 @@ public class OrderProcessingService : IOrderProcessingService
                e.Operation,
                order!.Id,
                e.IsTransient?.ToString() ?? "Not available");
-
-            await _orderRepository.ResetProcessingToRegistered(order.Id);
         }
     }
 
-    private async Task ProcessOrderRetryInternal(NotificationOrder order)
+    private async Task ProcessOrderRetryInternal(NotificationOrder order, UnitOfWork unitOfWork)
     {
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
-                await _orderRepository.SetOrderSendConditionNotMetAsync(order);
+                await _orderRepository.SetOrderSendConditionNotMetAsync(unitOfWork, order);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -225,7 +200,7 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.PersistProcessingResultAsync(order, emailOrderProcessingResult, smsOrderProcessingResult);
+                await _orderRepository.PersistProcessingResultAsync(unitOfWork, order, emailOrderProcessingResult, smsOrderProcessingResult);
                 break;
         }
     }

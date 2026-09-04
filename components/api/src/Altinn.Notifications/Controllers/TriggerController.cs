@@ -44,7 +44,13 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
-        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
+        ////await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
+        Task[] tasks = Enumerable.Range(0, 30)
+            .Select(_ => _orderProcessingService.StartProcessingPastDueOrders(cancellationToken))
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+
         return Ok();
     }
 
