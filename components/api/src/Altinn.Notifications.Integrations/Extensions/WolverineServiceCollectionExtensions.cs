@@ -192,12 +192,6 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSendEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (wolverineSettings.EmailPublishConcurrency <= 0)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.EmailPublishConcurrency)} must be greater than 0.");
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.EmailSendQueueName))
         {
             throw new InvalidOperationException(
@@ -217,12 +211,6 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (wolverineSettings.SmsPublishConcurrency <= 0)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.SmsPublishConcurrency)} must be greater than 0.");
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.SendSmsQueueName))
         {
             throw new InvalidOperationException(
@@ -242,12 +230,6 @@ public static class WolverineServiceCollectionExtensions
     /// </summary>
     private static void AddSendComposedEmailPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
-        if (wolverineSettings.ComposedEmailPublishConcurrency <= 0)
-        {
-            throw new InvalidOperationException(
-                $"{nameof(WolverineSettings.ComposedEmailPublishConcurrency)} must be greater than 0.");
-        }
-
         if (string.IsNullOrWhiteSpace(wolverineSettings.ComposedEmailSendQueueName))
         {
             throw new InvalidOperationException(

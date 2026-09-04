@@ -227,39 +227,9 @@ public class SendSmsCommandPublisherTests
             m => m.PublishBatchAsync(
                 It.Is<IReadOnlyList<Sms>>(items => items.Count == 0),
                 It.IsAny<Func<Sms, SendSmsCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Sms, Exception>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
-    {
-        // Arrange
-        const int configuredConcurrency = 7;
-        var smsList = new List<Sms> { _sms };
-
-        int? capturedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<Sms>>(),
-                It.IsAny<Func<Sms, SendSmsCommand>>(),
-                It.IsAny<int>(),
-                It.IsAny<Action<Sms, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<Sms>, Func<Sms, SendSmsCommand>, int, Action<Sms, Exception>?, CancellationToken>(
-                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
-            .ReturnsAsync((IReadOnlyList<Sms>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
-
-        // Act
-        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(configuredConcurrency, capturedConcurrency);
     }
 
     [Fact]
@@ -273,7 +243,6 @@ public class SendSmsCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<Sms>>(),
                 It.IsAny<Func<Sms, SendSmsCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Sms, Exception>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
@@ -358,10 +327,9 @@ public class SendSmsCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<Sms>>(),
                 It.IsAny<Func<Sms, SendSmsCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Sms, Exception>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyList<Sms> items, Func<Sms, SendSmsCommand> commandFactory, int _, Action<Sms, Exception>? onError, CancellationToken _) =>
+            .ReturnsAsync((IReadOnlyList<Sms> items, Func<Sms, SendSmsCommand> commandFactory, Action<Sms, Exception>? onError, CancellationToken _) =>
             {
                 var failed = new List<Sms>();
 
@@ -383,13 +351,10 @@ public class SendSmsCommandPublisherTests
 
     private static SendSmsCommandPublisher CreatePublisher(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<SendSmsCommandPublisher>>? loggerMock = null,
-        int publishConcurrency = 10)
+        Mock<ILogger<SendSmsCommandPublisher>>? loggerMock = null)
     {
         loggerMock ??= new Mock<ILogger<SendSmsCommandPublisher>>();
 
-        var options = Options.Create(new WolverineSettings { SmsPublishConcurrency = publishConcurrency });
-
-        return new SendSmsCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
+        return new SendSmsCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
     }
 }
