@@ -24,14 +24,12 @@ public interface IMessageBusPublisher
     /// <typeparam name="TCommand">The type of the command to publish.</typeparam>
     /// <param name="items">The items to publish.</param>
     /// <param name="commandFactory">A factory function to create a command from an item.</param>
-    /// <param name="concurrency">The maximum number of concurrent publish operations.</param>
     /// <param name="onError">An optional callback invoked for each item that fails to publish.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous publish operation, containing the items that failed to publish.</returns>
     Task<IReadOnlyList<TItem>> PublishBatchAsync<TItem, TCommand>(
         IReadOnlyList<TItem> items,
         Func<TItem, TCommand> commandFactory,
-        int concurrency,
         Action<TItem, Exception>? onError,
         CancellationToken cancellationToken)
         where TCommand : notnull;
