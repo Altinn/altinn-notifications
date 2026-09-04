@@ -67,6 +67,7 @@ public class SmsNotificationServiceTests
             new Mock<IDateTimeService>().Object,
             mockRepo.Object,
             new Mock<ISendSmsPublisher>().Object,
+            new Mock<ISmsSenderSubstitutionService>().Object,
             Options.Create(new NotificationConfig { SmsPublishBatchSize = _publishBatchSize }));
 
         // Act
