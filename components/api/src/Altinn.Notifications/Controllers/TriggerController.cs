@@ -44,12 +44,8 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
-        ////await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
-        Task[] tasks = Enumerable.Range(0, 30)
-            .Select(_ => _orderProcessingService.StartProcessingPastDueOrders(cancellationToken))
-            .ToArray();
-
-        await Task.WhenAll(tasks);
+        // TODO pastdue poc: This endpoint is currently only used for testing and debugging. In production, the background service will handle past due orders automatically.
+        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
 
         return Ok();
     }

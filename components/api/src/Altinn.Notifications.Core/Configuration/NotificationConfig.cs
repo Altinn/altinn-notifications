@@ -66,4 +66,14 @@ public class NotificationConfig
     /// Grace period in seconds added to expiry time of notifications, before setting a notification to failed time to live.
     /// </summary>
     public int ExpiryOffsetSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// The number of past due tasks to run concurrently in the background service
+    /// </summary>
+    public int PastDueOrdersTaskCount { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the past due orders background service when idle
+    /// </summary>
+    public int PastDueOrdersIdleDelaySeconds { get; set; } = 30;
 }

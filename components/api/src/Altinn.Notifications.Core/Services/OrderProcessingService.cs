@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -25,6 +26,8 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly ILogger<OrderProcessingService> _logger;
     private readonly IUnitOfWorkRepository _unitOfWorkRepository;
 
+    private readonly NotificationConfig _config;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
@@ -36,7 +39,8 @@ public class OrderProcessingService : IOrderProcessingService
         IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
         ILogger<OrderProcessingService> logger,
-        IUnitOfWorkRepository unitOfWorkRepository)
+        IUnitOfWorkRepository unitOfWorkRepository,
+        IOptions<NotificationConfig> config)
     {
         _orderRepository = orderRepository;
         _emailProcessingService = emailProcessingService;
@@ -46,18 +50,17 @@ public class OrderProcessingService : IOrderProcessingService
         _conditionClient = conditionClient;
         _logger = logger;
         _unitOfWorkRepository = unitOfWorkRepository;
+        _config = config.Value;
     }
 
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
-        using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrders");
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        int totalOrdersProcessed = 0;
-
-        while (stopwatch.ElapsedMilliseconds < 60_000)
+        while (true)
         {
+            using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrder");
+            int ordersProcessed = 0;
             var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
 
             try
@@ -66,27 +69,30 @@ public class OrderProcessingService : IOrderProcessingService
                 if (pastDueOrder == null)
                 {
                     await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                    break;
+                    await Task.Delay(_config.PastDueOrdersIdleDelaySeconds * 1000, cancellationToken);
+                    continue;
                 }
 
                 await ProcessOrder(pastDueOrder!, unitOfWork);
                 await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                 cancellationToken.ThrowIfCancellationRequested();
-                ++totalOrdersProcessed;
+                ++ordersProcessed;
             }
             catch (Exception e)
             {
-                Activity.Current?.SetTag("TotalCount", totalOrdersProcessed);
-
+                _logger.LogError(
+                    e,
+                    "An error occurred while processing past due orders. The current unit of work will be rolled back. Error message: {ErrorMessage}",
+                    e.Message);
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                Console.WriteLine(e.Message);
-
                 throw;
             }
+            finally
+            {
+                Activity.Current?.SetTag("Count", ordersProcessed);
+            }
         }
-
-        stopwatch.Stop();
     }
 
     /// <inheritdoc/>
