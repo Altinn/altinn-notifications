@@ -25,6 +25,7 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IConditionClient _conditionClient;
     private readonly ILogger<OrderProcessingService> _logger;
     private readonly IUnitOfWorkRepository _unitOfWorkRepository;
+    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.OrderProcessingService");
 
     private readonly NotificationConfig _config;
 
@@ -59,8 +60,7 @@ public class OrderProcessingService : IOrderProcessingService
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
         while (true)
         {
-            using Activity? activityBatch = Activity.Current?.Source.StartActivity("StartProcessingPastDueOrder");
-            int ordersProcessed = 0;
+            using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
             var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
 
             try
@@ -77,20 +77,19 @@ public class OrderProcessingService : IOrderProcessingService
                 await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                 cancellationToken.ThrowIfCancellationRequested();
-                ++ordersProcessed;
             }
             catch (Exception e)
             {
-                _logger.LogError(
-                    e,
-                    "An error occurred while processing past due orders. The current unit of work will be rolled back. Error message: {ErrorMessage}",
-                    e.Message);
+                if (!(e is OperationCanceledException || e is TaskCanceledException))
+                {
+                    _logger.LogError(
+                        e,
+                        "An error occurred while processing past due orders. The current unit of work will be rolled back. Error message: {ErrorMessage}",
+                        e.Message);
+                }
+
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
                 throw;
-            }
-            finally
-            {
-                Activity.Current?.SetTag("Count", ordersProcessed);
             }
         }
     }
