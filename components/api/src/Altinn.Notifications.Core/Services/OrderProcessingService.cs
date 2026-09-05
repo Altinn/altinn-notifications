@@ -55,13 +55,14 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
+    public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default, int maxIterations = -1)
     {
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
-        while (true)
+        for (int i = 0; maxIterations == -1 || i < maxIterations; i++)
         {
             using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
             var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+            bool rollbackDone = false;
 
             try
             {
@@ -69,11 +70,12 @@ public class OrderProcessingService : IOrderProcessingService
                 if (pastDueOrder == null)
                 {
                     await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                    rollbackDone = true;
                     await Task.Delay(_config.PastDueOrdersIdleDelaySeconds * 1000, cancellationToken);
                     continue;
                 }
 
-                await ProcessOrder(pastDueOrder!, unitOfWork);
+                await ProcessOrder(pastDueOrder, unitOfWork);
                 await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -88,7 +90,11 @@ public class OrderProcessingService : IOrderProcessingService
                         e.Message);
                 }
 
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                if (!rollbackDone)
+                {
+                    await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                }
+
                 throw;
             }
         }

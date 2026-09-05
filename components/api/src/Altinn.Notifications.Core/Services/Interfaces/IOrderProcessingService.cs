@@ -25,9 +25,13 @@ public interface IOrderProcessingService
     /// The method continues fetching batches of orders until either fewer than 50 orders are returned
     /// or the total processing time exceeds 60 seconds.
     /// </para>
+    /// <param name="maxIterations">
+    /// The <paramref name="maxIterations"/> parameter allows limiting the number of iterations for processing batches of orders.
+    /// A value of -1 indicates no limit.
+    /// </param>
     /// </remarks>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default);
+    public Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default, int maxIterations = -1);
 
     /// <summary>
     /// Processes a notification order through the appropriate channel-specific service.

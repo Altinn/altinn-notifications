@@ -45,7 +45,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
-    private const string _advanceStatusFromProcessingSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Processing'::orderprocessingstate";
     private const string _advanceStatusFromRegisteredSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Registered'::orderprocessingstate";
     private const string _getOrderPastSendTime = "select notifications.getorder_pastsendtime()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
@@ -1018,7 +1017,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         var connection = unitOfWork.Connection;
         var transaction = unitOfWork.Transaction;
 
-        await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_advanceStatusFromRegisteredSql, connection, transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, OrderProcessingStatus.SendConditionNotMet.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
