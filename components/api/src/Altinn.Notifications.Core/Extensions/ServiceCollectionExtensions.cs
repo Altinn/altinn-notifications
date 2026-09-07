@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Extensions;
 
@@ -28,7 +29,12 @@ public static class ServiceCollectionExtensions
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
 
         services
-            .Configure<SmsSenderSubstitutionConfig>(config.GetSection("SmsSenderSubstitution"));
+            .AddOptions<SmsSenderSubstitutionConfig>()
+            .Bind(config.GetSection("SmsSenderSubstitution"))
+            .ValidateOnStart();
+
+        services
+            .AddSingleton<IValidateOptions<SmsSenderSubstitutionConfig>, SmsSenderSubstitutionConfigValidator>();
 
         services
             .AddHostedService<SmsPublishBackgroundService>()

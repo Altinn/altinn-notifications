@@ -265,7 +265,7 @@ public class SmsSenderSubstitutionServiceTests
         Assert.Equal("Altinn", result);
     }
 
-    private static ISmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)
+    private static SmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)
     {
         var config = new SmsSenderSubstitutionConfig { Rules = rules };
         return new SmsSenderSubstitutionService(Options.Create(config));
