@@ -48,30 +48,5 @@ public interface IOrderProcessingService
     /// If the sending condition is not met, the order is marked accordingly and will not be processed.
     /// </para>
     /// </remarks>
-    /// <returns>
-    /// A result indicating whether the order was successfully processed or requires a retry.
-    /// </returns>
-    public Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork);
-
-    /// <summary>
-    /// Retries processing of a previously failed notification order.
-    /// </summary>
-    /// <param name="order">The notification order to retry processing.</param>
-    /// <param name="unitOfWork">The unit of work for database operations.</param>
-    /// <remarks>
-    /// <para>
-    /// This method re-evaluates the sending conditions and attempts to process the order again if the conditions are met.
-    /// </para>
-    /// <para>
-    /// Unlike the initial processing, this method is more lenient. If the sending condition check fails during retry,
-    /// the order is still processed.
-    /// </para>
-    /// <para>
-    /// After retry processing, the order's status is updated based on the outcome.
-    /// </para>
-    /// </remarks>
-    /// <returns>
-    /// A result indicating whether further retry attempts are required (typically returns <c>false</c>).
-    /// </returns>
-    public Task ProcessOrderRetry(NotificationOrder order, UnitOfWork unitOfWork);
+    public Task ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork);
 }

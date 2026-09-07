@@ -45,7 +45,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
-    private const string _advanceStatusFromRegisteredSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2 AND processedstatus = 'Registered'::orderprocessingstate";
+    private const string _advanceStatusSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _getOrderPastSendTime = "select notifications.getorder_pastsendtime()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
@@ -968,7 +968,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
 
         ////await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
-        await using NpgsqlCommand pgcom = new(_advanceStatusFromRegisteredSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
@@ -976,31 +976,8 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
         if (rowsAffected == 0)
         {
-            await using NpgsqlCommand statusCmd = new(
-                "SELECT processedstatus FROM notifications.orders WHERE alternateid = $1",
-                connection,
-                transaction);
-            statusCmd.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-            var currentStatus = (string?)await statusCmd.ExecuteScalarAsync(cancellationToken);
-
-            // TODO pastdue poc: Decide how to handle duplicate notifications. We cannot rollback here
-            if (currentStatus is "Completed" or "Processed")
-            {
-                ////// Explicit rollback here — duplicate notifications are discarded.
-                ////// We return normally so this path never reaches the catch block.
-                ////await transaction.RollbackAsync(CancellationToken.None);
-
-                ////_logger.LogError(
-                ////    "Order {OrderId} already had status '{CurrentStatus}' when PersistProcessingResultAsync was called; this order was processed more than once. Duplicate notifications were rolled back.",
-                ////    order.Id,
-                ////    currentStatus);
-
-                ////return isCompleted;
-            }
-
-            // Throw — the catch block handles the single rollback for this path.
             throw new InvalidOperationException(
-                $"Order {order.Id} had unexpected status '{currentStatus ?? "not found"}' when attempting to persist processing result; expected Processing.");
+                $"Order {order.Id} not found when attempting to persist processing result");
         }
 
         if (isCompleted)
@@ -1012,47 +989,29 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default)
+    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, OrderProcessingStatus status, CancellationToken cancellationToken = default)
     {
         var connection = unitOfWork.Connection;
         var transaction = unitOfWork.Transaction;
 
-        await using NpgsqlCommand pgcom = new(_advanceStatusFromRegisteredSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, OrderProcessingStatus.SendConditionNotMet.ToString());
+        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
 
         if (rowsAffected > 0)
         {
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            // Don't insert a status feed entry the state is Retrying, as this is a transient state and not a final state.
+            // The status feed entry will be inserted when the order reaches a final state (Completed, SendConditionNotMet, or Cancelled).
+            if (status == OrderProcessingStatus.SendConditionNotMet)
+            {
+                await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
+            }
         }
-        else
+        else if (rowsAffected == 0)
         {
-            await using NpgsqlCommand statusCmd = new(
-                "SELECT processedstatus FROM notifications.orders WHERE alternateid = $1",
-                connection,
-                transaction);
-            statusCmd.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-            var currentStatus = (string?)await statusCmd.ExecuteScalarAsync(cancellationToken);
-
-            if (currentStatus is null)
-            {
-                throw new InvalidOperationException($"Order {order.Id} was not found when attempting to set SendConditionNotMet.");
-            }
-
-            if (currentStatus is "SendConditionNotMet" or "Completed")
-            {
-                // Expected duplicate delivery — the order was already processed successfully.
-                _logger.LogError(
-                    "Order {OrderId} already had status '{CurrentStatus}' when SetOrderSendConditionNotMetAsync was called; this order was processed more than once.",
-                    order.Id,
-                    currentStatus);
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    $"Order {order.Id} had unexpected status '{currentStatus}' when attempting to set SendConditionNotMet; expected Processing.");
-            }
+            throw new InvalidOperationException(
+                $"Order {order.Id} not found when attempting to persist processing result");
         }
     }
 
