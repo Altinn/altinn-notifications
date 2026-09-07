@@ -240,6 +240,31 @@ public class SmsSenderSubstitutionServiceTests
         Assert.Equal("Altinn", result);
     }
 
+    [Fact]
+    public void ResolveSender_PathologicalRegexPatternTimesOut_TreatedAsNonMatch_ReturnsConfiguredSenderUnchanged()
+    {
+        // Arrange - classic catastrophic-backtracking pattern (nested quantifiers), requires
+        // regex fallback since it contains metacharacters. Combined with a non-matching
+        // input long enough to trigger exponential backtracking before hitting the timeout.
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                PhoneNumberPrefixPattern = "^(a+)+$",
+                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
+            }
+        ]);
+
+        var pathologicalInput = new string('a', 40) + "!";
+
+        // Act
+        var result = service.ResolveSender("Altinn", pathologicalInput, "digdir");
+
+        // Assert - the timeout is caught internally and treated as a non-match, so the
+        // configured sender is returned unchanged rather than the call throwing or hanging.
+        Assert.Equal("Altinn", result);
+    }
+
     private static ISmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)
     {
         var config = new SmsSenderSubstitutionConfig { Rules = rules };

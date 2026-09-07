@@ -10,6 +10,8 @@ namespace Altinn.Notifications.Core.Services;
 /// <inheritdoc cref="ISmsSenderSubstitutionService"/>
 public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
 {
+    private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
+
     private readonly CompiledRule[] _rules;
 
     /// <summary>
@@ -53,7 +55,7 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
     /// <summary>
     /// Compiles a configured <see cref="SmsSenderSubstitutionRule"/> into a <see cref="CompiledRule"/>,
     /// using a fast literal-prefix comparison when the pattern is a simple anchored prefix,
-    /// falling back to a compiled regular expression otherwise.
+    /// falling back to a compiled regular expression (bounded by a match timeout) otherwise.
     /// </summary>
     private static CompiledRule CompileRule(SmsSenderSubstitutionRule rule)
     {
@@ -61,7 +63,7 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
 
         return literalPrefix != null
             ? new CompiledRule(literalPrefix, null, rule.NumericSenderByServiceOwner)
-            : new CompiledRule(null, new Regex(rule.PhoneNumberPrefixPattern, RegexOptions.Compiled | RegexOptions.CultureInvariant), rule.NumericSenderByServiceOwner);
+            : new CompiledRule(null, new Regex(rule.PhoneNumberPrefixPattern, RegexOptions.Compiled | RegexOptions.CultureInvariant, _regexTimeout), rule.NumericSenderByServiceOwner);
     }
 
     /// <summary>
@@ -112,9 +114,22 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
 
         public bool Matches(string phoneNumber)
         {
-            return _literalPrefix != null
-                ? phoneNumber.StartsWith(_literalPrefix, StringComparison.Ordinal)
-                : _regex!.IsMatch(phoneNumber);
+            if (_literalPrefix != null)
+            {
+                return phoneNumber.StartsWith(_literalPrefix, StringComparison.Ordinal);
+            }
+
+            try
+            {
+                return _regex!.IsMatch(phoneNumber);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // Treat a pathological/runaway pattern as a non-match rather than letting it
+                // block SMS publishing. The rule is still applied to subsequent recipients;
+                // it simply never substitutes for phone numbers that trigger the timeout.
+                return false;
+            }
         }
     }
 }
