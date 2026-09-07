@@ -51,7 +51,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms_batch(INTEGER) IS
+COMMENT ON FUNCTION notifications.claim_daytime_sms_batch_v2(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
-Includes the order creatorname to support per-service-owner SMS sender substitution.'
+Includes the order creatorname to support per-service-owner SMS sender substitution.';

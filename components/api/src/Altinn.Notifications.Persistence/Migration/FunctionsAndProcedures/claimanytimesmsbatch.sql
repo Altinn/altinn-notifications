@@ -51,7 +51,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_anytime_sms_batch(INTEGER) IS
+COMMENT ON FUNCTION notifications.claim_anytime_sms_batch_v2(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 1).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
