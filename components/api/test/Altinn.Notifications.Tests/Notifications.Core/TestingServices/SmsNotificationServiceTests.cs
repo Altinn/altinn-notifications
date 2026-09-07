@@ -665,6 +665,87 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_SubstitutionRulesConfiguredAndMatch_PublisherReceivesSubstitutedSender()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+34123456789", "message", "digdir");
+        var batch = new List<Sms> { sms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var commandPublisherMock = new Mock<ISendSmsPublisher>();
+        commandPublisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var senderSubstitutionServiceMock = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(true);
+        senderSubstitutionServiceMock
+            .Setup(s => s.ResolveSender("Altinn", "+34123456789", "digdir"))
+            .Returns("+4775006000");
+
+        var service = GetTestService(
+            repository: repoMock.Object,
+            commandPublisher: commandPublisherMock.Object,
+            senderSubstitutionService: senderSubstitutionServiceMock.Object);
+
+        // Act
+        await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert - the sender passed to the publisher has been substituted
+        commandPublisherMock.Verify(
+            p => p.PublishAsync(
+                It.Is<IReadOnlyList<Sms>>(list => list.Any(s => s.Sender == "+4775006000")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotifications_NoSubstitutionRulesConfigured_ResolveSenderIsNeverCalled()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799990001", "message", "digdir");
+        var batch = new List<Sms> { sms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var commandPublisherMock = new Mock<ISendSmsPublisher>();
+        commandPublisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var senderSubstitutionServiceMock = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(false);
+
+        var service = GetTestService(
+            repository: repoMock.Object,
+            commandPublisher: commandPublisherMock.Object,
+            senderSubstitutionService: senderSubstitutionServiceMock.Object);
+
+        // Act
+        await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert - sender unchanged, and ResolveSender never invoked when no rules are configured
+        commandPublisherMock.Verify(
+            p => p.PublishAsync(
+                It.Is<IReadOnlyList<Sms>>(list => list.Any(s => s.Sender == "Altinn")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        senderSubstitutionServiceMock.Verify(
+            s => s.ResolveSender(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotifications_PublishAsyncReturnsSingleFailure_OnlyThatItemStatusReset()
     {
         // Arrange
@@ -700,6 +781,7 @@ public class SmsNotificationServiceTests
         DateTime? dateTimeOutput = null,
         ISmsNotificationRepository? repository = null,
         ISendSmsPublisher? commandPublisher = null,
+        ISmsSenderSubstitutionService? senderSubstitutionService = null,
         int? publishBatchSize = null)
     {
         var guidService = MockGuidService(guidOutput);
@@ -707,12 +789,14 @@ public class SmsNotificationServiceTests
 
         repository ??= new Mock<ISmsNotificationRepository>().Object;
         commandPublisher ??= new Mock<ISendSmsPublisher>().Object;
+        senderSubstitutionService ??= new Mock<ISmsSenderSubstitutionService>().Object;
 
         return new SmsNotificationService(
             guidService,
             dateTimeService,
             repository,
             commandPublisher,
+            senderSubstitutionService,
             Options.Create(new NotificationConfig
             {
                 SmsPublishBatchSize = publishBatchSize ?? 50
