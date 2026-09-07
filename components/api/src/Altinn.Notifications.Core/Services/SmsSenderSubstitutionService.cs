@@ -77,9 +77,27 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
     {
         var candidate = pattern.StartsWith('^') ? pattern[1..] : pattern;
 
-        if (candidate.Length == 0 || candidate.Any(IsRegexMetacharacter))
+        if (candidate.Length == 0)
         {
             return null;
+        }
+
+        // A leading "+" (e.g. "+34" in an international phone number prefix) cannot function
+        // as a valid regex quantifier at the start of the pattern, so it is safe to treat as
+        // a literal character here rather than rejecting the whole pattern as "not literal".
+        for (var i = 0; i < candidate.Length; i++)
+        {
+            var c = candidate[i];
+
+            if (c == '+' && i == 0)
+            {
+                continue;
+            }
+
+            if (IsRegexMetacharacter(c))
+            {
+                return null;
+            }
         }
 
         return candidate;
