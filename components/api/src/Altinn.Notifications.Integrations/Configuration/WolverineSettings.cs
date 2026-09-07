@@ -9,31 +9,16 @@ namespace Altinn.Notifications.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
-    /// Maximum number of email send commands published concurrently during a batch publish operation.
-    /// </summary>
-    public int EmailPublishConcurrency { get; set; } = 10;
-
-    /// <summary>
     /// ASB queue name for publishing email send commands.
     /// Produced by this API and consumed by the email service.
     /// </summary>
     public string EmailSendQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Maximum number of composed email send commands published concurrently during a batch publish operation.
-    /// </summary>
-    public int ComposedEmailPublishConcurrency { get; set; } = 5;
-
-    /// <summary>
     /// ASB queue name for publishing composed email send commands.
     /// Produced by this API and consumed by the email service on a dedicated listener.
     /// </summary>
     public string ComposedEmailSendQueueName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Maximum number of SMS send commands published concurrently during a batch publish operation.
-    /// </summary>
-    public int SmsPublishConcurrency { get; set; } = 10;
 
     /// <summary>
     /// ASB queue name used for publishing SMS messages.
@@ -142,9 +127,4 @@ public class WolverineSettings : WolverineSettingsBase
     /// and platform dependency failures.
     /// </summary>
     public int PastDueOrdersRetryDelayMs { get; set; } = 60_000;
-
-    /// <summary>
-    /// Maximum number of past-due orders send commands published concurrently during a batch publish operation.
-    /// </summary>
-    public int PastDueOrdersPublishConcurrency { get; set; } = 10;
 }

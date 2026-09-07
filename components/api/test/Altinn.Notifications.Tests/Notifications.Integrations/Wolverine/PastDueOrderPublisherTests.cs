@@ -44,7 +44,6 @@ public class PastDueOrderPublisherTests
             m => m.PublishBatchAsync(
                 It.Is<IReadOnlyList<NotificationOrder>>(items => items.Count == 0),
                 It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<NotificationOrder, Exception>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -61,7 +60,6 @@ public class PastDueOrderPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<NotificationOrder>>(),
                 It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<NotificationOrder, Exception>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
@@ -210,65 +208,6 @@ public class PastDueOrderPublisherTests
             Times.Never);
     }
 
-    [Fact]
-    public async Task PublishAsync_PassesConfiguredConcurrencyToMessageBusPublisher()
-    {
-        // Arrange
-        const int configuredConcurrency = 7;
-        var orders = new List<NotificationOrder> { CreateOrder() };
-
-        int? capturedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<NotificationOrder>>(),
-                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
-                It.IsAny<int>(),
-                It.IsAny<Action<NotificationOrder, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<NotificationOrder>, Func<NotificationOrder, ProcessPastDueOrderCommand>, int, Action<NotificationOrder, Exception>?, CancellationToken>(
-                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
-            .ReturnsAsync((IReadOnlyList<NotificationOrder>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock, concurrency: configuredConcurrency);
-
-        // Act
-        await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(configuredConcurrency, capturedConcurrency);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task PublishAsync_ZeroOrNegativeConcurrency_PassesDefaultOfTenToMessageBusPublisher(int configuredConcurrency)
-    {
-        // Arrange
-        var orders = new List<NotificationOrder> { CreateOrder() };
-
-        int? capturedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<NotificationOrder>>(),
-                It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
-                It.IsAny<int>(),
-                It.IsAny<Action<NotificationOrder, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<NotificationOrder>, Func<NotificationOrder, ProcessPastDueOrderCommand>, int, Action<NotificationOrder, Exception>?, CancellationToken>(
-                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
-            .ReturnsAsync((IReadOnlyList<NotificationOrder>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock, concurrency: configuredConcurrency);
-
-        // Act
-        await publisher.PublishAsync(orders, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(10, capturedConcurrency);
-    }
-
     /// <summary>
     /// Configures <paramref name="messageBusPublisherMock"/> so that <c>PublishBatchAsync</c> exercises
     /// the provided <c>commandFactory</c> and <c>onError</c> callbacks the same way the real
@@ -283,10 +222,9 @@ public class PastDueOrderPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<NotificationOrder>>(),
                 It.IsAny<Func<NotificationOrder, ProcessPastDueOrderCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<NotificationOrder, Exception>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyList<NotificationOrder> items, Func<NotificationOrder, ProcessPastDueOrderCommand> commandFactory, int _, Action<NotificationOrder, Exception>? onError, CancellationToken _) =>
+            .ReturnsAsync((IReadOnlyList<NotificationOrder> items, Func<NotificationOrder, ProcessPastDueOrderCommand> commandFactory, Action<NotificationOrder, Exception>? onError, CancellationToken _) =>
             {
                 var failed = new List<NotificationOrder>();
 
@@ -308,13 +246,10 @@ public class PastDueOrderPublisherTests
 
     private static PastDueOrderPublisher CreatePublisher(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null,
-        int concurrency = 10)
+        Mock<ILogger<PastDueOrderPublisher>>? loggerMock = null)
     {
         loggerMock ??= new Mock<ILogger<PastDueOrderPublisher>>();
 
-        var options = Options.Create(new WolverineSettings { PastDueOrdersPublishConcurrency = concurrency });
-
-        return new PastDueOrderPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
+        return new PastDueOrderPublisher(loggerMock.Object, messageBusPublisherMock.Object);
     }
 }

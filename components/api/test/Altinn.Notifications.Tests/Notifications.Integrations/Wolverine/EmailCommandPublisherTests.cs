@@ -276,39 +276,9 @@ public class EmailCommandPublisherTests
             m => m.PublishBatchAsync(
                 It.Is<IReadOnlyList<Email>>(items => items.Count == 0),
                 It.IsAny<Func<Email, SendEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Email, Exception>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task PublishAsync_Batch_PassesConfiguredConcurrencyToMessageBusPublisher()
-    {
-        // Arrange
-        const int configuredConcurrency = 7;
-        var emails = new List<Email> { _email };
-
-        int? capturedConcurrency = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishBatchAsync(
-                It.IsAny<IReadOnlyList<Email>>(),
-                It.IsAny<Func<Email, SendEmailCommand>>(),
-                It.IsAny<int>(),
-                It.IsAny<Action<Email, Exception>?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyList<Email>, Func<Email, SendEmailCommand>, int, Action<Email, Exception>?, CancellationToken>(
-                (_, _, concurrency, _, _) => capturedConcurrency = concurrency)
-            .ReturnsAsync((IReadOnlyList<Email>)[]);
-
-        var publisher = CreatePublisher(messageBusPublisherMock, publishConcurrency: configuredConcurrency);
-
-        // Act
-        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(configuredConcurrency, capturedConcurrency);
     }
 
     [Fact]
@@ -322,7 +292,6 @@ public class EmailCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<Email>>(),
                 It.IsAny<Func<Email, SendEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Email, Exception>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
@@ -409,10 +378,9 @@ public class EmailCommandPublisherTests
             .Setup(m => m.PublishBatchAsync(
                 It.IsAny<IReadOnlyList<Email>>(),
                 It.IsAny<Func<Email, SendEmailCommand>>(),
-                It.IsAny<int>(),
                 It.IsAny<Action<Email, Exception>?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyList<Email> items, Func<Email, SendEmailCommand> commandFactory, int _, Action<Email, Exception>? onError, CancellationToken _) =>
+            .ReturnsAsync((IReadOnlyList<Email> items, Func<Email, SendEmailCommand> commandFactory, Action<Email, Exception>? onError, CancellationToken _) =>
             {
                 var failed = new List<Email>();
 
@@ -434,13 +402,10 @@ public class EmailCommandPublisherTests
 
     private static EmailCommandPublisher CreatePublisher(
         Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<EmailCommandPublisher>>? loggerMock = null,
-        int publishConcurrency = 10)
+        Mock<ILogger<EmailCommandPublisher>>? loggerMock = null)
     {
         loggerMock ??= new Mock<ILogger<EmailCommandPublisher>>();
 
-        var options = Options.Create(new WolverineSettings { EmailPublishConcurrency = publishConcurrency });
-
-        return new EmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object, options);
+        return new EmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
     }
 }

@@ -78,7 +78,6 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             (IReadOnlyList<TestItem>)[],
             item => new TestCommand(item.Id),
-            concurrency: 10,
             onError: null,
             TestContext.Current.CancellationToken);
 
@@ -101,7 +100,7 @@ public class WolverinePublisherTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, cts.Token));
+            () => publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, cts.Token));
 
         messageBusMock.Verify(m => m.SendAsync(It.IsAny<TestCommand>(), It.IsAny<DeliveryOptions?>()), Times.Never);
     }
@@ -120,7 +119,7 @@ public class WolverinePublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, TestContext.Current.CancellationToken);
+        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -146,7 +145,6 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             items,
             item => new TestCommand(item.Id),
-            10,
             (item, ex) => errors.Add((item, ex)),
             TestContext.Current.CancellationToken);
 
@@ -175,7 +173,7 @@ public class WolverinePublisherTests
         var publisher = CreatePublisher(messageBusMock);
 
         // Act
-        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), 10, null, TestContext.Current.CancellationToken);
+        var result = await publisher.PublishBatchAsync(items, item => new TestCommand(item.Id), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -199,13 +197,56 @@ public class WolverinePublisherTests
         var result = await publisher.PublishBatchAsync(
             [item],
             i => new TestCommand(i.Id),
-            10,
             null,
             TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
         Assert.Equal(item.Id, result[0].Id);
+    }
+
+    [Fact]
+    public async Task PublishBatchAsync_CancellationRequestedDuringBatch_SkipsRemainingItemsAndReportsThemAsFailed()
+    {
+        // Arrange
+        var firstItem = new TestItem(Guid.NewGuid());
+        var secondItem = new TestItem(Guid.NewGuid());
+        IReadOnlyList<TestItem> items = [firstItem, secondItem];
+
+        using var cts = new CancellationTokenSource();
+
+        var messageBusMock = new Mock<IMessageBus>();
+        messageBusMock
+            .Setup(m => m.SendAsync(It.Is<TestCommand>(c => c.Id == firstItem.Id), It.IsAny<DeliveryOptions?>()))
+            .Returns(() =>
+            {
+                // Cancelling synchronously here—before the second item's admission check
+                // runs—removes any timing race: Task.WhenAll(items.Select(...)) dispatches
+                // each item's lambda synchronously in order, so by the time item2's check
+                // executes, cancellation is guaranteed to already be visible.
+                cts.Cancel();
+                return ValueTask.CompletedTask;
+            });
+
+        var publisher = CreatePublisher(messageBusMock);
+
+        var errors = new List<(TestItem Item, Exception Exception)>();
+
+        // Act
+        var result = await publisher.PublishBatchAsync(
+            items,
+            item => new TestCommand(item.Id),
+            (item, ex) => errors.Add((item, ex)),
+            cts.Token);
+
+        // Assert: the second item is skipped entirely—SendAsync must never be called for it.
+        messageBusMock.Verify(
+            m => m.SendAsync(It.Is<TestCommand>(c => c.Id == secondItem.Id), It.IsAny<DeliveryOptions?>()),
+            Times.Never);
+
+        Assert.DoesNotContain(firstItem, result);
+        Assert.Contains(secondItem, result);
+        Assert.Contains(errors, e => e.Item.Id == secondItem.Id && e.Exception is OperationCanceledException);
     }
 
     private static WolverinePublisher CreatePublisher(Mock<IMessageBus> messageBusMock)
