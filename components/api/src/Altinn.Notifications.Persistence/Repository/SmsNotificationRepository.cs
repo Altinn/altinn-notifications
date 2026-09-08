@@ -115,7 +115,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 reader.GetValue<Guid>("alternateid"),
                 reader.GetValue<string>("sendernumber"),
                 reader.GetValue<string>("mobilenumber"),
-                reader.GetValue<string>("body")));
+                reader.GetValue<string>("body"),
+                reader.GetValue<string>("creatorname")));
         }
 
         return result;
