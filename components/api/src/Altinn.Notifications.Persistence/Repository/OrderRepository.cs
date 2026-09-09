@@ -258,7 +258,9 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         {
             if (await reader.ReadAsync(cancellationToken))
             {
-                return await reader.GetFieldValueAsync<NotificationOrder>(0);
+                var notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0);
+                notificationOrder.OrderProcessingStatus = processRetry ? OrderProcessingStatus.Retrying : OrderProcessingStatus.Registered;
+                return notificationOrder;
             }
         }
 

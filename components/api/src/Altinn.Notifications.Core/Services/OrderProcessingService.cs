@@ -194,10 +194,7 @@ public class OrderProcessingService : IOrderProcessingService
             return new SendConditionEvaluationResult { IsSendConditionMet = evaluationResult.Value };
         }
 
-        // TODO: pastdue poc: Consider if we should change the model/datamodel so that the relevant db columns are included in the NotificationOrder object,
-        // to avoid this extra db call. For now, we will do a db call to check if this is the first time we are processing this order.
-        bool firstTime = (await _orderRepository.GetOrderWithStatusById(order.Id, order.Creator.ShortName))?.ProcessingStatus.Status != OrderProcessingStatus.Retrying;
-        if (!firstTime)
+        if (order.OrderProcessingStatus == OrderProcessingStatus.Retrying)
         {
             _logger.LogInformation(
                 "// OrderProcessingService // IsSendConditionMet // Condition check failed on retry for order with ID '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Processing the order regardless.",
