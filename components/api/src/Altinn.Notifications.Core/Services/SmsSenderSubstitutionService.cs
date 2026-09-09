@@ -32,7 +32,10 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
             return configuredSender;
         }
 
-        var normalizedPhoneNumber = NormalizePhoneNumber(recipientPhoneNumber);
+        if (!TryNormalizePhoneNumber(recipientPhoneNumber, out var normalizedPhoneNumber))
+        {
+            return configuredSender;
+        }
 
         foreach (var rule in _rules)
         {
@@ -51,25 +54,36 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
     }
 
     /// <summary>
-    /// Strips a leading "+" or "00" international dialing prefix from a phone number, so that
-    /// both formats resolve to the same bare country code for prefix comparison against
-    /// <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/>.
+    /// Attempts to strip a leading "+" or "00" international dialing prefix from a phone
+    /// number, so that both formats resolve to the same bare country code for prefix
+    /// comparison against <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/>.
     /// </summary>
-    /// <param name="phoneNumber">The recipient phone number, e.g. "+4790926292" or "004790926292".</param>
-    /// <returns>The phone number without its leading "+" or "00" prefix.</returns>
-    private static string NormalizePhoneNumber(string phoneNumber)
+    /// <param name="phoneNumber">The recipient phone number, e.g. "+4799999999" or "00479999999".</param>
+    /// <param name="normalizedPhoneNumber">
+    /// The phone number without its leading "+" or "00" prefix, if one was present; otherwise
+    /// <see cref="string.Empty"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the phone number had a leading "+" or "00" international
+    /// dialing prefix and could be normalized; otherwise <see langword="false"/>, indicating
+    /// no country code substitution rule should be evaluated.
+    /// </returns>
+    private static bool TryNormalizePhoneNumber(string phoneNumber, out string normalizedPhoneNumber)
     {
         if (phoneNumber.StartsWith('+'))
         {
-            return phoneNumber[1..];
+            normalizedPhoneNumber = phoneNumber[1..];
+            return true;
         }
 
         if (phoneNumber.StartsWith("00", StringComparison.Ordinal))
         {
-            return phoneNumber[2..];
+            normalizedPhoneNumber = phoneNumber[2..];
+            return true;
         }
 
-        return phoneNumber;
+        normalizedPhoneNumber = string.Empty;
+        return false;
     }
 
     /// <summary>

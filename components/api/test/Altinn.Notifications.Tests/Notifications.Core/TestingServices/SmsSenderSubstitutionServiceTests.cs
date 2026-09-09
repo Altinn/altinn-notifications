@@ -240,6 +240,28 @@ public class SmsSenderSubstitutionServiceTests
         Assert.Equal("Altinn", result);
     }
 
+    [Fact]
+    public void ResolveSender_RecipientNumberHasNoInternationalPrefix_DoesNotMatchCountryCodeRule()
+    {
+        // Arrange - an 8-digit national number with no leading "+" or "00" happens to start
+        // with the digits "34", but since there is no international dialing prefix present,
+        // it must NOT be treated as if "34" were a country code.
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                CountryCodePrefix = "34",
+                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
+            }
+        ]);
+
+        // Act
+        var result = service.ResolveSender("Altinn", "34123456", "digdir");
+
+        // Assert
+        Assert.Equal("Altinn", result);
+    }
+
     private static SmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)
     {
         var config = new SmsSenderSubstitutionConfig { Rules = rules };

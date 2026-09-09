@@ -26,7 +26,7 @@ public class SmsSenderSubstitutionRule
     /// Must NOT include a leading "+", "00", or any regex metacharacters. Matching is done
     /// against the recipient's phone number after normalizing away either a leading "+" or
     /// "00" international dialing prefix, so a rule configured with "47" matches both
-    /// "+4790926292" and "004790926292".
+    /// "+4799999999" and "00479999999".
     /// </summary>
     public string CountryCodePrefix { get; set; } = string.Empty;
 
