@@ -47,6 +47,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _advanceStatusSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _getOrderPastSendTime = "select notifications.getorder_pastsendtime()";
+    private const string _getOrderRetry = "select notifications.getorder_retry()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder_v2($1, $2)"; // _alternateid,  creator
     private const string _insertOrderChainSql = "select notifications.insertorderchain_v2($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
@@ -250,9 +251,9 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, CancellationToken cancellationToken = default)
+    public async Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, bool processRetry, CancellationToken cancellationToken = default)
     {
-        await using NpgsqlCommand pgcom = new(_getOrderPastSendTime, unitOfWork.Connection, unitOfWork.Transaction);
+        await using NpgsqlCommand pgcom = new(processRetry ? _getOrderRetry : _getOrderPastSendTime, unitOfWork.Connection, unitOfWork.Transaction);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
             if (await reader.ReadAsync(cancellationToken))

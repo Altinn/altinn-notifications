@@ -73,7 +73,17 @@ public class NotificationConfig
     public int PastDueOrdersTaskCount { get; set; } = 30;
 
     /// <summary>
+    /// The number of retry tasks to run concurrently in the background service
+    /// </summary>
+    public int RetryOrdersTaskCount { get; set; } = 1;
+
+    /// <summary>
     /// The delay in seconds between each iteration of the past due orders background service when idle
     /// </summary>
     public int PastDueOrdersIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the retry orders background service when idle
+    /// </summary>
+    public int RetryOrdersIdleDelaySeconds { get; set; } = 30;
 }

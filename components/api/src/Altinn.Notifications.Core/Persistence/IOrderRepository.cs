@@ -124,6 +124,9 @@ public interface IOrderRepository
     /// <param name="unitOfWork">
     /// The <see cref="UnitOfWork"/> used to execute the query and status update in the current database context.
     /// </param>
+    /// <param name="processRetry">
+    /// A boolean indicating whether to process retry orders. If true, retrieves orders that are being retried; otherwise, retrieves orders past their send time.
+    /// </param>
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
@@ -131,7 +134,7 @@ public interface IOrderRepository
     /// A <see cref="Task{TResult}"/> The first <see cref="NotificationOrder"/> object that was retrieved and marked for processing.
     /// Returns null if no orders are past due or available for processing.
     /// </returns>
-    public Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, CancellationToken cancellationToken = default);
+    public Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, bool processRetry, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets processing status of an order

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.getorder_pastsendtime()
+CREATE OR REPLACE FUNCTION notifications.getorder_retry()
     RETURNS TABLE(notificationorders jsonb)
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -6,8 +6,8 @@ BEGIN
     RETURN QUERY
 		SELECT notificationorder AS notificationorders
 		FROM notifications.orders
-		WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'
-		ORDER BY requestedsendtime ASC, _id ASC
+		WHERE processedstatus = 'Retrying'::orderprocessingstate AND processed <= now() - INTERVAL '1 minute'
+		ORDER BY processed  ASC, _id ASC
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED;
 END;

@@ -55,48 +55,42 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default, int maxIterations = -1)
+    public async Task<bool> StartProcessingPastDueOrders(bool processRetry, CancellationToken cancellationToken = default)
     {
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
-        for (int i = 0; maxIterations == -1 || i < maxIterations; i++)
+        using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
+        var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        bool rollbackDone = false;
+
+        try
         {
-            using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
-            var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-            bool rollbackDone = false;
-
-            try
+            var pastDueOrder = await _orderRepository.GetNextPastDueOrder(unitOfWork, processRetry, cancellationToken);
+            if (pastDueOrder == null)
             {
-                var pastDueOrder = await _orderRepository.GetNextPastDueOrder(unitOfWork, cancellationToken);
-                if (pastDueOrder == null)
-                {
-                    await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                    rollbackDone = true;
-                    await Task.Delay(_config.PastDueOrdersIdleDelaySeconds * 1000, cancellationToken);
-                    continue;
-                }
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                rollbackDone = true;
 
-                await ProcessOrder(pastDueOrder, unitOfWork);
-                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-
-                cancellationToken.ThrowIfCancellationRequested();
+                return false;
             }
-            catch (Exception e)
+
+            await ProcessOrder(pastDueOrder, unitOfWork);
+            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!rollbackDone)
             {
-                if (!(e is OperationCanceledException || e is TaskCanceledException))
-                {
-                    _logger.LogError(
-                        e,
-                        "An error occurred while processing past due orders. The current unit of work will be rolled back. Error message: {ErrorMessage}",
-                        e.Message);
-                }
-
-                if (!rollbackDone)
-                {
-                    await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                }
-
-                throw;
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "An error occurred while processing past due order: {ErrorMessage}", e.Message);
+            }
+
+            return false;
         }
     }
 

@@ -45,7 +45,23 @@ public class TriggerController(
     public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
         // TODO pastdue poc: This endpoint is currently only used for testing and debugging. In production, the background service will handle past due orders automatically.
-        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken, 1);
+        await _orderProcessingService.StartProcessingPastDueOrders(false, cancellationToken);
+
+        return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint for starting the processing of retry orders
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+    [HttpPost]
+    [Route("retryorders")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_RetryOrders(CancellationToken cancellationToken = default)
+    {
+        // TODO pastdue poc: This endpoint is currently only used for testing and debugging. In production, the background service will handle past due orders automatically.
+        await _orderProcessingService.StartProcessingPastDueOrders(true, cancellationToken);
 
         return Ok();
     }

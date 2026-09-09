@@ -34,21 +34,40 @@ public class PastDueOrdersBackgroundService : BackgroundService
         {
             try
             {
-                // This loop will normally only get executed once, but in case of an exception we want to restart
-                Task[] tasks = Enumerable.Range(0, _config.PastDueOrdersTaskCount)
-                    .Select(_ => _orderProcessingService.StartProcessingPastDueOrders(stoppingToken))
+                Task[] pastDueTasks = Enumerable.Range(0, _config.PastDueOrdersTaskCount)
+                    .Select(_ => RunOrderLoop(false, stoppingToken))
+                    .ToArray();
+                Task[] retryTasks = Enumerable.Range(0, _config.RetryOrdersTaskCount)
+                    .Select(_ => RunOrderLoop(true, stoppingToken))
                     .ToArray();
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(pastDueTasks.Concat(retryTasks));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                if (ex is OperationCanceledException)
+                if (stoppingToken.IsCancellationRequested)
                 {
                     throw;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+            }
+        }
+    }
+
+    private async Task RunOrderLoop(bool processRetry, CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (!await _orderProcessingService.StartProcessingPastDueOrders(processRetry, stoppingToken) && !stoppingToken.IsCancellationRequested)
+                {
+                    await Task.Delay((processRetry ? _config.RetryOrdersIdleDelaySeconds : _config.PastDueOrdersIdleDelaySeconds) * 1000, stoppingToken);
+                }
+            }
+            catch (Exception)
+            {
             }
         }
     }
