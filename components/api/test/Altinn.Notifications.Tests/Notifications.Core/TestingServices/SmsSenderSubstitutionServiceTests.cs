@@ -24,14 +24,14 @@ public class SmsSenderSubstitutionServiceTests
     }
 
     [Fact]
-    public void HasRules_RuleWithEmptyPattern_IsIgnored_ReturnsFalse()
+    public void HasRules_RuleWithEmptyPrefix_IsIgnored_ReturnsFalse()
     {
         // Arrange
         var service = CreateService(
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = string.Empty,
+                CountryCodePrefix = string.Empty,
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -48,7 +48,7 @@ public class SmsSenderSubstitutionServiceTests
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = []
             }
         ]);
@@ -65,7 +65,7 @@ public class SmsSenderSubstitutionServiceTests
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -88,14 +88,14 @@ public class SmsSenderSubstitutionServiceTests
     }
 
     [Fact]
-    public void ResolveSender_LiteralPrefixPatternMatchesAndOwnerHasEntry_ReturnsNumericSender()
+    public void ResolveSender_PlusPrefixedNumberMatchesAndOwnerHasEntry_ReturnsNumericSender()
     {
         // Arrange
         var service = CreateService(
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -108,14 +108,14 @@ public class SmsSenderSubstitutionServiceTests
     }
 
     [Fact]
-    public void ResolveSender_RegexPatternMatchesAndOwnerHasEntry_ReturnsNumericSender()
+    public void ResolveSender_DoubleZeroPrefixedNumberMatchesAndOwnerHasEntry_ReturnsNumericSender()
     {
-        // Arrange - pattern with alternation requires regex fallback, matches "+34" or "0034"
+        // Arrange - "00" and "+" international prefixes must resolve to the same mapping
         var service = CreateService(
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^(?:\\+|00)34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -130,14 +130,14 @@ public class SmsSenderSubstitutionServiceTests
     }
 
     [Fact]
-    public void ResolveSender_PatternDoesNotMatch_ReturnsConfiguredSenderUnchanged()
+    public void ResolveSender_PrefixDoesNotMatch_ReturnsConfiguredSenderUnchanged()
     {
         // Arrange
         var service = CreateService(
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -150,14 +150,14 @@ public class SmsSenderSubstitutionServiceTests
     }
 
     [Fact]
-    public void ResolveSender_PatternMatchesButServiceOwnerHasNoEntry_ReturnsConfiguredSenderUnchanged()
+    public void ResolveSender_PrefixMatchesButServiceOwnerHasNoEntry_ReturnsConfiguredSenderUnchanged()
     {
         // Arrange
         var service = CreateService(
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -177,12 +177,12 @@ public class SmsSenderSubstitutionServiceTests
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["other-owner"] = "+4700000000" }
             },
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -208,7 +208,7 @@ public class SmsSenderSubstitutionServiceTests
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
             }
         ]);
@@ -228,7 +228,7 @@ public class SmsSenderSubstitutionServiceTests
         [
             new SmsSenderSubstitutionRule
             {
-                PhoneNumberPrefixPattern = "^+34",
+                CountryCodePrefix = "34",
                 NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "   " }
             }
         ]);
@@ -237,31 +237,6 @@ public class SmsSenderSubstitutionServiceTests
         var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
-    }
-
-    [Fact]
-    public void ResolveSender_PathologicalRegexPatternTimesOut_TreatedAsNonMatch_ReturnsConfiguredSenderUnchanged()
-    {
-        // Arrange - classic catastrophic-backtracking pattern (nested quantifiers), requires
-        // regex fallback since it contains metacharacters. Combined with a non-matching
-        // input long enough to trigger exponential backtracking before hitting the timeout.
-        var service = CreateService(
-        [
-            new SmsSenderSubstitutionRule
-            {
-                PhoneNumberPrefixPattern = "^(a+)+$",
-                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
-            }
-        ]);
-
-        var pathologicalInput = new string('a', 40) + "!";
-
-        // Act
-        var result = service.ResolveSender("Altinn", pathologicalInput, "digdir");
-
-        // Assert - the timeout is caught internally and treated as a non-match, so the
-        // configured sender is returned unchanged rather than the call throwing or hanging.
         Assert.Equal("Altinn", result);
     }
 

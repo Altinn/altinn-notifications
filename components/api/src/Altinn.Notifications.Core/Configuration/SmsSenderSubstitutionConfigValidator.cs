@@ -1,18 +1,15 @@
-﻿using System.Text.RegularExpressions;
-
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Configuration;
 
 /// <summary>
 /// Validates <see cref="SmsSenderSubstitutionConfig"/> at startup, ensuring every configured
-/// <see cref="SmsSenderSubstitutionRule.PhoneNumberPrefixPattern"/> is a syntactically valid
-/// regular expression before the application starts processing notifications.
+/// <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/> consists of 1-3 digits only, with
+/// no leading "+"/"00" or regex metacharacters, before the application starts processing
+/// notifications.
 /// </summary>
 public class SmsSenderSubstitutionConfigValidator : IValidateOptions<SmsSenderSubstitutionConfig>
 {
-    private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
-
     /// <inheritdoc/>
     public ValidateOptionsResult Validate(string? name, SmsSenderSubstitutionConfig options)
     {
@@ -25,22 +22,18 @@ public class SmsSenderSubstitutionConfigValidator : IValidateOptions<SmsSenderSu
 
         for (var i = 0; i < options.Rules.Count; i++)
         {
-            var pattern = options.Rules[i].PhoneNumberPrefixPattern;
+            var prefix = options.Rules[i].CountryCodePrefix;
 
-            if (string.IsNullOrWhiteSpace(pattern))
+            if (string.IsNullOrWhiteSpace(prefix))
             {
-                // An empty/whitespace pattern is ignored (not applied) by SmsSenderSubstitutionService,
+                // An empty/whitespace prefix is ignored (not applied) by SmsSenderSubstitutionService,
                 // so it is not treated as a configuration error here.
                 continue;
             }
 
-            try
+            if (prefix.Length is < 1 or > 3 || !prefix.All(char.IsAsciiDigit))
             {
-                _ = new Regex(pattern, RegexOptions.None, _regexTimeout);
-            }
-            catch (ArgumentException ex)
-            {
-                failures.Add($"SmsSenderSubstitution.Rules[{i}].PhoneNumberPrefixPattern ('{pattern}') is not a valid regular expression: {ex.Message}");
+                failures.Add($"SmsSenderSubstitution.Rules[{i}].CountryCodePrefix ('{prefix}') must consist of 1-3 digits only, without a leading '+' or '00'.");
             }
         }
 

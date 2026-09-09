@@ -8,7 +8,7 @@ public class SmsSenderSubstitutionConfig
 {
     /// <summary>
     /// Substitution rules evaluated in order. The first rule whose
-    /// <see cref="SmsSenderSubstitutionRule.PhoneNumberPrefixPattern"/> matches the
+    /// <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/> matches the
     /// recipient's phone number, and that has an entry for the relevant service owner,
     /// is applied.
     /// </summary>
@@ -16,20 +16,19 @@ public class SmsSenderSubstitutionConfig
 }
 
 /// <summary>
-/// A single sender substitution rule: a phone number prefix pattern mapped to numeric
+/// A single sender substitution rule: a country calling code mapped to numeric
 /// sender numbers per service owner (creator short name).
 /// </summary>
 public class SmsSenderSubstitutionRule
 {
     /// <summary>
-    /// A regular expression matched against the recipient's phone number.
+    /// The bare country calling code, consisting of 1-3 digits only (e.g. "47" for Norway).
+    /// Must NOT include a leading "+", "00", or any regex metacharacters. Matching is done
+    /// against the recipient's phone number after normalizing away either a leading "+" or
+    /// "00" international dialing prefix, so a rule configured with "47" matches both
+    /// "+4790926292" and "004790926292".
     /// </summary>
-    /// <remarks>
-    /// If the pattern is a simple literal prefix (no regex metacharacters other than an
-    /// optional leading "^"), it can be matched using a fast ordinal string comparison
-    /// instead of a full regex evaluation.
-    /// </remarks>
-    public string PhoneNumberPrefixPattern { get; set; } = string.Empty;
+    public string CountryCodePrefix { get; set; } = string.Empty;
 
     /// <summary>
     /// Maps a service owner's short name (e.g. "digdir") to the numeric sender number to

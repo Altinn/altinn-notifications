@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Options;
@@ -10,8 +8,6 @@ namespace Altinn.Notifications.Core.Services;
 /// <inheritdoc cref="ISmsSenderSubstitutionService"/>
 public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
 {
-    private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
-
     private readonly CompiledRule[] _rules;
 
     /// <summary>
@@ -21,8 +17,8 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
     public SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> config)
     {
         _rules = [.. config.Value.Rules
-            .Where(r => !string.IsNullOrWhiteSpace(r.PhoneNumberPrefixPattern) && r.NumericSenderByServiceOwner.Count > 0)
-            .Select(CompileRule)];
+            .Where(r => !string.IsNullOrWhiteSpace(r.CountryCodePrefix) && r.NumericSenderByServiceOwner.Count > 0)
+            .Select(r => new CompiledRule(r.CountryCodePrefix, r.NumericSenderByServiceOwner))];
     }
 
     /// <inheritdoc/>
@@ -36,9 +32,11 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
             return configuredSender;
         }
 
+        var normalizedPhoneNumber = NormalizePhoneNumber(recipientPhoneNumber);
+
         foreach (var rule in _rules)
         {
-            if (!rule.Matches(recipientPhoneNumber))
+            if (!rule.Matches(normalizedPhoneNumber))
             {
                 continue;
             }
@@ -53,101 +51,48 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
     }
 
     /// <summary>
-    /// Compiles a configured <see cref="SmsSenderSubstitutionRule"/> into a <see cref="CompiledRule"/>,
-    /// using a fast literal-prefix comparison when the pattern is a simple anchored prefix,
-    /// falling back to a compiled regular expression (bounded by a match timeout) otherwise.
+    /// Strips a leading "+" or "00" international dialing prefix from a phone number, so that
+    /// both formats resolve to the same bare country code for prefix comparison against
+    /// <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/>.
     /// </summary>
-    private static CompiledRule CompileRule(SmsSenderSubstitutionRule rule)
+    /// <param name="phoneNumber">The recipient phone number, e.g. "+4790926292" or "004790926292".</param>
+    /// <returns>The phone number without its leading "+" or "00" prefix.</returns>
+    private static string NormalizePhoneNumber(string phoneNumber)
     {
-        var literalPrefix = TryExtractLiteralPrefix(rule.PhoneNumberPrefixPattern);
-
-        return literalPrefix != null
-            ? new CompiledRule(literalPrefix, null, rule.NumericSenderByServiceOwner)
-            : new CompiledRule(null, new Regex(rule.PhoneNumberPrefixPattern, RegexOptions.Compiled | RegexOptions.CultureInvariant, _regexTimeout), rule.NumericSenderByServiceOwner);
-    }
-
-    /// <summary>
-    /// Attempts to extract a plain literal prefix from a pattern that contains no regex
-    /// metacharacters other than a leading "^" anchor, so it can be matched using a fast
-    /// ordinal string comparison instead of a full regex evaluation.
-    /// </summary>
-    /// <param name="pattern">The configured phone number prefix pattern.</param>
-    /// <returns>The literal prefix if the pattern is a simple anchored literal; otherwise <c>null</c>.</returns>
-    private static string? TryExtractLiteralPrefix(string pattern)
-    {
-        var candidate = pattern.StartsWith('^') ? pattern[1..] : pattern;
-
-        if (candidate.Length == 0)
+        if (phoneNumber.StartsWith('+'))
         {
-            return null;
+            return phoneNumber[1..];
         }
 
-        // A leading "+" (e.g. "+34" in an international phone number prefix) cannot function
-        // as a valid regex quantifier at the start of the pattern, so it is safe to treat as
-        // a literal character here rather than rejecting the whole pattern as "not literal".
-        for (var i = 0; i < candidate.Length; i++)
+        if (phoneNumber.StartsWith("00", StringComparison.Ordinal))
         {
-            var c = candidate[i];
-
-            if (c == '+' && i == 0)
-            {
-                continue;
-            }
-
-            if (IsRegexMetacharacter(c))
-            {
-                return null;
-            }
+            return phoneNumber[2..];
         }
 
-        return candidate;
+        return phoneNumber;
     }
 
     /// <summary>
-    /// Determines whether a character is a regular expression metacharacter that would
-    /// invalidate treating the pattern as a plain literal prefix.
-    /// </summary>
-    private static bool IsRegexMetacharacter(char c)
-    {
-        return c is '.' or '*' or '+' or '?' or '(' or ')' or '[' or ']' or '{' or '}' or '|' or '\\' or '^' or '$';
-    }
-
-    /// <summary>
-    /// A compiled substitution rule using either a fast literal prefix comparison or a
-    /// compiled regular expression, along with the per-service-owner numeric sender map.
+    /// A compiled substitution rule matching on a bare country code prefix, along with the
+    /// per-service-owner numeric sender map.
     /// </summary>
     private sealed class CompiledRule
     {
-        private readonly string? _literalPrefix;
-        private readonly Regex? _regex;
+        private readonly string _countryCodePrefix;
 
-        public CompiledRule(string? literalPrefix, Regex? regex, Dictionary<string, string> numericSenderByServiceOwner)
+        public CompiledRule(string countryCodePrefix, Dictionary<string, string> numericSenderByServiceOwner)
         {
-            _literalPrefix = literalPrefix;
-            _regex = regex;
+            _countryCodePrefix = countryCodePrefix;
             NumericSenderByServiceOwner = numericSenderByServiceOwner;
         }
 
         public Dictionary<string, string> NumericSenderByServiceOwner { get; }
 
-        public bool Matches(string phoneNumber)
-        {
-            if (_literalPrefix != null)
-            {
-                return phoneNumber.StartsWith(_literalPrefix, StringComparison.Ordinal);
-            }
-
-            try
-            {
-                return _regex!.IsMatch(phoneNumber);
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                // Treat a pathological/runaway pattern as a non-match rather than letting it
-                // block SMS publishing. The rule is still applied to subsequent recipients;
-                // it simply never substitutes for phone numbers that trigger the timeout.
-                return false;
-            }
-        }
+        /// <summary>
+        /// Matches an already-normalized phone number (with any leading "+" or "00" stripped)
+        /// against this rule's bare country code prefix.
+        /// </summary>
+        public bool Matches(string normalizedPhoneNumber) =>
+            normalizedPhoneNumber.StartsWith(_countryCodePrefix, StringComparison.Ordinal);
     }
 }
