@@ -27,8 +27,6 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IUnitOfWorkRepository _unitOfWorkRepository;
     private static readonly ActivitySource _activitySource = new("Altinn.Notifications.OrderProcessingService");
 
-    private readonly NotificationConfig _config;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
@@ -40,8 +38,7 @@ public class OrderProcessingService : IOrderProcessingService
         IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
         ILogger<OrderProcessingService> logger,
-        IUnitOfWorkRepository unitOfWorkRepository,
-        IOptions<NotificationConfig> config)
+        IUnitOfWorkRepository unitOfWorkRepository)
     {
         _orderRepository = orderRepository;
         _emailProcessingService = emailProcessingService;
@@ -51,7 +48,6 @@ public class OrderProcessingService : IOrderProcessingService
         _conditionClient = conditionClient;
         _logger = logger;
         _unitOfWorkRepository = unitOfWorkRepository;
-        _config = config.Value;
     }
 
     /// <inheritdoc/>

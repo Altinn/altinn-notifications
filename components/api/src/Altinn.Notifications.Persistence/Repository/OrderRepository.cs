@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -28,9 +29,10 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// Initializes a new instance of the <see cref="OrderRepository"/> class.
 /// </remarks>
 /// <param name="dataSource">The npgsql data source.</param>
+/// <param name="config">The notification config</param>
 /// <param name="logger">The logger associated with this implementation of the IOrderRepository</param>
 [ExcludeFromCodeCoverage]
-public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger) : IOrderRepository
+public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger, NotificationConfig config) : IOrderRepository
 {
     private const string _shipmentIdColumnName = "shipment_id";
     private const string _ordersChainIdColumnName = "orders_chain_id";
@@ -254,6 +256,11 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     public async Task<NotificationOrder?> GetNextPastDueOrder(UnitOfWork unitOfWork, bool processRetry, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(processRetry ? _getOrderRetry : _getOrderPastSendTime, unitOfWork.Connection, unitOfWork.Transaction);
+        if (processRetry)
+        {
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, TimeSpan.FromSeconds(config.RetryOrdersDBDelaySeconds));
+        }
+
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
             if (await reader.ReadAsync(cancellationToken))

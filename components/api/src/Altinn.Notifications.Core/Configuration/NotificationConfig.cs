@@ -86,4 +86,9 @@ public class NotificationConfig
     /// The delay in seconds between each iteration of the retry orders background service when idle
     /// </summary>
     public int RetryOrdersIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The number of seconds from now to skip while looking for orders to retry
+    /// </summary>
+    public int RetryOrdersDBDelaySeconds { get; set; } = 60;
 }
