@@ -70,14 +70,12 @@ public class OrderProcessingService : IOrderProcessingService
             return false;
         }
 
-        bool rollbackDone = false;
         try
         {
             var pastDueOrder = await _orderRepository.GetNextPastDueOrder(unitOfWork, processRetry, cancellationToken);
             if (pastDueOrder == null)
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                rollbackDone = true;
 
                 return false;
             }
@@ -89,11 +87,7 @@ public class OrderProcessingService : IOrderProcessingService
         }
         catch (Exception e)
         {
-            if (!rollbackDone)
-            {
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-            }
-
+            await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             if (!cancellationToken.IsCancellationRequested)
             {
                 _logger.LogError(e, "An error occurred while processing past due order: {ErrorMessage}", e.Message);
@@ -106,13 +100,12 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork)
     {
-        var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
+        var sendingConditionEvaluationResult = await EvaluateSendingCondition(order);
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
             case { IsSendConditionMet: null }:
-                // TODO pastdue poc: Decide how to reprocess orders that have failed the send condition check. For now, we will set the order to "SendConditionNotMet" and not retry it.
                 var status = sendingConditionEvaluationResult.IsSendConditionMet == false ? OrderProcessingStatus.SendConditionNotMet : OrderProcessingStatus.Retrying;
                 await _orderRepository.SetOrderSendConditionNotMetAsync(unitOfWork, order, status);
                 break;
@@ -156,11 +149,6 @@ public class OrderProcessingService : IOrderProcessingService
     /// Determines if a notification order should proceed based on its configured send condition endpoint.
     /// </summary>
     /// <param name="order">The notification order containing the optional condition endpoint to evaluate.</param>
-    /// <param name="isRetry">
-    /// Indicates whether this evaluation is part of a retry attempt.
-    /// If <c>false</c>, a failed or inconclusive condition check will result in a retry recommendation.
-    /// If <c>true</c>, the order will be processed even if the condition check fails.
-    /// </param>
     /// <returns>
     /// A <see cref="SendConditionEvaluationResult"/> indicating:
     /// <list type="bullet">
@@ -174,7 +162,7 @@ public class OrderProcessingService : IOrderProcessingService
     ///   </item>
     /// </list>
     /// </returns>
-    private async Task<SendConditionEvaluationResult> EvaluateSendingCondition(NotificationOrder order, bool isRetry)
+    private async Task<SendConditionEvaluationResult> EvaluateSendingCondition(NotificationOrder order)
     {
         if (order.ConditionEndpoint == null)
         {
@@ -185,7 +173,7 @@ public class OrderProcessingService : IOrderProcessingService
 
         if (evaluationResult.IsSuccess)
         {
-            if (evaluationResult.Value == true)
+            if (evaluationResult.Value)
             {
                 _logger.LogTrace(
                     "// OrderProcessingService // IsSendConditionMet // Condition check yield true for order '{OrderId}' at endpoint '{Endpoint}'.",
@@ -210,7 +198,7 @@ public class OrderProcessingService : IOrderProcessingService
                 order.Id,
                 order.ConditionEndpoint,
                 evaluationResult.Error!.StatusCode,
-                evaluationResult.Error!.Message ?? "No error message provided");
+                evaluationResult.Error.Message ?? "No error message provided");
 
             return new SendConditionEvaluationResult { IsSendConditionMet = true };
         }
@@ -221,7 +209,7 @@ public class OrderProcessingService : IOrderProcessingService
                 order.Id,
                 order.ConditionEndpoint,
                 evaluationResult.Error!.StatusCode,
-                evaluationResult.Error!.Message ?? "No error message provided");
+                evaluationResult.Error.Message ?? "No error message provided");
 
             return new SendConditionEvaluationResult
             {
