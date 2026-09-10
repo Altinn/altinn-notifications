@@ -29,6 +29,12 @@ public class PastDueOrdersBackgroundService : BackgroundService
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (_config.PastDueOrdersTaskCount == 0 && _config.RetryOrdersTaskCount == 0)
+        {
+            // Unit test case: No tasks configured, so we don't start any loops. This is useful for unit tests that don't want to start background processing.
+            return;
+        }
+
         // TODO pastdue poc: How to suspend and resume processing
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -66,8 +72,18 @@ public class PastDueOrdersBackgroundService : BackgroundService
                     await Task.Delay((processRetry ? _config.RetryOrdersIdleDelaySeconds : _config.PastDueOrdersIdleDelaySeconds) * 1000, stoppingToken);
                 }
             }
-            catch (Exception)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                return;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Unhandled error in past due order loop. processRetry: {ProcessRetry}", processRetry);
+
+                if (!stoppingToken.IsCancellationRequested)
+                {
+                    await Task.Delay((processRetry ? _config.RetryOrdersIdleDelaySeconds : _config.PastDueOrdersIdleDelaySeconds) * 1000, stoppingToken);
+                }
             }
         }
     }

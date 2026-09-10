@@ -55,9 +55,22 @@ public class OrderProcessingService : IOrderProcessingService
     {
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
         using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
-        var unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        bool rollbackDone = false;
+        UnitOfWork unitOfWork;
+        try
+        {
+            unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "Failed to start a unit of work for past due order processing.");
+            }
 
+            return false;
+        }
+
+        bool rollbackDone = false;
         try
         {
             var pastDueOrder = await _orderRepository.GetNextPastDueOrder(unitOfWork, processRetry, cancellationToken);
