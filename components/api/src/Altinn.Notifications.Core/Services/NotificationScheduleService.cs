@@ -67,6 +67,21 @@ namespace Altinn.Notifications.Core.Services
             return TimeZoneInfo.ConvertTimeToUtc(expiryDateTime, _norwegainTimeZoneInfo);
         }
 
+        /// <inheritdoc/>
+        public DateTime GetRequestedSendTimeForDaytimeSendCondition(DateTime requestedSendTime)
+        {
+            var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(requestedSendTime);
+
+            if (equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime)
+            {
+                return requestedSendTime;
+            }
+
+            DateTime nextDaytimeWindowStart = equivalentDateTimeInNorway.Date.AddDays(1).Add(_sendWindowStartTime);
+
+            return TimeZoneInfo.ConvertTimeToUtc(nextDaytimeWindowStart, _norwegainTimeZoneInfo);
+        }
+
         /// <summary>
         /// Converts a UTC <see cref="DateTime"/> to the equivalent time in the Norwegian time zone.
         /// </summary>

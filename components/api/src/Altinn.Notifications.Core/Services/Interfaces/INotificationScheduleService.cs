@@ -23,4 +23,23 @@ public interface INotificationScheduleService
     /// The UTC date and time when the SMS notification will expire.
     /// </returns>
     DateTime GetSmsExpirationDateTime(DateTime referenceUtcDateTime);
+
+    /// <summary>
+    /// Calculates the requested send time that should be used for an order with a send condition and an SMS
+    /// notification governed by <see cref="Altinn.Notifications.Core.Enums.SendingTimePolicy.Daytime"/>.
+    /// </summary>
+    /// <param name="requestedSendTime">The UTC requested send time originally supplied for the order.</param>
+    /// <returns>
+    /// If <paramref name="requestedSendTime"/> falls after the configured Daytime send window (17:00 CET/CEST),
+    /// the returned value is the UTC equivalent of 09:00 the next day. Otherwise, <paramref name="requestedSendTime"/>
+    /// is returned unchanged.
+    /// </returns>
+    /// <remarks>
+    /// This exists to avoid a stale send condition evaluation: without this adjustment, an order registered in the
+    /// evening would have its send condition evaluated immediately, but the SMS notification itself would not be
+    /// delivered until the Daytime window opens the next morning &#8212; a delay during which the condition could
+    /// become false. By postponing <c>RequestedSendTime</c> to align with the next Daytime window opening, past-due
+    /// processing (and therefore send condition evaluation) is deferred to occur close to actual send time instead.
+    /// </remarks>
+    DateTime GetRequestedSendTimeForDaytimeSendCondition(DateTime requestedSendTime);
 }
