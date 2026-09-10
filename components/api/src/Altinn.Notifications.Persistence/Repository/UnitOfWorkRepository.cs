@@ -13,26 +13,46 @@ namespace Altinn.Notifications.Persistence.Repository
         public async Task<UnitOfWork> StartUnitOfWork()
         {
             var connection = await dataSource.OpenConnectionAsync();
-            var transaction = await connection.BeginTransactionAsync();
-            return new UnitOfWork
+            try
             {
-                Connection = connection,
-                Transaction = transaction
-            };
+                var transaction = await connection.BeginTransactionAsync();
+                return new UnitOfWork
+                {
+                    Connection = connection,
+                    Transaction = transaction
+                };
+            }
+            catch
+            {
+                await connection.CloseAsync();
+                throw;
+            }
         }
 
         /// <inheritdoc/>
         public async Task RollbackUnitOfWork(UnitOfWork unitOfWork)
         {
-            await unitOfWork.Transaction.RollbackAsync();
-            await unitOfWork.Connection.CloseAsync();
+            try
+            {
+                await unitOfWork.Transaction.RollbackAsync();
+            }
+            finally
+            {
+                await unitOfWork.Connection.CloseAsync();
+            }
         }
 
         /// <inheritdoc/>
         public async Task CommitUnitOfWork(UnitOfWork unitOfWork)
         {
-            await unitOfWork.Transaction.CommitAsync();
-            await unitOfWork.Connection.CloseAsync();
+            try
+            {
+                await unitOfWork.Transaction.CommitAsync();
+            }
+            finally
+            {
+                await unitOfWork.Connection.CloseAsync();
+            }
         }
     }
 }
