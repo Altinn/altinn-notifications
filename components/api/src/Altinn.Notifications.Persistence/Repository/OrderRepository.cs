@@ -2,7 +2,6 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -14,9 +13,8 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
-
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -32,7 +30,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <param name="config">The notification config</param>
 /// <param name="logger">The logger associated with this implementation of the IOrderRepository</param>
 [ExcludeFromCodeCoverage]
-public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger, NotificationConfig config) : IOrderRepository
+public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger, IOptions<NotificationConfig> config) : IOrderRepository
 {
     private const string _shipmentIdColumnName = "shipment_id";
     private const string _ordersChainIdColumnName = "orders_chain_id";
@@ -258,7 +256,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await using NpgsqlCommand pgcom = new(processRetry ? _getOrderRetry : _getOrderPastSendTime, unitOfWork.Connection, unitOfWork.Transaction);
         if (processRetry)
         {
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, TimeSpan.FromSeconds(config.RetryOrdersDBDelaySeconds));
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, TimeSpan.FromSeconds(config.Value.RetryOrdersDBDelaySeconds));
         }
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
@@ -977,7 +975,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
         var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
 
-        ////await using NpgsqlCommand pgcom = new(_advanceStatusFromProcessingSql, connection, transaction);
         await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
