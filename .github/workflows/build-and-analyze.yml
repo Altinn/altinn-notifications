@@ -197,7 +197,7 @@ jobs:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
           POSTGRES_DB: notificationsdb
-          POSTGRES_INIT_ARGS: "-c max_connections=600"
+          POSTGRES_INIT_ARGS: "-c max_connections=1200"
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -500,7 +500,7 @@ jobs:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
           POSTGRES_DB: notificationsdb
-          POSTGRES_INIT_ARGS: "-c max_connections=600"
+          POSTGRES_INIT_ARGS: "-c max_connections=1200"
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
