@@ -1,4 +1,4 @@
 {
   "culture": "invariant",
-  "parallelizeTestCollections": true
+  "parallelizeTestCollections": false
 }
