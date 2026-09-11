@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -13,6 +14,7 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -346,6 +348,117 @@ public class OrderProcessingServiceTests
         await Assert.ThrowsAsync<Exception>(() => service.ProcessOrder(order, unitOfWork));
     }
 
+    [Fact]
+    public async Task PastDueOrdersBackgroundService_ExecuteAsync_NoTasksConfigured_DoesNotProcessOrders()
+    {
+        var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
+        var config = Options.Create(new NotificationConfig
+        {
+            PastDueOrdersTaskCount = 0,
+            RetryOrdersTaskCount = 0
+        });
+
+        var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, Mock.Of<ILogger<PastDueOrdersBackgroundService>>());
+
+        await service.ExecuteForTestAsync(TestContext.Current.CancellationToken);
+
+        orderProcessingServiceMock.Verify(s => s.StartProcessingPastDueOrders(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PastDueOrdersBackgroundService_ExecuteAsync_ConfiguredTasks_StartsPastDueAndRetryLoops()
+    {
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        int pastDueCalls = 0;
+        int retryCalls = 0;
+        int totalCalls = 0;
+        const int expectedCalls = 3;
+        var allLoopsStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
+        orderProcessingServiceMock
+            .Setup(s => s.StartProcessingPastDueOrders(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns<bool, CancellationToken>(async (processRetry, _) =>
+            {
+                if (processRetry)
+                {
+                    Interlocked.Increment(ref retryCalls);
+                }
+                else
+                {
+                    Interlocked.Increment(ref pastDueCalls);
+                }
+
+                if (Interlocked.Increment(ref totalCalls) == expectedCalls)
+                {
+                    allLoopsStarted.TrySetResult();
+                    cancellationTokenSource.Cancel();
+                }
+
+                await allLoopsStarted.Task;
+                return true;
+            });
+
+        var config = Options.Create(new NotificationConfig
+        {
+            PastDueOrdersTaskCount = 2,
+            RetryOrdersTaskCount = 1,
+            PastDueOrdersIdleDelaySeconds = 0,
+            RetryOrdersIdleDelaySeconds = 0
+        });
+
+        var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, Mock.Of<ILogger<PastDueOrdersBackgroundService>>());
+
+        await service.ExecuteForTestAsync(cancellationTokenSource.Token);
+
+        Assert.Equal(2, pastDueCalls);
+        Assert.Equal(1, retryCalls);
+    }
+
+    [Fact]
+    public async Task PastDueOrdersBackgroundService_ExecuteAsync_StartProcessingThrows_LogsAndRetries()
+    {
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        int calls = 0;
+        var loggerMock = new Mock<ILogger<PastDueOrdersBackgroundService>>();
+
+        var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
+        orderProcessingServiceMock
+            .Setup(s => s.StartProcessingPastDueOrders(false, It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                if (Interlocked.Increment(ref calls) == 1)
+                {
+                    throw new InvalidOperationException("failure");
+                }
+
+                cancellationTokenSource.Cancel();
+                return Task.FromResult(true);
+            });
+
+        var config = Options.Create(new NotificationConfig
+        {
+            PastDueOrdersTaskCount = 1,
+            RetryOrdersTaskCount = 0,
+            PastDueOrdersIdleDelaySeconds = 0,
+            RetryOrdersIdleDelaySeconds = 0
+        });
+
+        var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, loggerMock.Object);
+
+        await service.ExecuteForTestAsync(cancellationTokenSource.Token);
+
+        Assert.Equal(2, calls);
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Unhandled error in past due order loop.")),
+                It.IsAny<InvalidOperationException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
     private static NotificationOrder CreateOrder(NotificationChannel notificationChannel, OrderProcessingStatus? orderProcessingStatus = null, Uri? conditionEndpoint = null)
     {
         return new NotificationOrder
@@ -417,5 +530,21 @@ public class OrderProcessingServiceTests
             conditionClient,
             new LoggerFactory().CreateLogger<OrderProcessingService>(),
             unitOfWorkRepository);
+    }
+
+    private sealed class TestablePastDueOrdersBackgroundService : PastDueOrdersBackgroundService
+    {
+        public TestablePastDueOrdersBackgroundService(
+            IOrderProcessingService orderProcessingService,
+            IOptions<NotificationConfig> config,
+            ILogger<PastDueOrdersBackgroundService> logger)
+            : base(orderProcessingService, config, logger)
+        {
+        }
+
+        public Task ExecuteForTestAsync(CancellationToken stoppingToken)
+        {
+            return ExecuteAsync(stoppingToken);
+        }
     }
 }
