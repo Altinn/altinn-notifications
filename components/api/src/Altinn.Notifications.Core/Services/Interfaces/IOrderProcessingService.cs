@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -12,26 +13,23 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IOrderProcessingService
 {
     /// <summary>
-    /// Processes a batch of notification orders whose requested send times have passed.
+    /// Processes the next ready notification order whose requested send times have passed.
     /// </summary>
+    /// <param name="processRetry">A boolean indicating whether to process retry orders. If true, retrieves orders that are being retried; otherwise, retrieves orders past their send time.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <remarks>
     /// <para>
-    /// This method retrieves orders that are due for processing, updates their status to 'Processing',
-    /// and publishes them to an Azure Service Bus queue for asynchronous handling.
-    /// </para>
-    /// <para>
-    /// The method continues fetching batches of orders until either fewer than 50 orders are returned
-    /// or the total processing time exceeds 60 seconds.
+    /// This method retrieves orders that are due for processing and updates their status to 'Processing'
     /// </para>
     /// </remarks>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default);
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether any orders were processed.</returns>
+    public Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Processes a notification order through the appropriate channel-specific service.
+    /// Processes a notification order
     /// </summary>
     /// <param name="order">The notification order to process.</param>
+    /// <param name="unitOfWork">The unit of work for database operations.</param>
     /// <remarks>
     /// <para>
     /// This method evaluates any configured sending conditions. If the conditions are met,
@@ -42,29 +40,5 @@ public interface IOrderProcessingService
     /// If the sending condition is not met, the order is marked accordingly and will not be processed.
     /// </para>
     /// </remarks>
-    /// <returns>
-    /// A result indicating whether the order was successfully processed or requires a retry.
-    /// </returns>
-    public Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order);
-
-    /// <summary>
-    /// Retries processing of a previously failed notification order.
-    /// </summary>
-    /// <param name="order">The notification order to retry processing.</param>
-    /// <remarks>
-    /// <para>
-    /// This method re-evaluates the sending conditions and attempts to process the order again if the conditions are met.
-    /// </para>
-    /// <para>
-    /// Unlike the initial processing, this method is more lenient. If the sending condition check fails during retry,
-    /// the order is still processed.
-    /// </para>
-    /// <para>
-    /// After retry processing, the order's status is updated based on the outcome.
-    /// </para>
-    /// </remarks>
-    /// <returns>
-    /// A result indicating whether further retry attempts are required (typically returns <c>false</c>).
-    /// </returns>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    public Task ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork);
 }
