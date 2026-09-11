@@ -24,6 +24,7 @@ public class OrderRequestService : IOrderRequestService
     private readonly IContactPointService _contactPointService;
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
+    private readonly INotificationScheduleService _notificationScheduleService;
     private readonly string _defaultEmailFromAddress;
     private readonly string _defaultSmsSender;
 
@@ -35,12 +36,14 @@ public class OrderRequestService : IOrderRequestService
         IContactPointService contactPointService,
         IGuidService guid,
         IDateTimeService dateTime,
+        INotificationScheduleService notificationScheduleService,
         IOptions<NotificationConfig> config)
     {
         _repository = repository;
         _contactPointService = contactPointService;
         _guid = guid;
         _dateTime = dateTime;
+        _notificationScheduleService = notificationScheduleService;
         _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
         _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
@@ -173,6 +176,46 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return templates;
+    }
+
+    /// <summary>
+    /// Determines the requested send time to use for an order, postponing it to the next Daytime send
+    /// window if required to avoid a stale send condition evaluation.
+    /// </summary>
+    /// <param name="requestedSendTime">The originally requested UTC send time for the order.</param>
+    /// <param name="conditionEndpoint">The order's condition endpoint, if any.</param>
+    /// <param name="channel">The notification channel selected for the order.</param>
+    /// <param name="smsSendingTimePolicy">The SMS sending time policy associated with the order, if any.</param>
+    /// <returns>
+    /// The original <paramref name="requestedSendTime"/>, unless the order has a send condition and includes
+    /// an SMS notification governed by <see cref="SendingTimePolicy.Daytime"/>, in which case the returned value
+    /// may be postponed to align with the next Daytime send window opening.
+    /// </returns>
+    /// <remarks>
+    /// Postponing the requested send time also affects any Email notification delivered as part of the same
+    /// order (for <see cref="NotificationChannel.EmailAndSms"/>, <see cref="NotificationChannel.EmailPreferred"/>,
+    /// and <see cref="NotificationChannel.SmsPreferred"/>). This is intentional: the send condition is evaluated
+    /// once per order, so ensuring that evaluation happens close to the actual SMS send time necessarily means
+    /// deferring the whole order &#8212; including any co-delivered Email &#8212; to the same time.
+    /// </remarks>
+    private DateTime ResolveRequestedSendTime(DateTime requestedSendTime, Uri? conditionEndpoint, NotificationChannel channel, SendingTimePolicy? smsSendingTimePolicy)
+    {
+        if (conditionEndpoint == null)
+        {
+            return requestedSendTime;
+        }
+
+        bool channelIncludesSms = channel is NotificationChannel.Sms
+            or NotificationChannel.EmailAndSms
+            or NotificationChannel.SmsPreferred
+            or NotificationChannel.EmailPreferred;
+
+        if (!channelIncludesSms || smsSendingTimePolicy != SendingTimePolicy.Daytime)
+        {
+            return requestedSendTime;
+        }
+
+        return _notificationScheduleService.GetRequestedSendTimeForDaytimeSendCondition(requestedSendTime);
     }
 
     /// <summary>
@@ -429,6 +472,12 @@ public class OrderRequestService : IOrderRequestService
 
         var templates = SetSenderIfNotDefined(deliveryDetails.Templates);
 
+        var requestedSendTime = ResolveRequestedSendTime(
+            orderRequest.RequestedSendTime,
+            orderRequest.ConditionEndpoint,
+            deliveryDetails.Channel,
+            deliveryDetails.SmsSendingTimePolicy);
+
         return new NotificationOrder
         {
             Created = currentTime,
@@ -441,7 +490,7 @@ public class OrderRequestService : IOrderRequestService
             Recipients = deliveryDetails.Recipients,
             NotificationChannel = deliveryDetails.Channel,
             SendersReference = orderRequest.SendersReference,
-            RequestedSendTime = orderRequest.RequestedSendTime,
+            RequestedSendTime = requestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
             UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
@@ -609,6 +658,12 @@ public class OrderRequestService : IOrderRequestService
 
             var templates = SetSenderIfNotDefined(deliveryDetails.Templates);
 
+            var requestedSendTime = ResolveRequestedSendTime(
+                notificationReminder.RequestedSendTime,
+                notificationReminder.ConditionEndpoint,
+                deliveryDetails.Channel,
+                deliveryDetails.SmsSendingTimePolicy);
+
             reminders.Add(new NotificationOrder
             {
                 Creator = creator,
@@ -624,7 +679,7 @@ public class OrderRequestService : IOrderRequestService
                 UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
                 SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
-                RequestedSendTime = notificationReminder.RequestedSendTime,
+                RequestedSendTime = requestedSendTime,
                 ConditionEndpoint = notificationReminder.ConditionEndpoint
             });
         }

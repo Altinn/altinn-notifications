@@ -126,5 +126,47 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Act & Assert
             Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
         }
+
+        [Fact]
+        public void GetRequestedSendTimeForDaytimeSendCondition_WhenRequestedTimeIsWithinSendWindow_ReturnsUnchanged()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 10, 0, 0, DateTimeKind.Utc); // within 09-17 local window
+
+            // Act
+            var result = _notificationScheduleService.GetRequestedSendTimeForDaytimeSendCondition(requestedSendTime);
+
+            // Assert
+            Assert.Equal(requestedSendTime, result);
+        }
+
+        [Fact]
+        public void GetRequestedSendTimeForDaytimeSendCondition_WhenRequestedTimeIsBeforeSendWindow_ReturnsNextDayWindowStart()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 05, 0, 0, DateTimeKind.Utc); // 05:00 UTC is before window opens
+            var expectedSendTime = new DateTime(2025, 08, 26, 07, 0, 0, DateTimeKind.Utc); // next day 09:00 local
+
+            // Act
+            var result = _notificationScheduleService.GetRequestedSendTimeForDaytimeSendCondition(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedSendTime, result);
+        }
+
+        [Fact]
+        public void GetRequestedSendTimeForDaytimeSendCondition_WhenRequestedTimeIsAfterSendWindow_ReturnsNextDayWindowStart()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is after window closes
+
+            var expectedSendTime = new DateTime(2025, 08, 26, 07, 0, 0, DateTimeKind.Utc); // next day 09:00 local
+
+            // Act
+            var result = _notificationScheduleService.GetRequestedSendTimeForDaytimeSendCondition(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedSendTime, result);
+        }
     }
 }
