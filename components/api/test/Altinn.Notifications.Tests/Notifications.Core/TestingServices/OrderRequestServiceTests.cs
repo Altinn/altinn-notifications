@@ -2945,6 +2945,9 @@ public class OrderRequestServiceTests
             notificationScheduleService = notificationScheduleServiceMock.Object;
             notificationScheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
             notificationScheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+            notificationScheduleServiceMock
+                .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(It.IsAny<DateTime>()))
+                .Returns((DateTime requestedSendTime) => requestedSendTime);
         }
     
         return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, notificationScheduleService ?? notificationScheduleServiceMock.Object, config);
