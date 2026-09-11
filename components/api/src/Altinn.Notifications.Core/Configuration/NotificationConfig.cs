@@ -91,4 +91,14 @@ public class NotificationConfig
     /// The number of seconds from now to skip while looking for orders to retry
     /// </summary>
     public int RetryOrdersDBDelaySeconds { get; set; } = 60;
+
+    /// <summary>
+    /// The number of consecutive past due orders before ramping up the processing of past due orders. This is used to prevent overloading the system with too many past due orders at once.
+    /// </summary>
+    public int PastDueOrdersRampUpLimit { get; set; } = 10;
+
+    /// <summary>
+    /// The number of consecutive retry orders before ramping up the processing of retry orders. This is used to prevent overloading the system with too many retry orders at once.
+    /// </summary>
+    public int RetryOrdersRampUpLimit { get; set; } = 10;
 }
