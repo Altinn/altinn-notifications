@@ -2910,7 +2910,7 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
-    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
+    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null, INotificationScheduleService? notificationScheduleService = null)
     {
         if (repository == null)
         {
@@ -2938,6 +2938,15 @@ public class OrderRequestServiceTests
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
 
-        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, config);
+        var notificationScheduleServiceMock = new Mock<INotificationScheduleService>();
+
+        if (notificationScheduleService == null)
+        {
+            notificationScheduleService = notificationScheduleServiceMock.Object;
+            notificationScheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+            notificationScheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+        }
+    
+        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, notificationScheduleService ?? notificationScheduleServiceMock.Object, config);
     }
 }
