@@ -305,7 +305,7 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
     /// A contact point service stub that performs no lookups, used for recipients that already carry
     /// their own address information (e.g. <see cref="RecipientSms"/> with an explicit phone number).
     /// </summary>
-    private static IContactPointService GetNoOpContactPointService()
+    private static NoOpContactPointService GetNoOpContactPointService()
     {
         return new NoOpContactPointService();
     }
@@ -314,7 +314,7 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
     /// A contact point service stub that adds a fixed email and SMS address for any recipient identified
     /// by national identity number, avoiding a real call to the external KRR/Profile services in tests.
     /// </summary>
-    private static IContactPointService GetContactPointStubForPerson()
+    private static StubPersonContactPointService GetContactPointStubForPerson()
     {
         return new StubPersonContactPointService();
     }
