@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
+using Microsoft.Extensions.Hosting;
 using Moq;
 
 namespace Altinn.Notifications.IntegrationTests;
@@ -51,6 +51,19 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 .ToList();
 
             foreach (var descriptor in wolverineServices)
+            {
+                services.Remove(descriptor);
+            }
+
+            // Prevent the past-due/retry background polling loops from running during
+            // integration tests — they open many concurrent DB connections and are
+            // unrelated to what these tests verify.
+            var hostedServices = services
+                .Where(s => s.ServiceType == typeof(IHostedService)
+                    && s.ImplementationType?.Name.Contains("PastDueOrder", StringComparison.Ordinal) == true)
+                .ToList();
+
+            foreach (var descriptor in hostedServices)
             {
                 services.Remove(descriptor);
             }
