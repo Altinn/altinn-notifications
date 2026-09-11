@@ -72,6 +72,12 @@ namespace Altinn.Notifications.Core.Services
         {
             var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(requestedSendTime);
 
+            if (equivalentDateTimeInNorway.TimeOfDay < _sendWindowStartTime)
+            {
+                DateTime daytimeWindowStart = equivalentDateTimeInNorway.Date.Add(_sendWindowStartTime);
+                return TimeZoneInfo.ConvertTimeToUtc(daytimeWindowStart, _norwegainTimeZoneInfo);
+            }
+
             if (equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime)
             {
                 return requestedSendTime;
