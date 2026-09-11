@@ -85,7 +85,7 @@ public class PastDueOrdersBackgroundService : BackgroundService
                 bool shouldDelay = false;
                 if (shouldAttemptProcessing)
                 {
-                    bool gotOrder = await _orderProcessingService.StartProcessingPastDueOrders(processRetry, stoppingToken);
+                    bool gotOrder = await _orderProcessingService.TryProcessOrder(processRetry, stoppingToken);
                     if (!gotOrder && !stoppingToken.IsCancellationRequested)
                     {
                         consecutiveRunsWithOrderReturned = 0;

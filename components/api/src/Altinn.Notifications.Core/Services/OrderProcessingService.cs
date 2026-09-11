@@ -51,7 +51,7 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> StartProcessingPastDueOrders(bool processRetry, CancellationToken cancellationToken = default)
+    public async Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default)
     {
         // TODO: pastdue poc: Change operation name to something more descriptive, e.g. "ProcessPastDueOrdersBatch"
         using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");

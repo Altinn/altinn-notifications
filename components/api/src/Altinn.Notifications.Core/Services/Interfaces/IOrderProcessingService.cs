@@ -23,7 +23,7 @@ public interface IOrderProcessingService
     /// </para>
     /// </remarks>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether any orders were processed.</returns>
-    public Task<bool> StartProcessingPastDueOrders(bool processRetry, CancellationToken cancellationToken = default);
+    public Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Processes a notification order

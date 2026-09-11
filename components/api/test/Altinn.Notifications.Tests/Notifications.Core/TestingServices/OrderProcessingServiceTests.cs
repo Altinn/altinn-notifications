@@ -40,7 +40,7 @@ public class OrderProcessingServiceTests
             orderRepository: orderRepositoryMock.Object,
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
-        var result = await service.StartProcessingPastDueOrders(false, TestContext.Current.CancellationToken);
+        var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
         unitOfWorkRepositoryMock.Verify(u => u.StartUnitOfWork(), Times.Once);
@@ -79,7 +79,7 @@ public class OrderProcessingServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object,
             smsOrderProcessingService: smsProcessingServiceMock.Object);
 
-        var result = await service.StartProcessingPastDueOrders(true, TestContext.Current.CancellationToken);
+        var result = await service.TryProcessOrder(true, TestContext.Current.CancellationToken);
 
         Assert.True(result);
         orderRepositoryMock.Verify(r => r.GetNextPastDueOrder(unitOfWork, true, It.IsAny<CancellationToken>()), Times.Once);
@@ -104,7 +104,7 @@ public class OrderProcessingServiceTests
             orderRepository: orderRepositoryMock.Object,
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
-        var result = await service.StartProcessingPastDueOrders(false, TestContext.Current.CancellationToken);
+        var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
@@ -362,7 +362,7 @@ public class OrderProcessingServiceTests
 
         await service.ExecuteForTestAsync(TestContext.Current.CancellationToken);
 
-        orderProcessingServiceMock.Verify(s => s.StartProcessingPastDueOrders(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        orderProcessingServiceMock.Verify(s => s.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -377,7 +377,7 @@ public class OrderProcessingServiceTests
 
         var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
         orderProcessingServiceMock
-            .Setup(s => s.StartProcessingPastDueOrders(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Returns<bool, CancellationToken>(async (processRetry, _) =>
             {
                 if (processRetry)
@@ -424,7 +424,7 @@ public class OrderProcessingServiceTests
 
         var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
         orderProcessingServiceMock
-            .Setup(s => s.StartProcessingPastDueOrders(false, It.IsAny<CancellationToken>()))
+            .Setup(s => s.TryProcessOrder(false, It.IsAny<CancellationToken>()))
             .Returns(() =>
             {
                 if (Interlocked.Increment(ref calls) == 1)
