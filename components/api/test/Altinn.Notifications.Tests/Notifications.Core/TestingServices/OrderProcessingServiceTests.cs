@@ -403,8 +403,8 @@ public class OrderProcessingServiceTests
         {
             PastDueOrdersTaskCount = 2,
             RetryOrdersTaskCount = 1,
-            PastDueOrdersIdleDelaySeconds = 0,
-            RetryOrdersIdleDelaySeconds = 0
+            PastDueOrdersPrimaryTaskIdleDelaySeconds = 0,
+            RetryOrdersPrimaryTaskIdleDelaySeconds = 0
         });
 
         var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, Mock.Of<ILogger<PastDueOrdersBackgroundService>>());
@@ -440,8 +440,8 @@ public class OrderProcessingServiceTests
         {
             PastDueOrdersTaskCount = 1,
             RetryOrdersTaskCount = 0,
-            PastDueOrdersIdleDelaySeconds = 0,
-            RetryOrdersIdleDelaySeconds = 0
+            PastDueOrdersPrimaryTaskIdleDelaySeconds = 0,
+            RetryOrdersPrimaryTaskIdleDelaySeconds = 0
         });
 
         var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, loggerMock.Object);

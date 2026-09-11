@@ -73,11 +73,8 @@ public class PastDueOrdersBackgroundService : BackgroundService
     private async Task RunOrderLoop(bool processRetry, bool isFirstInstance, CancellationToken stoppingToken)
     {
         int consecutiveRunsWithOrderReturned = 0;
-        TimeSpan idleDelay = TimeSpan.FromSeconds(
-            processRetry ? _config.RetryOrdersIdleDelaySeconds : _config.PastDueOrdersIdleDelaySeconds);
-        int rampupLimit = processRetry
-            ? _config.RetryOrdersRampUpLimit
-            : _config.PastDueOrdersRampUpLimit;
+        var idleDelay = GetDelay(processRetry, isFirstInstance);
+        int rampupLimit = processRetry ? _config.RetryOrdersRampUpLimit : _config.PastDueOrdersRampUpLimit;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -133,6 +130,20 @@ public class PastDueOrdersBackgroundService : BackgroundService
                     await Task.Delay(idleDelay, stoppingToken);
                 }
             }
+        }
+    }
+    
+    private TimeSpan GetDelay(bool processRetry, bool isFirstInstance)
+    {
+        if (isFirstInstance)
+        {
+            return TimeSpan.FromSeconds(
+                processRetry ? _config.RetryOrdersPrimaryTaskIdleDelaySeconds : _config.PastDueOrdersPrimaryTaskIdleDelaySeconds);
+        }
+        else
+        {
+            return TimeSpan.FromSeconds(
+                processRetry ? _config.RetryOrdersAdditionalTasksIdleDelaySeconds : _config.PastDueOrdersAdditionalTasksIdleDelaySeconds);
         }
     }
 

@@ -78,14 +78,28 @@ public class NotificationConfig
     public int RetryOrdersTaskCount { get; set; } = 1;
 
     /// <summary>
-    /// The delay in seconds between each iteration of the past due orders background service when idle
+    /// The delay in seconds between each iteration of the past due orders background service when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
     /// </summary>
-    public int PastDueOrdersIdleDelaySeconds { get; set; } = 30;
+    public int PastDueOrdersPrimaryTaskIdleDelaySeconds { get; set; } = 30;
 
     /// <summary>
-    /// The delay in seconds between each iteration of the retry orders background service when idle
+    /// The delay in seconds between each iteration of the past due orders background service for all other tasks
+    /// than the primary task.
     /// </summary>
-    public int RetryOrdersIdleDelaySeconds { get; set; } = 30;
+    public int PastDueOrdersAdditionalTasksIdleDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the retry orders background service when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
+    /// </summary>
+    public int RetryOrdersPrimaryTaskIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the retry orders background service for all other tasks
+    /// than the primary task.
+    /// </summary>
+    public int RetryOrdersAdditionalTasksIdleDelaySeconds { get; set; } = 5;
 
     /// <summary>
     /// The number of seconds from now to skip while looking for orders to retry
