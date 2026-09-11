@@ -30,16 +30,17 @@ public interface INotificationScheduleService
     /// </summary>
     /// <param name="requestedSendTime">The UTC requested send time originally supplied for the order.</param>
     /// <returns>
-    /// If <paramref name="requestedSendTime"/> falls after the configured Daytime send window (17:00 CET/CEST),
-    /// the returned value is the UTC equivalent of 09:00 the next day. Otherwise, <paramref name="requestedSendTime"/>
-    /// is returned unchanged.
+    /// If <paramref name="requestedSendTime"/> falls outside the configured Daytime send window (09:00-17:00 CET/CEST),
+    /// the returned value is postponed to the UTC equivalent of the window's start time (09:00 local): the same day
+    /// if <paramref name="requestedSendTime"/> falls before the window opens, or the next day if it falls after the
+    /// window closes. Otherwise, <paramref name="requestedSendTime"/> is returned unchanged.
     /// </returns>
     /// <remarks>
-    /// This exists to avoid a stale send condition evaluation: without this adjustment, an order registered in the
-    /// evening would have its send condition evaluated immediately, but the SMS notification itself would not be
-    /// delivered until the Daytime window opens the next morning &#8212; a delay during which the condition could
-    /// become false. By postponing <c>RequestedSendTime</c> to align with the next Daytime window opening, past-due
-    /// processing (and therefore send condition evaluation) is deferred to occur close to actual send time instead.
+    /// This exists to avoid a stale send condition evaluation: without this adjustment, an order registered outside
+    /// the Daytime window would have its send condition evaluated immediately, but the SMS notification itself would
+    /// not be delivered until the Daytime window opens &#8212; a delay during which the condition could become false.
+    /// By postponing <c>RequestedSendTime</c> to align with the Daytime window opening, past-due processing (and
+    /// therefore send condition evaluation) is deferred to occur close to actual send time instead.
     /// </remarks>
     DateTime GetRequestedSendTimeForDaytimeSendCondition(DateTime requestedSendTime);
 }
