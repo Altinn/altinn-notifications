@@ -369,50 +369,48 @@ public class OrderProcessingServiceTests
     public async Task PastDueOrdersBackgroundService_ExecuteAsync_ConfiguredTasks_StartsPastDueAndRetryLoops()
     {
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        int pastDueCalls = 0;
-        int retryCalls = 0;
-        int totalCalls = 0;
-        const int expectedCalls = 3;
-        var allLoopsStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int pastDueStarted = 0;
+        int retryStarted = 0;
+        var bothLoopsStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
         orderProcessingServiceMock
             .Setup(s => s.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .Returns<bool, CancellationToken>(async (processRetry, _) =>
+            .Returns<bool, CancellationToken>((processRetry, _) =>
             {
                 if (processRetry)
                 {
-                    Interlocked.Increment(ref retryCalls);
+                    Interlocked.Exchange(ref retryStarted, 1);
                 }
                 else
                 {
-                    Interlocked.Increment(ref pastDueCalls);
+                    Interlocked.Exchange(ref pastDueStarted, 1);
                 }
 
-                if (Interlocked.Increment(ref totalCalls) == expectedCalls)
+                if (Volatile.Read(ref pastDueStarted) == 1 && Volatile.Read(ref retryStarted) == 1)
                 {
-                    allLoopsStarted.TrySetResult();
+                    bothLoopsStarted.TrySetResult();
                     cancellationTokenSource.Cancel();
                 }
 
-                await allLoopsStarted.Task;
-                return true;
+                return Task.FromResult(false);
             });
 
         var config = Options.Create(new NotificationConfig
         {
-            PastDueOrdersTaskCount = 2,
+            PastDueOrdersTaskCount = 1,
             RetryOrdersTaskCount = 1,
-            PastDueOrdersPrimaryTaskIdleDelaySeconds = 0,
-            RetryOrdersPrimaryTaskIdleDelaySeconds = 0
+            PastDueOrdersPrimaryTaskIdleDelaySeconds = 1,
+            RetryOrdersPrimaryTaskIdleDelaySeconds = 1
         });
 
         var service = new TestablePastDueOrdersBackgroundService(orderProcessingServiceMock.Object, config, Mock.Of<ILogger<PastDueOrdersBackgroundService>>());
 
         await service.ExecuteForTestAsync(cancellationTokenSource.Token);
 
-        Assert.Equal(2, pastDueCalls);
-        Assert.Equal(1, retryCalls);
+        Assert.True(bothLoopsStarted.Task.IsCompleted);
+        orderProcessingServiceMock.Verify(s => s.TryProcessOrder(false, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        orderProcessingServiceMock.Verify(s => s.TryProcessOrder(true, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]

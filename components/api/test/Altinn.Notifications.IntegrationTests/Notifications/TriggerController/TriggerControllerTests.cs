@@ -28,7 +28,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()
+    public async Task Trigger_PastDueOrder_OrderProcessingServiceCalled()
     {
         // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
@@ -39,7 +39,29 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             orderProcessingService: serviceMock.Object,
             smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
-        string url = _basePath + "/pastdueorders";
+        string url = _basePath + "/pastdueoneorder";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Trigger_RetryOrder_OrderProcessingServiceCalled()
+    {
+        // Arrange
+        Mock<IOrderProcessingService> serviceMock = new();
+
+        var smsPublishTaskQueueMock = CreateIdleSmsQueueMock();
+
+        var client = GetTestClient(
+            orderProcessingService: serviceMock.Object,
+            smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
+
+        string url = _basePath + "/retryoneorder";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act

@@ -34,10 +34,10 @@ public class PastDueOrdersBackgroundService : BackgroundService
         if (_config.PastDueOrdersTaskCount == 0 && _config.RetryOrdersTaskCount == 0)
         {
             // Unit test case: No tasks configured, so we don't start any loops. This is useful for unit tests that don't want to start background processing.
+            // Could also be used in production to disable past due order processing if needed.
             return;
         }
 
-        // TODO pastdue poc: How to suspend and resume processing
         while (!stoppingToken.IsCancellationRequested)
         {
             try
