@@ -53,7 +53,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default)
     {
-        using Activity? activity = _activitySource.StartActivity("StartProcessingPastDueOrders.Loop.Iteration");
+        using Activity? activity = _activitySource.StartActivity("TryProcessOrder");
         UnitOfWork unitOfWork;
         try
         {
