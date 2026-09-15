@@ -2920,9 +2920,8 @@ public class OrderRequestServiceTests
         // Arrange
         Guid orderId = Guid.NewGuid();
         Guid orderChainId = Guid.NewGuid();
-        DateTime currentTime = DateTime.UtcNow;
-        DateTime originalRequestedSendTime = currentTime.AddMinutes(5);
-        DateTime postponedSendTime = currentTime.AddHours(20);
+        DateTime currentTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+        DateTime postponedSendTime = new(2026, 09, 16, 07, 0, 0, DateTimeKind.Utc);
 
         var smsSettings = new SmsSendingOptions
         {
@@ -2984,12 +2983,23 @@ public class OrderRequestServiceTests
                 }
             })
             .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
+            {
+                foreach (var r in recipients)
+                {
+                    r.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                    r.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.no"));
+                }
+            })
+            .Returns(Task.CompletedTask);
 
         Mock<INotificationScheduleService> scheduleServiceMock = new();
         scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
         scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
         scheduleServiceMock
-            .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(originalRequestedSendTime))
+            .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(currentTime))
             .Returns(postponedSendTime);
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime, scheduleServiceMock.Object);
@@ -3002,7 +3012,7 @@ public class OrderRequestServiceTests
             .SetIdempotencyId(Guid.NewGuid().ToString())
             .SetRecipient(recipient)
             .SetConditionEndpoint(new Uri("https://vg.no/condition"))
-            .SetRequestedSendTime(originalRequestedSendTime)
+            .SetRequestedSendTime(currentTime)
             .Build();
 
         // Act
@@ -3019,7 +3029,7 @@ public class OrderRequestServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(originalRequestedSendTime), Times.Once);
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(currentTime), Times.Once);
     }
 
     [Fact]
