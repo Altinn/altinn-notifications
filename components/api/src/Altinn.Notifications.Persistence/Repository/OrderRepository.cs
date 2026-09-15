@@ -826,8 +826,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        ////try
-        ////{
         cancellationToken.ThrowIfCancellationRequested();
         long chainDbId = await insertInstantOrderAction(connection, transaction, cancellationToken);
 
@@ -842,17 +840,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
         cancellationToken.ThrowIfCancellationRequested();
         await transaction.CommitAsync(cancellationToken);
-        ////}
-        ////catch (OperationCanceledException)
-        ////{
-        ////    await transaction.RollbackAsync(CancellationToken.None);
-        ////    throw;
-        ////}
-        ////catch (Exception)
-        ////{
-        ////    await transaction.RollbackAsync(CancellationToken.None);
-        ////    throw;
-        ////}
 
         return new InstantNotificationOrderTracking
         {
