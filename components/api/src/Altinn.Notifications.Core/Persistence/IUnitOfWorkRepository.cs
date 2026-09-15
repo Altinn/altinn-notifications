@@ -1,4 +1,4 @@
-﻿using Npgsql;
+﻿using Altinn.Notifications.Core.Models;
 
 namespace Altinn.Notifications.Core.Persistence;
 
@@ -26,20 +26,4 @@ public interface IUnitOfWorkRepository
     /// <param name="unitOfWork">The unit of work to commit.</param>
     /// <returns></returns>
     public Task CommitUnitOfWork(UnitOfWork unitOfWork);
-}
-
-/// <summary>
-/// Represents a unit of work that encapsulates a database connection and transaction.
-/// </summary>
-public class UnitOfWork
-{
-    /// <summary>
-    /// Gets or sets the NpgsqlConnection used for the unit of work.
-    /// </summary>
-    public NpgsqlConnection Connection { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the NpgsqlTransaction used for the unit of work.
-    /// </summary>
-    public NpgsqlTransaction Transaction { get; set; } = null!;
 }

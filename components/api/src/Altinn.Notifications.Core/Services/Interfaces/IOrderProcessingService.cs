@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Persistence;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 

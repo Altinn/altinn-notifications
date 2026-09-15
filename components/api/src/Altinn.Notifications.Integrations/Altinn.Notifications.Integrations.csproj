@@ -33,8 +33,4 @@
 		</AssemblyAttribute>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Wolverine\Commands\" />
-	</ItemGroup>
-
 </Project>

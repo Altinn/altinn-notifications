@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Persistence;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Persistence;
 using Npgsql;
 
 namespace Altinn.Notifications.Persistence.Repository

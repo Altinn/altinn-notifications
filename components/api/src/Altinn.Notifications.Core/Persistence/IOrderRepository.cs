@@ -1,8 +1,8 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Shared;
-using Npgsql;
 
 namespace Altinn.Notifications.Core.Persistence;
 
