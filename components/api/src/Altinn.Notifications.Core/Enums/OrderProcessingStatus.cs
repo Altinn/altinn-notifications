@@ -33,5 +33,10 @@ public enum OrderProcessingStatus
     /// <summary>
     /// The notification order has been processed, but its final delivery status is pending.
     /// </summary>
-    Processed
+    Processed,
+
+    /// <summary>
+    /// The notification order should be retried due to a transient failure or other recoverable issue
+    /// </summary>
+    Retrying
 }

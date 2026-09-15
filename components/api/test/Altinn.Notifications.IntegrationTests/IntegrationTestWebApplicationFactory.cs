@@ -57,7 +57,6 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISendSmsPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IPastDueOrderPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IComposedEmailCommandPublisher>()));
         });
     }

@@ -20,6 +20,7 @@ public class GetOrderService : IGetOrderService
         { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have a final status." },
         { OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met." },
         { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
+        { OrderProcessingStatus.Retrying, "Order is being retried after a previous failure." },
     };
 
     /// <summary>
