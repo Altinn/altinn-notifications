@@ -2910,7 +2910,474 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
-    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
+    [Theory]
+    [InlineData(NotificationChannel.Sms)]
+    [InlineData(NotificationChannel.EmailAndSms)]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    public async Task RegisterNotificationOrderChain_ConditionEndpointSetAndDaytimePolicy_PostponesRequestedSendTime(NotificationChannel channel)
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+        DateTime postponedSendTime = new(2026, 09, 16, 07, 0, 0, DateTimeKind.Utc);
+
+        var smsSettings = new SmsSendingOptions
+        {
+            Body = "Test Body",
+            Sender = "TestSender",
+            SendingTimePolicy = SendingTimePolicy.Daytime
+        };
+
+        var emailSettings = new EmailSendingOptions
+        {
+            Body = "Test Body",
+            Subject = "Test Subject",
+            ContentType = EmailContentType.Plain
+        };
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientPerson = new RecipientPerson
+            {
+                NationalIdentityNumber = "16069412345",
+                ChannelSchema = channel,
+                SmsSettings = smsSettings,
+                EmailSettings = emailSettings
+            }
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = orderChainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
+
+        Mock<IContactPointService> contactPointServiceMock = new();
+        contactPointServiceMock
+            .Setup(c => c.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage, bool, string?>((_, recipients, _, _, _, _) =>
+            {
+                foreach (var r in recipients)
+                {
+                    r.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                    r.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.no"));
+                }
+            })
+            .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
+            {
+                foreach (var r in recipients)
+                {
+                    r.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                }
+            })
+            .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
+            {
+                foreach (var r in recipients)
+                {
+                    r.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                    r.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.no"));
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        Mock<INotificationScheduleService> scheduleServiceMock = new();
+        scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+        scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+        scheduleServiceMock
+            .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(currentTime))
+            .Returns(postponedSendTime);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime, scheduleServiceMock.Object);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(Guid.NewGuid().ToString())
+            .SetRecipient(recipient)
+            .SetConditionEndpoint(new Uri("https://vg.no/condition"))
+            .SetRequestedSendTime(currentTime)
+            .Build();
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == postponedSendTime),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(currentTime), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_NoConditionEndpoint_DoesNotPostponeRequestedSendTime()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime originalRequestedSendTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = new SmsSendingOptions
+                {
+                    Body = "Test Body",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicy.Daytime
+                }
+            }
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = orderChainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
+
+        Mock<INotificationScheduleService> scheduleServiceMock = new();
+        scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+        scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, originalRequestedSendTime, scheduleServiceMock.Object);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(Guid.NewGuid().ToString())
+            .SetRecipient(recipient)
+            .SetConditionEndpoint(null)
+            .SetRequestedSendTime(originalRequestedSendTime)
+            .Build();
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == originalRequestedSendTime),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_ConditionEndpointSet_EmailOnlyChannel_DoesNotPostponeRequestedSendTime()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime originalRequestedSendTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientEmail = new RecipientEmail
+            {
+                EmailAddress = "recipient@altinn.no",
+                Settings = new EmailSendingOptions
+                {
+                    Body = "Test Body",
+                    Subject = "Test Subject",
+                    ContentType = EmailContentType.Plain
+                }
+            }
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = orderChainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
+
+        Mock<INotificationScheduleService> scheduleServiceMock = new();
+        scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+        scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, originalRequestedSendTime, scheduleServiceMock.Object);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(Guid.NewGuid().ToString())
+            .SetRecipient(recipient)
+            .SetConditionEndpoint(new Uri("https://vg.no/condition"))
+            .SetRequestedSendTime(originalRequestedSendTime)
+            .Build();
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == originalRequestedSendTime),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_ConditionEndpointSet_SmsChannel_AnytimePolicy_DoesNotPostponeRequestedSendTime()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime originalRequestedSendTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = new SmsSendingOptions
+                {
+                    Body = "Test Body",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicy.Anytime
+                }
+            }
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = orderChainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders = null
+            });
+
+        Mock<INotificationScheduleService> scheduleServiceMock = new();
+        scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+        scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, originalRequestedSendTime, scheduleServiceMock.Object);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(Guid.NewGuid().ToString())
+            .SetRecipient(recipient)
+            .SetConditionEndpoint(new Uri("https://vg.no/condition"))
+            .SetRequestedSendTime(originalRequestedSendTime)
+            .Build();
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == originalRequestedSendTime),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_WithReminders_EachReminderResolvesSendTimeIndependently()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        Guid reminderId = Guid.NewGuid();
+        Guid secondReminderId = Guid.NewGuid();
+        DateTime mainRequestedSendTime = new(2026, 09, 15, 20, 0, 0, DateTimeKind.Utc);
+        DateTime mainPostponedSendTime = new(2026, 09, 16, 07, 0, 0, DateTimeKind.Utc);
+        DateTime reminderRequestedSendTime = new(2026, 09, 22, 20, 0, 0, DateTimeKind.Utc);
+        DateTime secondReminderRequestedSendTime = new(2026, 09, 29, 20, 0, 0, DateTimeKind.Utc);
+        DateTime secondReminderPostponedSendTime = new(2026, 09, 30, 07, 0, 0, DateTimeKind.Utc);
+
+        var mainRecipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = new SmsSendingOptions
+                {
+                    Body = "Main Body",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicy.Daytime
+                }
+            }
+        };
+
+        var reminderRecipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = new SmsSendingOptions
+                {
+                    Body = "Reminder Body",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicy.Daytime
+                }
+            }
+        };
+
+        var secondReminderRecipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = new SmsSendingOptions
+                {
+                    Body = "Second Reminder Body",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicy.Daytime
+                }
+            }
+        };
+
+        var reminders = new List<NotificationReminder>
+        {
+            new()
+            {
+                DelayDays = 7,
+                OrderId = reminderId,
+                Recipient = reminderRecipient,
+                RequestedSendTime = reminderRequestedSendTime,
+                ConditionEndpoint = null // No condition endpoint => should not be postponed
+            },
+            new()
+            {
+                DelayDays = 14,
+                OrderId = secondReminderId,
+                Recipient = secondReminderRecipient,
+                RequestedSendTime = secondReminderRequestedSendTime,
+                ConditionEndpoint = new Uri("https://vg.no/condition") // Condition endpoint + Daytime => should be postponed independently
+            }
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OrderChainCreateResult
+            {
+                IsNewlyCreated = true,
+                InternalId = 1,
+                OrderChainId = orderChainId,
+                ShipmentId = orderId,
+                SendersReference = null,
+                Reminders =
+                [
+                    new NotificationOrderChainShipment { ShipmentId = reminderId, SendersReference = null },
+                    new NotificationOrderChainShipment { ShipmentId = secondReminderId, SendersReference = null }
+                ]
+            });
+
+        Mock<INotificationScheduleService> scheduleServiceMock = new();
+        scheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+        scheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+        scheduleServiceMock
+            .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(mainRequestedSendTime))
+            .Returns(mainPostponedSendTime);
+        scheduleServiceMock
+            .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(secondReminderRequestedSendTime))
+            .Returns(secondReminderPostponedSendTime);
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, mainRequestedSendTime, scheduleServiceMock.Object);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("ttd"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId(Guid.NewGuid().ToString())
+            .SetRecipient(mainRecipient)
+            .SetConditionEndpoint(new Uri("https://vg.no/condition")) // Main order has condition endpoint => should be postponed
+            .SetRequestedSendTime(mainRequestedSendTime)
+            .SetReminders(reminders)
+            .Build();
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == mainPostponedSendTime),
+                It.Is<List<NotificationOrder>>(list =>
+                    list.Count == 2 &&
+                    list[0].RequestedSendTime == reminderRequestedSendTime &&
+                    list[1].RequestedSendTime == secondReminderPostponedSendTime),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(mainRequestedSendTime), Times.Once);
+        scheduleServiceMock.Verify(n => n.GetRequestedSendTimeForDaytimeSendCondition(secondReminderRequestedSendTime), Times.Once);
+    }
+
+    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null, INotificationScheduleService? notificationScheduleService = null)
     {
         if (repository == null)
         {
@@ -2938,6 +3405,18 @@ public class OrderRequestServiceTests
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
 
-        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, config);
+        var notificationScheduleServiceMock = new Mock<INotificationScheduleService>();
+
+        if (notificationScheduleService == null)
+        {
+            notificationScheduleService = notificationScheduleServiceMock.Object;
+            notificationScheduleServiceMock.Setup(n => n.CanSendSmsNow()).Returns(true);
+            notificationScheduleServiceMock.Setup(n => n.GetSmsExpirationDateTime(It.IsAny<DateTime>())).Returns((DateTime reference) => reference.AddHours(48));
+            notificationScheduleServiceMock
+                .Setup(n => n.GetRequestedSendTimeForDaytimeSendCondition(It.IsAny<DateTime>()))
+                .Returns((DateTime requestedSendTime) => requestedSendTime);
+        }
+    
+        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, notificationScheduleService ?? notificationScheduleServiceMock.Object, config);
     }
 }
