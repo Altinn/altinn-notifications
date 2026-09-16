@@ -32,6 +32,7 @@ public class OrderProcessingService(
     public async Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default)
     {
         using Activity? activity = _activitySource.StartActivity("TryProcessOrder")?.SetTag("Retry", processRetry);
+        string savepoint = "after_read_with_lock";
         UnitOfWork unitOfWork;
         try
         {
@@ -58,6 +59,7 @@ public class OrderProcessingService(
                 return false;
             }
 
+            await unitOfWorkRepository.SaveUnitOfWork(unitOfWork, savepoint);
             await ProcessOrder(pastDueOrder, unitOfWork);
             await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
@@ -65,23 +67,28 @@ public class OrderProcessingService(
         }
         catch (Exception e)
         {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(e, "An error occurred while processing past due order {OrderId}: {ErrorMessage}", pastDueOrder?.Id, e.Message);
+            }
+
             if (pastDueOrder != null && pastDueOrder?.Id != null)
             {
                 activity?.SetTag("OrderId", pastDueOrder?.Id);
                 try
                 {
+                    await unitOfWorkRepository.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
                     await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder!.Id, $"{e} {e.Message}");
+                    await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
                 }
                 catch (Exception)
                 {
-                    // Do nothing, probably a global infrastructure error
+                    await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
                 }
             }
-
-            await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-            if (!cancellationToken.IsCancellationRequested)
+            else
             {
-                logger.LogError(e, "An error occurred while processing past due order {OrderId}: {ErrorMessage}", pastDueOrder?.Id, e.Message);
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
 
             return false;
