@@ -3562,6 +3562,51 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SetRetryStatus_MaxRetryCountBoundary_KeepsRetryingAtLimitAndFailsAboveLimit()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        IOptions<NotificationConfig> options = ServiceUtil
+            .GetServices([typeof(IOptions<NotificationConfig>)])
+            .Cast<IOptions<NotificationConfig>>()
+            .First();
+        int maxRetryCount = options.Value.RetryOrdersMaxCount;
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Act - up to and including max retry count
+        for (int i = 0; i < maxRetryCount; i++)
+        {
+            await SetRetryStatusWithUnitOfWork(repo, order.Id, $"retry-{i}", TestContext.Current.CancellationToken);
+        }
+
+        // Assert - at max retry count, state is still Retrying
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string statusAtLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Retrying.ToString(), statusAtLimit);
+
+        // Act - one more retry moves to Failed (retrycount + 1 > _maxretrycount)
+        await SetRetryStatusWithUnitOfWork(repo, order.Id, "retry-over-limit", TestContext.Current.CancellationToken);
+
+        // Assert - above max retry count, state is Failed
+        string statusAboveLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Failed.ToString(), statusAboveLimit);
+    }
+
+    [Fact]
     public async Task PersistProcessingResultAsync_SmsNotification_PersistsAllRecipientFields()
     {
         // Arrange

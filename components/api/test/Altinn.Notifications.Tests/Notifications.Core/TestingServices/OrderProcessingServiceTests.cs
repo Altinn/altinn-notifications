@@ -75,8 +75,8 @@ public class OrderProcessingServiceTests
         var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
-        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
-        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWorkToSavepoint(unitOfWork, "after_read_with_lock"), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         orderRepositoryMock.Verify(
             r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
             Times.Once);
