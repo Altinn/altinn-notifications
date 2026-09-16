@@ -72,6 +72,11 @@ public class OrderProcessingService(
                 logger.LogError(e, "An error occurred while processing past due order {OrderId}: {ErrorMessage}", pastDueOrder?.Id, e.Message);
             }
 
+            if (unitOfWork.Connection.State != System.Data.ConnectionState.Open)
+            {
+                return false;
+            }
+
             if (pastDueOrder != null)
             {
                 activity?.SetTag("OrderId", pastDueOrder.Id);
