@@ -72,9 +72,9 @@ public class OrderProcessingService(
                 logger.LogError(e, "An error occurred while processing past due order {OrderId}: {ErrorMessage}", pastDueOrder?.Id, e.Message);
             }
 
-            if (pastDueOrder != null && pastDueOrder?.Id != null)
+            if (pastDueOrder != null)
             {
-                activity?.SetTag("OrderId", pastDueOrder?.Id);
+                activity?.SetTag("OrderId", pastDueOrder.Id);
                 try
                 {
                     await unitOfWorkRepository.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
