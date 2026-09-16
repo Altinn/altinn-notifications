@@ -852,7 +852,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         return client;
     }
 
-    private static IDashboardService GetRealDashboardService()
+    private static DashboardService GetRealDashboardService()
     {
         var repository = ServiceUtil.GetServices([typeof(IDashboardRepository)])
             .OfType<DashboardRepository>()
