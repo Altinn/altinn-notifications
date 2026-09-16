@@ -761,19 +761,10 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         // Arrange
         // The SMS notification is stored exactly as received, with the international "00" prefix,
         // e.g. "004799999999". A dashboard lookup for the very same value should return that entry.
-        //
-        // BUG: DashboardService.GetNotificationsByPhoneNumberAsync normalizes the incoming phone number
-        // via MobileNumberHelper.EnsureCountryCodeIfValidNumber, which turns "0047..." into "+47..."
-        // before querying the database. Since the stored value still has the "00" prefix, the query
-        // no longer matches it and the lookup incorrectly returns an empty list.
-        //
-        // This test uses the real DashboardService/DashboardRepository (not the mock) so the bug is
-        // actually exercised end-to-end through the controller. It is expected to FAIL until the bug
-        // in MobileNumberHelper.EnsureCountryCodeIfValidNumber is fixed.
         const string storedMobileNumber = "004799999999";
 
         Guid orderId = await SeedOrderWithSmsNotification(
-            new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
+            DateTime.UtcNow.AddHours(-8),
             mobileNumber: storedMobileNumber);
 
         try
