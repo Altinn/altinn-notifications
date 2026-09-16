@@ -72,6 +72,16 @@ public enum ProcessingLifecycle
     Order_Processed,
 
     /// <summary>
+    /// The order is being retried after a previous failure or inconclusive processing attempt.
+    /// </summary>
+    Order_Retrying,
+
+    /// <summary>
+    /// The order has failed and will not be retried.
+    /// </summary>
+    Order_Failed,
+
+    /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
