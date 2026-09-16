@@ -115,4 +115,9 @@ public class NotificationConfig
     /// The number of consecutive retry orders before ramping up the processing of retry orders. This is used to prevent overloading the system with too many retry orders at once.
     /// </summary>
     public int RetryOrdersRampUpLimit { get; set; } = 10;
+
+    /// <summary>
+    /// The maximum number of retry attempts for a retry order.
+    /// </summary>
+    public int RetryOrdersMaxCount { get; set; } = 10;
 }

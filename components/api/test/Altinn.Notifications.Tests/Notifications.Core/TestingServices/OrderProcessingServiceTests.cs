@@ -49,6 +49,77 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task StartProcessingPastDueOrders_WhenOrderProcessingThrows_SetsRetryStatusAndRollsBack()
+    {
+        var unitOfWork = new UnitOfWork();
+        var order = CreateOrder(NotificationChannel.Sms);
+
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetNextPastDueOrder(unitOfWork, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(order);
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(s => s.ProcessOrder(order))
+            .ThrowsAsync(new InvalidOperationException("failure"));
+
+        var service = GetTestService(
+            orderRepository: orderRepositoryMock.Object,
+            smsOrderProcessingService: smsProcessingServiceMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        orderRepositoryMock.Verify(
+            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task StartProcessingPastDueOrders_WhenSetRetryStatusThrows_RollsBackAndReturnsFalse()
+    {
+        var unitOfWork = new UnitOfWork();
+        var order = CreateOrder(NotificationChannel.Sms);
+
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetNextPastDueOrder(unitOfWork, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(order);
+        orderRepositoryMock
+            .Setup(r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("retry status failure"));
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(s => s.ProcessOrder(order))
+            .ThrowsAsync(new InvalidOperationException("processing failure"));
+
+        var service = GetTestService(
+            orderRepository: orderRepositoryMock.Object,
+            smsOrderProcessingService: smsProcessingServiceMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        orderRepositoryMock.Verify(
+            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task StartProcessingPastDueOrders_OrderFound_ProcessesAndCommits()
     {
         var unitOfWork = new UnitOfWork();
@@ -137,7 +208,7 @@ public class OrderProcessingServiceTests
             r => r.PersistProcessingResultAsync(unitOfWork, order, It.IsAny<EmailOrderProcessingResult>(), smsResult, It.IsAny<CancellationToken>()),
             Times.Once);
         orderRepositoryMock.Verify(
-            r => r.SetOrderSendConditionNotMetAsync(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<OrderProcessingStatus>(), It.IsAny<CancellationToken>()),
+            r => r.SetOrderSendConditionNotMetAsync(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -266,7 +337,7 @@ public class OrderProcessingServiceTests
         await service.ProcessOrder(order, unitOfWork);
 
         orderRepositoryMock.Verify(
-            r => r.SetOrderSendConditionNotMetAsync(unitOfWork, order, OrderProcessingStatus.SendConditionNotMet, It.IsAny<CancellationToken>()),
+            r => r.SetOrderSendConditionNotMetAsync(unitOfWork, order, It.IsAny<CancellationToken>()),
             Times.Once);
         orderRepositoryMock.Verify(
             r => r.PersistProcessingResultAsync(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailOrderProcessingResult>(), It.IsAny<SmsOrderProcessingResult>(), It.IsAny<CancellationToken>()),
@@ -296,7 +367,7 @@ public class OrderProcessingServiceTests
         await service.ProcessOrder(order, unitOfWork);
 
         orderRepositoryMock.Verify(
-            r => r.SetOrderSendConditionNotMetAsync(unitOfWork, order, OrderProcessingStatus.Retrying, It.IsAny<CancellationToken>()),
+            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
             Times.Once);
         emailOrderProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
     }
@@ -330,7 +401,7 @@ public class OrderProcessingServiceTests
 
         smsOrderProcessingServiceMock.Verify(s => s.ProcessOrder(order), Times.Once);
         orderRepositoryMock.Verify(
-            r => r.SetOrderSendConditionNotMetAsync(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<OrderProcessingStatus>(), It.IsAny<CancellationToken>()),
+            r => r.SetOrderSendConditionNotMetAsync(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -12,6 +13,8 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -3357,7 +3360,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
-        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, OrderProcessingStatus.SendConditionNotMet, TestContext.Current.CancellationToken);
+        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
         // Assert
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3398,7 +3401,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
-        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, OrderProcessingStatus.SendConditionNotMet, TestContext.Current.CancellationToken);
+        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
         // Assert
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -3436,11 +3439,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // First delivery — normal path
-        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, OrderProcessingStatus.SendConditionNotMet, TestContext.Current.CancellationToken);
+        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
         // Act — second delivery, order is already SendConditionNotMet (real duplicate-delivery race)
         // Should not throw and should not write a second status feed entry
-        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, OrderProcessingStatus.SendConditionNotMet, TestContext.Current.CancellationToken);
+        await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
         // Assert
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3460,8 +3463,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(OrderRepository));
 
         // An order that is never persisted to the DB.
-        // SetProcessingStatusAsync updates 0 rows (no-op), then InsertStatusFeedEntry
-        // throws InvalidOperationException because insertstatusfeed finds no matching order.
+        // SetOrderSendConditionNotMetAsync updates 0 rows and throws InvalidOperationException.
         NotificationOrder ghostOrder = new()
         {
             Id = Guid.NewGuid(),
@@ -3473,11 +3475,90 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, ghostOrder, OrderProcessingStatus.SendConditionNotMet, TestContext.Current.CancellationToken));
+            SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, ghostOrder, TestContext.Current.CancellationToken));
 
         string orderCountSql = $"SELECT count(1) FROM notifications.orders WHERE alternateid = '{ghostOrder.Id}'";
         int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderCountSql);
         Assert.Equal(0, orderCount);
+    }
+
+    [Fact]
+    public async Task SetRetryStatus_FirstAttempt_SetsRetryingAndPersistsReason()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Act
+        await SetRetryStatusWithUnitOfWork(repo, order.Id, "first retry", TestContext.Current.CancellationToken);
+
+        // Assert
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Retrying.ToString(), actualStatus);
+
+        string retryCountSql = $"SELECT retrycount FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        int retryCount = await PostgreUtil.RunSqlReturnOutput<int>(retryCountSql);
+        Assert.Equal(1, retryCount);
+
+        string retryReasonSql = $"SELECT retryreason FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string retryReason = await PostgreUtil.RunSqlReturnOutput<string>(retryReasonSql);
+        Assert.Equal("first retry", retryReason);
+    }
+
+    [Fact]
+    public async Task SetRetryStatus_WhenRetryThresholdExceeded_SetsFailed()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        IOptions<NotificationConfig> options = ServiceUtil
+            .GetServices([typeof(IOptions<NotificationConfig>)])
+            .Cast<IOptions<NotificationConfig>>()
+            .First();
+        int maxRetryCount = options.Value.RetryOrdersMaxCount;
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Act
+        for (int i = 0; i <= maxRetryCount; i++)
+        {
+            await SetRetryStatusWithUnitOfWork(repo, order.Id, $"retry-{i}", TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
+        Assert.Equal(OrderProcessingStatus.Failed.ToString(), actualStatus);
+
+        string retryCountSql = $"SELECT retrycount FROM notifications.orders WHERE alternateid = '{order.Id}'";
+        int retryCount = await PostgreUtil.RunSqlReturnOutput<int>(retryCountSql);
+        Assert.Equal(maxRetryCount + 1, retryCount);
     }
 
     [Fact]
@@ -4239,7 +4320,6 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     private static async Task SetOrderSendConditionNotMetAsyncWithUnitOfWork(
         OrderRepository repo,
         NotificationOrder order,
-        OrderProcessingStatus status,
         CancellationToken cancellationToken)
     {
         IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
@@ -4250,7 +4330,31 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         try
         {
-            await repo.SetOrderSendConditionNotMetAsync(unitOfWork, order, status, cancellationToken);
+            await repo.SetOrderSendConditionNotMetAsync(unitOfWork, order, cancellationToken);
+            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+        }
+        catch
+        {
+            await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            throw;
+        }
+    }
+
+    private static async Task SetRetryStatusWithUnitOfWork(
+        OrderRepository repo,
+        Guid orderId,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
+            .GetServices([typeof(IUnitOfWorkRepository)])
+            .First(i => i.GetType() == typeof(UnitOfWorkRepository));
+
+        UnitOfWork unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+
+        try
+        {
+            await repo.SetRetryStatus(unitOfWork, orderId, reason);
             await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
         }
         catch

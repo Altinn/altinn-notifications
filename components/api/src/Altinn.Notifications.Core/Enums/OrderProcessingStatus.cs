@@ -38,5 +38,10 @@ public enum OrderProcessingStatus
     /// <summary>
     /// The notification order should be retried due to a transient failure or other recoverable issue
     /// </summary>
-    Retrying
+    Retrying,
+
+    /// <summary>
+    /// The notification order has failed to be processed after all retry attempts have been exhausted.
+    /// </summary>
+    Failed
 }
