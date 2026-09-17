@@ -80,9 +80,9 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
 
 		<!-- Wolverine -->
-		<PackageVersion Include="WolverineFx" Version="6.37.0" />
-		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.37.0" />
-		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.37.0" />
+		<PackageVersion Include="WolverineFx" Version="6.28.2" />
+		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.28.2" />
+		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.28.2" />
 
 		<!-- xUnit -->
 		<PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
