@@ -75,11 +75,13 @@ public class OrderProcessingServiceTests
         var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
-        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWorkToSavepoint(unitOfWork, "after_read_with_lock"), Times.Once);
-        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.SaveUnitOfWork(unitOfWork, "after_read_with_lock"), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWorkToSavepoint(It.IsAny<UnitOfWork>(), It.IsAny<string>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         orderRepositoryMock.Verify(
-            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
-            Times.Once);
+            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()),
+            Times.Never);
     }
 
     [Fact]
@@ -112,11 +114,13 @@ public class OrderProcessingServiceTests
         var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
-        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.SaveUnitOfWork(unitOfWork, "after_read_with_lock"), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWorkToSavepoint(It.IsAny<UnitOfWork>(), It.IsAny<string>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         orderRepositoryMock.Verify(
-            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
-            Times.Once);
+            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()),
+            Times.Never);
     }
 
     [Fact]
@@ -178,7 +182,9 @@ public class OrderProcessingServiceTests
         var result = await service.TryProcessOrder(false, TestContext.Current.CancellationToken);
 
         Assert.False(result);
-        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWorkToSavepoint(It.IsAny<UnitOfWork>(), It.IsAny<string>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.SaveUnitOfWork(It.IsAny<UnitOfWork>(), It.IsAny<string>()), Times.Never);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
