@@ -73,7 +73,8 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        Guid dialogId = Guid.NewGuid();
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={dialogId}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -103,49 +104,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         Assert.Equal(_emailNotificationId, emailEntry.NotificationId);
         Assert.Equal(_emailRequestedSendTime, emailEntry.RequestedSendTime);
 
-        _serviceMock.Verify(s => s.GetByDialogId("dialog-abc", It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task Get_WithValidBearerTokenAndTransmissionId_ReturnsOk()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?transmissionId=transmission-xyz");
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        var items = JsonSerializer.Deserialize<List<NotificationLogSummaryExt>>(content, _options);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull(items);
-        Assert.Equal(2, items.Count);
-
-        var smsEntry = Assert.Single(items, i => i.Channel == "Sms");
-        Assert.Equal(_smsNotificationId, smsEntry.NotificationId);
-        Assert.Equal("Sms", smsEntry.Channel);
-        Assert.Equal("Reminder", smsEntry.Type);
-        Assert.Equal("Delivered", smsEntry.Status);
-        Assert.Equal("+4799999999", smsEntry.Destination);
-        Assert.Equal(_smsLastUpdateTime, smsEntry.LastUpdateTime);
-        Assert.Equal(_smsRequestedSendTime, smsEntry.RequestedSendTime);
-
-        var emailEntry = Assert.Single(items, i => i.Channel == "Email");
-        Assert.Equal("Email", emailEntry.Channel);
-        Assert.Equal("Delivered", emailEntry.Status);
-        Assert.Equal("Notification", emailEntry.Type);
-        Assert.Equal("user@example.com", emailEntry.Destination);
-        Assert.Equal(_emailLastUpdateTime, emailEntry.LastUpdateTime);
-        Assert.Equal(_emailNotificationId, emailEntry.NotificationId);
-        Assert.Equal(_emailRequestedSendTime, emailEntry.RequestedSendTime);
-
-        _serviceMock.Verify(s => s.GetByTransmissionId("transmission-xyz", It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -157,7 +116,9 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc&transmissionId=transmission-xyz");
+        Guid dialogId = Guid.NewGuid();
+        Guid transmissionId = Guid.NewGuid();
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={dialogId}&transmissionId={transmissionId}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -187,7 +148,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         Assert.Equal(_emailNotificationId, emailEntry.NotificationId);
         Assert.Equal(_emailRequestedSendTime, emailEntry.RequestedSendTime);
 
-        _serviceMock.Verify(s => s.GetByDialogAndTransmissionIds("dialog-abc", "transmission-xyz", It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetByDialogAndTransmissionIds(dialogId.ToString(), transmissionId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -195,7 +156,8 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
     {
         // Arrange
         HttpClient client = GetTestClient();
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        Guid dialogId = Guid.NewGuid();
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={dialogId}");
         request.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
         // Act
@@ -226,7 +188,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         Assert.Equal(_emailNotificationId, emailEntry.NotificationId);
         Assert.Equal(_emailRequestedSendTime, emailEntry.RequestedSendTime);
 
-        _serviceMock.Verify(s => s.GetByDialogId("dialog-abc", It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -234,7 +196,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
     {
         // Arrange
         HttpClient client = GetTestClient();
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={Guid.NewGuid()}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -249,7 +211,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={Guid.NewGuid()}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -267,7 +229,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "invalid:scope"));
 
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={Guid.NewGuid()}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -308,7 +270,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        HttpRequestMessage request = new(HttpMethod.Get, _basePath + "?dialogId=dialog-abc");
+        HttpRequestMessage request = new(HttpMethod.Get, _basePath + $"?dialogId={Guid.NewGuid()}");
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);

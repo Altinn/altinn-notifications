@@ -296,6 +296,10 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         .AddPolicy(AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE, policy =>
         {
             policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_COMPOSED_EMAIL_CREATE));
+        })
+        .AddPolicy(AuthorizationConstants.POLICY_END_USER_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement("altinn:portal/enduser"));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
