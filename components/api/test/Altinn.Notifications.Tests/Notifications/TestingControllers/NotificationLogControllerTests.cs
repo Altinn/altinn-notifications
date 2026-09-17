@@ -234,6 +234,101 @@ public class NotificationLogControllerTests
         serviceMock.Verify(s => s.GetByDialogId(It.IsAny<string>(), cancellationToken), Times.Once);
     }
 
+    [Fact]
+    public async Task GetForEnduser_WithDialogIdOnlyAndAccessToDialog_DelegatesGetByDialogId()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        _dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(true);
+
+        var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
+
+        // Act
+        var result = await controller.GetForEnduser(
+            new NotificationLogQueryExt { DialogId = dialogId },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var notificationLogSummaries = Assert.IsType<IImmutableList<NotificationLogSummaryExt>>(
+            actionResult.Value,
+            exactMatch: false);
+        Assert.Equal(2, notificationLogSummaries.Count);
+
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _serviceMock.Verify(
+            s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithDialogAndTransmissionIdsAndAccessToDialog_DelegatesGetByDialogAndTransmissionIds()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        Guid transmissionId = Guid.NewGuid();
+        _dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(true);
+
+        var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
+        var query = new NotificationLogQueryExt
+        {
+            DialogId = dialogId,
+            TransmissionId = transmissionId
+        };
+
+        // Act
+        var result = await controller.GetForEnduser(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var notificationLogSummaries = Assert.IsType<IImmutableList<NotificationLogSummaryExt>>(
+            actionResult.Value,
+            exactMatch: false);
+        Assert.Equal(2, notificationLogSummaries.Count);
+
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _serviceMock.Verify(
+            s => s.GetByDialogAndTransmissionIds(
+                dialogId.ToString(),
+                transmissionId.ToString(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithoutAccessToDialog_ReturnsForbiddenAndDoesNotCallService()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        _dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(false);
+
+        var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
+
+        // Act
+        var result = await controller.GetForEnduser(
+            new NotificationLogQueryExt { DialogId = dialogId },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _serviceMock.Verify(
+            s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _serviceMock.Verify(
+            s => s.GetByDialogAndTransmissionIds(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static NotificationLogSummary CreateSmsSummary() =>
         new()
         {

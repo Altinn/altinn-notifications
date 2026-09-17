@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models.NotificationLog;
@@ -16,6 +17,7 @@ using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
 
@@ -28,6 +30,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.NotificationLogCon
 public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.NotificationLogController>>
 {
     private const string _basePath = "/notifications/api/v1/future/log";
+    private const string _enduserBasePath = "/notifications/api/v1/future/enduser/log";
 
     private static readonly Guid _smsNotificationId = Guid.NewGuid();
     private static readonly Guid _emailNotificationId = Guid.NewGuid();
@@ -239,6 +242,92 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
     }
 
     [Fact]
+    public async Task GetForEnduser_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "invalid:scope"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithValidUserTokenAndAccessToDialog_ReturnsOk()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        var dialogportenClientMock = new Mock<IDialogportenClient>();
+        dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(true);
+
+        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _serviceMock.Verify(s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithValidUserTokenWithoutAccessToDialog_ReturnsForbidden()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        var dialogportenClientMock = new Mock<IDialogportenClient>();
+        dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(false);
+
+        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _serviceMock.Verify(
+            s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Get_WithNoQueryIdentifiersProvided_ReturnsBadRequest()
     {
         // Arrange
@@ -285,9 +374,12 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
     }
 
-    private HttpClient GetTestClient(INotificationLogService? service = null)
+    private HttpClient GetTestClient(
+        INotificationLogService? service = null,
+        IDialogportenClient? dialogportenClient = null)
     {
         service ??= _serviceMock.Object;
+        dialogportenClient ??= Mock.Of<IDialogportenClient>();
 
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
@@ -296,6 +388,7 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton(service);
+                services.Replace(ServiceDescriptor.Singleton(dialogportenClient));
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
