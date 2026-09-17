@@ -793,6 +793,47 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         }
     }
 
+    [Theory]
+    [InlineData("004799999999")]
+    [InlineData("+4799999999")]
+    public async Task GetByPhoneNumber_AnyPrefixVariant_ReturnsSeededNotification(string lookupPhoneNumber)
+    {
+        // Arrange
+        // The SMS notification is stored exactly as received, with the international "00" prefix,
+        // e.g. "004799999999". A dashboard lookup using the stored value, the "+47" variant, or the
+        // bare number without any prefix should all return that same entry.
+        const string storedMobileNumber = "004799999999";
+
+        Guid orderId = await SeedOrderWithSmsNotification(
+            DateTime.UtcNow.AddHours(-8),
+            mobileNumber: storedMobileNumber);
+
+        try
+        {
+            IDashboardService realService = GetRealDashboardService();
+
+            HttpClient client = GetTestClient(realService);
+            SetValidAuthorization(client);
+
+            HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", lookupPhoneNumber));
+
+            // Act
+            HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(result);
+            var item = Assert.Single(result);
+            Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
+        }
+        finally
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds([orderId]);
+        }
+    }
+
     private static HttpRequestMessage CreateRequest(string pathAndQuery, params (string Name, string Value)[] headers)
     {
         HttpRequestMessage request = new(HttpMethod.Get, $"{_basePath}/recipients/notifications/{pathAndQuery}");
