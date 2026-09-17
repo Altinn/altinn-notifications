@@ -44,6 +44,12 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
+        public async Task RollbackUnitOfWorkToSavepoint(UnitOfWork unitOfWork, string savepoint)
+        {
+            await unitOfWork.Transaction.RollbackAsync(savepoint);
+        }
+
+        /// <inheritdoc/>
         public async Task CommitUnitOfWork(UnitOfWork unitOfWork)
         {
             try
@@ -54,6 +60,12 @@ namespace Altinn.Notifications.Persistence.Repository
             {
                 await unitOfWork.Connection.CloseAsync();
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task SaveUnitOfWork(UnitOfWork unitOfWork, string savepoint)
+        {
+            await unitOfWork.Transaction.SaveAsync(savepoint);
         }
     }
 }

@@ -62,7 +62,9 @@ public static class ProcessingLifecycleMapper
         { "processed", ProcessingLifecycle.Order_Processed },
         { "registered", ProcessingLifecycle.Order_Registered },
         { "processing", ProcessingLifecycle.Order_Processing },
-        { "sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet }
+        { "sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet },
+        { "retrying", ProcessingLifecycle.Order_Retrying },
+        { "failed", ProcessingLifecycle.Order_Failed }
     };
 
     /// <summary>

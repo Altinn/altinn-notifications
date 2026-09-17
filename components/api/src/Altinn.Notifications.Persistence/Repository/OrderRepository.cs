@@ -44,8 +44,8 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _insertOrderSql = "select notifications.insertorder_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy, _type, _processingstatus, _orderchainid)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
-    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _advanceStatusSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
+    private const string _retryStatusSql = "call notifications.updateorderretry($1, $2, $3)"; // (_orderid, _retryreason, _maxretrycount)
     private const string _getOrderPastSendTime = "select notifications.getorder_pastsendtime()";
     private const string _getOrderRetry = "select notifications.getorder_retry($1)";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
@@ -82,7 +82,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     /// <inheritdoc/>
     public async Task<List<NotificationOrder>> GetOrdersBySendersReference(string sendersReference, string creator)
     {
-        List<NotificationOrder> searchResult = new();
+        List<NotificationOrder> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersBySendersReferenceSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sendersReference);
@@ -244,9 +244,19 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     /// <inheritdoc/>
     public async Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_advanceStatusSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task SetRetryStatus(UnitOfWork unitOfWork, Guid orderId, string reason)
+    {
+        await using NpgsqlCommand pgcom = new(_retryStatusSql, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, reason != null ? reason : DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, config.Value.RetryOrdersMaxCount);
         await pgcom.ExecuteNonQueryAsync();
     }
 
@@ -259,14 +269,12 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, TimeSpan.FromSeconds(config.Value.RetryOrdersDBDelaySeconds));
         }
 
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
-            if (await reader.ReadAsync(cancellationToken))
-            {
-                var notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0, cancellationToken);
-                notificationOrder.OrderProcessingStatus = processRetry ? OrderProcessingStatus.Retrying : OrderProcessingStatus.Registered;
-                return notificationOrder;
-            }
+            var notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0, cancellationToken);
+            notificationOrder.OrderProcessingStatus = processRetry ? OrderProcessingStatus.Retrying : OrderProcessingStatus.Registered;
+            return notificationOrder;
         }
 
         return null;
@@ -591,7 +599,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             return;
         }
 
-        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertSmsTextSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertSmsTextSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, smsTemplate.SenderNumber);
@@ -607,7 +615,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             return;
         }
 
-        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertEmailTextSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertEmailTextSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.FromAddress);
@@ -983,26 +991,21 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, OrderProcessingStatus status, CancellationToken cancellationToken = default)
+    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default)
     {
         var connection = unitOfWork.Connection;
         var transaction = unitOfWork.Transaction;
 
         await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, OrderProcessingStatus.SendConditionNotMet.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
 
         if (rowsAffected > 0)
         {
-            // Don't insert a status feed entry the state is Retrying, as this is a transient state and not a final state.
-            // The status feed entry will be inserted when the order reaches a final state (Completed, SendConditionNotMet, or Cancelled).
-            if (status == OrderProcessingStatus.SendConditionNotMet)
-            {
-                await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
-            }
+            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
         }
-        else if (rowsAffected == 0)
+        else
         {
             throw new InvalidOperationException(
                 $"Order {order.Id} not found when attempting to persist processing result");

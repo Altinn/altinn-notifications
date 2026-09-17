@@ -21,6 +21,7 @@ public class GetOrderService : IGetOrderService
         { OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met." },
         { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
         { OrderProcessingStatus.Retrying, "Order is being retried after a previous failure." },
+        { OrderProcessingStatus.Failed, "Order processing has failed after all retry attempts have been exhausted." },
     };
 
     /// <summary>

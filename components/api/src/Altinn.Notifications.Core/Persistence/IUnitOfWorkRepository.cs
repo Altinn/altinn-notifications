@@ -26,4 +26,20 @@ public interface IUnitOfWorkRepository
     /// <param name="unitOfWork">The unit of work to commit.</param>
     /// <returns></returns>
     public Task CommitUnitOfWork(UnitOfWork unitOfWork);
+
+    /// <summary>
+    /// Rolls back the changes made during the unit of work to a specific savepoint by rolling back the transaction to that savepoint.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to roll back.</param>
+    /// <param name="savepoint">The savepoint to roll back to.</param>
+    /// <returns></returns>
+    public Task RollbackUnitOfWorkToSavepoint(UnitOfWork unitOfWork, string savepoint);
+
+    /// <summary>
+    /// Saves the changes made during the unit of work to a specific savepoint by creating a savepoint in the transaction.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to save.</param>
+    /// <param name="savepoint">The savepoint to create.</param>
+    /// <returns></returns>
+    public Task SaveUnitOfWork(UnitOfWork unitOfWork, string savepoint);
 }
