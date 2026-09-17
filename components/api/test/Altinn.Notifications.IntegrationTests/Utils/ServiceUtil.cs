@@ -233,6 +233,7 @@ public static class ServiceUtil
     private static void RegisterRepositories(IServiceCollection services)
     {
         services.AddSingleton<IOrderRepository, OrderRepository>();
+        services.AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IDashboardRepository, DashboardRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();

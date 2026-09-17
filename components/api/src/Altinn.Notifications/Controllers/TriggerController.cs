@@ -35,16 +35,32 @@ public class TriggerController(
     private readonly ITerminateExpiredNotificationsService _terminateExpiredService = terminateExpiredService;
 
     /// <summary>
-    /// Endpoint for starting the processing of past due orders
+    /// Endpoint to trigger processing of one past due order. This is intended for testing and debugging purposes, and should not be used in production.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
-    [Route("pastdueorders")]
+    [Route("pastdueoneorder")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
+    public async Task<ActionResult> Trigger_PastDueOrder(CancellationToken cancellationToken = default)
     {
-        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
+        await _orderProcessingService.TryProcessOrder(false, cancellationToken);
+
+        return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint to trigger processing for one retry order. This is intended for testing and debugging purposes, and should not be used in production
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+    [HttpPost]
+    [Route("retryoneorder")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_RetryOrder(CancellationToken cancellationToken = default)
+    {
+        await _orderProcessingService.TryProcessOrder(true, cancellationToken);
+
         return Ok();
     }
 
