@@ -83,7 +83,7 @@ public class OrderProcessingService(
                 try
                 {
                     await unitOfWorkRepository.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
-                    await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder!.Id, $"{e} {e.Message}");
+                    await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder.Id, $"{e} {e.Message}");
                     await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
                 }
                 catch (Exception)
