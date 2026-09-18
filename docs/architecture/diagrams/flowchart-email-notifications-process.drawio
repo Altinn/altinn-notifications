@@ -249,7 +249,7 @@
                         <mxPoint x="275.66" y="1010" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="8" value="Valid send result?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                <mxCell id="8" value="Valid EmailSendResult?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="217.16" y="1020" width="117.67" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="11" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="8" target="12" edge="1">

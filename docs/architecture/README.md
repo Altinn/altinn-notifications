@@ -32,6 +32,12 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 </details>
 
 <details>
+<summary>Composed email notification processing</summary>
+
+![Composed email notification flow](diagrams/flowchart-composed-email-notifications-process.svg "Flow chart for composed email notification processing")
+</details>
+
+<details>
 <summary>SMS notification processing</summary>
 
 ![SMS notification flow](diagrams/flowchart-sms-notifications-process.svg "Flow chart for SMS notification processing")

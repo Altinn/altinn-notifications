@@ -1,0 +1,178 @@
+<mxfile host="65bd71144e">
+    <diagram id="composed-email-notifications-process-v1" name="Composed Email Notifications Process">
+        <mxGraphModel dx="2232" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1050" pageHeight="1560" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="5" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-420" y="10" width="247.5" height="320" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-160" y="10" width="970" height="1520" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-title-label" value="Composed email notification flow" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="15" width="260" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="ext-post" value="POST /future/orders/composed-email" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="50" width="260" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-ext-validate" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="ext-post" target="step-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-validate" value="Validate request, extract creator (org)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="110" width="260" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-validate-existing" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-validate" target="diamond-existing" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="diamond-existing" value="Existing order for (creator +&lt;div&gt;&amp;nbsp;idempotencyId)?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="190" width="220" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-existing-new" value="NEW" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="diamond-existing" target="step-build" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-existing-match" value="MATCH" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="diamond-existing" target="end-existing" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-existing" value="Return 200 OK with existing order chain details" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="200" width="240" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-build" value="Build NotificationOrder (Type: Composed), with attachments referenced by SAS URL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="300" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-build-persist" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-build" target="step-persist" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-persist" value="Persist order to DB (status: &#39;Registered&#39;) → Return 201 Created" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="415" width="260" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-persist-note" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-persist" target="note-standard" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-standard" value="Processed like a standard order&amp;nbsp;&lt;div&gt;(see: flowchart-order-process)&lt;div&gt;Generates an email notification with status &#39;New&#39;&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="515" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-note-cron" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="note-standard" target="cron-label" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="cron-label" value="Cron trigger: send-email&lt;div&gt;(same trigger as regular email)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="630" width="260" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="timer" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="1" vertex="1">
+                    <mxGeometry x="287" y="675" width="46" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-timer-claim" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="timer" target="step-claim" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-claim" value="Claim new composed email notifications from DB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="750" width="260" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-claim-publish" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-claim" target="step-publish" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-publish" value="Publish SendComposedEmailCommand to ASB queue" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="835" width="260" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-publish-asb" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-publish" target="asb-composed" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="asb-composed" value="altinn.notifications.composedemail.send" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="920" width="230" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-asb-receive" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="asb-composed" target="step-receive" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-receive" value="Receive SendComposedEmailCommand, build ComposedEmail with SAS file attachment references" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="1000" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-receive-download" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-receive" target="step-download" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-download" value="Download each attachment from its SAS URL&lt;div&gt;(parallel, limited concurrency)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="1110" width="260" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-download-diamond" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-download" target="diamond-sasvalid" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="diamond-sasvalid" value="SAS URL valid?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="1205" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-sasvalid-valid" value="Valid" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="diamond-sasvalid" target="step-submit-acs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-sasvalid-permanent" value="Permanent failure" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" parent="1" source="diamond-sasvalid" target="box-invalidsas" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="575" y="1245"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="box-invalidsas" value="InvalidSasUrlException" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="1220" width="210" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-invalidsas-dispatch" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="box-invalidsas" target="box-dispatchfailed" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="765" y="1310" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="box-dispatchfailed" value="Dispatch send result to API&amp;nbsp;&lt;div&gt;(Failed_InvalidSasUrl)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="1290" width="210" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-dispatch-end" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="box-dispatchfailed" target="2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end-nosretry" value="Terminal delivery status — no retry, no ACS call" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="675" y="1450" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-sasvalid-transient" value="Transient failure" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;fontSize=9;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="diamond-sasvalid" target="box-attachdlex" edge="1">
+                    <mxGeometry x="-0.2431" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                        <mxPoint x="80" y="1140" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="100" y="1245"/>
+                            <mxPoint x="100" y="1245"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="box-attachdlex" value="AttachmentDownloadException" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-150" y="1220" width="230" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-attachdlex-note" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="box-attachdlex" target="note-retry" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-retry" value="Infrastructure exception —&amp;nbsp;&lt;div&gt;handled by Wolverine retry policy:&lt;div&gt;cooldown retries → scheduled retries → DLQ&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="-145" y="1300" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-submit-acs" value="Submit composed email (with attachments) to ACS →&amp;nbsp;&lt;div&gt;get OperationId, start polling for operation status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="1320" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-submit-converge" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="step-submit-acs" target="note-converge" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note-converge" value="Same status polling, delivery report and dispatch flow as regular email —&lt;div&gt;see: flowchart-email-notifications-process&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="1430" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-notifications" value="Altinn.Notifications" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-401.25" y="23.5" width="210" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-email" value="Altinn.Notifications.Email" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-401.25" y="85" width="210" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-asb" value="Azure Service Bus queue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=20;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="-401.25" y="145" width="210" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend-note" value="For all ASB queues: Infrastructure exceptions (TimeoutException, ServiceBusException, TaskCanceledException, AttachmentDownloadException) are handled by Wolverine retry policy: cooldown retries → scheduled retries → DLQ" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fontStyle=2;strokeColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="-401.25" y="205" width="210" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="Persist status to DB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="607.5" y="1375" width="175" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="2" target="end-nosretry">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="840" y="1485" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
