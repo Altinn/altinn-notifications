@@ -60,19 +60,7 @@ public class NotificationLogController(
                 return Forbid();
             }
 
-            IImmutableList<NotificationLogSummary> entries;
-
-            if (query.TransmissionId.HasValue)
-            {
-                entries = await _notificationLogService.GetByDialogAndTransmissionIds(
-                    query.DialogId.ToString(), query.TransmissionId.Value.ToString(), cancellationToken);
-            }
-            else
-            {
-                entries = await _notificationLogService.GetByDialogId(query.DialogId.ToString(), cancellationToken);
-            }
-
-            return Ok(entries.MapToNotificationLogSummaryList());
+            return await GetLog(query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -111,24 +99,29 @@ public class NotificationLogController(
                 return Forbid();
             }
 
-            IImmutableList<NotificationLogSummary> entries;
-
-            if (query.TransmissionId.HasValue)
-            {
-                entries = await _notificationLogService.GetByDialogAndTransmissionIds(
-                    query.DialogId.ToString(), query.TransmissionId.Value.ToString(), cancellationToken);
-            }
-            else
-            {
-                entries = await _notificationLogService.GetByDialogId(query.DialogId.ToString(), cancellationToken);
-            }
-
-            return Ok(entries.MapToNotificationLogSummaryList());
+            return await GetLog(query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
+    }
+
+    private async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> GetLog(NotificationLogQueryExt query, CancellationToken cancellationToken)
+    {
+        IImmutableList<NotificationLogSummary> entries;
+
+        if (query.TransmissionId.HasValue)
+        {
+            entries = await _notificationLogService.GetByDialogAndTransmissionIds(
+                query.DialogId.ToString(), query.TransmissionId.Value.ToString(), cancellationToken);
+        }
+        else
+        {
+            entries = await _notificationLogService.GetByDialogId(query.DialogId.ToString(), cancellationToken);
+        }
+
+        return Ok(entries.MapToNotificationLogSummaryList());
     }
 }
