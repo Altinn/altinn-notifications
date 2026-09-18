@@ -333,6 +333,11 @@ public class NotificationLogControllerTests
     public async Task GetForEnduser_WhenServiceThrowsOperationCanceledException_Returns499WithProblemDetails()
     {
         // Arrange
+        Guid dialogId = Guid.NewGuid();
+        _dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .ReturnsAsync(true);
+
         var serviceMock = new Mock<INotificationLogService>();
         serviceMock
             .Setup(s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -347,7 +352,7 @@ public class NotificationLogControllerTests
         };
 
         // Act
-        var result = await controller.GetForEnduser(new NotificationLogQueryExt { DialogId = Guid.NewGuid() }, TestContext.Current.CancellationToken);
+        var result = await controller.GetForEnduser(new NotificationLogQueryExt { DialogId = dialogId }, TestContext.Current.CancellationToken);
 
         // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
