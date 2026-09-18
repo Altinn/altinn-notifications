@@ -329,6 +329,33 @@ public class NotificationLogControllerTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task GetForEnduser_WhenServiceThrowsOperationCanceledException_Returns499WithProblemDetails()
+    {
+        // Arrange
+        var serviceMock = new Mock<INotificationLogService>();
+        serviceMock
+            .Setup(s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items["Org"] = "ttd";
+
+        var controller = new NotificationLogController(serviceMock.Object, _dialogportenClientMock.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
+
+        // Act
+        var result = await controller.GetForEnduser(new NotificationLogQueryExt { DialogId = Guid.NewGuid() }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, statusCodeResult.StatusCode);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
+        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString());
+    }
+
     private static NotificationLogSummary CreateSmsSummary() =>
         new()
         {
