@@ -242,92 +242,6 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
     }
 
     [Fact]
-    public async Task GetForEnduser_WithoutBearerToken_ReturnsUnauthorized()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetForEnduser_WithInvalidScope_ReturnsForbidden()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            PrincipalUtil.GetUserToken(1337, scope: "invalid:scope"));
-
-        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetForEnduser_WithValidUserTokenAndAccessToDialog_ReturnsOk()
-    {
-        // Arrange
-        Guid dialogId = Guid.NewGuid();
-        var dialogportenClientMock = new Mock<IDialogportenClient>();
-        dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
-            .ReturnsAsync(true);
-
-        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
-
-        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
-        _serviceMock.Verify(s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetForEnduser_WithValidUserTokenWithoutAccessToDialog_ReturnsForbidden()
-    {
-        // Arrange
-        Guid dialogId = Guid.NewGuid();
-        var dialogportenClientMock = new Mock<IDialogportenClient>();
-        dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
-            .ReturnsAsync(false);
-
-        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
-
-        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
-        _serviceMock.Verify(
-            s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task Get_WithNoQueryIdentifiersProvided_ReturnsBadRequest()
     {
         // Arrange
@@ -372,6 +286,92 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString());
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "invalid:scope"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={Guid.NewGuid()}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithValidUserTokenAndAccessToDialog_ReturnsOk()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        var dialogportenClientMock = new Mock<IDialogportenClient>();
+        dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetForEnduser_WithValidUserTokenWithoutAccessToDialog_ReturnsForbidden()
+    {
+        // Arrange
+        Guid dialogId = Guid.NewGuid();
+        var dialogportenClientMock = new Mock<IDialogportenClient>();
+        dialogportenClientMock
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        HttpClient client = GetTestClient(dialogportenClient: dialogportenClientMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetUserToken(1337, scope: "altinn:portal/enduser"));
+
+        HttpRequestMessage request = new(HttpMethod.Get, _enduserBasePath + $"?dialogId={dialogId}");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(
+            s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private HttpClient GetTestClient(

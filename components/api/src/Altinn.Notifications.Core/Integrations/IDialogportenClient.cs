@@ -11,6 +11,7 @@ public interface IDialogportenClient
     /// Performs a check to determine if the current user has access to a specific dialog identified by its ID.
     /// </summary>
     /// <param name="dialogId">The ID of the dialog to check access for.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether the user has access to the dialog.</returns>
-    public Task<bool> CheckUserAccessToDialog(Guid dialogId);
+    public Task<bool> CheckUserAccessToDialog(Guid dialogId, CancellationToken cancellationToken);
 }

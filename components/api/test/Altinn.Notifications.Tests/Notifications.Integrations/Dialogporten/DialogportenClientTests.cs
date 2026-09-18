@@ -21,7 +21,8 @@ public class DialogportenClientTests
     [InlineData(HttpStatusCode.Unauthorized, false)]
     [InlineData(HttpStatusCode.Forbidden, false)]
     [InlineData(HttpStatusCode.NotFound, false)]
-    public async Task CheckUserAccessToDialog_DialogportenReturnsOk_ReturnsTrue(HttpStatusCode statusCode, bool expectedResult)
+    public async Task CheckUserAccessToDialog_DialogportenReturnsOk_ReturnsTrue(
+        HttpStatusCode statusCode, bool expectedResult)
     {
         // Arrange
         DelegatingHandlerStub delegatingHandlerStub = new((request, token) =>
@@ -38,7 +39,7 @@ public class DialogportenClientTests
             mockAuthenticationContext.Object);
 
         // Act
-        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid());
+        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(expectedResult, result);
@@ -56,7 +57,7 @@ public class DialogportenClientTests
             mockAuthenticationContext.Object);
 
         // Act
-        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid());
+        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -78,7 +79,7 @@ public class DialogportenClientTests
             mockAuthenticationContext.Object);
 
         // Act
-        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid());
+        bool result = await target.CheckUserAccessToDialog(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);

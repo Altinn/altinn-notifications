@@ -93,7 +93,7 @@ public class NotificationLogController(
                 return ValidationProblem(ModelState);
             }
 
-            bool userHasAccess = await _dialogportenClient.CheckUserAccessToDialog(query.DialogId);
+            bool userHasAccess = await _dialogportenClient.CheckUserAccessToDialog(query.DialogId, cancellationToken);
             if (!userHasAccess)
             {
                 return Forbid();

@@ -240,7 +240,7 @@ public class NotificationLogControllerTests
         // Arrange
         Guid dialogId = Guid.NewGuid();
         _dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
@@ -257,7 +257,7 @@ public class NotificationLogControllerTests
             exactMatch: false);
         Assert.Equal(2, notificationLogSummaries.Count);
 
-        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()), Times.Once);
         _serviceMock.Verify(
             s => s.GetByDialogId(dialogId.ToString(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -270,7 +270,7 @@ public class NotificationLogControllerTests
         Guid dialogId = Guid.NewGuid();
         Guid transmissionId = Guid.NewGuid();
         _dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
@@ -290,7 +290,7 @@ public class NotificationLogControllerTests
             exactMatch: false);
         Assert.Equal(2, notificationLogSummaries.Count);
 
-        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()), Times.Once);
         _serviceMock.Verify(
             s => s.GetByDialogAndTransmissionIds(
                 dialogId.ToString(),
@@ -305,7 +305,7 @@ public class NotificationLogControllerTests
         // Arrange
         Guid dialogId = Guid.NewGuid();
         _dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var controller = new NotificationLogController(_serviceMock.Object, _dialogportenClientMock.Object);
@@ -317,7 +317,7 @@ public class NotificationLogControllerTests
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
-        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId), Times.Once);
+        _dialogportenClientMock.Verify(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()), Times.Once);
         _serviceMock.Verify(
             s => s.GetByDialogId(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -335,7 +335,7 @@ public class NotificationLogControllerTests
         // Arrange
         Guid dialogId = Guid.NewGuid();
         _dialogportenClientMock
-            .Setup(c => c.CheckUserAccessToDialog(dialogId))
+            .Setup(c => c.CheckUserAccessToDialog(dialogId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var serviceMock = new Mock<INotificationLogService>();

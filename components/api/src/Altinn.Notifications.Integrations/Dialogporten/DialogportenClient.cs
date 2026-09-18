@@ -42,12 +42,13 @@ public class DialogportenClient : IDialogportenClient
     /// will determine user access based on the response status code.
     /// </remarks>
     /// <param name="dialogId">The ID of the dialog to check access for.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The task result contains a boolean
     /// indicating whether the user has access to the dialog. Also returns false if the Dialogporten 
     /// integration is disabled or if the user is not authenticated.
     /// </returns>
-    public async Task<bool> CheckUserAccessToDialog(Guid dialogId)
+    public async Task<bool> CheckUserAccessToDialog(Guid dialogId, CancellationToken cancellationToken)
     {
         if (!_dialogportenSettings.Enabled)
         {
@@ -63,7 +64,8 @@ public class DialogportenClient : IDialogportenClient
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client.GetAsync($"enduser/dialoglookup?instanceRef=urn:altinn:dialog-id:{dialogId}");
+        var response = await _client.GetAsync(
+            $"enduser/dialoglookup?instanceRef=urn:altinn:dialog-id:{dialogId}", cancellationToken);
 
         return response.IsSuccessStatusCode;
     }
