@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Altinn.Notifications.Authorization;
+﻿using Altinn.Notifications.Authorization;
 
 using Microsoft.AspNetCore.Http;
 

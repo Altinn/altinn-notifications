@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Altinn.Notifications.Core.Shared;
+﻿namespace Altinn.Notifications.Core.Shared;
 
 /// <summary>
 /// Interface describing the contract for an authentication context, which can be used to manage and access

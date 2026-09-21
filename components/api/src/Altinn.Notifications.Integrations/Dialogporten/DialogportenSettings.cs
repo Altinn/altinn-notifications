@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Altinn.Notifications.Integrations.Dialogporten;
+﻿namespace Altinn.Notifications.Integrations.Dialogporten;
 
 /// <summary>
 /// Settings required for configuring the Dialogporten integration.

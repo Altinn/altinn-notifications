@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Authorization;
 

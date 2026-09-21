@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 using AltinnCore.Authentication.Constants;
 

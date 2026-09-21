@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Altinn.Notifications.Core.Integrations;
+﻿namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
 /// Interface describing the required features of an implementation of a client for the Dialogporten service.

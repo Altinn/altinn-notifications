@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Shared;

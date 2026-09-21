@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Net;
+﻿using System.Net;
 
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Dialogporten;
@@ -21,7 +20,7 @@ public class DialogportenClientTests
     [InlineData(HttpStatusCode.Unauthorized, false)]
     [InlineData(HttpStatusCode.Forbidden, false)]
     [InlineData(HttpStatusCode.NotFound, false)]
-    public async Task CheckUserAccessToDialog_DialogportenReturnsOk_ReturnsTrue(
+    public async Task CheckUserAccessToDialog_DialogportenReturnsOk_ReturnsExpectedBooleanValue(
         HttpStatusCode statusCode, bool expectedResult)
     {
         // Arrange
