@@ -1,14 +1,14 @@
 <mxfile host="65bd71144e">
     <diagram id="email-notifications-process-v2" name="Email Notifications Process">
-        <mxGraphModel dx="870" dy="421" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1350" math="0" shadow="0">
+        <mxGraphModel dx="2474" dy="1160" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1350" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="22" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="600" y="10" width="600" height="720" as="geometry"/>
+                    <mxGeometry x="600" y="10" width="600" height="740" as="geometry"/>
                 </mxCell>
                 <mxCell id="21" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="-40" y="10" width="620" height="1285" as="geometry"/>
+                    <mxGeometry x="-40" y="10" width="620" height="1290" as="geometry"/>
                 </mxCell>
                 <mxCell id="col-send-label" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Sending flow&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="170" y="18.5" width="200" height="25" as="geometry"/>
@@ -125,8 +125,8 @@
                         <mxPoint x="230" y="1207" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="end-send" value="&lt;font style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Intermediate delivery status&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;for&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;the email notification&lt;/span&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
-                    <mxGeometry x="256" y="1210" width="40" height="40" as="geometry"/>
+                <mxCell id="end-send" value="&lt;font style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Intermediate status (&#39;Succeeded&#39;) or&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;terminal status (&#39;Failed_*&#39;) for&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;the email notification.&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;The order is either &#39;Processed&#39; or &#39;Completed&#39;&lt;/span&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fontSize=10;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="256" y="1200" width="40" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="dr-source" value="&lt;font&gt;ACS sends delivery report to EventGrid → EventGrid routes&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;event to ASB queue&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="663.5" y="67.5" width="165" height="55" as="geometry"/>
@@ -218,7 +218,7 @@
                 <mxCell id="arrow-dead-not-found-end" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="dr-err-not-found" target="dr-end-not-found" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="end-dr" value="&lt;font&gt;Terminal delivery status for&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;the email notification&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                <mxCell id="end-dr" value="&lt;font&gt;Terminal status (&#39;Delivered&#39; or &#39;Failed_*&#39;&lt;/font&gt;&lt;font style=&quot;color: rgb(63, 63, 63); background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;)&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(63, 63, 63); background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;for the email&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: rgb(63, 63, 63);&quot;&gt;notification.&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;The order is &#39;Completed&#39; if this was the last&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;pending notification, otherwise &#39;Processed&#39;&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="726" y="645" width="40" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" parent="1" source="note-poll" target="asb-check" edge="1">
@@ -241,16 +241,16 @@
                         <mxPoint y="2" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="6" value="&lt;font&gt;Persist&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;email send&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;status to DB&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="196" y="1130" width="160" height="55" as="geometry"/>
+                <mxCell id="6" value="&lt;font&gt;Persist&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;email notification&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;status to DB&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;(&#39;Succeeded&#39; / &#39;Delivered&#39; / &#39;Failed_*&#39;)&amp;nbsp;&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="172" y="1120" width="208" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="step5-persist" target="8" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="275.66" y="1010" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="8" value="Valid EmailSendResult?" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-                    <mxGeometry x="217.16" y="1020" width="117.67" height="60" as="geometry"/>
+                <mxCell id="8" value="Valid&amp;nbsp;&lt;div&gt;EmailSendResult?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="210" y="1020" width="131.99" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="11" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="8" target="12" edge="1">
                     <mxGeometry x="-0.0497" relative="1" as="geometry">
@@ -284,6 +284,24 @@
                 </mxCell>
                 <mxCell id="20" value="&lt;font&gt;Altinn.Notifications.Email&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-280" y="80" width="210" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="Reset notification status back to&amp;nbsp;&lt;div&gt;&#39;New&#39; to be retried&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="410" y="1040" width="158" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="6" target="24">
+                    <mxGeometry x="0.1703" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="489" y="1150"/>
+                        </Array>
+                        <mxPoint x="410" y="1099" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="650" y="1210" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="27" value="Transient error" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="26">
+                    <mxGeometry x="-0.2365" y="1" relative="1" as="geometry">
+                        <mxPoint x="-8" y="-1" as="offset"/>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>

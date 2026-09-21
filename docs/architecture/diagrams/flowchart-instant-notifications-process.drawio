@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="instant-notifications-process-v1" name="Instant Notifications Process">
-        <mxGraphModel dx="1830" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1500" math="0" shadow="0">
+        <mxGraphModel dx="2474" dy="1160" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="920" pageHeight="1500" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -76,7 +76,7 @@
                 <mxCell id="end-200-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="288" y="660" width="28" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="note-sms" value="&lt;i&gt;No ASB queue: SMS dispatched synchronously&lt;br&gt;via HTTP — replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                <mxCell id="note-sms" value="&lt;i&gt;No ASB queue: SMS dispatched synchronously&lt;br&gt;via HTTP, replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
                     <mxGeometry x="-86" y="678" width="226" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="http-sms" value="HTTP &lt;b&gt;POST /instantmessage/send&lt;/b&gt;&lt;br&gt;to Altinn.Notifications.Sms service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
@@ -91,7 +91,7 @@
                 <mxCell id="end-500-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
                     <mxGeometry x="288" y="940" width="28" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="persist-sms" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(status: &#39;Processed&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                <mxCell id="persist-sms" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(order status: &#39;Processed&#39;; SMS notification status: &#39;Sending&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-66" y="955" width="186" height="55" as="geometry"/>
                 </mxCell>
                 <mxCell id="end-201-sms" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
@@ -192,7 +192,7 @@
                 <mxCell id="end-200-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="846" y="660" width="28" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="note-email" value="&lt;i&gt;No ASB queue: email dispatched synchronously&lt;br&gt;via HTTP — replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                <mxCell id="note-email" value="&lt;i&gt;No ASB queue: email dispatched synchronously&lt;br&gt;via HTTP, replaces async queue dispatch&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" parent="1" vertex="1">
                     <mxGeometry x="470" y="678" width="226" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="http-email" value="HTTP &lt;b&gt;POST /instantemail&lt;/b&gt;&lt;br&gt;to Altinn.Notifications.Email service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
@@ -207,7 +207,7 @@
                 <mxCell id="end-500-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
                     <mxGeometry x="846" y="940" width="28" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="persist-email" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(status: &#39;Processed&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                <mxCell id="persist-email" value="Persist instant order record + single NotificationOrder to DB&lt;br&gt;(order status: &#39;Processed&#39;; email notification status: &#39;Sending&#39;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="490" y="955" width="186" height="55" as="geometry"/>
                 </mxCell>
                 <mxCell id="end-201-email" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;perimeter=ellipsePerimeter;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
@@ -275,16 +275,16 @@
                 <mxCell id="a-persist-201-email" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="persist-email" target="end-201-email" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="2" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="2" value="" style="shape=actor;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="12" y="80" width="30" height="34" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="3" value="" style="shape=actor;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="568" y="76" width="30" height="34" as="geometry"/>
                 </mxCell>
-                <mxCell id="4" value="&lt;font style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;Email instant flow (email address recipient)&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+                <mxCell id="4" value="&lt;font style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;Email instant flow (email address recipient)&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="610" y="40" width="160" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="5" value="&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;POST /future/orders/instant/sms&lt;/font&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+                <mxCell id="5" value="&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;POST /future/orders/instant/sms&lt;/font&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=10;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="-66" y="110" width="186" height="30" as="geometry"/>
                 </mxCell>
             </root>
