@@ -1,11 +1,9 @@
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
@@ -13,11 +11,10 @@ namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
 /// email notifications to an Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
-public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher, IOptions<WolverineSettings> options) : IEmailCommandPublisher
+public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : IEmailCommandPublisher
 {
     private readonly ILogger<EmailCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
-    private readonly int _publishConcurrency = options.Value.EmailPublishConcurrency <= 0 ? 10 : options.Value.EmailPublishConcurrency;
 
     /// <inheritdoc/>
     public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
@@ -46,7 +43,6 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
         return _messageBusPublisher.PublishBatchAsync(
             emails,
             commandFactory: CreateCommand,
-            _publishConcurrency,
             onError: (email, exception) =>
             {
                 if (exception is OperationCanceledException)

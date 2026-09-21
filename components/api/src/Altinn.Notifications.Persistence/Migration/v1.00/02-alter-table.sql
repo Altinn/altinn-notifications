@@ -1,0 +1,1 @@
+ALTER TABLE notifications.orders add column IF NOT EXISTS retrycount integer not null default 0, add column IF NOT EXISTS retryreason text null;

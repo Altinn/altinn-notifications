@@ -1172,29 +1172,30 @@ CREATE OR REPLACE FUNCTION notifications.getorder_pastsendtime()
 AS $BODY$
 BEGIN
     RETURN QUERY
-        SELECT notificationorder AS notificationorders
-        FROM notifications.orders
-        WHERE processedstatus = 'Registered'::orderprocessingstate
-          AND requestedsendtime <= now() + INTERVAL '1 minute'
-        ORDER BY requestedsendtime ASC, _id ASC
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED;
+		SELECT notificationorder AS notificationorders
+		FROM notifications.orders
+		WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'
+		ORDER BY requestedsendtime ASC, _id ASC
+		LIMIT 1
+		FOR UPDATE SKIP LOCKED;
 END;
 $BODY$;
 
--- Add comment to document the function's purpose and behavior
-COMMENT ON FUNCTION notifications.getorder_pastsendtime() IS
-'Retrieves and updates notification orders that are ready for processing.
-Selects up to 1 order with:
-- processedstatus = ''Registered''
-- requestedsendtime <= current time + 1 minute grace period
-
-Orders are processed in chronological order (oldest first) and status is updated to ''Processing''.
-Uses row-level locking with SKIP LOCKED to handle concurrent executions safely - multiple 
-instances can run simultaneously without conflicts, each processing different orders.
-
-Returns: JSONB notification order data for the claimed and updated orders.';
-
+-- getorderretry.sql:
+CREATE OR REPLACE FUNCTION notifications.getorder_retry(_retry_delay interval)
+    RETURNS TABLE(notificationorders jsonb)
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    RETURN QUERY
+		SELECT notificationorder AS notificationorders
+		FROM notifications.orders
+		WHERE processedstatus = 'Retrying'::orderprocessingstate AND processed <= now() - _retry_delay
+		ORDER BY processed ASC, _id ASC
+		LIMIT 1
+		FOR UPDATE SKIP LOCKED;
+END;
+$BODY$;
 
 -- getorderschaintracking.sql:
 -- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
@@ -2427,6 +2428,29 @@ Parameters:
 - _limit (INT): maximum number of records to update
 - _expiry_offset_seconds (INT): grace period in seconds before marking as expired (default: 300)
 Returns a set of unique alternateid for the updated records.';
+
+
+-- updateorderretry.sql:
+CREATE OR REPLACE PROCEDURE notifications.updateorderretry(
+    _alternateid uuid,
+    _retryreason TEXT,
+    _maxretrycount INTEGER
+)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    UPDATE notifications.orders
+    SET
+        retryreason = _retryreason,
+        processed = CURRENT_TIMESTAMP,
+        retrycount = retrycount + 1,
+        processedstatus = CASE
+        WHEN retrycount + 1 > _maxretrycount THEN 'Failed'::orderprocessingstate
+        ELSE 'Retrying'::orderprocessingstate
+        END
+    WHERE alternateid = _alternateid;
+END;
+$BODY$;
 
 
 -- updatesmsnotification.sql:

@@ -1,12 +1,11 @@
 #nullable disable
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
-
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
@@ -18,25 +17,18 @@ using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-
 using AltinnCore.Authentication.JwtCookie;
-
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-
 using Npgsql;
-
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -150,6 +142,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
+    services.AddSingleton(new ActivitySource("Altinn.Notifications.OrderProcessingService"));
+
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
         .WithMetrics(metrics =>
@@ -177,6 +171,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddNpgsql();
 
             tracing.AddSource("Wolverine");
+
+            tracing.AddSource("Altinn.Notifications.OrderProcessingService");
         });
 
     AddAzureMonitorTelemetryExporters(services, config);
@@ -260,9 +256,17 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
-    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
+        }));
+    }
 
-    if (string.IsNullOrEmpty(applicationInsightsConnectionString))
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }
@@ -270,14 +274,20 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
 }
 
