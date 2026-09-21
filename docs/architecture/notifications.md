@@ -50,7 +50,7 @@ followed by a diagram showing the relation between the tables.
 
 | Table               | Description                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| orders              | Contains metadata for each notification order, including send time policy, order type, and a nullable FK to orderschain |
+| orders              | Contains metadata for each notification order, including send time policy, order type, retry count/reason, and a nullable FK to orderschain |
 | emailtexts          | Holds the template texts (subject, body, sender) for email notifications                                             |
 | emailnotifications  | Holds metadata for each email notification, recipient contact details, customized content, and raw delivery report   |
 | smstexts            | Holds the template texts (sender number, body) for SMS notifications                                                 |
@@ -59,6 +59,7 @@ followed by a diagram showing the relation between the tables.
 | orderschain         | Contains order chain metadata (main order + optional reminders) for scheduled notification requests                  |
 | statusfeed          | Tracks the final status of each processed notification order, one entry per order, for status feed queries           |
 | deaddeliveryreports | Stores delivery reports that could not be matched to a known notification, for investigation and reprocessing        |
+| notificationlog     | Logs individual send attempts (dialog/transmission references, delivery reference, status) for email and SMS notifications tied to a shipment |
 
 ![Diagram of Notifications Database](diagrams/db-schema.png "Diagram of Notifications Database")
 
@@ -70,29 +71,48 @@ The Notifications API has an integration towards Azure Service Bus, managed thro
 
 **Handlers (consumers):**
 
-- [ProcessPastDueOrderHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/ProcessPastDueOrderHandler.cs):
-  Processes notification orders that are ready to be dispatched
-- [EmailSendResultHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/EmailSendResultHandler.cs):
+- [EmailSendResultHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/EmailSendResultHandler.cs):
   Consumes email send results from the email service and updates notification status
 - [EmailDeliveryReportHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/EmailDeliveryReportHandler.cs):
   Consumes ACS email delivery reports routed from Azure Event Grid
 - [EmailServiceRateLimitHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/EmailServiceRateLimitHandler.cs):
   Consumes service rate limit updates from the email service
-- [SmsSendResultHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/SmsSendResultHandler.cs):
+- [SmsSendResultHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/SmsSendResultHandler.cs):
   Consumes SMS send results from the SMS service and updates notification status
 - [SmsDeliveryReportHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/SmsDeliveryReportHandler.cs):
   Consumes SMS delivery reports from the SMS service
 
 **Publishers:**
 
-- [PastDueOrderPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/PastDueOrderPublisher.cs):
-  Publishes notification orders ready for processing
 - [EmailCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/EmailCommandPublisher.cs):
   Publishes email send commands to the email service
+- [ComposedEmailCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/ComposedEmailCommandPublisher.cs):
+  Publishes composed email send commands to the email service
 - [SendSmsCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/SendSmsCommandPublisher.cs):
   Publishes SMS send commands to the SMS service
 
 [Please reference the Azure Service Bus architecture section for a closer description of the ASB queue setup.](asb.md)
+
+### Background services
+
+Past-due order processing does not go through Azure Service Bus. It is driven directly
+by [PastDueOrdersBackgroundService](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Services/PastDueOrdersBackgroundService.cs),
+which runs continuously in-process and picks up orders using row-level database locking
+(`SELECT ... FOR UPDATE SKIP LOCKED`) instead of dispatching to a queue. It runs two kinds
+of concurrent loops:
+
+- **Past-due loop:** picks up orders whose requested send time has passed and are still
+  in status `Registered`.
+- **Retry loop:** picks up orders in status `Retrying`, after a configurable delay.
+
+Each iteration processes one order inside a single database transaction — evaluating the
+send condition, generating notifications, and persisting the result atomically. If
+processing fails, the transaction rolls back to a savepoint (discarding partial work but
+keeping the order row locked) and the order's retry count is incremented; once a
+configurable maximum is exceeded, the order is marked `Failed` instead of being retried
+again.
+
+See the [order processing flow chart](diagrams/flowchart-order-process.svg) for the full flow.
 
 ### Maskinporten
 
@@ -131,7 +151,6 @@ The following cron jobs are defined:
 
 | Job name                       | Schedule        | Description                                                                                |
 | ------------------------------ | --------------- | ------------------------------------------------------------------------------------------ |
-| pending-orders-trigger         | `*/1 * * * *`   | Triggers processing of past due orders                                                     |
 | send-email-trigger             | `*/1 * * * *`   | Triggers sending of all pending email notifications                                        |
 | send-sms-trigger               | `* 7-16 * * *`  | Triggers sending of SMS notifications with daytime send time policy (business hours only)  |
 | send-sms-trigger-anytime       | `*/1 * * * *`   | Triggers sending of SMS notifications with anytime send time policy (no time restriction)  |
