@@ -51,7 +51,7 @@ AS $$
     WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
-    ORDER BY o.requestedsendtime DESC;
+    ORDER BY o.requestedsendtime DESC
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_phone_number IS

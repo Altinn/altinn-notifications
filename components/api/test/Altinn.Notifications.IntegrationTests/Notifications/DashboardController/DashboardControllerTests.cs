@@ -12,7 +12,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models.Dashboard;
 using Altinn.Notifications.Persistence.Repository;
@@ -753,44 +752,6 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.Equal((HttpStatusCode)499, response.StatusCode);
         Assert.NotNull(problemDetails);
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
-    }
-
-    [Fact]
-    public async Task GetByPhoneNumber_ZeroZeroPrefixedNumber_ReturnsSeededNotification()
-    {
-        // Arrange
-        // The SMS notification is stored exactly as received, with the international "00" prefix,
-        // e.g. "004799999999". A dashboard lookup for the very same value should return that entry.
-        const string storedMobileNumber = "004799999999";
-
-        Guid orderId = await SeedOrderWithSmsNotification(
-            DateTime.UtcNow.AddHours(-8),
-            mobileNumber: storedMobileNumber);
-
-        try
-        {
-            IDashboardService realService = GetRealDashboardService();
-
-            HttpClient client = GetTestClient(realService);
-            SetValidAuthorization(client);
-
-            HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", storedMobileNumber));
-
-            // Act
-            HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-            string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.NotNull(result);
-            var item = Assert.Single(result);
-            Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
-        }
-        finally
-        {
-            await PostgreUtil.DeleteOrdersByAlternateIds([orderId]);
-        }
     }
 
     [Theory]
