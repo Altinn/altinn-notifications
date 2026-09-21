@@ -46,6 +46,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_MissingOrgInHttpContext_ReturnsForbidden()
     {
         // Arrange
@@ -68,6 +69,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_WithDialogIdOnly_DelegatesGetByDialogId()
     {
         // Arrange
@@ -110,6 +112,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_WithDialogAndTransmissionIds_DelegatesGetByDialogAndTransmissionIds()
     {
         // Arrange
@@ -155,6 +158,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_WhenServiceReturnsEmptyList_ReturnsOkWithEmptyCollection()
     {
         // Arrange
@@ -181,6 +185,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_WhenServiceThrowsOperationCanceledException_Returns499WithProblemDetails()
     {
         // Arrange
@@ -208,6 +213,7 @@ public class NotificationLogControllerTests
     }
 
     [Fact]
+    [Obsolete]
     public async Task Get_WithValidRequest_PassesCancellationTokenToService()
     {
         // Arrange

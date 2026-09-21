@@ -45,6 +45,7 @@ public class NotificationLogController(
     [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogSummaryExt>))]
     [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    [Obsolete("This endpoint is deprecated and deleted in a future release. No direct replacement is available.")]
     public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> Get([FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
     {
         try
