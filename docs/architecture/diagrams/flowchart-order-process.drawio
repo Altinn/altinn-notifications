@@ -1,11 +1,11 @@
 <mxfile host="65bd71144e">
     <diagram id="order-process-background-service-v1" name="Order Process (Background Service)">
-        <mxGraphModel dx="2074" dy="1560" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1250" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1434" dy="1783" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1250" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="16" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-                    <mxGeometry x="60" y="-30" width="1010" height="1070" as="geometry"/>
+                <mxCell id="16" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="-30" width="1050" height="1070" as="geometry"/>
                 </mxCell>
                 <mxCell id="title-label" value="&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;Order processing flow&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="60" y="-25" width="1010" height="25" as="geometry"/>
@@ -71,9 +71,10 @@
                 <mxCell id="arrow-eval-condition" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="eval-condition" target="diamond-condition" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="arrow-condition-no" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;entryPerimeter=0;" parent="1" source="diamond-condition" target="12" edge="1">
+                <mxCell id="arrow-condition-no" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;entryPerimeter=0;" parent="1" source="diamond-condition" target="12" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="500" y="537.5" as="targetPoint"/>
+                        <mxPoint x="90" y="540" as="targetPoint"/>
+                        <mxPoint x="-20" y="540" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="generate" value="Resolve contact points,&amp;nbsp;&lt;div&gt;generate email/SMS notifications&amp;nbsp;&lt;/div&gt;&lt;div&gt;(status: &#39;New&#39;)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
@@ -84,8 +85,8 @@
                         <mxPoint x="320" y="580" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="note-lock-held" value="Row lock (and any outbound API calls: Profile/Register/Authorization/condition endpoint)&amp;nbsp;&lt;div&gt;is held for this entire step&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=9;fontStyle=2;" parent="1" vertex="1">
-                    <mxGeometry x="455" y="620" width="250" height="65" as="geometry"/>
+                <mxCell id="note-lock-held" value="Row lock (and any outbound API calls: Profile/Register/Authorization)&amp;nbsp;&lt;div&gt;is held for this entire step&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=9;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="620" width="185" height="65" as="geometry"/>
                 </mxCell>
                 <mxCell id="persist" value="Persist notifications + order result (same transaction)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="190" y="710" width="260" height="45" as="geometry"/>
@@ -149,20 +150,53 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="6" value="&lt;font&gt;Order status: &#39;Processed&#39; (commit)&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                <mxCell id="6" value="&lt;font&gt;Order status: &#39;Processed&#39; (commit)&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="300" y="900" width="40" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" value="&lt;font&gt;Order status: &#39;Completed&#39; (commit)&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                <mxCell id="7" value="&lt;font&gt;Order status: &#39;Completed&#39; (commit)&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="470" y="850" width="40" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="10" value="&lt;font&gt;Order status: &#39;Failed&#39;&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;(terminal, commit)&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                <mxCell id="10" value="&lt;font&gt;Order status: &#39;Failed&#39;&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;(terminal, commit)&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="790" y="634.5" width="40" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="11" value="&lt;font&gt;Order status: &#39;Retrying&#39;,&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;will be picked up again&amp;nbsp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;after a delay (commit)&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                <mxCell id="11" value="&lt;font&gt;Order status: &#39;Retrying&#39;,&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;will be picked up again&amp;nbsp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;after a delay (commit)&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
                     <mxGeometry x="990" y="634.5" width="40" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="12" value="&lt;font&gt;Order status: &#39;&lt;span style=&quot;color: rgb(0, 0, 0); white-space: normal;&quot;&gt;&#39;SendConditionNotMet&#39; &lt;br&gt;(commit)&lt;/span&gt;&#39;&amp;nbsp;&lt;/font&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
-                    <mxGeometry x="500" y="517.5" width="40" height="40" as="geometry"/>
+                <mxCell id="12" value="&lt;font&gt;Order status:&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;&#39;&lt;span style=&quot;color: rgb(0, 0, 0); white-space: normal;&quot;&gt;&#39;SendConditionNotMet&#39;&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;color: rgb(0, 0, 0); white-space: normal;&quot;&gt;(commit)&lt;/span&gt;&#39;&amp;nbsp;&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="102.5" y="517.5" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="UNDETERMINED" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontSize=9;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="diamond-condition" target="19">
+                    <mxGeometry x="-0.2328" relative="1" as="geometry">
+                        <mxPoint x="590" y="538" as="targetPoint"/>
+                        <mxPoint x="605" y="530" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="540" y="538"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="18" value="&lt;font&gt;Order status: &#39;Retrying&#39;,&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font&gt;will be picked up again&amp;nbsp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;after a delay (commit)&lt;/font&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=cancel;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="634.5" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="Current status&amp;nbsp;&lt;div&gt;&#39;Retrying&#39;?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="570" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="NO" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=9;entryPerimeter=0;" edge="1" parent="1" source="19" target="18">
+                    <mxGeometry x="-0.2348" relative="1" as="geometry">
+                        <mxPoint x="570" y="720" as="targetPoint"/>
+                        <mxPoint x="677" y="720" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="670" y="600"/>
+                            <mxPoint x="670" y="635"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="21" value="YES (continue)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=9;" edge="1" parent="1" source="19" target="generate">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="565" y="654.16" as="targetPoint"/>
+                        <mxPoint x="500" y="654.16" as="sourcePoint"/>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>
