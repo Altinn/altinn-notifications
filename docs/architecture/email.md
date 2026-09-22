@@ -12,6 +12,8 @@ The Notifications email microservice has an integration towards Azure Service Bu
   Consumes email send commands from the API, submits the email to Azure Communication Services, and enqueues a status check
 - [CheckEmailSendStatusHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Wolverine/Handlers/CheckEmailSendStatusHandler.cs):
   Polls Azure Communication Services for the status of an in-flight email send operation and re-enqueues itself until a terminal status is reached
+- [SendComposedEmailCommandHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Wolverine/Handlers/SendComposedEmailCommandHandler.cs):
+  Consumes composed email send commands from the API, downloads any file attachments from their SAS URL, and submits the email to Azure Communication Services
 
 **Publishers:**
 
@@ -27,6 +29,15 @@ A client, [EmailServiceClient](https://github.com/Altinn/altinn-notifications/bl
 has been implemented based on the SDK made available by Microsoft to interact with their API.
 
 ACS email delivery reports are routed to the Notifications API via Azure Event Grid and Azure Service Bus (not directly to the email service).
+
+### Composed email
+
+Composed email orders arrive with subject, body, and recipient already fully composed by the caller, optionally with file attachments referenced by SAS URL rather than embedded directly. At send time, [EmailServiceClient](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Clients/EmailServiceClient.cs) downloads each attachment from its SAS URL (in parallel, with limited concurrency) before submitting the email to ACS.
+
+- An invalid or expired SAS URL (`InvalidSasUrlException`) fails the notification immediately — no retry, no ACS call.
+- A transient download failure (`AttachmentDownloadException`) is retried like any other infrastructure exception.
+
+See the [composed email flow chart](diagrams/flowchart-composed-email-notifications-process.svg) for the full flow.
 
 ## Dependencies
 

@@ -20,15 +20,15 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 ## Process flow diagrams
 
 <details>
-<summary>Order processing</summary>
+<summary>Orders chain registration</summary>
 
-![Order processing flow](diagrams/flowchart-order-process.svg "Flow chart for order processing")
+![Orders chain registration flow](diagrams/flowchart-orders-chain-registration-process.svg "Flow chart for orders chain registration")
 </details>
 
 <details>
-<summary>Email notification processing</summary>
+<summary>Order processing</summary>
 
-![Email notification flow](diagrams/flowchart-email-notifications-process.svg "Flow chart for email notification processing")
+![Order processing flow](diagrams/flowchart-order-process.svg "Flow chart for order processing")
 </details>
 
 <details>
@@ -38,9 +38,15 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 </details>
 
 <details>
-<summary>Orders chain registration</summary>
+<summary>Email notification processing</summary>
 
-![Orders chain registration flow](diagrams/flowchart-orders-chain-registration-process.svg "Flow chart for orders chain registration")
+![Email notification flow](diagrams/flowchart-email-notifications-process.svg "Flow chart for email notification processing")
+</details>
+
+<details>
+<summary>Composed email notification processing</summary>
+
+![Composed email notification flow](diagrams/flowchart-composed-email-notifications-process.svg "Flow chart for composed email notification processing")
 </details>
 
 <details>
@@ -63,6 +69,7 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 - [**Azure Service Bus**](https://azure.microsoft.com/en-us/products/service-bus): hosts the message queues the microservices consume and produce messages to.
 - [**PostgreSQL**](https://www.postgresql.org/): used for storage.
 - [**Azure Communication Services**](https://azure.microsoft.com/en-us/products/communication-services): used to send emails.
+- [**Azure Blob Storage**](https://azure.microsoft.com/en-us/products/storage/blobs): source of file attachments for composed email orders, referenced by a caller-supplied, time-limited SAS URL and downloaded by the email service at send time.
 - [**Azure Event Grid**](https://azure.microsoft.com/en-us/products/event-grid): used to route ACS email delivery report events to Azure Service Bus.
 - [**LINK Mobility**](https://www.linkmobility.com/): used to send SMS.
 - [**Maskinporten**](https://www.digdir.no/felleslosninger/maskinporten/869): used to generate tokens for external REST API requests.
