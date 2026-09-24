@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Options;
@@ -6,20 +7,16 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <inheritdoc cref="ISmsSenderSubstitutionService"/>
-public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
+/// <summary>
+/// Initializes a new instance of the <see cref="SmsSenderSubstitutionService"/> class.
+/// </summary>
+/// <param name="config">The sender substitution configuration.</param>
+public class SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> config) : ISmsSenderSubstitutionService
 {
-    private readonly CompiledRule[] _rules;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SmsSenderSubstitutionService"/> class.
-    /// </summary>
-    /// <param name="config">The sender substitution configuration.</param>
-    public SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> config)
-    {
-        _rules = [.. config.Value.Rules
+    private readonly CompiledRule[] _rules = [.. config.Value.Rules
             .Where(r => !string.IsNullOrWhiteSpace(r.CountryCodePrefix) && r.NumericSenderByServiceOwner.Count > 0)
-            .Select(r => new CompiledRule(r.CountryCodePrefix, r.NumericSenderByServiceOwner))];
-    }
+            .Select(r => new CompiledRule(r.CountryCodePrefix, FilterToValidNumericSenders(r.NumericSenderByServiceOwner)))
+            .Where(r => r.NumericSenderByServiceOwner.Count > 0)];
 
     /// <inheritdoc/>
     public bool HasRules => _rules.Length > 0;
@@ -84,6 +81,21 @@ public class SmsSenderSubstitutionService : ISmsSenderSubstitutionService
 
         normalizedPhoneNumber = string.Empty;
         return false;
+    }
+
+    /// <summary>
+    /// Filters a service-owner-to-numeric-sender map down to entries whose numeric sender is a
+    /// valid mobile number, using the same validation applied to recipient phone numbers
+    /// elsewhere in the application. Invalid entries are dropped so that, if encountered, the
+    /// original <c>configuredSender</c> is used instead of an invalid numeric sender.
+    /// </summary>
+    /// <param name="numericSenderByServiceOwner">The configured service-owner-to-numeric-sender map.</param>
+    /// <returns>A new map containing only entries with a valid numeric sender.</returns>
+    private static Dictionary<string, string> FilterToValidNumericSenders(Dictionary<string, string> numericSenderByServiceOwner)
+    {
+        return numericSenderByServiceOwner
+            .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value) && MobileNumberHelper.IsValidMobileNumber(kvp.Value))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     /// <summary>

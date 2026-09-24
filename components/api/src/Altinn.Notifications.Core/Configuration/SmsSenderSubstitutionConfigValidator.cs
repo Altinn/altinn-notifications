@@ -1,12 +1,14 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Altinn.Notifications.Core.Helpers;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Configuration;
 
 /// <summary>
 /// Validates <see cref="SmsSenderSubstitutionConfig"/> at startup, ensuring every configured
 /// <see cref="SmsSenderSubstitutionRule.CountryCodePrefix"/> consists of 1-3 digits only, with
-/// no leading "+"/"00" or regex metacharacters, before the application starts processing
-/// notifications.
+/// no leading "+"/"00" or regex metacharacters, and that every configured numeric sender number
+/// is a valid mobile number, before the application starts processing notifications.
 /// </summary>
 public class SmsSenderSubstitutionConfigValidator : IValidateOptions<SmsSenderSubstitutionConfig>
 {
@@ -22,7 +24,8 @@ public class SmsSenderSubstitutionConfigValidator : IValidateOptions<SmsSenderSu
 
         for (var i = 0; i < options.Rules.Count; i++)
         {
-            var prefix = options.Rules[i].CountryCodePrefix;
+            var rule = options.Rules[i];
+            var prefix = rule.CountryCodePrefix;
 
             if (string.IsNullOrWhiteSpace(prefix))
             {
@@ -34,6 +37,19 @@ public class SmsSenderSubstitutionConfigValidator : IValidateOptions<SmsSenderSu
             if (prefix.Length is < 1 or > 3 || !prefix.All(char.IsAsciiDigit))
             {
                 failures.Add($"SmsSenderSubstitution.Rules[{i}].CountryCodePrefix ('{prefix}') must consist of 1-3 digits only, without a leading '+' or '00'.");
+            }
+
+            foreach (var (serviceOwner, numericSender) in rule.NumericSenderByServiceOwner)
+            {
+                if (string.IsNullOrWhiteSpace(numericSender))
+                {
+                    continue;
+                }
+
+                if (!MobileNumberHelper.IsValidMobileNumber(numericSender))
+                {
+                    failures.Add($"SmsSenderSubstitution.Rules[{i}].NumericSenderByServiceOwner['{serviceOwner}'] ('{numericSender}') is not a valid mobile number.");
+                }
             }
         }
 
