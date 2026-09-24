@@ -262,6 +262,70 @@ public class SmsSenderSubstitutionServiceTests
         Assert.Equal("Altinn", result);
     }
 
+    [Fact]
+    public void HasRules_RuleWithOnlyInvalidNumericSenders_IsIgnored_ReturnsFalse()
+    {
+        // Arrange - the numeric sender is not a valid mobile number, so the entire rule
+        // has no usable entries left after filtering and should be dropped.
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                CountryCodePrefix = "34",
+                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "not-a-number" }
+            }
+        ]);
+
+        // Act & Assert
+        Assert.False(service.HasRules);
+    }
+
+    [Fact]
+    public void ResolveSender_NumericSenderIsNotAValidMobileNumber_ReturnsConfiguredSenderUnchanged()
+    {
+        // Arrange
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                CountryCodePrefix = "34",
+                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "invalid-number" }
+            }
+        ]);
+
+        // Act
+        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+
+        // Assert
+        Assert.Equal("Altinn", result);
+    }
+
+    [Fact]
+    public void ResolveSender_OneServiceOwnerHasInvalidNumericSenderAndAnotherHasValid_OnlyValidOneIsUsable()
+    {
+        // Arrange
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                CountryCodePrefix = "34",
+                NumericSenderByServiceOwner = new Dictionary<string, string>
+                {
+                    ["digdir"] = "+4775006000",
+                    ["other-owner"] = "invalid-number"
+                }
+            }
+        ]);
+
+        // Act
+        var validOwnerResult = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var invalidOwnerResult = service.ResolveSender("Altinn", "+34123456789", "other-owner");
+
+        // Assert
+        Assert.Equal("+4775006000", validOwnerResult);
+        Assert.Equal("Altinn", invalidOwnerResult);
+    }
+
     private static SmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)
     {
         var config = new SmsSenderSubstitutionConfig { Rules = rules };

@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Collections.Generic;
+
+using Altinn.Notifications.Core.Configuration;
 
 using Xunit;
 
@@ -142,5 +144,110 @@ public class SmsSenderSubstitutionConfigValidatorTests
 
         // Assert
         Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_NumericSenderIsNullOrWhitespace_IsIgnored_ReturnsSuccess(string? numericSender)
+    {
+        // Arrange
+        var options = new SmsSenderSubstitutionConfig
+        {
+            Rules =
+            [
+                new SmsSenderSubstitutionRule
+                {
+                    CountryCodePrefix = "47",
+                    NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = numericSender! }
+                }
+            ]
+        };
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_NumericSenderIsValidMobileNumber_ReturnsSuccess()
+    {
+        // Arrange
+        var options = new SmsSenderSubstitutionConfig
+        {
+            Rules =
+            [
+                new SmsSenderSubstitutionRule
+                {
+                    CountryCodePrefix = "47",
+                    NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
+                }
+            ]
+        };
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("not-a-number")]
+    [InlineData("12345")]
+    [InlineData("4775006000")]
+    public void Validate_NumericSenderIsNotAValidMobileNumber_ReturnsFailure(string numericSender)
+    {
+        // Arrange
+        var options = new SmsSenderSubstitutionConfig
+        {
+            Rules =
+            [
+                new SmsSenderSubstitutionRule
+                {
+                    CountryCodePrefix = "47",
+                    NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = numericSender }
+                }
+            ]
+        };
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Failures!, f => f.Contains(numericSender) && f.Contains("digdir"));
+    }
+
+    [Fact]
+    public void Validate_MultipleServiceOwnersWithMixedNumericSenderValidity_AggregatesAllFailuresOnly()
+    {
+        // Arrange
+        var options = new SmsSenderSubstitutionConfig
+        {
+            Rules =
+            [
+                new SmsSenderSubstitutionRule
+                {
+                    CountryCodePrefix = "47",
+                    NumericSenderByServiceOwner = new Dictionary<string, string>
+                    {
+                        ["digdir"] = "+4775006000",
+                        ["other-owner"] = "invalid-number"
+                    }
+                }
+            ]
+        };
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Single(result.Failures!);
+        Assert.Contains(result.Failures!, f => f.Contains("invalid-number") && f.Contains("other-owner"));
     }
 }
