@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
@@ -8,6 +9,10 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using Moq;
 using Npgsql;
 using Xunit;
 
@@ -970,31 +975,53 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_EmptyNotificationId_DoesNotThrow()
+    public async Task PersistSubstitutedSender_EmptyNotificationId_DoesNotThrowAndLogsError()
     {
         // Arrange
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
 
-        // Act & Assert — exceptions are caught and logged internally, so no exception should propagate.
+        // Act
         await repo.PersistSubstitutedSender(Guid.Empty, "+4775006000");
+
+        // Assert
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<InvalidNotificationIdentifierException>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task PersistSubstitutedSender_NullOrWhitespaceSender_DoesNotThrow(string? sender)
+    public async Task PersistSubstitutedSender_NullOrWhitespaceSender_DoesNotThrowAndLogsError(string? sender)
     {
         // Arrange
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
 
-        // Act & Assert — exceptions are caught and logged internally, so no exception should propagate.
+        // Act
         await repo.PersistSubstitutedSender(Guid.NewGuid(), sender!);
+
+        // Assert
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<ArgumentException>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
     }
 }
