@@ -172,6 +172,29 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData(SendingTimePolicy.Anytime)]
     [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotifications_ShouldReturnCreatorNameMatchingOrderCreator(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, sendingTimePolicy);
+
+        // Assert
+        Sms? result = smsToBeSent.Find(s => s.NotificationId == smsNotification.Id);
+        Assert.NotNull(result);
+        Assert.Equal(order.Creator.ShortName, result.Creator);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
     public async Task GetNewNotifications_WithSendingPolicy_ShouldReturnEligibleSmsNotifications(SendingTimePolicy sendingTimePolicy)
     {
         // Arrange
