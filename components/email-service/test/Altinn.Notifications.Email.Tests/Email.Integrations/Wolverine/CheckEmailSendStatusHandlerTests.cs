@@ -81,7 +81,7 @@ public class CheckEmailSendStatusHandlerTests
         var dispatcherMock = new Mock<IEmailSendResultDispatcher>();
         dispatcherMock
             .Setup(d => d.DispatchAsync(It.IsAny<SendOperationResult>()))
-            .Callback<SendOperationResult>(r => capturedResult = r)
+            .Callback<SendOperationResult>((r) => capturedResult = r)
             .Returns(Task.CompletedTask);
 
         // Act

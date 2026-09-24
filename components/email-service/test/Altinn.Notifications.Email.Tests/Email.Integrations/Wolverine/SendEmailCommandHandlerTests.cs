@@ -30,7 +30,7 @@ public class SendEmailCommandHandlerTests
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
@@ -61,8 +61,8 @@ public class SendEmailCommandHandlerTests
         Notifications.Email.Core.Sending.Email? capturedEmail = null;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-            .Callback<Notifications.Email.Core.Sending.Email>(e => capturedEmail = e)
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
+            .Callback<Notifications.Email.Core.Sending.Email, CancellationToken>((e, ct) => capturedEmail = e)
             .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger>();
@@ -94,7 +94,7 @@ public class SendEmailCommandHandlerTests
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();

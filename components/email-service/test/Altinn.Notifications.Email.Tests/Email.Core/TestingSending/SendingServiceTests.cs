@@ -27,7 +27,7 @@ public class SendingServiceTests
         new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_InvalidEmailFormat });
 
         Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
@@ -64,7 +64,7 @@ public class SendingServiceTests
         new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ReturnsAsync("operation-id");
 
         Mock<IEmailStatusCheckDispatcher> sendingAcceptedPublisherMock = new();
@@ -97,7 +97,7 @@ public class SendingServiceTests
         new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = EmailSendResult.Failed_TransientError, IntermittentErrorDelay = 1000 });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -156,7 +156,7 @@ public class SendingServiceTests
         new(id, "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
         Mock<IEmailServiceClient> clientMock = new();
-        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+        clientMock.Setup(c => c.SendEmail(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = failResult });
 
         Mock<IEmailStatusCheckDispatcher> checkDispatcherMock = new();
@@ -173,7 +173,8 @@ public class SendingServiceTests
 
         // Assert
         statusDispatcherMock.Verify(
-            d => d.DispatchAsync(It.Is<SendOperationResult>(r =>
+            d => d.DispatchAsync(
+                It.Is<SendOperationResult>(r =>
                 r.NotificationId == id &&
                 r.OperationId == string.Empty &&
                 r.SendResult == failResult)),
