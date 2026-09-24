@@ -281,10 +281,12 @@ public interface IOrderRepository
     Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sets the order status to <see cref="OrderProcessingStatus.Retrying"/> and records the reason for retrying.
+    /// Sets the order status to <see cref="OrderProcessingStatus.Retrying"/>, or to <see cref="OrderProcessingStatus.Failed"/>
+    /// once retries are exhausted, and records the reason. A status feed entry is written when the order transitions to
+    /// <see cref="OrderProcessingStatus.Failed"/>.
     /// </summary>
     /// <param name="unitOfWork">The unit of work for database operations.</param>
-    /// <param name="orderId">The unique identifier of the order.</param>
+    /// <param name="order">The notification order being retried.</param>
     /// <param name="reason">The reason for retrying the order.</param>
-    Task SetRetryStatus(UnitOfWork unitOfWork, Guid orderId, string reason);
+    Task SetRetryStatus(UnitOfWork unitOfWork, NotificationOrder order, string reason);
 }

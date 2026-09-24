@@ -80,7 +80,7 @@ public class OrderProcessingServiceTests
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         orderRepositoryMock.Verify(
-            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()),
+            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<string>()),
             Times.Never);
     }
 
@@ -98,7 +98,7 @@ public class OrderProcessingServiceTests
             .Setup(r => r.GetNextPastDueOrder(unitOfWork, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(order);
         orderRepositoryMock
-            .Setup(r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()))
+            .Setup(r => r.SetRetryStatus(unitOfWork, order, It.IsAny<string>()))
             .ThrowsAsync(new InvalidOperationException("retry status failure"));
 
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
@@ -119,7 +119,7 @@ public class OrderProcessingServiceTests
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         orderRepositoryMock.Verify(
-            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()),
+            r => r.SetRetryStatus(It.IsAny<UnitOfWork>(), It.IsAny<NotificationOrder>(), It.IsAny<string>()),
             Times.Never);
     }
 
@@ -373,7 +373,7 @@ public class OrderProcessingServiceTests
         await service.ProcessOrder(order, unitOfWork);
 
         orderRepositoryMock.Verify(
-            r => r.SetRetryStatus(unitOfWork, order.Id, It.IsAny<string>()),
+            r => r.SetRetryStatus(unitOfWork, order, It.IsAny<string>()),
             Times.Once);
         emailOrderProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
     }

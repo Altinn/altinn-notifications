@@ -83,7 +83,7 @@ public class OrderProcessingService(
                 try
                 {
                     await unitOfWorkRepository.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
-                    await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder.Id, $"{e} {e.Message}");
+                    await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder, $"{e} {e.Message}");
                     await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
                 }
                 catch (Exception)
@@ -115,7 +115,7 @@ public class OrderProcessingService(
                 }
                 else
                 {
-                    await orderRepository.SetRetryStatus(unitOfWork, order.Id, "Send condition evaluation inconclusive");
+                    await orderRepository.SetRetryStatus(unitOfWork, order, "Send condition evaluation inconclusive");
                 }
 
                 break;
