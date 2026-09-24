@@ -1049,6 +1049,14 @@ LANGUAGE sql
 STABLE
 PARALLEL SAFE
 AS $$
+    WITH normalized AS (
+        SELECT
+            CASE
+                WHEN _phonenumber LIKE '+47%' THEN substring(_phonenumber FROM 4)
+                WHEN _phonenumber LIKE '0047%' THEN substring(_phonenumber FROM 5)
+                ELSE _phonenumber
+            END AS bare_number
+    )
     SELECT
         o.alternateid AS shipmentid,
         o.sendersreference,
@@ -1065,16 +1073,18 @@ AS $$
         s.resulttime
     FROM notifications.smsnotifications s
     JOIN notifications.orders o ON o._id = s._orderid
-    WHERE s.mobilenumber = _phonenumber
+    CROSS JOIN normalized n
+    WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
-    ORDER BY o.requestedsendtime DESC;
+    ORDER BY o.requestedsendtime DESC
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_phone_number IS
 'Retrieves all SMS notifications sent to a recipient identified by their phone number within a given date range.
+Matches the recipient regardless of whether the stored mobile number uses the "+47" or "0047" country code prefix.
 Parameters:
-- _phonenumber: The phone number of the recipient (e.g. +4799999999)
+- _phonenumber: The phone number of the recipient, with or without a "+47"/"0047" prefix (e.g. +4799999999, 004799999999, or 99999999)
 - _from_date: Start of the date range (inclusive) based on requestedsendtime
 - _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:
@@ -1172,6 +1182,38 @@ BEGIN
 END;
 $BODY$;
 
+
+-- getorderpastsendtime.sql:
+CREATE OR REPLACE FUNCTION notifications.getorder_pastsendtime()
+    RETURNS TABLE(notificationorders jsonb)
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    RETURN QUERY
+		SELECT notificationorder AS notificationorders
+		FROM notifications.orders
+		WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'
+		ORDER BY requestedsendtime ASC, _id ASC
+		LIMIT 1
+		FOR UPDATE SKIP LOCKED;
+END;
+$BODY$;
+
+-- getorderretry.sql:
+CREATE OR REPLACE FUNCTION notifications.getorder_retry(_retry_delay interval)
+    RETURNS TABLE(notificationorders jsonb)
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    RETURN QUERY
+		SELECT notificationorder AS notificationorders
+		FROM notifications.orders
+		WHERE processedstatus = 'Retrying'::orderprocessingstate AND processed <= now() - _retry_delay
+		ORDER BY processed ASC, _id ASC
+		LIMIT 1
+		FOR UPDATE SKIP LOCKED;
+END;
+$BODY$;
 
 -- getorderschaintracking.sql:
 -- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
@@ -2404,6 +2446,29 @@ Parameters:
 - _limit (INT): maximum number of records to update
 - _expiry_offset_seconds (INT): grace period in seconds before marking as expired (default: 300)
 Returns a set of unique alternateid for the updated records.';
+
+
+-- updateorderretry.sql:
+CREATE OR REPLACE PROCEDURE notifications.updateorderretry(
+    _alternateid uuid,
+    _retryreason TEXT,
+    _maxretrycount INTEGER
+)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    UPDATE notifications.orders
+    SET
+        retryreason = _retryreason,
+        processed = CURRENT_TIMESTAMP,
+        retrycount = retrycount + 1,
+        processedstatus = CASE
+        WHEN retrycount + 1 > _maxretrycount THEN 'Failed'::orderprocessingstate
+        ELSE 'Retrying'::orderprocessingstate
+        END
+    WHERE alternateid = _alternateid;
+END;
+$BODY$;
 
 
 -- updatesmsnotification.sql:
