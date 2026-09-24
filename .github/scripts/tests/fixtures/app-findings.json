@@ -1,0 +1,53 @@
+{
+  "Results": [
+    {
+      "Target": "altinn-profile:abc123 (alpine 3.23.0)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-OS-FIXED",
+          "PkgName": "musl",
+          "InstalledVersion": "1.2.5-r0",
+          "FixedVersion": "1.2.5-r1",
+          "Severity": "HIGH"
+        },
+        {
+          "VulnerabilityID": "CVE-OS-STILL",
+          "PkgName": "openssl",
+          "InstalledVersion": "3.5.0-r0",
+          "FixedVersion": "3.5.1-r0",
+          "Severity": "CRITICAL"
+        }
+      ]
+    },
+    {
+      "Target": "usr/share/dotnet/shared/Microsoft.AspNetCore.App/10.0.9/Microsoft.AspNetCore.App.deps.json",
+      "Class": "lang-pkgs",
+      "Type": "dotnet-core",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-RUNTIME-FIXED",
+          "PkgName": "System.Text.Json",
+          "InstalledVersion": "10.0.9",
+          "FixedVersion": "10.0.11",
+          "Severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "Target": "app/Altinn.Profile.deps.json",
+      "Class": "lang-pkgs",
+      "Type": "dotnet-core",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-APP-DEP",
+          "PkgName": "SixLabors.ImageSharp",
+          "InstalledVersion": "2.1.0",
+          "FixedVersion": "2.1.10, 3.1.7",
+          "Severity": "HIGH"
+        }
+      ]
+    }
+  ]
+}
