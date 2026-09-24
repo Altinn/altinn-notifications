@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -906,5 +907,94 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(sql);
         Assert.Null(persistedReport);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_ValidNotificationId_PersistsSubstitutedSenderToDatabase()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        const string substitutedSender = "+4775006000";
+
+        // Act
+        await repo.PersistSubstitutedSender(smsNotification.Id, substitutedSender);
+
+        // Assert
+        string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
+
+        string? persistedSubstitutedSender = await PostgreUtil.RunSqlReturnOutput<string?>(sql, new NpgsqlParameter("@id", smsNotification.Id));
+        Assert.Equal(substitutedSender, persistedSubstitutedSender);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_CalledTwice_OverwritesPreviousSubstitutedSender()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006000");
+        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006001");
+
+        // Assert
+        string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
+
+        string? persistedSubstitutedSender = await PostgreUtil.RunSqlReturnOutput<string?>(sql, new NpgsqlParameter("@id", smsNotification.Id));
+        Assert.Equal("+4775006001", persistedSubstitutedSender);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_UnknownNotificationId_DoesNotThrowAndUpdatesNoRows()
+    {
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act & Assert — no matching row, but this is a best-effort write, so no exception is expected.
+        await repo.PersistSubstitutedSender(Guid.NewGuid(), "+4775006000");
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_EmptyNotificationId_DoesNotThrow()
+    {
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act & Assert — exceptions are caught and logged internally, so no exception should propagate.
+        await repo.PersistSubstitutedSender(Guid.Empty, "+4775006000");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task PersistSubstitutedSender_NullOrWhitespaceSender_DoesNotThrow(string? sender)
+    {
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act & Assert — exceptions are caught and logged internally, so no exception should propagate.
+        await repo.PersistSubstitutedSender(Guid.NewGuid(), sender!);
     }
 }

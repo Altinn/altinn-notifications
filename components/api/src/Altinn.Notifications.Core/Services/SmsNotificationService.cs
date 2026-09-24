@@ -104,7 +104,7 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                ApplySenderSubstitution(newSmsNotifications);
+                await ApplySenderSubstitution(newSmsNotifications);
 
                 var unpublishedSms = await _smsPublisher.PublishAsync(newSmsNotifications, cancellationToken);
                 foreach (var sms in unpublishedSms)
@@ -153,7 +153,7 @@ public class SmsNotificationService : ISmsNotificationService
     /// Skips all work when no substitution rules are configured, so the common case (no
     /// substitution in use) adds no per-recipient overhead.
     /// </remarks>
-    private void ApplySenderSubstitution(List<Sms> smsNotifications)
+    private async Task ApplySenderSubstitution(List<Sms> smsNotifications)
     {
         if (!_senderSubstitutionService.HasRules)
         {
@@ -163,6 +163,8 @@ public class SmsNotificationService : ISmsNotificationService
         foreach (var sms in smsNotifications)
         {
             sms.Sender = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
+
+            await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
         }
     }
 
