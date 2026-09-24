@@ -142,6 +142,17 @@ assert_contains "$out" "Already on latest base"           "base-origin -> alread
 assert_contains "$out" "**0** fixable by a base image bump" "nothing marked as base-bump without a newer base"
 assert_contains "$out" "App dependency"                    "app dep still flagged without a newer base"
 
+# COMPONENT_NAME labels the heading, for telling components apart when their
+# summaries are stacked on one workflow run page; omitting it keeps the
+# generic heading.
+out="$(COMPONENT_NAME="Notifications API" HAS_NEW_BASE=false FLOATING_TAG=10.0-alpine3.23 \
+  bash "$scripts/analyze-base-fixes.sh" "$fixtures/app-findings.json")"
+assert_contains "$out" "## 🐳 Base image mitigation analysis — Notifications API" "COMPONENT_NAME labels the heading"
+
+out="$(HAS_NEW_BASE=false FLOATING_TAG=10.0-alpine3.23 \
+  bash "$scripts/analyze-base-fixes.sh" "$fixtures/app-findings.json")"
+assert_contains "$out" "## 🐳 Base image mitigation analysis"$'\n' "heading stays generic without COMPONENT_NAME"
+
 echo
 echo "Passed: $pass  Failed: $fail"
 [[ "$fail" -eq 0 ]]

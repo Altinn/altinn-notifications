@@ -22,6 +22,7 @@
 # Usage: analyze-base-fixes.sh <app-trivy.json> [base-latest-trivy.json]
 #
 # Environment (all optional, used for wording only):
+#   COMPONENT_NAME name shown in the report heading, e.g. "Notifications API"
 #   HAS_NEW_BASE   "true" when a newer base image was found and scanned
 #   FLOATING_TAG   floating channel tag, e.g. 10.0-alpine3.23
 #   LATEST_VERSION concrete latest patch, e.g. 10.0.11-alpine3.23
@@ -47,6 +48,7 @@ if [[ ! -f "$app_json" ]]; then
   exit 1
 fi
 
+component_name="${COMPONENT_NAME:-}"
 has_new_base="${HAS_NEW_BASE:-false}"
 floating_tag="${FLOATING_TAG:-the latest base image}"
 latest_version="${LATEST_VERSION:-}"
@@ -157,7 +159,11 @@ done < <(extract | tr -d '\r')
 
 # Render.
 {
-  echo "## 🐳 Base image mitigation analysis"
+  if [[ -n "$component_name" ]]; then
+    echo "## 🐳 Base image mitigation analysis — ${component_name}"
+  else
+    echo "## 🐳 Base image mitigation analysis"
+  fi
   echo
   if [[ -n "$base_tag" ]]; then
     echo "Deployed base image: \`$(ref_with_digest "$base_tag" "$base_digest")\`"

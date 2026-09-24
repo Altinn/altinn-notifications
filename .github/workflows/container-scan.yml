@@ -24,6 +24,8 @@ concurrency:
   group: container-scan-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions: {}
+
 jobs:
   changes:
     name: Detect changes
@@ -69,82 +71,59 @@ jobs:
     name: 'Scan: Notifications API'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Build the Docker image
-        run: docker build . -f components/api/Dockerfile --tag altinn-notifications-api:${{ github.sha }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: 'altinn-notifications-api:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          trivyignores: '.trivyignore.yaml'
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
-          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
-          TRIVY_SHOW_SUPPRESSED: true
+      security-events: write
+    uses: ./.github/workflows/container-scan-component.yml
+    with:
+      component-name: 'Notifications API'
+      image-name: altinn-notifications-api
+      dockerfile: components/api/Dockerfile
 
   scan-email:
     name: 'Scan: Email Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.email == 'true'
-    runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Build the Docker image
-        run: docker build . -f components/email-service/Dockerfile --tag altinn-notifications-email:${{ github.sha }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: 'altinn-notifications-email:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          trivyignores: '.trivyignore.yaml'
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
-          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
-          TRIVY_SHOW_SUPPRESSED: true
+      security-events: write
+    uses: ./.github/workflows/container-scan-component.yml
+    with:
+      component-name: 'Email Delivery Service'
+      image-name: altinn-notifications-email
+      dockerfile: components/email-service/Dockerfile
 
   scan-sms:
     name: 'Scan: SMS Delivery Service'
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.sms == 'true'
-    runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Build the Docker image
-        run: docker build . -f components/sms-service/Dockerfile --tag altinn-notifications-sms:${{ github.sha }}
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: 'altinn-notifications-sms:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          trivyignores: '.trivyignore.yaml'
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db,aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
-          TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db,aquasec/trivy-java-db,ghcr.io/aquasecurity/trivy-java-db
-          TRIVY_SHOW_SUPPRESSED: true
+      security-events: write
+    uses: ./.github/workflows/container-scan-component.yml
+    with:
+      component-name: 'SMS Delivery Service'
+      image-name: altinn-notifications-sms
+      dockerfile: components/sms-service/Dockerfile
+
+  slack-notify:
+    name: Notify Slack on findings
+    needs: [scan-api, scan-email, scan-sms]
+    # Each scan-* job exits with a failure result when it finds CRITICAL/HIGH
+    # vulnerabilities (see container-scan-component.yml), so this must not be
+    # gated on those jobs succeeding. A job that was skipped (its component's
+    # paths didn't change on a push/PR run) must not trigger an alert; an
+    # empty count from a job that *did* run means it broke before counting -
+    # also worth an alert.
+    if: >
+      github.event_name != 'pull_request' && !cancelled() && (
+        (needs.scan-api.result != 'skipped' && needs.scan-api.outputs.findings-count != '0') ||
+        (needs.scan-email.result != 'skipped' && needs.scan-email.outputs.findings-count != '0') ||
+        (needs.scan-sms.result != 'skipped' && needs.scan-sms.outputs.findings-count != '0')
+      )
+    uses: ./.github/workflows/send-slack-warning.yml
+    permissions: {}
+    with:
+      warning-message: 'Notifications scan failed or found potential vulnerabilities in one or more components - inspect workflow log for more details'
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_CORE_ALERTS }}
