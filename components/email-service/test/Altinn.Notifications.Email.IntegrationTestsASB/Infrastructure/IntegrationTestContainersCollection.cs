@@ -8,6 +8,6 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 /// xUnit collection definition that shares the test containers fixture across all tests in the collection.
 /// </summary>
 [CollectionDefinition(nameof(IntegrationTestContainersCollection))]
-public class IntegrationTestContainersCollection : ICollectionFixture<IntegrationTestContainersFixture>
+public class IntegrationTestContainersCollection : ICollectionFixture<IntegrationTestEmailContainersFixture>
 {
 }

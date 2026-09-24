@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 /// xUnit fixture that starts all required containers for integration tests (PostgreSQL, MSSQL, Azure Service Bus Emulator).
 /// The fixture is shared across all tests in the collection to avoid starting/stopping containers repeatedly.
 /// </summary>
-public sealed class IntegrationTestContainersFixture : IAsyncLifetime
+public class IntegrationTestContainersFixture : IAsyncLifetime
 {
     private const string _mssqlSaPassword = "YourStrong!Passw0rd";
     private INetwork? _network;
@@ -31,7 +31,7 @@ public sealed class IntegrationTestContainersFixture : IAsyncLifetime
     /// <summary>
     /// Gets the Azure Service Bus connection string for the emulator.
     /// </summary>
-    public string ServiceBusConnectionString { get; private set; } = string.Empty;
+    public string ServiceBusConnectionString { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the PostgreSQL connection string (admin user).
@@ -50,14 +50,24 @@ public sealed class IntegrationTestContainersFixture : IAsyncLifetime
 
     #endregion
 
+    private bool IsLocalASBDisabled()
+    {
+        return true;
+    }
+
     #region Lifecycle Methods
 
     /// <summary>
     /// Initializes the fixture by starting MSSQL, Azure Service Bus Emulator, and optionally PostgreSQL containers.
     /// PostgreSQL is only started if the consuming project's appsettings.integrationtest.json contains a PostgreSQLSettings section.
     /// </summary>
-    public async ValueTask InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
+        if (IsLocalASBDisabled())
+        {
+            return;
+        }
+
         try
         {
             _network = new NetworkBuilder()
@@ -159,7 +169,7 @@ public sealed class IntegrationTestContainersFixture : IAsyncLifetime
     /// <summary>
     /// Disposes the fixture by stopping and removing all containers.
     /// </summary>
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         static async Task SafeDisposeContainerAsync(IContainer? container)
         {
@@ -177,6 +187,11 @@ public sealed class IntegrationTestContainersFixture : IAsyncLifetime
             {
                 Console.WriteLine($"Error disposing container: {ex.Message}");
             }
+        }
+
+        if (IsLocalASBDisabled())
+        {
+            return;
         }
 
         try

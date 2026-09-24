@@ -15,9 +15,21 @@ using Xunit;
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture fixture)
+public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private IntegrationTestEmailContainersFixture _fixture = fixture;
+
+    private string EmailStatusCheckQueueName => _fixture.WebHost.WolverineSettings!.EmailStatusCheckQueueName;
+
+    private string EmailSendResultQueueName => _fixture.WebHost.WolverineSettings!.EmailSendResultQueueName;
+
+    private async Task<Mock<IEmailServiceClient>> UseEmailClientMockAsync()
+    {
+        _fixture.ResetInstalledMocks();
+        var emailClientMock = new Mock<IEmailServiceClient>();
+        _fixture.InstallEmailServiceClient(emailClientMock.Object);
+        return emailClientMock;
+    }
 
     private static CheckEmailSendStatusCommand ValidCommand() => new()
     {
@@ -35,38 +47,31 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     {
         // Arrange
         var command = ValidCommand();
+        var emailClientMock = await UseEmailClientMockAsync();
 
-        var emailClientMock = new Mock<IEmailServiceClient>();
+        var webHost = _fixture.WebHost;
         emailClientMock
             .Setup(c => c.GetOperationUpdate(command.SendOperationId))
             .ReturnsAsync(terminalResult);
+        await _fixture.DrainQueue(EmailStatusCheckQueueName);
+        await _fixture.DrainQueue(EmailSendResultQueueName);
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => emailClientMock.Object)
-            .Initialize();
+        // Act
+        await webHost.SendToQueueAsync(EmailStatusCheckQueueName, command);
 
-        await using (factory)
-        {
-            string checkQueueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
-            string statusQueueName = factory.WolverineSettings!.EmailSendResultQueueName;
+        // Assert - message should arrive on the sending status queue
+        var receivedMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            EmailSendResultQueueName,
+            TimeSpan.FromSeconds(15));
 
-            // Act
-            await factory.SendToQueueAsync(checkQueueName, command);
+        Assert.NotNull(receivedMessage);
 
-            // Assert - message should arrive on the sending status queue
-            var receivedMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                statusQueueName,
-                TimeSpan.FromSeconds(15));
-
-            Assert.NotNull(receivedMessage);
-
-            var statusCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(receivedMessage.Body.ToString());
-            Assert.NotNull(statusCommand);
-            Assert.Equal(command.NotificationId, statusCommand.NotificationId);
-            Assert.Equal(command.SendOperationId, statusCommand.OperationId);
-            Assert.Equal(terminalResult.ToString(), statusCommand.SendResult);
-        }
+        var statusCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(receivedMessage.Body.ToString());
+        Assert.NotNull(statusCommand);
+        Assert.Equal(command.NotificationId, statusCommand.NotificationId);
+        Assert.Equal(command.SendOperationId, statusCommand.OperationId);
+        Assert.Equal(terminalResult.ToString(), statusCommand.SendResult);
     }
 
     [Fact]
@@ -74,91 +79,81 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestContainersFixture f
     {
         // Arrange
         int attemptCount = 0;
+        var emailClientMock = await UseEmailClientMockAsync();
+        var command = ValidCommand();
 
-        var emailClientMock = new Mock<IEmailServiceClient>();
+        var webHost = _fixture.WebHost;
         emailClientMock
-            .Setup(c => c.GetOperationUpdate(It.IsAny<string>()))
-            .Callback(() => Interlocked.Increment(ref attemptCount))
+            .Setup(c => c.GetOperationUpdate(command.SendOperationId))
+            .Callback(() =>
+            {
+                Interlocked.Increment(ref attemptCount);
+            })
             .ThrowsAsync(new InvalidOperationException("Simulated ACS error"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => emailClientMock.Object)
-            .Initialize();
+        await _fixture.DrainQueue(EmailStatusCheckQueueName);
+        await _fixture.DrainQueue(EmailSendResultQueueName);
 
-        await using (factory)
-        {
-            var policy = factory.WolverineSettings!.EmailStatusCheckQueuePolicy;
-            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+        var policy = _fixture.WebHost.WolverineSettings!.EmailStatusCheckQueuePolicy;
+        int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
 
-            // Act
-            await factory.SendToQueueAsync(queueName, ValidCommand());
+        // Act
+        await _fixture.WebHost.SendToQueueAsync(EmailStatusCheckQueueName, command);
 
-            // Assert - Wait for message to appear in dead letter queue after retries exhaust
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(30));
-            Assert.NotNull(deadLetterMessage);
+        // Assert - Wait for message to appear in dead letter queue after retries exhaust
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            EmailStatusCheckQueueName,
+            TimeSpan.FromSeconds(30));
+        Assert.NotNull(deadLetterMessage);
 
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, attemptCount);
-        }
+        // Assert - Verify the handler was called exactly as many times as the policy dictates
+        Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+        Assert.Equal(expectedAttempts, attemptCount);
     }
 
     [Fact]
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .Initialize();
+        var webHost = _fixture.WebHost;
+        await _fixture.DrainQueue(EmailStatusCheckQueueName);
 
-        await using (factory)
+        // Act - NotificationId = Guid.Empty triggers ArgumentException in the handler guard clause
+        await webHost.SendToQueueAsync(EmailStatusCheckQueueName, new CheckEmailSendStatusCommand
         {
-            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+            NotificationId = Guid.Empty,
+            SendOperationId = Guid.NewGuid().ToString(),
+            LastCheckedAtUtc = DateTime.UtcNow
+        });
 
-            // Act - NotificationId = Guid.Empty triggers ArgumentException in the handler guard clause
-            await factory.SendToQueueAsync(queueName, new CheckEmailSendStatusCommand
-            {
-                NotificationId = Guid.Empty,
-                SendOperationId = Guid.NewGuid().ToString(),
-                LastCheckedAtUtc = DateTime.UtcNow
-            });
-
-            // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
-            Assert.NotNull(deadLetterMessage);
-        }
+        // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            EmailStatusCheckQueueName,
+            TimeSpan.FromSeconds(10));
+        Assert.NotNull(deadLetterMessage);
     }
 
     [Fact]
     public async Task CheckEmailSendStatus_WhenSendOperationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .Initialize();
+        var webHost = _fixture.WebHost;
+        await _fixture.DrainQueue(EmailStatusCheckQueueName);
 
-        await using (factory)
+        // Act - SendOperationId = string.Empty triggers ArgumentException in the handler guard clause.
+        // ArgumentException is not in the CheckEmailSendStatusHandlerPolicy chain → DLQ immediately.
+        await webHost.SendToQueueAsync(EmailStatusCheckQueueName, new CheckEmailSendStatusCommand
         {
-            string queueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
+            NotificationId = Guid.NewGuid(),
+            SendOperationId = string.Empty,
+            LastCheckedAtUtc = DateTime.UtcNow
+        });
 
-            // Act - SendOperationId = string.Empty triggers ArgumentException in the handler guard clause.
-            // ArgumentException is not in the CheckEmailSendStatusHandlerPolicy chain → DLQ immediately.
-            await factory.SendToQueueAsync(queueName, new CheckEmailSendStatusCommand
-            {
-                NotificationId = Guid.NewGuid(),
-                SendOperationId = string.Empty,
-                LastCheckedAtUtc = DateTime.UtcNow
-            });
-
-            // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
-            Assert.NotNull(deadLetterMessage);
-        }
+        // Assert - Message should appear in DLQ quickly (ArgumentException is not retried)
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            EmailStatusCheckQueueName,
+            TimeSpan.FromSeconds(10));
+        Assert.NotNull(deadLetterMessage);
     }
 }
