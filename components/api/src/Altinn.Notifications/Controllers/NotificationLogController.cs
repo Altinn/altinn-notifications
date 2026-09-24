@@ -3,14 +3,12 @@ using System.Collections.Immutable;
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Errors;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.NotificationLog;
-using Altinn.Notifications.Validators.Extensions;
-
-using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,16 +21,15 @@ namespace Altinn.Notifications.Controllers;
 /// Controller for retrieving notification log entries by Dialogporten identifiers.
 /// </summary>
 [ApiController]
-[Route("notifications/api/v1/future/log")]
+[Route("notifications/api/v1/future")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
-[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class NotificationLogController(
     INotificationLogService notificationLogService,
-    IValidator<NotificationLogQueryExt> validator) : ControllerBase
+    IDialogportenClient dialogportenClient) : ControllerBase
 {
-    private readonly IValidator<NotificationLogQueryExt> _validator = validator;
     private readonly INotificationLogService _notificationLogService = notificationLogService;
+    private readonly IDialogportenClient _dialogportenClient = dialogportenClient;
 
     /// <summary>
     /// Retrieves notification log entries filtered by dialog identifier, transmission identifier, or both.
@@ -42,19 +39,19 @@ public class NotificationLogController(
     /// <returns>
     /// A collection of matching notification log entries, or an empty list when no entries match.
     /// </returns>
-    [HttpGet]
+    [HttpGet("log")]
+    [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
     [Produces("application/json")]
     [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogSummaryExt>))]
     [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    [Obsolete("This endpoint is deprecated and deleted in a future release. No direct replacement is available.")]
     public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> Get([FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
     {
         try
         {
-            var validationResult = _validator.Validate(query);
-            if (!validationResult.IsValid)
+            if (!ModelState.IsValid)
             {
-                validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 
@@ -64,29 +61,68 @@ public class NotificationLogController(
                 return Forbid();
             }
 
-            IImmutableList<NotificationLogSummary> entries;
-
-            bool hasDialogId = !string.IsNullOrWhiteSpace(query.DialogId);
-            bool hasTransmissionId = !string.IsNullOrWhiteSpace(query.TransmissionId);
-            if (hasDialogId && hasTransmissionId)
-            {
-                entries = await _notificationLogService.GetByDialogAndTransmissionIds(query.DialogId!, query.TransmissionId!, cancellationToken);
-            }
-            else if (hasDialogId)
-            {
-                entries = await _notificationLogService.GetByDialogId(query.DialogId!, cancellationToken);
-            }
-            else
-            {
-                entries = await _notificationLogService.GetByTransmissionId(query.TransmissionId!, cancellationToken);
-            }
-
-            return Ok(entries.MapToNotificationLogSummaryList());
+            return await GetLog(query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
+    }
+
+    /// <summary>
+    /// Retrieves notification log entries filtered by dialog identifier, transmission identifier, or both.
+    /// </summary>
+    /// <param name="query">The Dialogporten identifiers to filter by. At least one must be provided.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A collection of matching notification log entries, or an empty list when no entries match.
+    /// </returns>
+    [HttpGet("enduser/log")]
+    [Authorize(Policy = AuthorizationConstants.POLICY_END_USER_ACCESS)]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogSummaryExt>))]
+    [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> GetForEnduser(
+        [FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            bool userHasAccess = await _dialogportenClient.CheckUserAccessToDialog(query.DialogId, cancellationToken);
+            if (!userHasAccess)
+            {
+                return Forbid();
+            }
+
+            return await GetLog(query, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+    }
+
+    private async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> GetLog(NotificationLogQueryExt query, CancellationToken cancellationToken)
+    {
+        IImmutableList<NotificationLogSummary> entries;
+
+        if (query.TransmissionId.HasValue)
+        {
+            entries = await _notificationLogService.GetByDialogAndTransmissionIds(
+                query.DialogId.ToString(), query.TransmissionId.Value.ToString(), cancellationToken);
+        }
+        else
+        {
+            entries = await _notificationLogService.GetByDialogId(query.DialogId.ToString(), cancellationToken);
+        }
+
+        return Ok(entries.MapToNotificationLogSummaryList());
     }
 }
