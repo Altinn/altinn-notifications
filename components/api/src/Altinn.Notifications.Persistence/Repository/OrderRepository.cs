@@ -46,7 +46,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _advanceStatusSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _retryStatusSql = "call notifications.updateorderretry($1, $2, $3)"; // (_orderid, _retryreason, _maxretrycount)
-    private const string _getProcessedStatusSql = "select processedstatus from notifications.orders where alternateid=$1";
     private const string _getOrderPastSendTime = "select notifications.getorder_pastsendtime()";
     private const string _getOrderRetry = "select notifications.getorder_retry($1)";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v5($1, $2)"; // _alternateid,  creator
@@ -252,28 +251,13 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task SetRetryStatus(UnitOfWork unitOfWork, NotificationOrder order, string reason)
+    public async Task SetRetryStatus(UnitOfWork unitOfWork, Guid orderId, string reason)
     {
         await using NpgsqlCommand pgcom = new(_retryStatusSql, unitOfWork.Connection, unitOfWork.Transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, reason != null ? reason : DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, config.Value.RetryOrdersMaxCount);
         await pgcom.ExecuteNonQueryAsync();
-
-        await using NpgsqlCommand statusCmd = new(_getProcessedStatusSql, unitOfWork.Connection, unitOfWork.Transaction);
-        statusCmd.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-
-        object? result = await statusCmd.ExecuteScalarAsync();
-        if (result is not string resultingStatusText)
-        {
-            throw new InvalidOperationException(
-                $"Order {order.Id} not found when attempting to persist retry result");
-        }
-
-        if (Enum.Parse<OrderProcessingStatus>(resultingStatusText) == OrderProcessingStatus.Failed)
-        {
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.Failed, [], [], unitOfWork.Connection, unitOfWork.Transaction);
-        }
     }
 
     /// <inheritdoc/>

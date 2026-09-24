@@ -3503,7 +3503,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.Create(order);
 
         // Act
-        await SetRetryStatusWithUnitOfWork(repo, order, "first retry", TestContext.Current.CancellationToken);
+        await SetRetryStatusWithUnitOfWork(repo, order.Id, "first retry", TestContext.Current.CancellationToken);
 
         // Assert
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3517,8 +3517,6 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string retryReasonSql = $"SELECT retryreason FROM notifications.orders WHERE alternateid = '{order.Id}'";
         string retryReason = await PostgreUtil.RunSqlReturnOutput<string>(retryReasonSql);
         Assert.Equal("first retry", retryReason);
-
-        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id)); // still Retrying — no status feed entry yet
     }
 
     [Fact]
@@ -3550,7 +3548,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         for (int i = 0; i <= maxRetryCount; i++)
         {
-            await SetRetryStatusWithUnitOfWork(repo, order, $"retry-{i}", TestContext.Current.CancellationToken);
+            await SetRetryStatusWithUnitOfWork(repo, order.Id, $"retry-{i}", TestContext.Current.CancellationToken);
         }
 
         // Assert
@@ -3561,18 +3559,6 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string retryCountSql = $"SELECT retrycount FROM notifications.orders WHERE alternateid = '{order.Id}'";
         int retryCount = await PostgreUtil.RunSqlReturnOutput<int>(retryCountSql);
         Assert.Equal(maxRetryCount + 1, retryCount);
-
-        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
-
-        string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
-            JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
-        string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
-        using var doc = JsonDocument.Parse(statusJson);
-        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
-        Assert.Equal("Order_Failed", doc.RootElement.GetProperty("Status").GetString());
-
-        // Failed orders never produced any actual notification, so they must never reach the notification log
-        Assert.Equal(0, await PostgreUtil.SelectNotificationLogEntryCount(order.Id));
     }
 
     [Fact]
@@ -3604,70 +3590,20 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act - up to and including max retry count
         for (int i = 0; i < maxRetryCount; i++)
         {
-            await SetRetryStatusWithUnitOfWork(repo, order, $"retry-{i}", TestContext.Current.CancellationToken);
+            await SetRetryStatusWithUnitOfWork(repo, order.Id, $"retry-{i}", TestContext.Current.CancellationToken);
         }
 
         // Assert - at max retry count, state is still Retrying
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
         string statusAtLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
         Assert.Equal(OrderProcessingStatus.Retrying.ToString(), statusAtLimit);
-        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
 
         // Act - one more retry moves to Failed (retrycount + 1 > _maxretrycount)
-        await SetRetryStatusWithUnitOfWork(repo, order, "retry-over-limit", TestContext.Current.CancellationToken);
+        await SetRetryStatusWithUnitOfWork(repo, order.Id, "retry-over-limit", TestContext.Current.CancellationToken);
 
         // Assert - above max retry count, state is Failed
         string statusAboveLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
         Assert.Equal(OrderProcessingStatus.Failed.ToString(), statusAboveLimit);
-
-        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
-
-        string jsonSql = $@"SELECT sf.orderstatus FROM notifications.statusfeed sf
-            JOIN notifications.orders o ON sf.orderid = o._id WHERE o.alternateid = '{order.Id}'";
-        string statusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
-        using var doc = JsonDocument.Parse(statusJson);
-        Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
-        Assert.Equal("Order_Failed", doc.RootElement.GetProperty("Status").GetString());
-
-        Assert.Equal(0, await PostgreUtil.SelectNotificationLogEntryCount(order.Id));
-    }
-
-    [Fact]
-    public async Task SetRetryStatus_WhenCalledAgainAfterFailed_IsIdempotentNoOpForStatusFeed()
-    {
-        // Arrange
-        OrderRepository repo = (OrderRepository)ServiceUtil
-            .GetServices([typeof(IOrderRepository)])
-            .First(i => i.GetType() == typeof(OrderRepository));
-
-        IOptions<NotificationConfig> options = ServiceUtil
-            .GetServices([typeof(IOptions<NotificationConfig>)])
-            .Cast<IOptions<NotificationConfig>>()
-            .First();
-        int maxRetryCount = options.Value.RetryOrdersMaxCount;
-
-        NotificationOrder order = new()
-        {
-            Id = Guid.NewGuid(),
-            Created = DateTime.UtcNow,
-            Creator = new("ttd"),
-            Type = OrderType.Notification,
-            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
-        };
-
-        _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
-
-        for (int i = 0; i <= maxRetryCount; i++)
-        {
-            await SetRetryStatusWithUnitOfWork(repo, order, $"retry-{i}", TestContext.Current.CancellationToken);
-        }
-
-        // Act - a duplicate-delivery retry call after the order is already Failed must not throw or duplicate the entry
-        await SetRetryStatusWithUnitOfWork(repo, order, "retry-after-failed", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
     }
 
     [Fact]
@@ -4451,7 +4387,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
     private static async Task SetRetryStatusWithUnitOfWork(
         OrderRepository repo,
-        NotificationOrder order,
+        Guid orderId,
         string reason,
         CancellationToken cancellationToken)
     {
@@ -4463,7 +4399,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         try
         {
-            await repo.SetRetryStatus(unitOfWork, order, reason);
+            await repo.SetRetryStatus(unitOfWork, orderId, reason);
             await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
         }
         catch
