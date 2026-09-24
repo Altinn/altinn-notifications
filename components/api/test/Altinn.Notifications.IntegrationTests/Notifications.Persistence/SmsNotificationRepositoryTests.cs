@@ -962,16 +962,27 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_UnknownNotificationId_DoesNotThrowAndUpdatesNoRows()
+    public async Task PersistSubstitutedSender_UnknownNotificationId_DoesNotThrowAndLogsWarning()
     {
         // Arrange
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
 
-        // Act & Assert — no matching row, but this is a best-effort write, so no exception is expected.
+        // Act — no matching row, but this is a best-effort write, so no exception is expected.
         await repo.PersistSubstitutedSender(Guid.NewGuid(), "+4775006000");
+
+        // Assert
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                null,
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
     }
 
     [Fact]
