@@ -30,11 +30,11 @@ public class MockEmailServiceClient : IEmailServiceClient
     }
 
     /// <inheritdoc/>
-    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
+    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email, CancellationToken cancellationToken = default)
     {
         string operationId = email.NotificationId.ToString();
         Result<string, EmailClientErrorResponse> result = operationId;
-        await Task.Delay(AcsSendExecutionTimeMs);
+        await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
         return result;
     }
 

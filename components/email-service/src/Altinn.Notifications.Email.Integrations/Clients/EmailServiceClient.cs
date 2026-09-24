@@ -52,8 +52,9 @@ public class EmailServiceClient : IEmailServiceClient
     /// Send an email
     /// </summary>
     /// <param name="email">The email</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
+    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email, CancellationToken cancellationToken = default)
     {
         EmailContent emailContent = new(email.Subject);
         switch (email.ContentType)
@@ -71,7 +72,7 @@ public class EmailServiceClient : IEmailServiceClient
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
         try
         {
-            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
+            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cancellationToken);
 
             return emailSendOperation.Id;
         }

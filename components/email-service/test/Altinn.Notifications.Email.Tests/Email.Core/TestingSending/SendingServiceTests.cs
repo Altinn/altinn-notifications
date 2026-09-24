@@ -40,7 +40,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendAsync(email);
+        await sendingService.SendAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
         statusDispatcherMock.Verify(
@@ -78,7 +78,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, sendingAcceptedPublisherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendAsync(email);
+        await sendingService.SendAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
         sendingAcceptedPublisherMock.Verify(p => p.DispatchAsync(id, "operation-id"), Times.Once);
@@ -118,7 +118,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendAsync(email);
+        await sendingService.SendAsync(email, TestContext.Current.CancellationToken);
         var testEnd = DateTime.UtcNow;
 
         // Assert - rate limit signal goes via dispatcher with correct payload
@@ -169,7 +169,7 @@ public class SendingServiceTests
         var sendingService = new SendingService(new Mock<ILogger<SendingService>>().Object, clientMock.Object, checkDispatcherMock.Object, statusDispatcherMock.Object, emailServiceRateLimitDispatcherMock.Object);
 
         // Act
-        await sendingService.SendAsync(email);
+        await sendingService.SendAsync(email, TestContext.Current.CancellationToken);
 
         // Assert
         statusDispatcherMock.Verify(

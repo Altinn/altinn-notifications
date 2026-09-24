@@ -9,7 +9,8 @@ public interface ISendingService
     /// Sends a standard email via Azure Communication Services.
     /// </summary>
     /// <param name="email">The email to send.</param>
-    Task SendAsync(Email email);
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    Task SendAsync(Email email, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Downloads attachments via SAS URL and sends the composed email via ACS.

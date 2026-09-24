@@ -38,7 +38,7 @@ public class SendEmailCommandHandlerTests
 
         // Act & Assert
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         Assert.Same(exception, thrown);
 
@@ -69,7 +69,7 @@ public class SendEmailCommandHandlerTests
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         // Act
-        await SendEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object);
+        await SendEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(
@@ -102,7 +102,7 @@ public class SendEmailCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         loggerMock.Verify(
             l => l.Log(
