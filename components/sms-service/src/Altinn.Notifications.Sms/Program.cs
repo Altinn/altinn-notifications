@@ -193,14 +193,20 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
 }
 

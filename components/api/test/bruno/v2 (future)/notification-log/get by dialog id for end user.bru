@@ -1,0 +1,41 @@
+meta {
+  name: get by dialog id for end user
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/enduser/log?dialogId={{dialogporten_dialog_id}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  dialogId: {{dialogporten_dialog_id}}
+}
+
+vars:pre-request {
+  dialogporten_dialog_id: 01a0a4d9-fff9-7713-826a-f398d5bceabd
+}
+
+script:pre-request {
+  //Auto-fetch a valid auth-token
+  if(   
+    //no token
+    bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
+    
+    //new env
+    bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
+    
+    //old token (expired)
+    (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now() 
+    ){
+    const requestResponse = await bru.runRequest("test-util/end user dialog token");
+  
+    if(requestResponse.status == 200){
+      console.log('Automatically (re)-aquired a JWT');
+    }else{
+      console.log('Failed automatically (re)-aquirering a JWT');
+    }
+  }
+}

@@ -15,26 +15,9 @@ The general pattern is:
 2. **Scheduled retry** — subsequent failures are re-enqueued with an increasing delay (scheduled delivery).
 3. **Dead-letter queue** — messages that exhaust all retries are moved to the queue's dead-letter sub-queue for inspection.
 
+The composed email send queue additionally treats `AttachmentDownloadException` (a transient SAS-URL download failure) as retryable under this same policy.
+
 ## Queue overview
-
-### Orders
-
-#### Past due orders queue
-
-**Description:** Orders whose requested send time has passed and are ready to be processed for notification dispatch.
-
-**Publisher:** Altinn Notifications API, [PastDueOrderPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/PastDueOrderPublisher.cs)
-
-**Handler:** Altinn Notifications API, [ProcessPastDueOrderHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Handlers/ProcessPastDueOrderHandler.cs)
-
-**Content:**
-- Format: json
-- Data structure: [NotificationOrder](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Orders/NotificationOrder.cs)
-- Description: An order containing notification templates along with complete or partial recipient data.
-
-**Notes:** Triggered by the `pending-orders-trigger` cron job via the Trigger controller.
-
----
 
 ### Emails
 
@@ -50,6 +33,23 @@ The general pattern is:
 - Format: json
 - Data structure: [Email](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Core/Models/Email.cs)
 - Description: An email with all required properties present.
+
+---
+
+#### Composed email send queue
+
+**Description:** Composed email send commands — subject, body, and recipient already fully composed by the caller, with optional file attachments — published by the API and consumed by the email service.
+
+**Publisher:** Altinn Notifications API, [ComposedEmailCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/ComposedEmailCommandPublisher.cs)
+
+**Handler:** Altinn Notifications Email, [SendComposedEmailCommandHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/email-service/src/Altinn.Notifications.Email.Integrations/Wolverine/Handlers/SendComposedEmailCommandHandler.cs)
+
+**Content:**
+- Format: json
+- Data structure: [SendComposedEmailCommand](https://github.com/Altinn/altinn-notifications/blob/main/components/shared/src/Altinn.Notifications.Shared/Commands/SendComposedEmailCommand.cs)
+- Description: A fully-composed email with pre-rendered content and file attachments referenced by SAS URL.
+
+**Notes:** Downstream status uses the *existing* email status check and email send result queues below — there is no dedicated status/result queue for composed email. Attachments are downloaded from their SAS URL at send time; a transient download failure (`AttachmentDownloadException`) is retried like any other infrastructure exception, while an invalid or expired SAS URL (`InvalidSasUrlException`) fails the notification immediately without a retry.
 
 ---
 
