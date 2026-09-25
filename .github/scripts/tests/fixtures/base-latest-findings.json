@@ -1,0 +1,18 @@
+{
+  "Results": [
+    {
+      "Target": "mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.23 (alpine 3.23.0)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-OS-STILL",
+          "PkgName": "openssl",
+          "InstalledVersion": "3.5.0-r0",
+          "FixedVersion": "3.5.1-r0",
+          "Severity": "CRITICAL"
+        }
+      ]
+    }
+  ]
+}
