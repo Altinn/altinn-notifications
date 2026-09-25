@@ -150,6 +150,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
             SendStatusIdentifierType.GatewayReference);
     }
+    
     /// <inheritdoc/>
     public async Task PersistSubstitutedSender(Guid notificationId, string sender)
     {

@@ -162,9 +162,13 @@ public class SmsNotificationService : ISmsNotificationService
 
         foreach (var sms in smsNotifications)
         {
-            sms.Sender = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
+            var (sender, wasSubstituted) = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
 
-            await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
+            if (wasSubstituted)
+            {
+                sms.Sender = sender;
+                await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
+            }
         }
     }
 

@@ -81,10 +81,11 @@ public class SmsSenderSubstitutionServiceTests
         var service = CreateService([]);
 
         // Act
-        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -101,10 +102,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("+4775006000", result);
+        Assert.Equal("+4775006000", sender);
+        Assert.True(wasSubstituted);
     }
 
     [Fact]
@@ -121,12 +123,14 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var resultWithPlus = service.ResolveSender("Altinn", "+34123456789", "digdir");
-        var resultWithZeros = service.ResolveSender("Altinn", "0034123456789", "digdir");
+        var (senderWithPlus, wasSubstitutedWithPlus) = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (senderWithZeros, wasSubstitutedWithZeros) = service.ResolveSender("Altinn", "0034123456789", "digdir");
 
         // Assert
-        Assert.Equal("+4775006000", resultWithPlus);
-        Assert.Equal("+4775006000", resultWithZeros);
+        Assert.Equal("+4775006000", senderWithPlus);
+        Assert.True(wasSubstitutedWithPlus);
+        Assert.Equal("+4775006000", senderWithZeros);
+        Assert.True(wasSubstitutedWithZeros);
     }
 
     [Fact]
@@ -143,10 +147,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act - Norwegian number, does not match the Spanish prefix rule
-        var result = service.ResolveSender("Altinn", "+4799990000", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+4799990000", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -163,10 +168,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act - matching prefix, but "other-owner" has no substitution configured
-        var result = service.ResolveSender("Altinn", "+34123456789", "other-owner");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "other-owner");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -188,10 +194,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act - first rule matches the prefix but has no entry for "digdir", second rule does
-        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("+4775006000", result);
+        Assert.Equal("+4775006000", sender);
+        Assert.True(wasSubstituted);
     }
 
     [Theory]
@@ -214,10 +221,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var result = service.ResolveSender("Altinn", recipientPhoneNumber!, serviceOwnerShortName!);
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", recipientPhoneNumber!, serviceOwnerShortName!);
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -234,10 +242,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -256,10 +265,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var result = service.ResolveSender("Altinn", "34123456", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "34123456", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -294,10 +304,11 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var result = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (sender, wasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
 
         // Assert
-        Assert.Equal("Altinn", result);
+        Assert.Equal("Altinn", sender);
+        Assert.False(wasSubstituted);
     }
 
     [Fact]
@@ -318,12 +329,36 @@ public class SmsSenderSubstitutionServiceTests
         ]);
 
         // Act
-        var validOwnerResult = service.ResolveSender("Altinn", "+34123456789", "digdir");
-        var invalidOwnerResult = service.ResolveSender("Altinn", "+34123456789", "other-owner");
+        var (validOwnerSender, validOwnerWasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "digdir");
+        var (invalidOwnerSender, invalidOwnerWasSubstituted) = service.ResolveSender("Altinn", "+34123456789", "other-owner");
 
         // Assert
-        Assert.Equal("+4775006000", validOwnerResult);
-        Assert.Equal("Altinn", invalidOwnerResult);
+        Assert.Equal("+4775006000", validOwnerSender);
+        Assert.True(validOwnerWasSubstituted);
+        Assert.Equal("Altinn", invalidOwnerSender);
+        Assert.False(invalidOwnerWasSubstituted);
+    }
+
+    [Fact]
+    public void ResolveSender_ConfiguredSenderIsAlreadyAValidMobileNumber_ReturnsConfiguredSenderUnchangedEvenWhenMatchingRuleExists()
+    {
+        // Arrange - a matching rule exists for the recipient/owner combination, but since the
+        // configured sender is already a valid mobile number, substitution must not be applied.
+        var service = CreateService(
+        [
+            new SmsSenderSubstitutionRule
+            {
+                CountryCodePrefix = "34",
+                NumericSenderByServiceOwner = new Dictionary<string, string> { ["digdir"] = "+4775006000" }
+            }
+        ]);
+
+        // Act
+        var (sender, wasSubstituted) = service.ResolveSender("+4799999999", "+34123456789", "digdir");
+
+        // Assert
+        Assert.Equal("+4799999999", sender);
+        Assert.False(wasSubstituted);
     }
 
     private static SmsSenderSubstitutionService CreateService(List<SmsSenderSubstitutionRule> rules)

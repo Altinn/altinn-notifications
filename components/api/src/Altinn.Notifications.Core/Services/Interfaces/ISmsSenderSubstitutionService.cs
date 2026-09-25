@@ -25,6 +25,7 @@ public interface ISmsSenderSubstitutionService
     /// <returns>
     /// The substituted numeric sender if a rule matches the phone number and has an entry
     /// for the given service owner; otherwise <paramref name="configuredSender"/> unchanged.
+    /// The boolean indicates whether a substitution was applied.
     /// </returns>
-    string ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName);
+    (string Sender, bool WasSubstituted) ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName);
 }

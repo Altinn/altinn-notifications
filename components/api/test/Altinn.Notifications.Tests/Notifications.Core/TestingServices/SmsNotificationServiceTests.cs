@@ -686,7 +686,7 @@ public class SmsNotificationServiceTests
         senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(true);
         senderSubstitutionServiceMock
             .Setup(s => s.ResolveSender("Altinn", "+34123456789", "digdir"))
-            .Returns("+4775006000");
+            .Returns(("+4775006000", true));
 
         var service = GetTestService(
             repository: repoMock.Object,
