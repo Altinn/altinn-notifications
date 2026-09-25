@@ -50,9 +50,9 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 
     #endregion
 
-    private bool IsLocalASBDisabled()
+    private bool UseExternalASB()
     {
-        return true;
+        return false;
     }
 
     #region Lifecycle Methods
@@ -63,7 +63,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
     /// </summary>
     public virtual async ValueTask InitializeAsync()
     {
-        if (IsLocalASBDisabled())
+        if (UseExternalASB())
         {
             return;
         }
@@ -189,7 +189,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
             }
         }
 
-        if (IsLocalASBDisabled())
+        if (UseExternalASB())
         {
             return;
         }
