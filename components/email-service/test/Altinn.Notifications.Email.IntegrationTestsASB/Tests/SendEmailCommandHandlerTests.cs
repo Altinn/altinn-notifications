@@ -130,7 +130,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         int attemptCount = 0;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>()))
+            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
             .Callback(() => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new InvalidOperationException("Simulated sending failure"));
 
