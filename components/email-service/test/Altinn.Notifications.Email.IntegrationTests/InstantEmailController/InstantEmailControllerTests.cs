@@ -46,7 +46,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>())).ThrowsAsync(new OperationCanceledException());
+        sendingServiceMock.Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>())).ThrowsAsync(new OperationCanceledException());
 
         var instantEmailRequest = new InstantEmailRequest
         {
@@ -81,7 +81,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         var notificationId = Guid.NewGuid();
 
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>())).ThrowsAsync(new InvalidOperationException());
+        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException());
 
         var instantEmailRequest = new InstantEmailRequest
         {
@@ -156,7 +156,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         var notificationId = Guid.NewGuid();
 
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == notificationId))).Returns(Task.CompletedTask);
+        sendingServiceMock.Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == notificationId), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var instantEmailRequest = new InstantEmailRequest
         {
@@ -175,7 +175,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         var notificationId = Guid.NewGuid();
 
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == notificationId))).Returns(Task.CompletedTask);
+        sendingServiceMock.Setup(e => e.SendAsync(It.Is<Core.Sending.Email>(e => e.NotificationId == notificationId), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var instantEmailRequest = new InstantEmailRequest
         {
@@ -204,7 +204,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -215,8 +215,8 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         Core.Sending.Email? capturedEmail = null;
 
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>()))
-            .Callback<Core.Sending.Email>(email => capturedEmail = email)
+        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
+            .Callback<Core.Sending.Email, CancellationToken>((email, ct) => capturedEmail = email)
             .Returns(Task.CompletedTask);
 
         var instantEmailRequest = new InstantEmailRequest
@@ -242,7 +242,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal("sender@test.altinn.no", capturedEmail.FromAddress);
         Assert.Equal("recipient@example.com", capturedEmail.ToAddress);
         Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
-        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         var notificationId = Guid.NewGuid();
 
         var sendingServiceMock = new Mock<ISendingService>();
-        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>())).Returns(Task.CompletedTask);
+        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var httpClient = GetTestClient(sendingServiceMock.Object);
 
@@ -274,7 +274,7 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private HttpClient GetTestClient(ISendingService sendingService)

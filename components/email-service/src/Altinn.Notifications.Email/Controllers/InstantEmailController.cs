@@ -29,6 +29,7 @@ public class InstantEmailController : ControllerBase
     /// Sends an email instantly to a single recipient.
     /// </summary>
     /// <param name="request">The request containing email content, content type, recipient, sender, subject, and notification ID.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>
     /// Returns 202 (Accepted) when the email was successfully accepted for processing.
     /// Returns 400 (Bad Request) with <see cref="ProblemDetails"/> when the request is invalid or contains improper formatting.
@@ -40,13 +41,13 @@ public class InstantEmailController : ControllerBase
     [SwaggerResponse(202, "The email was accepted for processing.")]
     [SwaggerResponse(400, "The request was invalid.", typeof(ProblemDetails))]
     [SwaggerResponse(499, "The request was canceled before processing could complete.", typeof(ProblemDetails))]
-    public async Task<IActionResult> Send([FromBody] InstantEmailRequest request)
+    public async Task<IActionResult> Send([FromBody] InstantEmailRequest request, CancellationToken cancellationToken)
     {
         var emailDataModel = MapToEmail(request);
 
         try
         {
-            await _sendingService.SendAsync(emailDataModel);
+            await _sendingService.SendAsync(emailDataModel, cancellationToken);
 
             return Accepted();
         }

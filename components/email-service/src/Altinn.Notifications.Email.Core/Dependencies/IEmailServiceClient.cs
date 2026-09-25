@@ -12,8 +12,9 @@ public interface IEmailServiceClient
     /// Sends a standard email to Azure Communication Services.
     /// </summary>
     /// <param name="email">The email to send.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>The ACS operation ID on success, or an <see cref="EmailClientErrorResponse"/> on failure.</returns>
-    Task<Result<string, EmailClientErrorResponse>> SendEmail(Sending.Email email);
+    Task<Result<string, EmailClientErrorResponse>> SendEmail(Sending.Email email, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Downloads the attachments in <paramref name="email"/> via SAS URL,

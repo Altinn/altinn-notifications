@@ -37,7 +37,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
 
         var emailClientMock = new Mock<IEmailServiceClient>();
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmailClientErrorResponse
             {
                 IntermittentErrorDelay = intermittentErrorDelaySeconds,
@@ -91,8 +91,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
 
         var emailClientMock = new Mock<IEmailServiceClient>();
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
-            .Callback<Core.Sending.Email>(_ => clientInvoked.TrySetResult())
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
+            .Callback<Core.Sending.Email, CancellationToken>((_, _) => clientInvoked.TrySetResult())
             .ReturnsAsync(successResult);
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
@@ -133,8 +133,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestContainersFixtur
 
         var emailClientMock = new Mock<IEmailServiceClient>();
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
-            .Callback<Core.Sending.Email>(_ => clientInvoked.TrySetResult())
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
+            .Callback<Core.Sending.Email, CancellationToken>((_, _) => clientInvoked.TrySetResult())
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = nonTransientResult });
 
         var factory = new IntegrationTestWebApplicationFactory(_fixture)
