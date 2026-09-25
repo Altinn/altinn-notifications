@@ -115,11 +115,8 @@ jobs:
     # paths didn't change on a push/PR run) must not trigger an alert; an
     # empty count from a job that *did* run means it broke before counting -
     # also worth an alert.
-    # TEMPORARY (revert before merge): pull_request exclusion removed to
-    # verify the Slack webhook fires end-to-end. Restore
-    # `github.event_name != 'pull_request' &&` before this PR merges.
     if: >
-      !cancelled() && (
+      github.event_name != 'pull_request' && !cancelled() && (
         (needs.scan-api.result != 'skipped' && needs.scan-api.outputs.findings-count != '0') ||
         (needs.scan-email.result != 'skipped' && needs.scan-email.outputs.findings-count != '0') ||
         (needs.scan-sms.result != 'skipped' && needs.scan-sms.outputs.findings-count != '0')
