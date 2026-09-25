@@ -1,4 +1,5 @@
-﻿using System.Net;
+using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -11,16 +12,9 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
-using AltinnCore.Authentication.JwtCookie;
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -28,11 +22,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
 
-public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>
+public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
-    private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
     private readonly NotificationOrder _order;
     private readonly NotificationOrderWithStatus _orderWithStatus;
     private readonly NotificationOrderRequestResponse _requestResponse;
@@ -40,7 +34,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     private readonly JsonSerializerOptions _options;
     private readonly Guid _orderId = Guid.NewGuid();
 
-    public OrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
+    public OrdersControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
 
@@ -825,22 +819,11 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             cancelOrderService = cancelOrderMock.Object;
         }
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(getOrderService);
+        _factory.InstallService(orderRequestService);
+        _factory.InstallService(cancelOrderService);
 
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(getOrderService);
-                services.AddSingleton(orderRequestService);
-                services.AddSingleton(cancelOrderService);
-
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        return _factory.SharedClient;
     }
 }

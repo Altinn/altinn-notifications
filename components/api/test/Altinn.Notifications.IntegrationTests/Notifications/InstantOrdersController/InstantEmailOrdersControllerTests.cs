@@ -12,15 +12,10 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Orders;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-using AltinnCore.Authentication.JwtCookie;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -29,7 +24,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.InstantOrdersContr
 /// <summary>
 /// Integration tests for the <see cref="Controllers.InstantOrdersController"/> email endpoint with flattened structure.
 /// </summary>
-public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.InstantOrdersController>>
+public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string BasePath = "/notifications/api/v1/future/orders/instant/email";
     private const string NotificationCreationScope = "altinn:serviceowner/notifications.create";
@@ -44,12 +39,12 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
     private const string ValidSendersReference = "89F4BE02-2722-4E77-87AC-23081CC6365D";
 
     private readonly JsonSerializerOptions _options;
-    private readonly IntegrationTestWebApplicationFactory<Controllers.InstantOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantEmailOrdersControllerTests"/> class.
     /// </summary>
-    public InstantEmailOrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.InstantOrdersController> factory)
+    public InstantEmailOrdersControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
         _options = new JsonSerializerOptions
@@ -573,16 +568,10 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         instantOrderRequestService ??= Mock.Of<IInstantOrderRequestService>();
         validator ??= Mock.Of<IValidator<InstantEmailNotificationOrderRequestExt>>();
 
-        return _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(validator);
-                services.AddSingleton(dateTimeService);
-                services.AddSingleton(instantOrderRequestService);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(validator);
+        _factory.InstallService(dateTimeService);
+        _factory.InstallService(instantOrderRequestService);
+        return _factory.SharedClient;
     }
 }

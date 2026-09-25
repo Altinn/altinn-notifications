@@ -110,7 +110,7 @@ public static class PostgreUtil
         }
 
         if (forceSendersReferenceToBeNull)
-        {             
+        {
             // Force the senders reference to be null, even if a value is provided
             o.SendersReference = null;
         }
@@ -427,12 +427,12 @@ public static class PostgreUtil
     public static async Task RunSql(string query, params NpgsqlParameter[] parameters)
     {
         await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
-        
+
         if (parameters.Length > 0)
         {
             pgcom.Parameters.AddRange(parameters);
         }
-        
+
         await pgcom.ExecuteNonQueryAsync();
     }
 
@@ -441,7 +441,7 @@ public static class PostgreUtil
 
     public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
         => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
-    
+
     public static async Task UpdateNotificationCustomizedContent<T>(Guid notificationId, string? customizedSubject, string customizedBody)
         where T : class
     {

@@ -12,16 +12,9 @@ using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
-using AltinnCore.Authentication.JwtCookie;
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -32,7 +25,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers
 /// <summary>
 /// Integration tests for the <see cref="ComposedEmailOrdersController"/>.
 /// </summary>
-public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<ComposedEmailOrdersController>>
+public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/future/orders/composed-email";
     private const string _validScope = "altinn:serviceowner/notifications.composedemail.create";
@@ -47,12 +40,12 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         new Uri("https://altinnstorageaccount.blob.core.windows.net/attachments/contract.pdf" +
         "?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&spr=https&sig=fakesignature");
 
-    private readonly IntegrationTestWebApplicationFactory<ComposedEmailOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComposedEmailOrdersControllerTests"/> class.
     /// </summary>
-    public ComposedEmailOrdersControllerTests(IntegrationTestWebApplicationFactory<ComposedEmailOrdersController> factory)
+    public ComposedEmailOrdersControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -370,14 +363,8 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             composedEmailService = mock.Object;
         }
 
-        return _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(composedEmailService);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(composedEmailService);
+        return _factory.SharedClient;
     }
 }

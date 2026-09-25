@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -8,29 +8,21 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public sealed class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IAsyncLifetime
+public sealed class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFactory<Program>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
-    private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
-    public GetWithStatusById(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
+    public GetWithStatusById(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -177,18 +169,7 @@ public sealed class GetWithStatusById : IClassFixture<IntegrationTestWebApplicat
 
     private HttpClient GetTestClient()
     {
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        return _factory.SharedClient;
     }
 }

@@ -9,15 +9,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models.NotificationLog;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -25,7 +17,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.NotificationLogController;
 
-public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.NotificationLogController>>
+public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/future/log";
 
@@ -38,9 +30,9 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
 
     private readonly JsonSerializerOptions _options;
     private readonly Mock<INotificationLogService> _serviceMock;
-    private readonly IntegrationTestWebApplicationFactory<Controllers.NotificationLogController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
-    public NotificationLogControllerTests(IntegrationTestWebApplicationFactory<Controllers.NotificationLogController> factory)
+    public NotificationLogControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
 
@@ -327,19 +319,9 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
     {
         service ??= _serviceMock.Object;
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(service);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(service);
+        return _factory.SharedClient;
     }
 
     private static NotificationLogSummary CreateEmailSummary() =>

@@ -10,15 +10,7 @@ using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Dashboard;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -26,7 +18,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.DashboardController;
 
-public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.DashboardController>>
+public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/future/dashboard";
     private const string _validScope = "altinn:notifications.support.admin";
@@ -38,9 +30,9 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
 
     private readonly JsonSerializerOptions _options;
     private readonly Mock<IDashboardService> _serviceMock;
-    private readonly IntegrationTestWebApplicationFactory<Controllers.DashboardController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
-    public DashboardControllerTests(IntegrationTestWebApplicationFactory<Controllers.DashboardController> factory)
+    public DashboardControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
 
@@ -793,18 +785,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     {
         service ??= _serviceMock.Object;
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(service);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(service);
+        return _factory.SharedClient;
     }
 }

@@ -356,7 +356,7 @@ public sealed class DeadDeliveryReportRepositoryTests : IAsyncLifetime
         Assert.Null(result.Reason);
         Assert.Null(result.Message);
     }
-    
+
     [Fact]
     public async Task GetAllAsync_WithMatchingReports_ReturnsFilteredList()
     {

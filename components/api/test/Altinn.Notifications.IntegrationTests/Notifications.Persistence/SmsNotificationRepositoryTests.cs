@@ -237,7 +237,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         {
             (NotificationOrder order, SmsNotification sms) =
                 await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
-            
+
             _orderIdsToCleanup.Add(order.Id);
 
             claimedIds.Add(sms.Id);
@@ -350,7 +350,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act
         List<Sms> batch = await sut.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
         Sms? itemWithCustomizedBody = batch.FirstOrDefault(b => b.NotificationId == smsNotification.Id);
-        
+
         // Assert
         Assert.NotNull(itemWithCustomizedBody);
         Assert.Equal(customizedBody, itemWithCustomizedBody!.Message);

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -7,16 +7,9 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
-using AltinnCore.Authentication.JwtCookie;
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -24,15 +17,15 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsController;
 
-public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController>>
+public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private readonly string _basePath;
     private readonly string _invalidGuidBase;
-    private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     private readonly JsonSerializerOptions _options;
 
-    public EmailNotificationsControllerTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> factory)
+    public EmailNotificationsControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _basePath = $"/notifications/api/v1/orders/{Guid.NewGuid()}/notifications/email";
         _invalidGuidBase = "/notifications/api/v1/orders/1337;1=1/notifications/email";
@@ -196,20 +189,8 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
             summaryService = summaryServiceMock.Object;
         }
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(summaryService);
-
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(summaryService);
+        return _factory.SharedClient;
     }
 }

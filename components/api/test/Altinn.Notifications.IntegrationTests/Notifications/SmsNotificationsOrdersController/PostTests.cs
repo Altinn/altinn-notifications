@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -8,25 +8,17 @@ using Altinn.Notifications.Controllers;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsOrdersController;
 
-public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IAsyncLifetime
+public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/sms";
 
-    private readonly IntegrationTestWebApplicationFactory<SmsNotificationOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     private readonly string _serializedOrderRequestExt;
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
@@ -34,7 +26,7 @@ public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFacto
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
     private readonly List<Guid> _ordersToDelete = [];
 
-    public PostTests(IntegrationTestWebApplicationFactory<SmsNotificationOrdersController> factory)
+    public PostTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
         SmsNotificationOrderRequestExt orderRequestExt = new()
@@ -129,18 +121,7 @@ public sealed class PostTests : IClassFixture<IntegrationTestWebApplicationFacto
 
     private HttpClient GetTestClient()
     {
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        return _factory.SharedClient;
     }
 }

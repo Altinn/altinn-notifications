@@ -70,10 +70,10 @@ public sealed class StatusFeedRepositoryTests : IAsyncLifetime
         StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
             .GetServices([typeof(IStatusFeedRepository)])
             .First(i => i.GetType() == typeof(StatusFeedRepository));
-        
+
         // Act
         var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, "asc", _maxPageSize, TestContext.Current.CancellationToken);
-        
+
         // Assert
         Assert.Empty(results);
     }
@@ -98,7 +98,7 @@ public sealed class StatusFeedRepositoryTests : IAsyncLifetime
         _fakeOrderIdsToDelete.Add(oldOrderId);
         await InsertTestDataRowForStatusFeed(recentOrderId, recentDate, recentShipmentId);
         _fakeOrderIdsToDelete.Add(recentOrderId);
-        
+
         // Act
         var rowsAffected = await sut.DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
 

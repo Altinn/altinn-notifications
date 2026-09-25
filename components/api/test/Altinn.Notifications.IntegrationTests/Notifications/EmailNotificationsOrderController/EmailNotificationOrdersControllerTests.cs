@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -11,19 +11,12 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
 
 using FluentValidation;
 using FluentValidation.Results;
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -33,11 +26,11 @@ using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController>>
+public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
-    private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     private readonly JsonSerializerOptions _options;
 
@@ -45,7 +38,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     private readonly Guid _orderId;
     private readonly NotificationOrderRequestResponse _successRequestResponse;
 
-    public EmailNotificationOrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController> factory)
+    public EmailNotificationOrdersControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
         _options = new JsonSerializerOptions
@@ -390,26 +383,9 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             orderService = orderServiceMock.Object;
         }
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.Configure<GeneralSettings>(opts =>
-                {
-                    opts.BaseUri = "http://localhost:5090";
-                });
-
-                services.AddSingleton(validator);
-                services.AddSingleton(orderService);
-
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(validator);
+        _factory.InstallService(orderService);
+        return _factory.SharedClient;
     }
 }
