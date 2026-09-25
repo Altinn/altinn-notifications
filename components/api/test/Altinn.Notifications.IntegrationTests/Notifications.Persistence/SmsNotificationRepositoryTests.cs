@@ -986,7 +986,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_EmptyNotificationId_DoesNotThrowAndLogsError()
+    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidOperationException()
     {
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
@@ -996,24 +996,33 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             Options.Create(new NotificationConfig()));
 
         // Act
-        await repo.PersistSubstitutedSender(Guid.Empty, "+4775006000");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repo.PersistSubstitutedSender(Guid.Empty, "+4775006000"));
 
         // Assert
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<InvalidNotificationIdentifierException>(),
-                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-            Times.Once);
+        Assert.IsType<InvalidNotificationIdentifierException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_NullSender_ThrowsArgumentNullExceptionBeforePersisting()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act & Assert - validation happens before the try/catch, so the exception propagates
+        // directly and is neither wrapped in InvalidOperationException nor logged.
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => repo.PersistSubstitutedSender(Guid.NewGuid(), null!));
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task PersistSubstitutedSender_NullOrWhitespaceSender_DoesNotThrowAndLogsError(string? sender)
+    public async Task PersistSubstitutedSender_EmptyOrWhitespaceSender_ThrowsArgumentExceptionBeforePersisting(string sender)
     {
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
@@ -1022,17 +1031,9 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             loggerMock.Object,
             Options.Create(new NotificationConfig()));
 
-        // Act
-        await repo.PersistSubstitutedSender(Guid.NewGuid(), sender!);
-
-        // Assert
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<ArgumentException>(),
-                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-            Times.Once);
+        // Act & Assert - validation happens before the try/catch, so the exception propagates
+        // directly and is neither wrapped in InvalidOperationException nor logged.
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => repo.PersistSubstitutedSender(Guid.NewGuid(), sender));
     }
 }

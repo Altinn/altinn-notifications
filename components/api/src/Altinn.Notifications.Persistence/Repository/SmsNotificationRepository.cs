@@ -154,10 +154,10 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <inheritdoc/>
     public async Task PersistSubstitutedSender(Guid notificationId, string sender)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sender);
+        
         try
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(sender);
-
             if (notificationId == Guid.Empty)
             {
                 throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
@@ -177,8 +177,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         }
         catch (Exception e)
         {
-            // we don't want to throw an exception here, as it will cause the entire batch to fail. Instead, we log the error and continue processing the rest of the batch.
-            _logger.LogError(e, "Failed to persist substituted sender for SMS notification with ID {NotificationId}.", notificationId);
             throw new InvalidOperationException(
                 "Failed to persist substituted sender.",
                 e);

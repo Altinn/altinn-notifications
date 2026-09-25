@@ -702,6 +702,55 @@ public class SmsNotificationServiceTests
                 It.Is<IReadOnlyList<Sms>>(list => list.Any(s => s.Sender == "+4775006000")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // Assert - the substituted sender is persisted exactly once for the affected notification
+        repoMock.Verify(
+            r => r.PersistSubstitutedSender(sms.NotificationId, "+4775006000"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotifications_SubstitutionRulesConfiguredButNoMatch_PersistSubstitutedSenderIsNeverCalled()
+    {
+        // Arrange - rules are configured, but ResolveSender determines no substitution applies
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799990001", "message", "digdir");
+        var batch = new List<Sms> { sms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var commandPublisherMock = new Mock<ISendSmsPublisher>();
+        commandPublisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<IReadOnlyList<Sms>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var senderSubstitutionServiceMock = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(true);
+        senderSubstitutionServiceMock
+            .Setup(s => s.ResolveSender("Altinn", "+4799990001", "digdir"))
+            .Returns(("Altinn", false));
+
+        var service = GetTestService(
+            repository: repoMock.Object,
+            commandPublisher: commandPublisherMock.Object,
+            senderSubstitutionService: senderSubstitutionServiceMock.Object);
+
+        // Act
+        await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert - sender unchanged, and no write is made to persist a (non-existent) substitution
+        commandPublisherMock.Verify(
+            p => p.PublishAsync(
+                It.Is<IReadOnlyList<Sms>>(list => list.Any(s => s.Sender == "Altinn")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        repoMock.Verify(
+            r => r.PersistSubstitutedSender(It.IsAny<Guid>(), It.IsAny<string>()),
+            Times.Never);
     }
 
     [Fact]
