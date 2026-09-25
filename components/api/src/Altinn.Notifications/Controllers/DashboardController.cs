@@ -32,6 +32,7 @@ public class DashboardController : ControllerBase
     private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
     private readonly IValidator<NotificationsByEmailRequestExt> _emailValidator;
     private readonly IValidator<NotificationsByPhoneNumberRequestExt> _phoneNumberValidator;
+    private readonly IValidator<NotificationsByShipmentIdRequestExt> _shipmentIdValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
@@ -41,18 +42,21 @@ public class DashboardController : ControllerBase
     /// <param name="orgNumberValidator">The validator for organization number lookup requests.</param>
     /// <param name="emailValidator">The validator for email lookup requests.</param>
     /// <param name="phoneNumberValidator">The validator for phone number lookup requests.</param>
+    /// <param name="shipmentIdValidator">The validator for shipment id lookup requests.</param>
     public DashboardController(
         IDashboardService dashboardService,
         IValidator<NotificationsByNinRequestExt> ninValidator,
         IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator,
         IValidator<NotificationsByEmailRequestExt> emailValidator,
-        IValidator<NotificationsByPhoneNumberRequestExt> phoneNumberValidator)
+        IValidator<NotificationsByPhoneNumberRequestExt> phoneNumberValidator,
+        IValidator<NotificationsByShipmentIdRequestExt> shipmentIdValidator)
     {
         _dashboardService = dashboardService;
         _ninValidator = ninValidator;
         _orgNumberValidator = orgNumberValidator;
         _emailValidator = emailValidator;
         _phoneNumberValidator = phoneNumberValidator;
+        _shipmentIdValidator = shipmentIdValidator;
     }
 
     /// <summary>
@@ -140,6 +144,28 @@ public class DashboardController : ControllerBase
             request,
             _phoneNumberValidator,
             (req, ct) => _dashboardService.GetNotificationsByPhoneNumberAsync(req.PhoneNumber, req.From, req.To, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves all notifications belonging to a shipment identified by its shipment id.
+    /// </summary>
+    /// <param name="request">The request containing the shipment id and optional date range filters.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A list of notifications matching the search criteria.</returns>
+    [HttpGet("recipients/notifications/shipmentid")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByShipmentId(
+        NotificationsByShipmentIdRequestExt request,
+        CancellationToken cancellationToken = default)
+    {
+        return await ProcessDashboardRequestAsync(
+            request,
+            _shipmentIdValidator,
+            (req, ct) => _dashboardService.GetNotificationsByShipmentIdAsync(req.ShipmentId, req.From, req.To, ct),
             cancellationToken);
     }
 
