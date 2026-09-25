@@ -150,7 +150,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
             SendStatusIdentifierType.GatewayReference);
     }
-
     /// <inheritdoc/>
     public async Task PersistSubstitutedSender(Guid notificationId, string sender)
     {
@@ -179,6 +178,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         {
             // we don't want to throw an exception here, as it will cause the entire batch to fail. Instead, we log the error and continue processing the rest of the batch.
             _logger.LogError(e, "Failed to persist substituted sender for SMS notification with ID {NotificationId}.", notificationId);
+            throw new InvalidOperationException(
+                "Failed to persist substituted sender.",
+                e);
         }
     }
 }
