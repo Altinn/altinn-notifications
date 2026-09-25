@@ -18,6 +18,7 @@ public class DashboardRepository : IDashboardRepository
     private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
     private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email($1,$2,$3)"; // (_email, _from_date,_to_date)
     private const string _getNotificationsByPhoneNumber = "SELECT * from notifications.get_notifications_by_phone_number($1,$2,$3)"; // (_phonenumber, _from_date,_to_date)
+    private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid($1,$2,$3)"; // (_shipmentid, _from_date,_to_date)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
@@ -50,6 +51,12 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByPhoneNumberAsync(string phoneNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         return GetDashboardNotificationsAsync(_getNotificationsByPhoneNumber, phoneNumber, dateTimeFrom, dateTimeTo, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByShipmentIdAsync(string shipmentId, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    {
+        return GetDashboardNotificationsAsync(_getNotificationsByShipmentId, shipmentId, dateTimeFrom, dateTimeTo, cancellationToken);
     }
 
     /// <summary>
