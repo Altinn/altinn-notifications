@@ -795,6 +795,219 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         }
     }
 
+    // GET recipients/notifications/shipmentid
+    [Fact]
+    public async Task GetByShipmentId_ValidRequest_ReturnsOkWithExpectedPayload()
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid().ToString();
+        var notification = CreateNotification(emailAddress: _validEmail);
+        _serviceMock
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification> { notification });
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+        var item = Assert.Single(result);
+        Assert.Equal(notification.ShipmentId, item.ShipmentId);
+
+        _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_MissingRequiredHeader_ReturnsBadRequest()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("shipmentid");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_InvalidShipmentIdFormat_ReturnsBadRequestWithValidationError()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", "not-a-guid"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("valid GUID", content, StringComparison.OrdinalIgnoreCase);
+        _serviceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_NoBearerToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", Guid.NewGuid().ToString()));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_InvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", Guid.NewGuid().ToString()));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_WithFromAndToFilters_PassesRangeToServiceAndReturnsOk()
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid().ToString();
+        var from = DateTime.UtcNow.AddDays(-3);
+        var to = DateTime.UtcNow.AddDays(-1);
+        var notification = CreateNotification(emailAddress: _validEmail);
+
+        _serviceMock
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification> { notification });
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest(
+            $"shipmentid?From={Uri.EscapeDataString(from.ToString("O"))}&To={Uri.EscapeDataString(to.ToString("O"))}",
+            ("ShipmentId", shipmentId));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_NoMatchingNotifications_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid().ToString();
+        _serviceMock
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DashboardNotification>());
+
+        HttpClient client = GetTestClient();
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_ServiceThrowsOperationCanceled_Returns499WithProblemDetails()
+    {
+        // Arrange
+        var serviceMock = new Mock<IDashboardService>();
+        serviceMock
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        HttpClient client = GetTestClient(serviceMock.Object);
+        SetValidAuthorization(client);
+
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", Guid.NewGuid().ToString()));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal((HttpStatusCode)499, response.StatusCode);
+        Assert.NotNull(problemDetails);
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
+    }
+
+    [Fact]
+    public async Task GetByShipmentId_SeededOrder_ReturnsSeededNotification()
+    {
+        // Arrange
+        const string storedMobileNumber = "004799999999";
+
+        Guid orderId = await SeedOrderWithSmsNotification(
+            DateTime.UtcNow.AddHours(-8),
+            mobileNumber: storedMobileNumber);
+
+        try
+        {
+            IDashboardService realService = GetRealDashboardService();
+
+            HttpClient client = GetTestClient(realService);
+            SetValidAuthorization(client);
+
+            HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", orderId.ToString()));
+
+            // Act
+            HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(result);
+            var item = Assert.Single(result);
+            Assert.Equal(orderId, item.ShipmentId);
+            Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
+        }
+        finally
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds([orderId]);
+        }
+    }
+
     private static HttpRequestMessage CreateRequest(string pathAndQuery, params (string Name, string Value)[] headers)
     {
         HttpRequestMessage request = new(HttpMethod.Get, $"{_basePath}/recipients/notifications/{pathAndQuery}");

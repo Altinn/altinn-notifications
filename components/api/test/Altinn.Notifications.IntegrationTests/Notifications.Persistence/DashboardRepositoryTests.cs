@@ -572,6 +572,67 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         Assert.Null(attempt.NationalIdentityNumber);
     }
 
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_ReturnsEmailAndSmsForSeededOrder()
+    {
+        // Arrange
+        Guid orderId = await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
+            orderId.ToString(),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Contains(notification.DeliveryAttempts, r => r.Channel == "email");
+        Assert.Contains(notification.DeliveryAttempts, r => r.Channel == "sms");
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_UnknownShipmentId_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
+            Guid.NewGuid().ToString(),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        Guid orderId = await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
+            orderId.ToString(),
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
     private static DashboardRepository GetRepository() =>
         ServiceUtil.GetServices([typeof(IDashboardRepository)])
             .OfType<DashboardRepository>()

@@ -19,6 +19,7 @@ public class DashboardServiceTests
     private const string _recipientOrgNo = "123456789";
     private const string _recipientEmail = "recipient@example.com";
     private const string _recipientPhoneNumber = "+4799999999";
+    private static readonly string _shipmentId = Guid.NewGuid().ToString();
 
     [Fact]
     public async Task GetNotificationsByNinAsync_ValidInput_ReturnsRepositoryResult()
@@ -414,6 +415,105 @@ public class DashboardServiceTests
         repository.Verify(
             x => x.GetDashboardNotificationsByPhoneNumberAsync(
                 _recipientPhoneNumber,
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentIdAsync_ValidInput_ReturnsRepositoryResult()
+    {
+        // Arrange
+        var expected = new List<DashboardNotification>
+        {
+            new(
+                Guid.NewGuid(),
+                "test",
+                null,
+                null,
+                DateTime.UtcNow,
+                NotificationChannel.EmailPreferred,
+                "notification",
+                [new DashboardDeliveryAttempt(null, null, "email", "recipient@example.com", null, "Succeeded", null)]),
+        };
+
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var sut = new DashboardService(repository.Object);
+        DateTime from = DateTime.UtcNow.AddDays(-3);
+        DateTime to = DateTime.UtcNow;
+
+        // Act
+        var result = await sut.GetNotificationsByShipmentIdAsync(_shipmentId, from, to, CancellationToken.None);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.True(result.IsSuccess);
+        var entry = Assert.Single(result.Value!);
+        Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentIdAsync_NullDateRange_ForwardsNullsToRepository()
+    {
+        // Arrange
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new DashboardService(repository.Object);
+
+        // Act
+        var result = await sut.GetNotificationsByShipmentIdAsync(_shipmentId, null, null, CancellationToken.None);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, null, null, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentIdAsync_ForwardsCancellationToken()
+    {
+        // Arrange
+        Mock<IDashboardRepository> repository = new();
+        repository
+            .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new DashboardService(repository.Object);
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        await sut.GetNotificationsByShipmentIdAsync(_shipmentId, null, null, cts.Token);
+
+        // Assert
+        repository.Verify(
+            x => x.GetDashboardNotificationsByShipmentIdAsync(
+                _shipmentId,
                 It.IsAny<DateTime?>(),
                 It.IsAny<DateTime?>(),
                 cts.Token),

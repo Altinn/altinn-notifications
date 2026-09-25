@@ -31,7 +31,8 @@ public class DashboardControllerTests
             new NotificationsByNinRequestValidator(),
             new NotificationsByOrgNumberRequestValidator(),
             new NotificationsByEmailRequestValidator(),
-            new NotificationsByPhoneNumberRequestValidator());
+            new NotificationsByPhoneNumberRequestValidator(),
+            new NotificationsByShipmentIdRequestValidator());
     }
 
     [Theory]
@@ -849,6 +850,164 @@ public class DashboardControllerTests
         // Act
         var result = await _controller.GetNotificationsByPhoneNumber(
             new NotificationsByPhoneNumberRequestExt { PhoneNumber = "+4799999999" },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetNotificationsByShipmentId_ShipmentIdNullEmptyOrWhitespace_ReturnsValidationProblem(string? shipmentId)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId! },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData("not-a-guid")]
+    [InlineData("12345")]
+    public async Task GetNotificationsByShipmentId_InvalidShipmentIdFormat_ReturnsValidationProblem(string shipmentId)
+    {
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_FromEqualToTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var instant = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var shipmentId = Guid.NewGuid().ToString();
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId, From = instant, To = instant },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_FromAfterTo_ReturnsValidationProblem()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var shipmentId = Guid.NewGuid().ToString();
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId, From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        _dashboardServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_OnlyFromProvided_PassesValidationAndCallsService()
+    {
+        // Arrange — only one side of the range provided, so the from >= to check must not trigger
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var shipmentId = Guid.NewGuid().ToString();
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(shipmentId, from, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId, From = from },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_ValidInput_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var shipmentId = Guid.NewGuid().ToString();
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId, From = from, To = to },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+        _dashboardServiceMock.Verify(
+            x => x.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_NoNotificationsFound_Returns200WithEmptyList()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = Guid.NewGuid().ToString() },
+            CancellationToken.None);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = Guid.NewGuid().ToString() },
             CancellationToken.None);
 
         // Assert
