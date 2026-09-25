@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
@@ -8,6 +9,11 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using Moq;
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -167,6 +173,29 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Contains(smsToBeSent, e => e.NotificationId == smsNotification.Id);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotifications_ShouldReturnCreatorNameMatchingOrderCreator(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, sendingTimePolicy);
+
+        // Assert
+        Sms? result = smsToBeSent.Find(s => s.NotificationId == smsNotification.Id);
+        Assert.NotNull(result);
+        Assert.Equal(order.Creator.ShortName, result.Creator);
     }
 
     [Theory]
@@ -883,5 +912,128 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(sql);
         Assert.Null(persistedReport);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_ValidNotificationId_PersistsSubstitutedSenderToDatabase()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        const string substitutedSender = "+4775006000";
+
+        // Act
+        await repo.PersistSubstitutedSender(smsNotification.Id, substitutedSender);
+
+        // Assert
+        string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
+
+        string? persistedSubstitutedSender = await PostgreUtil.RunSqlReturnOutput<string?>(sql, new NpgsqlParameter("@id", smsNotification.Id));
+        Assert.Equal(substitutedSender, persistedSubstitutedSender);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_CalledTwice_OverwritesPreviousSubstitutedSender()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006000");
+        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006001");
+
+        // Assert
+        string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
+
+        string? persistedSubstitutedSender = await PostgreUtil.RunSqlReturnOutput<string?>(sql, new NpgsqlParameter("@id", smsNotification.Id));
+        Assert.Equal("+4775006001", persistedSubstitutedSender);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_UnknownNotificationId_DoesNotThrowAndLogsWarning()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act — no matching row, but this is a best-effort write, so no exception is expected.
+        await repo.PersistSubstitutedSender(Guid.NewGuid(), "+4775006000");
+
+        // Assert
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                null,
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repo.PersistSubstitutedSender(Guid.Empty, "+4775006000"));
+
+        // Assert
+        Assert.IsType<InvalidNotificationIdentifierException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_NullSender_ThrowsArgumentNullExceptionBeforePersisting()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act & Assert - validation happens before the try/catch, so the exception propagates
+        // directly and is neither wrapped in InvalidOperationException nor logged.
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => repo.PersistSubstitutedSender(Guid.NewGuid(), null!));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task PersistSubstitutedSender_EmptyOrWhitespaceSender_ThrowsArgumentExceptionBeforePersisting(string sender)
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act & Assert - validation happens before the try/catch, so the exception propagates
+        // directly and is neither wrapped in InvalidOperationException nor logged.
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => repo.PersistSubstitutedSender(Guid.NewGuid(), sender));
     }
 }
