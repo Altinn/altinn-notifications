@@ -39,7 +39,7 @@ public class SendingService(
             },
             async emailSendFailResponse =>
             {
-                await HandleSendFailAsync(email.NotificationId, emailSendFailResponse, cancellationToken);
+                await HandleSendFailAsync(email.NotificationId, emailSendFailResponse);
             });
     }
 
@@ -60,7 +60,7 @@ public class SendingService(
                 },
                 async emailSendFailResponse =>
                 {
-                    await HandleSendFailAsync(email.NotificationId, emailSendFailResponse, cancellationToken);
+                    await HandleSendFailAsync(email.NotificationId, emailSendFailResponse);
                 });
         }
         catch (InvalidSasUrlException ex)
@@ -83,8 +83,7 @@ public class SendingService(
     /// </summary>
     /// <param name="notificationId">The unique identifier of the notification that failed to send.</param>
     /// <param name="emailSendFailResponse">The error response from the email client containing the failure details.</param>
-    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    private async Task HandleSendFailAsync(Guid notificationId, EmailClientErrorResponse emailSendFailResponse, CancellationToken cancellationToken = default)
+    private async Task HandleSendFailAsync(Guid notificationId, EmailClientErrorResponse emailSendFailResponse)
     {
         if (emailSendFailResponse.SendResult == EmailSendResult.Failed_TransientError)
         {
