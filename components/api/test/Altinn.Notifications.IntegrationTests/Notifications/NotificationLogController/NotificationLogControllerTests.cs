@@ -381,7 +381,8 @@ public class NotificationLogControllerTests : IClassFixture<IntegrationTestWebAp
         dialogportenClient ??= Mock.Of<IDialogportenClient>();
 
         _factory.ResetInstalledMocks();
-        _factory.InstallService(service);
+        _factory.InstallService<INotificationLogService>(service);
+        _factory.InstallService<IDialogportenClient>(dialogportenClient);
         return _factory.SharedClient;
     }
 
