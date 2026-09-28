@@ -85,7 +85,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_ReturnsNotificationInBatch()
+    public async Task GetNewNotificationAsync_ReturnsNotification()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -96,10 +96,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        Email? emailToBeSent = await repo.GetNewNotificationAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);
+        Assert.NotNull(emailToBeSent);
+        Assert.Equal(emailNotification.Id, emailToBeSent.NotificationId);
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
+    public async Task GetNewNotificationAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
     {
         // Arrange
         EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
@@ -142,8 +143,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, TestContext.Current.CancellationToken);
-        Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        Email? interpolatedContent = await sut.GetNewNotificationAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(interpolatedContent);
@@ -154,7 +154,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData("", "Custom Body")] // Empty subject
     [InlineData("Custom Subject", "")] // Empty body
-    public async Task GetNewNotificationsAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
+    public async Task GetNewNotificationAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
     {
         // Arrange
         string defaultSubject = "email-subject";
@@ -169,8 +169,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, TestContext.Current.CancellationToken);
-        Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        Email? result = await sut.GetNewNotificationAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -774,10 +773,10 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        List<Email> batch = await emailRepo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        Email? batch = await emailRepo.GetNewNotificationAsync(TestContext.Current.CancellationToken);
 
         // Assert — the Composed order's notification must not appear in the standard email batch
-        Assert.DoesNotContain(batch, e => e.NotificationId == notificationId);
+        Assert.True(batch is null || batch.NotificationId != notificationId);
 
         // Confirm the notification is still in 'New' state (not claimed)
         string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";

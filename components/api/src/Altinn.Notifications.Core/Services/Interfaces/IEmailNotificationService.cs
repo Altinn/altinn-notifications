@@ -22,9 +22,11 @@ public interface IEmailNotificationService : INotificationService
     Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends pending email notifications.
+    /// Sends the next pending email notification, if any.
     /// </summary>
-    Task SendNotifications(CancellationToken cancellationToken);
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a pending notification was found; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendNotification(CancellationToken cancellationToken);
 
     /// <summary>
     /// Claims and publishes a batch of pending composed email notifications to the email service queue.

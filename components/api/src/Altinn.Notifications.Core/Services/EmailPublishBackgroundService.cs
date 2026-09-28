@@ -59,7 +59,7 @@ public class EmailPublishBackgroundService : BackgroundService
 
             try
             {
-                await _emailNotificationService.SendNotifications(cancellationToken);
+                await _emailNotificationService.SendNotification(cancellationToken);
             }
             catch (OperationCanceledException)
             {

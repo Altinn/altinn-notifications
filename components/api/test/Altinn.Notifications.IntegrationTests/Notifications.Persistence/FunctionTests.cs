@@ -9,8 +9,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
     [Collection(GlobalStateSerialCollection.Name)]
     public class FunctionTests : IAsyncLifetime
     {
-        private readonly int _publishBatchSize = 500;
-
         public ValueTask InitializeAsync()
         {
             return ValueTask.CompletedTask;
@@ -29,10 +27,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
         /// <summary>
         /// Scenario: Registered email limit timeout in db has passed
-        /// Expected side effect: Value is reset to NULL when getemails_statusnew_updatestatus is called by <see cref="EmailNotificationRepository"/>    
+        /// Expected side effect: Value is reset to NULL when claim_email is called by <see cref="EmailNotificationRepository"/>.
         /// </summary>
         [Fact]
-        public async Task Run_getemails_statusnew_updatestatus_ConfirmSideEffects()
+        public async Task Run_claim_email_ConfirmSideEffects()
         {
             // Arrange
             string sql = @"UPDATE notifications.resourcelimitlog
@@ -44,7 +42,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) });
             EmailNotificationRepository repository = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-            await repository.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+            await repository.GetNewNotificationAsync(TestContext.Current.CancellationToken);
 
             // Assert
             sql = @"SELECT emaillimittimeout
