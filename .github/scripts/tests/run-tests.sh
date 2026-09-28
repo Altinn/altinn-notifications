@@ -7,6 +7,11 @@
 
 set -uo pipefail
 
+# analyze-base-fixes.sh writes its report to $GITHUB_STEP_SUMMARY when set,
+# falling back to stdout otherwise. Unset it so the assertions see the same
+# stdout output locally and in CI.
+unset GITHUB_STEP_SUMMARY
+
 here="$(cd "$(dirname "$0")" && pwd)"
 scripts="$(cd "$here/.." && pwd)"
 fixtures="$here/fixtures"
