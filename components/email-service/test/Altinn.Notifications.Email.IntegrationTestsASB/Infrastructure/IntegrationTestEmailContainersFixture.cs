@@ -85,13 +85,20 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
 
         public override async ValueTask DisposeAsync()
         {
-            await WebHost.DisposeAsync();
-            if (UseBaseBehaviour)
+            try
             {
-                return;
-            }
+                await WebHost.DisposeAsync();
+                if (UseBaseBehaviour)
+                {
+                    return;
+                }
 
-            await base.DisposeAsync();
+                await base.DisposeAsync();
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
         }
     }
 }

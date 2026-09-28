@@ -17,8 +17,15 @@ public class IntegrationTestSmsAsbContainersFixture : IntegrationTestContainersF
 
     public override async ValueTask DisposeAsync()
     {
-        await WebHost.DisposeAsync();
-        await base.DisposeAsync();
+        try
+        {
+            await WebHost.DisposeAsync();
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            GC.SuppressFinalize(this);
+        }
     }
 
     internal void ResetInstalledMocks()
