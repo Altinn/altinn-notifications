@@ -1,0 +1,40 @@
+meta {
+  name: Get notifications by shipment id
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/shipmentid
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~from: {{dateFrom}}
+  ~to: {{dateTo}}
+}
+
+headers {
+  ShipmentId: {{shipmentId}}
+}
+
+vars:pre-request {
+  shipmentId: bae680fb-c85a-4196-9f3a-12bd9457aff5
+}
+
+script:pre-request {
+  const from = bru.getEnvVar("dateFrom");
+  const to = bru.getEnvVar("dateTo");
+  
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
+  bru.setVar("dateTo", to || new Date().toISOString());
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
