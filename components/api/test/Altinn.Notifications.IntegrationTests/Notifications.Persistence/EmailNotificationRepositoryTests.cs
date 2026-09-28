@@ -21,7 +21,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly int _publishBatchSize = 500;
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _orderChainIdsToDelete;
 
@@ -898,7 +897,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedNotificationsAsync_ReturnsComposedNotificationWithAttachments()
+    public async Task GetNewComposedNotificationAsync_ReturnsComposedNotificationWithAttachments()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -991,10 +990,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        ComposedEmail? result = await emailRepo.GetNewComposedNotificationAsync(TestContext.Current.CancellationToken);
 
-        // Assert — notification is in the batch
-        ComposedEmail? result = batch.FirstOrDefault(e => e.NotificationId == notificationId);
+        // Assert — notification is returned
         Assert.NotNull(result);
         Assert.Single(result.Attachments);
         Assert.Equal(expectedBody, result.Body);
@@ -1011,9 +1009,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedNotificationsAsync_StandardOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewComposedNotificationAsync_StandardOrderNotification_IsExcluded()
     {
-        // Arrange — a standard (non-Composed) order's email notification must not appear in the composed batch
+        // Arrange — a standard (non-Composed) order's email notification must not be returned by claim_composed_email
         EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
@@ -1022,12 +1020,12 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        ComposedEmail? resultNotification = await emailRepo.GetNewComposedNotificationAsync(TestContext.Current.CancellationToken);
 
-        // Assert — standard notification must not appear in the composed batch
-        Assert.DoesNotContain(batch, e => e.NotificationId == emailNotification.Id);
+        // Assert — standard notification must not be returned as composed notification
+        Assert.True(resultNotification is null || resultNotification.NotificationId != emailNotification.Id);
 
-        // Confirm the notification is still in 'New' state (not claimed by the composed batch)
+        // Confirm the notification is still in 'New' state (not claimed by claim_composed_email)
         string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'";
         string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
         Assert.Equal(EmailNotificationResultType.New.ToString(), result);

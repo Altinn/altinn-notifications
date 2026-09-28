@@ -48,7 +48,7 @@ public class ComposedEmailPublishBackgroundService(
 
             try
             {
-                await _emailNotificationService.SendComposedNotifications(cancellationToken);
+                await _emailNotificationService.SendComposedNotification(cancellationToken);
             }
             catch (OperationCanceledException)
             {

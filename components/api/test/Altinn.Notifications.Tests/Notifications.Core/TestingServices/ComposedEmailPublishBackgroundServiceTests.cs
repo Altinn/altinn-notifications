@@ -17,16 +17,16 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class ComposedEmailPublishBackgroundServiceTests
 {
     [Fact]
-    public async Task ExecuteAsync_SignalFires_CallsSendComposedNotifications()
+    public async Task ExecuteAsync_SignalFires_CallsSendComposedNotification()
     {
         // Arrange
         var sendCalled = new TaskCompletionSource();
 
         var emailServiceMock = new Mock<IEmailNotificationService>();
         emailServiceMock
-            .Setup(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()))
+            .Setup(s => s.SendComposedNotification(It.IsAny<CancellationToken>()))
             .Callback(() => sendCalled.TrySetResult())
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         int signalCallCount = 0;
         var signalMock = new Mock<IComposedEmailPublishSignal>();
@@ -56,7 +56,7 @@ public class ComposedEmailPublishBackgroundServiceTests
         await service.StopAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.Once);
+        emailServiceMock.Verify(s => s.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ComposedEmailPublishBackgroundServiceTests
         // Act
         await service.StartAsync(cts.Token);
         await service.StopAsync(TestContext.Current.CancellationToken);
-        emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.Never);
+        emailServiceMock.Verify(s => s.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class ComposedEmailPublishBackgroundServiceTests
 
         var emailServiceMock = new Mock<IEmailNotificationService>();
         emailServiceMock
-            .Setup(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()))
+            .Setup(s => s.SendComposedNotification(It.IsAny<CancellationToken>()))
             .Callback(() => sendCalled.TrySetResult())
             .ThrowsAsync(new OperationCanceledException());
 
@@ -164,7 +164,7 @@ public class ComposedEmailPublishBackgroundServiceTests
 
         // Assert
         signalMock.Verify(s => s.WaitAsync(It.IsAny<CancellationToken>()), Times.Once);
-        emailServiceMock.Verify(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()), Times.Once);
+        emailServiceMock.Verify(s => s.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class ComposedEmailPublishBackgroundServiceTests
 
         var emailServiceMock = new Mock<IEmailNotificationService>();
         emailServiceMock
-            .Setup(s => s.SendComposedNotifications(It.IsAny<CancellationToken>()))
+            .Setup(s => s.SendComposedNotification(It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger<ComposedEmailPublishBackgroundService>>();

@@ -29,12 +29,11 @@ public interface IEmailNotificationService : INotificationService
     Task<bool> SendNotification(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Claims and publishes a batch of pending composed email notifications to the email service queue.
+    /// Sends the next pending composed email notification, if any.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendComposedNotifications(CancellationToken cancellationToken);
+    /// <returns><see langword="true"/> if a pending composed notification was found; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.

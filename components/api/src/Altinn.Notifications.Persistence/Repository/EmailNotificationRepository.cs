@@ -30,7 +30,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
     private const string _getEmailNotificationSql = "SELECT * FROM notifications.claim_email()";
-    private const string _getComposedEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_composed_email_batch(@batchsize)";
+    private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
@@ -144,32 +144,28 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    public async Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    public async Task<ComposedEmail?> GetNewComposedNotificationAsync(CancellationToken cancellationToken)
     {
-        var searchResult = new List<ComposedEmail>();
-
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getComposedEmailNotificationsBatchSql);
-        pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
-
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getComposedEmailNotificationSql);
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        if (!await reader.ReadAsync(cancellationToken))
         {
-            EmailContentType contentType = Enum.Parse<EmailContentType>(await reader.GetFieldValueAsync<string>("contenttype", cancellationToken));
-
-            var attachmentsJson = await reader.GetFieldValueAsync<string>("attachments", cancellationToken);
-            var attachments = JsonSerializer.Deserialize<List<SasFileReference>>(attachmentsJson, JsonSerializerOptionsProvider.Options)
-                ?? [];
-
-            searchResult.Add(new ComposedEmail(
-                await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
-                await reader.GetFieldValueAsync<string>("subject", cancellationToken),
-                await reader.GetFieldValueAsync<string>("body", cancellationToken),
-                await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
-                await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
-                contentType,
-                attachments));
+            return null;
         }
 
-        return searchResult;
+        EmailContentType contentType = Enum.Parse<EmailContentType>(await reader.GetFieldValueAsync<string>("contenttype", cancellationToken));
+
+        var attachmentsJson = await reader.GetFieldValueAsync<string>("attachments", cancellationToken);
+        var attachments = JsonSerializer.Deserialize<List<SasFileReference>>(attachmentsJson, JsonSerializerOptionsProvider.Options)
+            ?? [];
+
+        return new ComposedEmail(
+            await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+            await reader.GetFieldValueAsync<string>("subject", cancellationToken),
+            await reader.GetFieldValueAsync<string>("body", cancellationToken),
+            await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
+            await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
+            contentType,
+            attachments);
     }
 }

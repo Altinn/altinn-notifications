@@ -8,8 +8,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
-using Microsoft.Extensions.Options;
-
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
@@ -22,7 +20,6 @@ public class EmailNotificationService(
     IGuidService guidService,
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
-    IOptions<NotificationConfig> notificationConfig,
     IEmailNotificationRepository emailNotificationRepository,
     IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
 {
@@ -30,7 +27,6 @@ public class EmailNotificationService(
     private readonly IDateTimeService _dateTimeService = dateTimeService;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
-    private readonly int _composedEmailPublishBatchSize = notificationConfig.Value.ComposedEmailPublishBatchSize;
     private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
@@ -91,21 +87,19 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public async Task SendComposedNotifications(CancellationToken cancellationToken)
+    public async Task<bool> SendComposedNotification(CancellationToken cancellationToken)
     {
-        List<ComposedEmail> claimedNotifications;
-        do
+        ComposedEmail? claimedNotification =
+            await _emailNotificationRepository.GetNewComposedNotificationAsync(cancellationToken);
+        if (claimedNotification is null)
         {
-            claimedNotifications =
-                await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
-            if (claimedNotifications.Count == 0)
-            {
-                break;
-            }
-
-            await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
+            return false;
         }
-        while (claimedNotifications.Count > 0);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await _composedEmailCommandPublisher.PublishAsync([claimedNotification], cancellationToken);
+        return true;
     }
 
     /// <inheritdoc/>

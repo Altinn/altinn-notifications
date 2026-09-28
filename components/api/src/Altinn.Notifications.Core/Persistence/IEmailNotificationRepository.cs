@@ -27,15 +27,14 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<Email?> GetNewNotificationAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Retrieves pending composed email notifications.
+    /// Retrieves the next pending composed email notification.
     /// </summary>
-    /// <param name="publishBatchSize">Maximum number of notifications to retrieve in one batch.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>
-    /// A task that completes when retrieval finishes. The result contains up to
-    /// <paramref name="publishBatchSize"/> composed email notifications. May return an empty list.
+    /// A task that completes when retrieval finishes. The result is the next pending composed email notification,
+    /// or <see langword="null"/> if none are available.
     /// </returns>
-    public Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<ComposedEmail?> GetNewComposedNotificationAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of an email notification and optionally persists
