@@ -1,4 +1,3 @@
-#nullable enable
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Xunit;

@@ -23,6 +23,14 @@ LANGUAGE sql
 STABLE
 PARALLEL SAFE
 AS $$
+    WITH normalized AS (
+        SELECT
+            CASE
+                WHEN _phonenumber LIKE '+47%' THEN substring(_phonenumber FROM 4)
+                WHEN _phonenumber LIKE '0047%' THEN substring(_phonenumber FROM 5)
+                ELSE _phonenumber
+            END AS bare_number
+    )
     SELECT
         o.alternateid AS shipmentid,
         o.sendersreference,
@@ -39,16 +47,18 @@ AS $$
         s.resulttime
     FROM notifications.smsnotifications s
     JOIN notifications.orders o ON o._id = s._orderid
-    WHERE s.mobilenumber = _phonenumber
+    CROSS JOIN normalized n
+    WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
-    ORDER BY o.requestedsendtime DESC;
+    ORDER BY o.requestedsendtime DESC
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_phone_number IS
 'Retrieves all SMS notifications sent to a recipient identified by their phone number within a given date range.
+Matches the recipient regardless of whether the stored mobile number uses the "+47" or "0047" country code prefix.
 Parameters:
-- _phonenumber: The phone number of the recipient (e.g. +4799999999)
+- _phonenumber: The phone number of the recipient, with or without a "+47"/"0047" prefix (e.g. +4799999999, 004799999999, or 99999999)
 - _from_date: Start of the date range (inclusive) based on requestedsendtime
 - _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:

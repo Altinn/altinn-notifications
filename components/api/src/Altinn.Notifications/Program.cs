@@ -9,6 +9,7 @@ using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
@@ -305,6 +306,10 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         .AddPolicy(AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE, policy =>
         {
             policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_COMPOSED_EMAIL_CREATE));
+        })
+        .AddPolicy(AuthorizationConstants.POLICY_END_USER_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement("altinn:portal/enduser"));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
@@ -316,6 +321,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProvider>();
     services.Configure<Altinn.Common.AccessToken.Configuration.KeyVaultSettings>(config.GetSection("kvSetting"));
     services.AddSingleton<IAuthorizationHandler, AccessTokenHandler>();
+    services.AddSingleton<IAuthenticationContext, AuthenticationContext>();
 }
 
 void AddInputModelValidators(IServiceCollection services)

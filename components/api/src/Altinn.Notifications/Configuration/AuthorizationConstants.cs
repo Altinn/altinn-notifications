@@ -34,5 +34,10 @@ namespace Altinn.Notifications.Configuration
         /// Id for the policy requiring the composed email create scope
         /// </summary>
         public const string POLICY_COMPOSED_EMAIL_CREATE_SCOPE = "ComposedEmailCreateScope";
+
+        /// <summary>
+        /// Id for the policy requiring the end user scope
+        /// </summary>
+        public const string POLICY_END_USER_ACCESS = "EndUserAccess";
     }
 }

@@ -1,10 +1,14 @@
 meta {
-  name: v2 (future)
-  seq: 5
+  name: enduser
+  seq: 7
+}
+
+auth {
+  mode: inherit
 }
 
 script:pre-request {
-  //Auto-fetch a valid auth-token
+  // Auto-fetch a valid bearer token for an end user
   if(   
     //no token
     bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
@@ -15,7 +19,7 @@ script:pre-request {
     //old token (expired)
     (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now() 
     ){
-    const requestResponse = await bru.runRequest("test-util/new-auth-token");
+    const requestResponse = await bru.runRequest("test-util/end user dialog token");
   
     if(requestResponse.status == 200){
       console.log('Automatically (re)-aquired a JWT');

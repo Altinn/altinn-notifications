@@ -1,13 +1,16 @@
 using Altinn.ApiClients.Maskinporten.Extensions;
 using Altinn.ApiClients.Maskinporten.Services;
+
 using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Common.PEP.Clients;
 using Altinn.Common.PEP.Implementation;
 using Altinn.Common.PEP.Interfaces;
+
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Dialogporten;
 using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
@@ -35,8 +38,11 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required PlatformSettings is missing from application configuration");
 
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
+        services.Configure<DialogportenSettings>(config.GetSection("DialogportenSettings"));
+
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
+        services.AddHttpClient<IDialogportenClient, DialogportenClient>();
         services.AddHttpClient<IShortMessageServiceClient, ShortMessageServiceClient>();
         services.AddHttpClient<IInstantEmailServiceClient, InstantEmailServiceClient>();
     }
