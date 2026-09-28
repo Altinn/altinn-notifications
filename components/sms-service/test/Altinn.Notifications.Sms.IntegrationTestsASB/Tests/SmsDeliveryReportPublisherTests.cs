@@ -19,9 +19,9 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 /// sends a correctly shaped <see cref="SmsDeliveryReportCommand"/> to the ASB queue.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fixture)
+public class SmsDeliveryReportPublisherTests(IntegrationTestSmsAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestSmsAsbContainersFixture _fixture = fixture;
 
     /// <summary>
     /// Tests the happy path: the ASB publisher serializes a <see cref="SendOperationResult"/>
@@ -30,12 +30,12 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task PublishAsync_SendsCommandToQueue()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange
             var publisher = factory.Host.Services.GetRequiredService<ISmsDeliveryReportPublisher>();
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var deliveryTime = DateTime.UtcNow.ToString("o");
             var result = new SendOperationResult
             {
@@ -52,10 +52,10 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
             };
 
             // Act
+            await _fixture.DrainQueue(queueName);
             await publisher.PublishAsync(result);
 
             // Assert - Receive the message from the queue and verify its content
-            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
@@ -87,12 +87,12 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task StatusService_WhenPublisherEnabled_PublishesDeliveryReportToQueue()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange
             var statusService = factory.Host.Services.GetRequiredService<IStatusService>();
+            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             string gatewayReference = Guid.NewGuid().ToString();
             var deliveryTime = DateTime.UtcNow.ToString("o");
 
@@ -103,10 +103,10 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestContainersFixture fi
                 deliveryTime);
 
             // Act
+            await _fixture.DrainQueue(queueName);
             await statusService.UpdateStatusAsync(drMessage);
 
             // Assert - Receive the message from the queue
-            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,

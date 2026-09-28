@@ -22,19 +22,19 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Tests;
 /// sends a correctly shaped <see cref="SmsSendResultCommand"/> to the ASB queue.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixture)
+public class SmsSendResultPublisherTests(IntegrationTestSmsAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestSmsAsbContainersFixture _fixture = fixture;
 
     [Fact]
     public async Task DispatchAsync_SendsCommandToQueue()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange
             var dispatcher = factory.Host.Services.GetRequiredService<ISmsSendResultDispatcher>();
+            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
             var result = new SendOperationResult
             {
                 NotificationId = Guid.NewGuid(),
@@ -43,10 +43,10 @@ public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixtur
             };
 
             // Act
+            await _fixture.DrainQueue(queueName);
             await dispatcher.DispatchAsync(result);
 
             // Assert - Receive the message from the queue and verify its content
-            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
@@ -73,21 +73,20 @@ public class SmsSendResultPublisherTests(IntegrationTestContainersFixture fixtur
             .Setup(c => c.SendAsync(It.IsAny<Core.Sending.Sms>()))
             .ReturnsAsync(gatewayReference);
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => smsClientMock.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<ISmsClient>(smsClientMock.Object);
+        var factory = _fixture.WebHost;
         {
             // Arrange
             var sendingService = factory.Host.Services.GetRequiredService<ISendingService>();
             var sms = new Core.Sending.Sms(notificationId, "sender", "+4799999999", "Integration test SMS body");
+            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
 
             // Act
+            await _fixture.DrainQueue(queueName);
             await sendingService.SendAsync(sms);
 
             // Assert - Receive the message from the queue
-            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
             var received = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString,
                 queueName,
