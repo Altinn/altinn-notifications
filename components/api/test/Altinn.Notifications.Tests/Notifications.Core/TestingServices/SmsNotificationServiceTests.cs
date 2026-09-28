@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -16,14 +10,10 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Moq;
 using Moq.Protected;
-
 using Npgsql;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -686,7 +676,7 @@ public class SmsNotificationServiceTests
         senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(true);
         senderSubstitutionServiceMock
             .Setup(s => s.ResolveSender("Altinn", "+34123456789", "digdir"))
-            .Returns(("+4775006000", true));
+            .Returns(new SmsSenderResolutionResult("+4775006000", true));
 
         var service = GetTestService(
             repository: repoMock.Object,
@@ -731,7 +721,7 @@ public class SmsNotificationServiceTests
         senderSubstitutionServiceMock.Setup(s => s.HasRules).Returns(true);
         senderSubstitutionServiceMock
             .Setup(s => s.ResolveSender("Altinn", "+4799990001", "digdir"))
-            .Returns(("Altinn", false));
+            .Returns(new SmsSenderResolutionResult("Altinn", false));
 
         var service = GetTestService(
             repository: repoMock.Object,

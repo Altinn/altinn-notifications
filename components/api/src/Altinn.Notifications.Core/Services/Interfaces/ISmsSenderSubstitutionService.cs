@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Models;
+
+namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
 /// Resolves an effective SMS sender identifier, substituting a numeric sender number for
@@ -23,9 +25,8 @@ public interface ISmsSenderSubstitutionService
     /// <param name="recipientPhoneNumber">The recipient's phone number, used to match substitution rules.</param>
     /// <param name="serviceOwnerShortName">The short name of the creator/service owner.</param>
     /// <returns>
-    /// The substituted numeric sender if a rule matches the phone number and has an entry
-    /// for the given service owner; otherwise <paramref name="configuredSender"/> unchanged.
-    /// The boolean indicates whether a substitution was applied.
+    /// A <see cref="SmsSenderResolutionResult"/> describing the sender to use and whether
+    /// a substitution was applied.
     /// </returns>
-    (string Sender, bool WasSubstituted) ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName);
+    SmsSenderResolutionResult ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName);
 }

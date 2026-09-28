@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Helpers;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Options;
@@ -22,21 +23,21 @@ public class SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> 
     public bool HasRules => _rules.Length > 0;
 
     /// <inheritdoc/>
-    public (string Sender, bool WasSubstituted) ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName)
+    public SmsSenderResolutionResult ResolveSender(string configuredSender, string recipientPhoneNumber, string serviceOwnerShortName)
     {
         if (MobileNumberHelper.IsValidMobileNumber(configuredSender))
         {
-            return (configuredSender, false);
+            return new SmsSenderResolutionResult(configuredSender, false);
         }
 
         if (_rules.Length == 0 || string.IsNullOrWhiteSpace(recipientPhoneNumber) || string.IsNullOrWhiteSpace(serviceOwnerShortName))
         {
-            return (configuredSender, false);
+            return new SmsSenderResolutionResult(configuredSender, false);
         }
 
         if (!TryNormalizePhoneNumber(recipientPhoneNumber, out var normalizedPhoneNumber))
         {
-            return (configuredSender, false);
+            return new SmsSenderResolutionResult(configuredSender, false);
         }
 
         foreach (var rule in _rules)
@@ -48,11 +49,11 @@ public class SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> 
 
             if (rule.NumericSenderByServiceOwner.TryGetValue(serviceOwnerShortName, out var numericSender) && !string.IsNullOrWhiteSpace(numericSender))
             {
-                return (numericSender, true);
+                return new SmsSenderResolutionResult(numericSender, true);
             }
         }
 
-        return (configuredSender, false);
+        return new SmsSenderResolutionResult(configuredSender, false);
     }
 
     /// <summary>
