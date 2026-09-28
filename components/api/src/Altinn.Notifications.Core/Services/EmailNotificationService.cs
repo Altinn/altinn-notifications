@@ -82,7 +82,7 @@ public class EmailNotificationService(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _emailCommandPublisher.PublishAsync([claimedNotification], cancellationToken);
+        await _emailCommandPublisher.PublishAsync(claimedNotification, cancellationToken);
         return true;
     }
 
@@ -98,7 +98,7 @@ public class EmailNotificationService(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _composedEmailCommandPublisher.PublishAsync([claimedNotification], cancellationToken);
+        await _composedEmailCommandPublisher.PublishAsync(claimedNotification, cancellationToken);
         return true;
     }
 

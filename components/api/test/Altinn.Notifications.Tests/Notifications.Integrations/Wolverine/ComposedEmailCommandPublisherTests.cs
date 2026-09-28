@@ -33,6 +33,69 @@ public class ComposedEmailCommandPublisherTests
         [new SasFileReference { Filename = "file.pdf", MimeType = "application/pdf", SasUrl = _sasUrl }]);
 
     [Fact]
+    public async Task PublishAsync_Single_Succeeds_ReturnsNullAndUsesNonBatchPublisher()
+    {
+        // Arrange
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        var result = await publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(result);
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        messageBusPublisherMock.Verify(
+            m => m.PublishBatchAsync(
+                It.IsAny<IReadOnlyList<ComposedEmail>>(),
+                It.IsAny<Func<ComposedEmail, SendComposedEmailCommand>>(),
+                It.IsAny<Action<ComposedEmail, Exception>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Single_Fails_ReturnsUnpublishedEmail()
+    {
+        // Arrange
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act
+        var result = await publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(_composedEmail, result);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Single_PreCancelledToken_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        var publisher = CreatePublisher(messageBusPublisherMock);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(_composedEmail, cts.Token));
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
     {
         // Arrange

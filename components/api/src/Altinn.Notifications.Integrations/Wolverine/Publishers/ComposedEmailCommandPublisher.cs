@@ -17,6 +17,30 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
+    public async Task<ComposedEmail?> PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
+                email.NotificationId);
+            return email;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<ComposedEmail>> PublishAsync(IReadOnlyList<ComposedEmail> emails, CancellationToken cancellationToken)
     {
         if (emails.Count == 0)
