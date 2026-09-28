@@ -1,7 +1,7 @@
 {
   "Results": [
     {
-      "Target": "altinn-profile:abc123 (alpine 3.23.0)",
+      "Target": "altinn-notifications-api:abc123 (alpine 3.23.0)",
       "Class": "os-pkgs",
       "Type": "alpine",
       "Vulnerabilities": [
@@ -36,7 +36,7 @@
       ]
     },
     {
-      "Target": "app/Altinn.Profile.deps.json",
+      "Target": "app/Altinn.Notifications.deps.json",
       "Class": "lang-pkgs",
       "Type": "dotnet-core",
       "Vulnerabilities": [

@@ -123,7 +123,7 @@ is_base_origin() {
   [[ "$class" = "os-pkgs" ]] && return 0
   case "$location" in
     usr/share/dotnet/*|/usr/share/dotnet/*|usr/lib/dotnet/*|/usr/lib/dotnet/*) return 0 ;;
-    *) return 1 ;;  # app-level dependency, e.g. app/Altinn.Profile.deps.json
+    *) return 1 ;;  # app-level dependency, e.g. app/Altinn.Notifications.deps.json
   esac
 }
 

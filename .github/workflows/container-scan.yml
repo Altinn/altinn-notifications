@@ -8,6 +8,8 @@ on:
       - 'components/*/Dockerfile'
       - '.trivyignore.yaml'
       - '.github/workflows/container-scan.yml'
+      - '.github/workflows/container-scan-component.yml'
+      - '.github/scripts/**'
       - 'Directory.Packages.props'
   pull_request:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - 'components/*/Dockerfile'
       - '.trivyignore.yaml'
       - '.github/workflows/container-scan.yml'
+      - '.github/workflows/container-scan-component.yml'
+      - '.github/scripts/**'
       - 'Directory.Packages.props'
   schedule:
     - cron: '0 8 * * 1,4'
@@ -37,6 +41,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       sms: ${{ steps.filter.outputs.sms }}
       email: ${{ steps.filter.outputs.email }}
+      scripts: ${{ steps.filter.outputs.scripts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,6 +56,8 @@ jobs:
               - 'components/shared/src/**'
               - '.trivyignore.yaml'
               - '.github/workflows/container-scan.yml'
+              - '.github/workflows/container-scan-component.yml'
+              - '.github/scripts/**'
               - 'Directory.Packages.props'
             sms:
               - 'components/shared/src/**'
@@ -58,6 +65,8 @@ jobs:
               - 'components/sms-service/Dockerfile'
               - '.trivyignore.yaml'
               - '.github/workflows/container-scan.yml'
+              - '.github/workflows/container-scan-component.yml'
+              - '.github/scripts/**'
               - 'Directory.Packages.props'
             email:
               - 'components/shared/src/**'
@@ -65,7 +74,25 @@ jobs:
               - 'components/email-service/Dockerfile'
               - '.trivyignore.yaml'
               - '.github/workflows/container-scan.yml'
+              - '.github/workflows/container-scan-component.yml'
+              - '.github/scripts/**'
               - 'Directory.Packages.props'
+            scripts:
+              - '.github/scripts/**'
+
+  test-scripts:
+    name: Test scan scripts
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run script tests
+        run: bash .github/scripts/tests/run-tests.sh
 
   scan-api:
     name: 'Scan: Notifications API'
