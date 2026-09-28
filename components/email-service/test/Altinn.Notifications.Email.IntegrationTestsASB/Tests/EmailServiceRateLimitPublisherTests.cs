@@ -139,6 +139,9 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;
         string emailServiceRateLimitQueueName = webHost.WolverineSettings!.EmailServiceRateLimitQueueName;
 
+        await _fixture.DrainQueue(emailSendQueueName);
+        await _fixture.DrainQueue(emailServiceRateLimitQueueName);
+
         // Act
         await webHost.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
 
