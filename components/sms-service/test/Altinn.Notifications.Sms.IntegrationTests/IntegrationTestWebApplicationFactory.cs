@@ -205,8 +205,16 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 throw new InvalidOperationException("Target method is null.");
             }
 
-            var target = _resolver();
-            return targetMethod.Invoke(target, args);
+            try
+            {
+                var target = _resolver();
+                return targetMethod.Invoke(target, args);
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw;
+            }
         }
     }
 }
