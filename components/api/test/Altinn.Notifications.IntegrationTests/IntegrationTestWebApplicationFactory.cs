@@ -33,9 +33,8 @@ namespace Altinn.Notifications.IntegrationTests;
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
-    private readonly Dictionary<Type, object> _installedServices = [];
+    private readonly ConcurrentDictionary<Type, object> _installedServices = new();
     private readonly ConcurrentDictionary<Type, object> _defaultResolvedServices = new();
-    private readonly Dictionary<string, string?> _configurationOverrides = [];
     private HttpClient? _sharedClient;
 
     public HttpClient SharedClient
@@ -61,27 +60,11 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     }
 
     /// <summary>
-    /// Clears runtime-installed service and configuration overrides.
+    /// Clears runtime-installed service overrides.
     /// </summary>
     public void ResetInstalledMocks()
     {
         _installedServices.Clear();
-        _configurationOverrides.Clear();
-    }
-
-    /// <summary>
-    /// Sets a configuration override used when creating the test host.
-    /// </summary>
-    /// <param name="key">Configuration key.</param>
-    /// <param name="value">Configuration value.</param>
-    public void SetConfigurationOverride(string key, string? value)
-    {
-        if (string.IsNullOrEmpty(key))
-        {
-            return;
-        }
-
-        _configurationOverrides[key] = value;
     }
 
     /// <summary>
@@ -102,7 +85,6 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ=="
             });
-            config.AddInMemoryCollection(_configurationOverrides);
 
             string? uri = configuration["GeneralSettings:BaseUri"];
             if (!string.IsNullOrEmpty(uri))
@@ -192,8 +174,14 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                     return (TService)service;
                 }
 
-                var resolved = _defaultResolvedServices.GetOrAdd(serviceType, _ =>
-                    ResolveServiceFromDescriptor(serviceProvider, fallbackDescriptor, serviceType));
+                if (lifetime == ServiceLifetime.Singleton)
+                {
+                    var resolvedSingleton = _defaultResolvedServices.GetOrAdd(serviceType, _ =>
+                        ResolveServiceFromDescriptor(serviceProvider, fallbackDescriptor, serviceType));
+                    return (TService)resolvedSingleton;
+                }
+
+                var resolved = ResolveServiceFromDescriptor(serviceProvider, fallbackDescriptor, serviceType);
                 return (TService)resolved;
             }),
             lifetime));

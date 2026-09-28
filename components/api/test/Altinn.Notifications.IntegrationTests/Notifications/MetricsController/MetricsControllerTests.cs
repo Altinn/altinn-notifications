@@ -3,7 +3,9 @@ using System.Text;
 using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 using Moq;
 
@@ -128,16 +130,18 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailySmsMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
-        var client = GetTestClient(metricsService: serviceMock.Object);
+        var client = GetTestClientWithMissingMetricsApiKey(metricsService: serviceMock.Object);
 
         string url = _basePath + "/sms";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "some-key");
 
         // Act
         using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("validation not configured", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -246,16 +250,18 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         serviceMock.Setup(e => e.GetParquetFile(It.IsAny<DailyMetrics<DailyEmailMetricsRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MetricsSummary());
 
-        var client = GetTestClient(metricsService: serviceMock.Object);
+        var client = GetTestClientWithMissingMetricsApiKey(metricsService: serviceMock.Object);
 
         string url = _basePath + "/email";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "some-key");
 
         // Act
         using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("validation not configured", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     private HttpClient GetTestClient(
@@ -266,5 +272,30 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         _factory.ResetInstalledMocks();
         _factory.InstallService(metricsService);
         return _factory.SharedClient;
+    }
+
+    private HttpClient GetTestClientWithMissingMetricsApiKey(
+        IMetricsService? metricsService = null)
+    {
+        metricsService ??= new Mock<IMetricsService>().Object;
+
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(metricsService);
+
+        return _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["MetricsApiKey"] = string.Empty
+                });
+            });
+
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton(metricsService);
+            });
+        }).CreateClient();
     }
 }
