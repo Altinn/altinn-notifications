@@ -8,6 +8,8 @@ namespace Altinn.Notifications.Shared.TestInfrastructure.Utils;
 /// </summary>
 public static class ServiceBusTestUtils
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     /// <summary>
     /// Sends a message to the specified Azure Service Bus queue.
     /// </summary>
@@ -21,7 +23,7 @@ public static class ServiceBusTestUtils
         ServiceBusSender sender = client.CreateSender(queueName);
 
         var busMessage = new ServiceBusMessage(
-            JsonSerializer.Serialize(message, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+            JsonSerializer.Serialize(message, _jsonOptions))
         {
             ContentType = "application/json",
             MessageId = Guid.NewGuid().ToString(),

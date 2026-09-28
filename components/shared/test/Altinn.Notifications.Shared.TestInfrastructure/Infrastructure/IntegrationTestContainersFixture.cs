@@ -50,7 +50,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 
     #endregion
 
-    private bool UseExternalASB()
+    private static bool UseExternalASB()
     {
         return false;
     }
@@ -189,13 +189,13 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
             }
         }
 
-        if (UseExternalASB())
-        {
-            return;
-        }
-
         try
         {
+            if (UseExternalASB())
+            {
+                return;
+            }
+
             await SafeDisposeContainerAsync(_serviceBusEmulatorContainer);
             await SafeDisposeContainerAsync(_mssqlContainer);
             await SafeDisposeContainerAsync(_postgresContainer);
@@ -214,6 +214,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
         finally
         {
             IsRunning = false;
+            GC.SuppressFinalize(this);
         }
     }
 
