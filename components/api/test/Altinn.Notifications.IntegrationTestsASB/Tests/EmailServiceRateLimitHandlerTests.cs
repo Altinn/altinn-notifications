@@ -14,9 +14,9 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture fixture)
+public class EmailServiceRateLimitHandlerTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
 
     [Fact]
     public async Task EmailServiceRateLimit_WhenValidCommand_CallsServiceWithCorrectArguments()
@@ -37,11 +37,9 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             })
             .Returns(Task.CompletedTask);
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<IAltinnServiceUpdateService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
 
@@ -52,7 +50,8 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             };
 
             // Act
-            await factory.SendToQueueAsync(queueName, command);
+            await _fixture.DrainQueue(queueName);
+            await factory.SendToEndpointAsync(queueName, command);
 
             // Assert
             var handlerCalled = await WaitForUtils.WaitForAsync(
@@ -87,11 +86,9 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             .Callback(() => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<IAltinnServiceUpdateService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
             var policy = factory.WolverineSettings!.EmailServiceRateLimitQueuePolicy;
@@ -101,7 +98,8 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestContainersFixture 
             var deadLetterWaitTimeout = TimeSpan.FromMilliseconds(totalPolicyDelayMs) + TimeSpan.FromSeconds(10);
 
             // Act
-            await factory.SendToQueueAsync(queueName, new EmailServiceRateLimitCommand
+            await _fixture.DrainQueue(queueName);
+            await factory.SendToEndpointAsync(queueName, new EmailServiceRateLimitCommand
             {
                 Source = "platform-notifications-email",
                 Data = "{}"

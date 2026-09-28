@@ -21,9 +21,10 @@ namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 /// and delivered to the Azure Service Bus queue via Wolverine.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture fixture)
+public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
+
     private const string _composedEmailSendQueueName = "altinn.notifications.composedemail.send";
 
     private static readonly Uri _sasUrl = new("https://storage.example.com/container/file.pdf?sv=2021&sig=abc");
@@ -40,10 +41,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
             new(Guid.NewGuid(), "Plain Subject", "Plain Body", "sender@altinnxyz.no", "plain@altinnxyz.no", EmailContentType.Plain, []),
             new(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, [])
         };
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -65,10 +64,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
         {
             new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, [])
         };
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -86,10 +83,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
     public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutEnqueuingMessages()
     {
         var factory = CreateFactory();
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -116,10 +111,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
         var factory = CreateFactory();
         var notificationId = Guid.NewGuid();
         var email = new ComposedEmail(notificationId, "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html, []);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -154,10 +147,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
         var factory = CreateFactory();
         var attachment = new SasFileReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = _sasUrl };
         var email = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, [attachment]);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -193,10 +184,8 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
         var plainEmail = new ComposedEmail(Guid.NewGuid(), "Plain Subject", "Plain Body", "sender@altinnxyz.no", "plain@altinnxyz.no", EmailContentType.Plain, []);
         var htmlEmail = new ComposedEmail(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, []);
         var emails = new List<ComposedEmail> { plainEmail, htmlEmail };
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueue(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -239,6 +228,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestContainersFixture
 
     private IntegrationTestWebApplicationFactory CreateFactory()
     {
-        return new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        _fixture.ResetInstalledMocks();
+        return _fixture.WebHost;
     }
 }

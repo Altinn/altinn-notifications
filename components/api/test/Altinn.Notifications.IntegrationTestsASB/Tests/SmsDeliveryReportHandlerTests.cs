@@ -11,7 +11,6 @@ using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using Moq;
 
@@ -22,16 +21,15 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
+public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
 
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification and set status to Accepted with a gatewayReference
             // (simulates the SMS service having successfully sent via Link Mobility)
@@ -41,6 +39,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
             // Act - Send an SMS delivery report command to the queue via Wolverine (simulates the SMS service)
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
             {
                 NotificationId = notification.Id,
@@ -76,22 +75,17 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
-        // Arrange - Capture logs to count handler attempts via NotificationNotFoundException
-        var logCapture = new LogCapture(nameof(NotificationNotFoundException));
         string unmatchedGatewayReference = Guid.NewGuid().ToString();
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
             // Act - Send delivery report with a gatewayReference that doesn't match any notification
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
             {
                 NotificationId = null,
@@ -133,24 +127,15 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, logCapture.Count);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
         }
     }
 
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
-        // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
-        var logCapture = new LogCapture(nameof(NotificationExpiredException));
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification, set gatewayReference via Accepted status,
             // then expire it. Must set gatewayReference before expiring — the SQL function
@@ -201,9 +186,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — expired reports are not retried");
 
-            // Assert - Verify the handler encountered the exception exactly once (no retries)
-            Console.WriteLine($"[Test] NotificationExpiredException logged {logCapture.Count} times");
-            Assert.Equal(1, logCapture.Count);
+            Assert.Equal(1, deadReport.AttemptCount);
         }
     }
 
@@ -217,11 +200,9 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             .Callback<SmsSendOperationResult>(_ => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<ISmsNotificationService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.SmsDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
@@ -259,11 +240,11 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
     [Fact]
     public async Task SmsDeliveryReport_WhenGatewayReferenceIsMissing_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+            await _fixture.DrainQueue(queueName);
 
             // Act - Send delivery report with an empty GatewayReference.
             // The handler throws InvalidDeliveryReportException, which is not in the
@@ -282,24 +263,23 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
                 TimeSpan.FromSeconds(10));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - No dead delivery report in DB (InvalidDeliveryReportException is not
-            // mapped to SaveDeadDeliveryReport in the policy — it goes straight to DLQ)
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - No dead delivery report should be created for missing gateway reference
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByGatewayReference(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                string.Empty);
+            Assert.Null(deadReport);
         }
     }
 
     [Fact]
     public async Task SmsDeliveryReport_WhenSendResultIsInvalid_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
             string gatewayReference = Guid.NewGuid().ToString();
+            await _fixture.DrainQueue(queueName);
 
             // Act - Send delivery report with a SendResult value that is not a valid enum member.
             // Enum.Parse<SmsNotificationResultType> will throw ArgumentException, which is not
@@ -329,9 +309,8 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
     [Fact]
     public async Task SmsDeliveryReport_WhenNotificationExists_PersistsDeliveryReportJsonToDatabase()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange — create a notification and set it to Accepted with a known gatewayReference
             // so the handler can resolve it by reference (simulates ACS round-trip)
@@ -351,6 +330,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestContainersFixture fixt
             });
 
             // Act — send a delivery report command through Wolverine (stamps required envelope headers)
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
             {
                 NotificationId = notification.Id,

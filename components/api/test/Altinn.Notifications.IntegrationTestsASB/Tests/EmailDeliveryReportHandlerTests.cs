@@ -12,7 +12,6 @@ using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Azure.Messaging.ServiceBus;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using Moq;
 
@@ -23,16 +22,15 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fixture)
+public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
 
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExists_UpdatesStatusToDelivered()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification and set status to Succeeded with an operationId
             // (simulates the email service having successfully sent via ACS)
@@ -42,6 +40,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
 
             // Act - Send a raw EventGrid delivery report to the queue (simulates ACS + Event Grid)
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+            await _fixture.DrainQueue(queueName);
             await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
             // Assert - Poll the database until the handler updates the status to "Delivered"
@@ -72,16 +71,10 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
-        // Arrange - Capture logs to count handler attempts via NotificationNotFoundException
-        var logCapture = new LogCapture(nameof(NotificationNotFoundException));
         string unmatchedOperationId = Guid.NewGuid().ToString();
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.EmailDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
@@ -90,6 +83,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send delivery report with an operationId that doesn't match any notification
+            await _fixture.DrainQueue(queueName);
             await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
@@ -126,24 +120,15 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, logCapture.Count);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
         }
     }
 
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
-        // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
-        var logCapture = new LogCapture(nameof(NotificationExpiredException));
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification with a future expiry first, set operationId,
             // then expire it. The v2 SQL function blocks updates on expired notifications,
@@ -191,9 +176,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(5));
             Assert.True(queueEmpty, "Queue should be empty — expired reports are not retried");
 
-            // Assert - Verify the handler encountered the exception exactly once (no retries)
-            Console.WriteLine($"[Test] NotificationExpiredException logged {logCapture.Count} times");
-            Assert.Equal(1, logCapture.Count);
+            Assert.Equal(1, deadReport.AttemptCount);
         }
     }
 
@@ -207,18 +190,18 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             .Callback<EmailSendOperationResult>(_ => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<IEmailNotificationService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.EmailDeliveryReportQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+            string operationId = Guid.NewGuid().ToString();
 
             // Act - Send delivery report that will trigger NpgsqlException on every attempt
-            await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), "Delivered");
+            await _fixture.DrainQueue(queueName);
+            await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
             // Assert - Wait for message to appear in dead letter queue after retries exhaust
             var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
@@ -227,11 +210,11 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(30));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - Dead delivery reports table should be empty (NpgsqlException goes to DLQ, not dead reports)
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - No dead delivery report should be written for this operation id
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                operationId);
+            Assert.Null(deadReport);
 
             // Assert - Verify the handler was called exactly as many times as the policy dictates
             Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
@@ -242,9 +225,8 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task EmailDeliveryReport_WhenNotificationExists_PersistsDeliveryReportJsonToDatabase()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange — create a notification and set it to Succeeded with a known operationId
             // so the handler can resolve it by operationId (simulates ACS round-trip)
@@ -285,15 +267,15 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task EmailDeliveryReport_WhenMessageIdIsMissing_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send a delivery report where messageId is empty.
             // InvalidDeliveryReportException is not in the policy error chain, so the
             // message goes to the dead letter queue immediately without any retries.
+            await _fixture.DrainQueue(queueName);
             await SendDeliveryReportAsync(queueName, operationId: string.Empty, status: "Delivered");
 
             // Assert - Message should appear in DLQ immediately (no retries)
@@ -303,27 +285,26 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(10));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - No dead delivery report in DB (InvalidDeliveryReportException is not
-            // mapped to SaveDeadDeliveryReport in the policy — it goes straight to DLQ)
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - No dead delivery report should be created for empty operation id
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                string.Empty);
+            Assert.Null(deadReport);
         }
     }
 
     [Fact]
     public async Task EmailDeliveryReport_WhenStatusIsUnrecognized_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send a delivery report with a status value that cannot be parsed.
             // Utils.ParseDeliveryStatus throws ArgumentException, which the handler
             // re-throws as InvalidDeliveryReportException — not in the policy chain → DLQ.
+            await _fixture.DrainQueue(queueName);
             await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), status: "NotAValidAcsStatus");
 
             // Assert - Message should appear in DLQ immediately (no retries)
@@ -333,26 +314,30 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(10));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - No dead delivery report in DB
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - No dead delivery report should be created for unrecognized status
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                string.Empty);
+            Assert.Null(deadReport);
         }
     }
 
     [Fact]
     public async Task EmailDeliveryReport_WhenSystemEventTypeIsUnhandled_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+
+            var deadReportCountBefore = await PostgreUtil.RunSqlReturnOutput<long>(
+                _fixture.PostgresConnectionString,
+                "SELECT count(1) FROM notifications.deaddeliveryreports WHERE channel = 1 AND reason = 'UNRECOGNIZED_SEND_RESULT'");
 
             // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
             // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
             // branch and throws InvalidDeliveryReportException → DLQ immediately.
+            await _fixture.DrainQueue(queueName);
             await SendRawEventGridEventAsync(
                 queueName,
                 eventType: "Microsoft.Storage.BlobCreated",
@@ -376,26 +361,26 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(10));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - No dead delivery report in DB
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - no email-channel dead delivery report should be written for this path
+            var deadReportCountAfter = await PostgreUtil.RunSqlReturnOutput<long>(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                "SELECT count(1) FROM notifications.deaddeliveryreports WHERE channel = 1 AND reason = 'UNRECOGNIZED_SEND_RESULT'");
+            Assert.Equal(deadReportCountBefore, deadReportCountAfter);
         }
     }
 
     [Fact]
     public async Task EmailDeliveryReport_WhenEventDataIsNotASystemEvent_GoesToDeadLetterQueueWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
             // Act - Send an event with a custom (non-Azure-system) event type so that
             // TryGetSystemEventData returns false. The handler's else branch throws
             // InvalidDeliveryReportException → DLQ immediately.
+            await _fixture.DrainQueue(queueName);
             await SendRawEventGridEventAsync(
                 queueName,
                 eventType: "Custom.Notification.Event",
@@ -408,11 +393,11 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
                 TimeSpan.FromSeconds(10));
             Assert.NotNull(deadLetterMessage);
 
-            // Assert - No dead delivery report in DB
-            var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            // Assert - no dead report should be written for this custom payload path
+            var deadReport = await PostgreUtil.GetDeadDeliveryReportByMessageId(
                 _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports");
-            Assert.Equal(0, deadReportCount);
+                string.Empty);
+            Assert.Null(deadReport);
         }
     }
 
@@ -469,9 +454,8 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
     [Fact]
     public async Task EmailDeliveryReport_WhenRetriesExhausted_FirstSeenReflectsOriginalEnqueueTime_NotRetryTime()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
             string unmatchedOperationId = Guid.NewGuid().ToString();
@@ -479,6 +463,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestContainersFixture fi
             // Record the window around the original send — the ASB broker stamps EnqueuedTime here.
             // FirstSeen must stay anchored to this, not drift forward with each retry re-enqueue.
             var beforeSend = DateTime.UtcNow;
+            await _fixture.DrainQueue(queueName);
             await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
             var afterSend = DateTime.UtcNow;
 

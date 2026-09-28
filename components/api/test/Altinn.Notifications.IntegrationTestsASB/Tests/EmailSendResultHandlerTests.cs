@@ -8,7 +8,6 @@ using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using Moq;
 
@@ -19,16 +18,15 @@ using Xunit;
 namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixture)
+public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
 
     [Fact]
     public async Task EmailSendResult_WhenNotificationExists_UpdatesStatusToDelivered()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification and set status to Succeeded with an operationId
             var (_, notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(factory);
@@ -45,6 +43,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             };
 
             // Act - Send the command to the ASB queue (simulating the email service)
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Poll the database until the handler updates the status to "Delivered"
@@ -76,11 +75,9 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             .Callback<Core.Models.Notification.EmailSendOperationResult>(_ => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new NpgsqlException("Simulated database error"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<IEmailNotificationService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
@@ -95,6 +92,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             };
 
             // Act - Send a command that will trigger NpgsqlException on every attempt
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Wait for message to appear in dead letter queue after retries exhaust
@@ -117,11 +115,9 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
         // Arrange - mock service to confirm the handler short-circuits before UpdateEmailSendStatus
         var mockService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => mockService.Object)
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<IEmailNotificationService>(mockService.Object);
+        var factory = _fixture.WebHost;
         {
             string operationId = Guid.NewGuid().ToString();
             string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
@@ -134,6 +130,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             };
 
             // Act - Send command with an unrecognized SendResult value
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Dead delivery report should be saved to the database
@@ -181,15 +178,8 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
     [Fact]
     public async Task EmailSendResult_WhenNotificationNotFound_RetriesAndSavesDeadDeliveryReport()
     {
-        // Arrange - Capture logs to count handler attempts via NotificationNotFoundException
-        var logCapture = new LogCapture(nameof(NotificationNotFoundException));
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             var policy = factory.WolverineSettings!.EmailSendResultQueuePolicy;
             int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
@@ -203,6 +193,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 OperationId = operationId,
                 SendResult = EmailNotificationResultType.Delivered.ToString()
             };
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
@@ -239,24 +230,15 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationNotFoundException should not trigger DLQ");
 
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            Console.WriteLine($"[Test] NotificationNotFoundException logged {logCapture.Count} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, logCapture.Count);
+            Assert.Equal(expectedAttempts, deadReport.AttemptCount);
         }
     }
 
     [Fact]
     public async Task EmailSendResult_WhenNotificationExpired_SavesDeadDeliveryReportWithoutRetry()
     {
-        // Arrange - Capture logs to verify the handler only runs once (no retries for expired)
-        var logCapture = new LogCapture(nameof(NotificationExpiredException));
-
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ConfigureTestServices(services =>
-                services.AddSingleton<ILoggerProvider>(logCapture))
-            .Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             // Arrange - Create notification, set operationId via Succeeded status,
             // then expire it. Must set operationId before expiring — the SQL function
@@ -279,6 +261,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 OperationId = operationId,
                 SendResult = EmailNotificationResultType.Delivered.ToString()
             };
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Poll the dead delivery reports table until the report appears
@@ -315,18 +298,15 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
                 TimeSpan.FromSeconds(5));
             Assert.True(dlqEmpty, "Dead letter queue should be empty — NotificationExpiredException should not trigger DLQ");
 
-            // Assert - Verify the handler encountered the exception exactly once (no retries)
-            Console.WriteLine($"[Test] NotificationExpiredException logged {logCapture.Count} times");
-            Assert.Equal(1, logCapture.Count);
+            Assert.Equal(1, deadReport.AttemptCount);
         }
     }
 
     [Fact]
     public async Task EmailSendResult_WhenBothIdentifiersEmpty_SavesDeadDeliveryReportWithoutRetry()
     {
-        var factory = new IntegrationTestWebApplicationFactory(_fixture).Initialize();
-
-        await using (factory)
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
         {
             string queueName = factory.WolverineSettings!.EmailSendResultQueueName;
 
@@ -340,6 +320,7 @@ public class EmailSendResultHandlerTests(IntegrationTestContainersFixture fixtur
             };
 
             // Act
+            await _fixture.DrainQueue(queueName);
             await factory.SendToQueueAsync(queueName, command);
 
             // Assert - Dead delivery report saved with the correct reason
