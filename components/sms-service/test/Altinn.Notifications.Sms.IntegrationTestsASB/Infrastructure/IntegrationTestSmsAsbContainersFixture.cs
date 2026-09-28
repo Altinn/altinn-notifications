@@ -5,6 +5,9 @@ namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 
 public class IntegrationTestSmsAsbContainersFixture : IntegrationTestContainersFixture
 {
+    /// <summary>
+    /// Gets the shared SMS ASB test host instance.
+    /// </summary>
     public IntegrationTestWebApplicationFactory WebHost { get; private set; } = null!;
 
     public override async ValueTask InitializeAsync()
@@ -28,17 +31,29 @@ public class IntegrationTestSmsAsbContainersFixture : IntegrationTestContainersF
         }
     }
 
+    /// <summary>
+    /// Resets runtime-installed service overrides for the shared host.
+    /// </summary>
     internal void ResetInstalledMocks()
     {
         WebHost.ResetInstalledMocks();
     }
 
+    /// <summary>
+    /// Installs a service override used by the shared host for subsequent test operations.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="service">Service instance to install.</param>
     internal void InstallService<TService>(TService service)
         where TService : class
     {
         WebHost.InstallService(service);
     }
 
+    /// <summary>
+    /// Drains both the main queue and its dead-letter queue.
+    /// </summary>
+    /// <param name="queueName">Queue name to drain.</param>
     internal async Task DrainQueue(string queueName)
     {
         await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, queueName);

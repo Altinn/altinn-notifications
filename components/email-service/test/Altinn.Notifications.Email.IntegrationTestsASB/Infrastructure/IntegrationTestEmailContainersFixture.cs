@@ -15,12 +15,24 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
         private ISendingService _defaultSendingService = null!;
         private IEmailServiceClient _defaultEmailServiceClient = null!;
 
+        /// <summary>
+        /// Gets the shared email ASB test host instance.
+        /// </summary>
         public IntegrationTestWebApplicationFactory WebHost { get; private set; } = null!;
 
+        /// <summary>
+        /// Gets the delegating email service client wrapper used for per-test overrides.
+        /// </summary>
         internal DelegatingEmailServiceClient EmailServiceClient { get; }
 
+        /// <summary>
+        /// Gets the delegating sending service wrapper used for per-test overrides.
+        /// </summary>
         internal DelegatingSendingService SendingService { get; } = new DelegatingSendingService(new AlwaysSucceedSendingService());
 
+        /// <summary>
+        /// Gets the resolved Wolverine settings from the shared host.
+        /// </summary>
         internal WolverineSettings? WolverineSettings => WebHost.WolverineSettings;
 
         public IntegrationTestEmailContainersFixture()
@@ -29,24 +41,39 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
             EmailServiceClient = new DelegatingEmailServiceClient(_defaultEmailServiceClient);
         }
 
+        /// <summary>
+        /// Installs an email service client override for subsequent test operations.
+        /// </summary>
+        /// <param name="emailServiceClient">Email service client to install.</param>
         internal void InstallEmailServiceClient(IEmailServiceClient emailServiceClient)
         {
             ArgumentNullException.ThrowIfNull(emailServiceClient);
             EmailServiceClient.SetCurrentClient(emailServiceClient);
         }
 
+        /// <summary>
+        /// Installs a sending service override for subsequent test operations.
+        /// </summary>
+        /// <param name="sendingService">Sending service to install.</param>
         internal void InstallSendingService(ISendingService sendingService)
         {
             ArgumentNullException.ThrowIfNull(sendingService);
             SendingService.SetCurrentService(sendingService);
         }
 
+        /// <summary>
+        /// Restores default email service and sending service implementations.
+        /// </summary>
         internal void ResetInstalledMocks()
         {
             EmailServiceClient.SetCurrentClient(_defaultEmailServiceClient);
             SendingService.SetCurrentService(_defaultSendingService);
         }
 
+        /// <summary>
+        /// Drains both the main queue and its dead-letter queue.
+        /// </summary>
+        /// <param name="queueName">Queue name to drain.</param>
         internal async Task DrainQueue(string queueName)
         {
             await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, queueName);

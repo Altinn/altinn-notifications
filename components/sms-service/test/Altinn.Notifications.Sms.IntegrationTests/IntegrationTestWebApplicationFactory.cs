@@ -22,6 +22,11 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     private readonly Dictionary<Type, object> _installedServices = [];
     private readonly ConcurrentDictionary<Type, object> _defaultResolvedServices = new();
 
+    /// <summary>
+    /// Installs a service override that will be used by delegated test service resolution.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="service">Service instance to install.</param>
     public void InstallService<TService>(TService service)
         where TService : class
     {
@@ -29,6 +34,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         _installedServices[typeof(TService)] = service;
     }
 
+    /// <summary>
+    /// Clears all runtime-installed service overrides.
+    /// </summary>
     public void ResetInstalledMocks()
     {
         _installedServices.Clear();
@@ -85,6 +93,12 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         });
     }
 
+    /// <summary>
+    /// Registers an interface as a delegated service that can be overridden at runtime per test.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="services">Service collection to mutate.</param>
+    /// <param name="fallbackFactory">Optional fallback factory when no default descriptor exists.</param>
     private void RegisterDelegatedService<TService>(
         IServiceCollection services,
         Func<IServiceProvider, TService>? fallbackFactory = null)
@@ -122,6 +136,13 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             lifetime));
     }
 
+    /// <summary>
+    /// Resolves the default implementation from an existing service descriptor.
+    /// </summary>
+    /// <param name="serviceProvider">Service provider used for activation.</param>
+    /// <param name="descriptor">Service descriptor to resolve from.</param>
+    /// <param name="serviceType">Service contract type.</param>
+    /// <returns>Resolved default service instance.</returns>
     private static object ResolveServiceFromDescriptor(
         IServiceProvider serviceProvider,
         ServiceDescriptor? descriptor,
@@ -145,11 +166,20 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         return serviceProvider.GetRequiredService(serviceType);
     }
 
+    /// <summary>
+    /// Dispatch proxy that forwards interface calls to a dynamically resolved implementation.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
     private class InterfaceDispatchProxy<TService> : DispatchProxy
         where TService : class
     {
         private Func<TService>? _resolver;
 
+        /// <summary>
+        /// Creates a proxy that resolves its target implementation at invocation time.
+        /// </summary>
+        /// <param name="resolver">Target resolver delegate.</param>
+        /// <returns>Interface proxy instance.</returns>
         public static TService Create(Func<TService> resolver)
         {
             var proxy = Create<TService, InterfaceDispatchProxy<TService>>();
@@ -157,6 +187,12 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             return proxy;
         }
 
+        /// <summary>
+        /// Invokes the target method on the currently resolved service instance.
+        /// </summary>
+        /// <param name="targetMethod">Target method metadata.</param>
+        /// <param name="args">Invocation arguments.</param>
+        /// <returns>Invocation result.</returns>
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (_resolver == null)
