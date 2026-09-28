@@ -1,25 +1,14 @@
 meta {
-  name: get by dialog id for end user
-  type: http
-  seq: 6
+  name: enduser
+  seq: 7
 }
 
-get {
-  url: {{host}}/notifications/api/v1/future/enduser/log?dialogId={{dialogporten_dialog_id}}
-  body: none
-  auth: inherit
-}
-
-params:query {
-  dialogId: {{dialogporten_dialog_id}}
-}
-
-vars:pre-request {
-  dialogporten_dialog_id: 01a0a4d9-fff9-7713-826a-f398d5bceabd
+auth {
+  mode: inherit
 }
 
 script:pre-request {
-  //Auto-fetch a valid auth-token
+  // Auto-fetch a valid bearer token for an end user
   if(   
     //no token
     bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
