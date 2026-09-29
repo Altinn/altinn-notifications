@@ -19,7 +19,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
     {
         _fixture.ResetInstalledMocks();
         var emailClientMock = new Mock<IEmailServiceClient>();
-        _fixture.InstallEmailServiceClient(emailClientMock.Object);
+        _fixture.InstallService<IEmailServiceClient>(emailClientMock.Object);
         return emailClientMock;
     }
 

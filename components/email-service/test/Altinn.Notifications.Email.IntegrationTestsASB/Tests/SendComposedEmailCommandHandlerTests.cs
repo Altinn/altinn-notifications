@@ -20,7 +20,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainers
     {
         _fixture.ResetInstalledMocks();
         var sendingService = new AlwaysSucceedSendingService();
-        _fixture.InstallSendingService(sendingService);
+        _fixture.InstallService<ISendingService>(sendingService);
         return sendingService;
     }
 

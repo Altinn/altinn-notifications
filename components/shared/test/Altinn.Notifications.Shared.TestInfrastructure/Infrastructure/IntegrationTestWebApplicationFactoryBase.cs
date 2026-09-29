@@ -23,6 +23,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     private IHost _host = null!;
     private readonly List<Action<IServiceCollection>> _configureTestServices = [];
     private readonly Dictionary<string, string?> _configOverrides = [];
+    private readonly DelegatedServiceOverrideRegistry _delegatedOverrides = new();
 
     /// <summary>
     /// Gets the fixture providing container connection strings.
@@ -41,6 +42,36 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     {
         _ = CreateClient();
         return (TSelf)this;
+    }
+
+    /// <summary>
+    /// Installs a service override that will be used by delegated test service resolution.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="service">Service instance to install.</param>
+    public void InstallService<TService>(TService service)
+        where TService : class
+    {
+        _delegatedOverrides.InstallService(service);
+    }
+
+    /// <summary>
+    /// Clears all runtime-installed service overrides.
+    /// </summary>
+    public void ResetInstalledMocks()
+    {
+        _delegatedOverrides.ResetInstalledMocks();
+    }
+
+    /// <summary>
+    /// Registers an interface as a delegated service that can be overridden at runtime per test.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="services">Service collection to mutate.</param>
+    protected void RegisterDelegatedService<TService>(IServiceCollection services)
+        where TService : class
+    {
+        _delegatedOverrides.RegisterDelegatedService<TService>(services);
     }
 
     /// <summary>

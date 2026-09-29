@@ -19,7 +19,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
     {
         _fixture.ResetInstalledMocks();
         var sendingService = new AlwaysSucceedSendingService();
-        _fixture.InstallSendingService(sendingService);
+        _fixture.InstallService<ISendingService>(sendingService);
         return sendingService;
     }
 
@@ -129,7 +129,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
             .ThrowsAsync(new InvalidOperationException("Simulated sending failure"));
 
         _fixture.ResetInstalledMocks();
-        _fixture.InstallSendingService(sendingServiceMock.Object);
+        _fixture.InstallService<ISendingService>(sendingServiceMock.Object);
 
         var webHost = _fixture.WebHost;
 

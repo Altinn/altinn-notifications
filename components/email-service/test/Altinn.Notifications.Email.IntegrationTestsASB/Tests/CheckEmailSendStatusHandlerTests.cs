@@ -27,7 +27,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
     {
         _fixture.ResetInstalledMocks();
         var emailClientMock = new Mock<IEmailServiceClient>();
-        _fixture.InstallEmailServiceClient(emailClientMock.Object);
+        _fixture.InstallService<IEmailServiceClient>(emailClientMock.Object);
         return emailClientMock;
     }
 

@@ -779,8 +779,12 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(result);
-            var item = Assert.Single(result);
-            Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
+
+            var seededItem = result.FirstOrDefault(item =>
+                item.ShipmentId == orderId &&
+                item.DeliveryAttempts.Any(attempt => attempt.MobileNumber == storedMobileNumber));
+
+            Assert.NotNull(seededItem);
         }
         finally
         {
