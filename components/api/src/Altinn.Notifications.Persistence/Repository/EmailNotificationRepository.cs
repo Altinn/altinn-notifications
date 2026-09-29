@@ -124,29 +124,51 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     public async Task<Email?> GetNewNotificationAsync(CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationSql);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        return await ReadNewNotificationAsync(pgcom, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand pgcom = new(_getEmailNotificationSql, unitOfWork.Connection, unitOfWork.Transaction);
+        return await ReadNewNotificationAsync(pgcom, cancellationToken);
+    }
+
+    private static async Task<Email?> ReadNewNotificationAsync(NpgsqlCommand pgcom, CancellationToken cancellationToken)
+    {
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
         {
-            if (!await reader.ReadAsync(cancellationToken))
-            {
-                return null;
-            }
-
-            EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
-
-            return new Email(
-                await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
-                await reader.GetFieldValueAsync<string>("subject", cancellationToken),
-                await reader.GetFieldValueAsync<string>("body", cancellationToken),
-                await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
-                await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
-                emailContentType);
+            return null;
         }
+
+        EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
+
+        return new Email(
+            await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+            await reader.GetFieldValueAsync<string>("subject", cancellationToken),
+            await reader.GetFieldValueAsync<string>("body", cancellationToken),
+            await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
+            await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
+            emailContentType);
     }
 
     /// <inheritdoc/>
     public async Task<ComposedEmail?> GetNewComposedNotificationAsync(CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getComposedEmailNotificationSql);
+        return await ReadNewComposedNotificationAsync(pgcom, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ComposedEmail?> GetNewComposedNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand pgcom = new(_getComposedEmailNotificationSql, unitOfWork.Connection, unitOfWork.Transaction);
+        return await ReadNewComposedNotificationAsync(pgcom, cancellationToken);
+    }
+
+    private static async Task<ComposedEmail?> ReadNewComposedNotificationAsync(NpgsqlCommand pgcom, CancellationToken cancellationToken)
+    {
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {

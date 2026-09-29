@@ -1,4 +1,3 @@
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -7,6 +6,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -21,7 +21,9 @@ public class EmailNotificationService(
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
     IEmailNotificationRepository emailNotificationRepository,
-    IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
+    IComposedEmailCommandPublisher composedEmailCommandPublisher,
+    IUnitOfWorkRepository unitOfWorkRepository,
+    ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
     private readonly IGuidService _guidService = guidService;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -72,34 +74,79 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public async Task<bool> SendNotification(CancellationToken cancellationToken)
+    public Task<bool> SendNotification(CancellationToken cancellationToken)
     {
-        Email? claimedNotification = await _emailNotificationRepository.GetNewNotificationAsync(cancellationToken);
-        if (claimedNotification is null)
-        {
-            return false;
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await _emailCommandPublisher.PublishAsync(claimedNotification, cancellationToken);
-        return true;
+        return SendClaimedNotification(
+            cancellationToken,
+            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendNotification));
     }
 
     /// <inheritdoc/>
-    public async Task<bool> SendComposedNotification(CancellationToken cancellationToken)
+    public Task<bool> SendComposedNotification(CancellationToken cancellationToken)
     {
-        ComposedEmail? claimedNotification =
-            await _emailNotificationRepository.GetNewComposedNotificationAsync(cancellationToken);
-        if (claimedNotification is null)
+        return SendClaimedNotification(
+            cancellationToken,
+            (unitOfWork, token) => _emailNotificationRepository.GetNewComposedNotificationAsync(unitOfWork, token),
+            (notification, token) => _composedEmailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendComposedNotification));
+    }
+
+    private async Task<bool> SendClaimedNotification<TNotification>(
+        CancellationToken cancellationToken,
+        Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
+        Func<TNotification, CancellationToken, Task> publishNotification,
+        string operationName)
+        where TNotification : class
+    {
+        UnitOfWork unitOfWork;
+        try
         {
+            unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(e, "Failed to start a unit of work for {OperationName}.", operationName);
+            }
+
             return false;
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            TNotification? claimedNotification = await getNewNotification(unitOfWork, cancellationToken);
+            if (claimedNotification is null)
+            {
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
 
-        await _composedEmailCommandPublisher.PublishAsync(claimedNotification, cancellationToken);
-        return true;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await publishNotification(claimedNotification, cancellationToken);
+            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(e, "An error occurred while processing {OperationName}.", operationName);
+            }
+
+            try
+            {
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            }
+            catch (Exception)
+            {
+            }
+
+            return false;
+        }
     }
 
     /// <inheritdoc/>

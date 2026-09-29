@@ -26,10 +26,10 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     private const string _emailSendQueueName = "altinn.notifications.email.send";
 
     /// <summary>
-    /// Verifies that publishing a valid email returns null (success indicator).
+    /// Verifies that publishing a valid email enqueues a message.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_ValidEmail_ReturnsNull()
+    public async Task PublishAsync_ValidEmail_EnqueuesMessage()
     {
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
@@ -40,9 +40,14 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
+            await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
-            Assert.Null(result);
+            var message = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                _emailSendQueueName,
+                TimeSpan.FromSeconds(10));
+
+            Assert.NotNull(message);
         }
     }
 
@@ -197,10 +202,10 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     }
 
     /// <summary>
-    /// Verifies that publishing a batch of valid emails returns an empty list (all succeeded).
+    /// Verifies that publishing multiple emails sequentially succeeds.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
+    public async Task PublishAsync_Multiple_SequentialSends_Succeed()
     {
         var factory = CreateFactory();
         var emails = new List<Email>
@@ -215,18 +220,19 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
-
-            Assert.Empty(result);
+            foreach (Email email in emails)
+            {
+                await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
+            }
         }
     }
 
     /// <summary>
-    /// Verifies that publishing a batch delivers one <see cref="SendEmailCommand"/> per email to the queue,
+    /// Verifies that publishing multiple emails delivers one <see cref="SendEmailCommand"/> per email to the queue,
     /// with all fields correctly mapped for each.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_ValidEmails_DeliversAllCommandsToQueue()
+    public async Task PublishAsync_MultipleEmails_DeliversAllCommandsToQueue()
     {
         var factory = CreateFactory();
         var firstEmail = new Email(Guid.NewGuid(), "First Subject", "First Body", "sender@altinnxyz.no", "first@altinnxyz.no", EmailContentType.Plain);
@@ -237,7 +243,10 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         {
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+            foreach (Email email in emails)
+            {
+                await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
+            }
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
@@ -272,10 +281,10 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     }
 
     /// <summary>
-    /// Verifies that publishing an empty batch returns an empty list without delivering any messages to the queue.
+    /// Verifies that not publishing any email leaves the queue empty.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutEnqueuingMessages()
+    public async Task PublishAsync_NoEmailPublished_QueueRemainsEmpty()
     {
         var factory = CreateFactory();
 
@@ -284,10 +293,6 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
-
-            var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
-
-            Assert.Empty(result);
 
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
@@ -298,16 +303,13 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
     /// <summary>
     /// Verifies that a pre-cancelled token causes <see cref="OperationCanceledException"/> to be thrown
-    /// before any messages in the batch are sent to the queue.
+    /// before any message is sent to the queue.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException_AndDoesNotEnqueue()
     {
         var factory = CreateFactory();
-        var emails = new List<Email>
-        {
-            new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain)
-        };
+        var email = new Email(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
 
         await using (factory)
         {
@@ -318,7 +320,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
             using var cancellationTokenSource = new CancellationTokenSource();
             await cancellationTokenSource.CancelAsync();
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(emails, cancellationTokenSource.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(email, cancellationTokenSource.Token));
         }
     }
 

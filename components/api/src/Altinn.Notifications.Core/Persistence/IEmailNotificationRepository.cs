@@ -27,6 +27,17 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<Email?> GetNewNotificationAsync(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Retrieves the next pending email notification within the provided unit of work.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <returns>
+    /// A task that completes when retrieval finishes. The result is the next pending email notification,
+    /// or <see langword="null"/> if none are available.
+    /// </returns>
+    public Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Retrieves the next pending composed email notification.
     /// </summary>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
@@ -35,6 +46,17 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// or <see langword="null"/> if none are available.
     /// </returns>
     public Task<ComposedEmail?> GetNewComposedNotificationAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves the next pending composed email notification within the provided unit of work.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <returns>
+    /// A task that completes when retrieval finishes. The result is the next pending composed email notification,
+    /// or <see langword="null"/> if none are available.
+    /// </returns>
+    public Task<ComposedEmail?> GetNewComposedNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of an email notification and optionally persists
