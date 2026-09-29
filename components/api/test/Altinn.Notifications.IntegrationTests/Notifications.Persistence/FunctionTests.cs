@@ -1,6 +1,9 @@
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
 
 using Xunit;
 
@@ -42,7 +45,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) });
             EmailNotificationRepository repository = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-            await repository.GetNewNotificationAsync(TestContext.Current.CancellationToken);
+            await using NpgsqlConnection connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
+            await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var unitOfWork = new UnitOfWork
+            {
+                Connection = connection,
+                Transaction = transaction
+            };
+
+            await repository.GetNewNotificationAsync(unitOfWork, TestContext.Current.CancellationToken);
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
             // Assert
             sql = @"SELECT emaillimittimeout

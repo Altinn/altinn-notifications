@@ -121,13 +121,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    public async Task<Email?> GetNewNotificationAsync(CancellationToken cancellationToken)
-    {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationSql);
-        return await ReadNewNotificationAsync(pgcom, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public async Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = new(_getEmailNotificationSql, unitOfWork.Connection, unitOfWork.Transaction);
@@ -151,13 +144,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
             await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
             emailContentType);
-    }
-
-    /// <inheritdoc/>
-    public async Task<ComposedEmail?> GetNewComposedNotificationAsync(CancellationToken cancellationToken)
-    {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getComposedEmailNotificationSql);
-        return await ReadNewComposedNotificationAsync(pgcom, cancellationToken);
     }
 
     /// <inheritdoc/>

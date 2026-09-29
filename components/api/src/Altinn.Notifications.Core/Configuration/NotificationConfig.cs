@@ -120,4 +120,58 @@ public class NotificationConfig
     /// The maximum number of retry attempts for a retry order.
     /// </summary>
     public int RetryOrdersMaxCount { get; set; } = 10;
+
+    /// <summary>
+    /// The number of past due tasks to run concurrently in the background service
+    /// </summary>
+    public int EmailNotificationsTaskCount { get; set; } = 30;
+
+    /// <summary>
+    /// The number of ComposedEmail tasks to run concurrently in the background service
+    /// </summary>
+    public int ComposedEmailNotificationsTaskCount { get; set; } = 1;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the email notification Notifications background service when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
+    /// </summary>
+    public int EmailNotificationsPrimaryTaskIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the email notification Notifications background service for all other tasks
+    /// than the primary task.
+    /// </summary>
+    public int EmailNotificationsAdditionalTasksIdleDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the ComposedEmail Notifications background service when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
+    /// </summary>
+    public int ComposedEmailNotificationsPrimaryTaskIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the ComposedEmail Notifications background service for all other tasks
+    /// than the primary task.
+    /// </summary>
+    public int ComposedEmailNotificationsAdditionalTasksIdleDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// The number of seconds from now to skip while looking for Notifications to ComposedEmail
+    /// </summary>
+    public int ComposedEmailNotificationsDBDelaySeconds { get; set; } = 60;
+
+    /// <summary>
+    /// The number of consecutive email notification Notifications before ramping up the processing of email notification Notifications. This is used to prevent overloading the system with too many email notification Notifications at once.
+    /// </summary>
+    public int EmailNotificationsRampUpLimit { get; set; } = 10;
+
+    /// <summary>
+    /// The number of consecutive ComposedEmail Notifications before ramping up the processing of ComposedEmail Notifications. This is used to prevent overloading the system with too many ComposedEmail Notifications at once.
+    /// </summary>
+    public int ComposedEmailNotificationsRampUpLimit { get; set; } = 10;
+
+    /// <summary>
+    /// The maximum number of ComposedEmail attempts for a ComposedEmail notification.
+    /// </summary>
+    public int ComposedEmailNotificationsMaxCount { get; set; } = 10;
 }

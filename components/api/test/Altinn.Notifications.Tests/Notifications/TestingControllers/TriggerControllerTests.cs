@@ -23,12 +23,10 @@ public class TriggerControllerTests
 
     private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
     private readonly Mock<ISmsPublishTaskQueue> _smsPublishTaskQueueMock = new();
-    private readonly Mock<IEmailPublishTaskQueue> _emailPublishTaskQueueMock = new();
     private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock = new();
     private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
     private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
-    private readonly Mock<IComposedEmailPublishSignal> _composedEmailPublishSignalMock = new();
 
     public TriggerControllerTests()
     {
@@ -38,21 +36,17 @@ public class TriggerControllerTests
         _smsPublishTaskQueueMock.Object,
         _notificationScheduleMock.Object,
         _orderProcessingServiceMock.Object,
-        _emailPublishTaskQueueMock.Object,
-        _composedEmailPublishSignalMock.Object,
+        _emailNotificationServiceMock.Object,
         new TerminateExpiredService(_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object));
     }
 
     [Fact]
-    public void Trigger_SendEmailNotifications_SignalsBothQueuesAndReturnsOk()
+    public async Task Trigger_SendEmailNotifications_ReturnsOk()
     {
         // Act
-        var result = _controller.Trigger_SendEmailNotifications();
+        var result = await _controller.Trigger_SendEmailNotifications(TestContext.Current.CancellationToken);
 
         // Assert
-        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(), Times.Once);
-        _composedEmailPublishSignalMock.Verify(x => x.TryEnqueue(), Times.Once);
-
         Assert.IsType<OkResult>(result);
     }
 

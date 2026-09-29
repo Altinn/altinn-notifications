@@ -95,7 +95,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        Email? emailToBeSent = await repo.GetNewNotificationAsync(TestContext.Current.CancellationToken);
+        Email? emailToBeSent = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(emailToBeSent);
@@ -142,7 +144,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
-        Email? interpolatedContent = await sut.GetNewNotificationAsync(TestContext.Current.CancellationToken);
+        Email? interpolatedContent = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(interpolatedContent);
@@ -168,7 +172,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
 
         // Act
-        Email? result = await sut.GetNewNotificationAsync(TestContext.Current.CancellationToken);
+        Email? result = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -772,7 +778,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        Email? batch = await emailRepo.GetNewNotificationAsync(TestContext.Current.CancellationToken);
+        Email? batch = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken);
 
         // Assert — the Composed order's notification must not appear in the standard email batch
         Assert.True(batch is null || batch.NotificationId != notificationId);
@@ -990,7 +998,10 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        ComposedEmail? result = await emailRepo.GetNewComposedNotificationAsync(TestContext.Current.CancellationToken);
+        ComposedEmail? result = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken,
+            commit: true);
 
         // Assert — notification is returned
         Assert.NotNull(result);
@@ -1020,7 +1031,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        ComposedEmail? resultNotification = await emailRepo.GetNewComposedNotificationAsync(TestContext.Current.CancellationToken);
+        ComposedEmail? resultNotification = await ExecuteInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            TestContext.Current.CancellationToken);
 
         // Assert — standard notification must not be returned as composed notification
         Assert.True(resultNotification is null || resultNotification.NotificationId != emailNotification.Id);
@@ -1035,6 +1048,32 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
+    }
+
+    private static async Task<TResult> ExecuteInUnitOfWork<TResult>(
+        Func<UnitOfWork, CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken,
+        bool commit = false)
+    {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        TResult result = await action(unitOfWork, cancellationToken);
+        if (commit)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            await transaction.RollbackAsync(cancellationToken);
+        }
+
+        return result;
     }
 
     [Fact]

@@ -29,8 +29,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SmsPublishBackgroundService>()
-            .AddHostedService<EmailPublishBackgroundService>()
-            .AddHostedService<ComposedEmailPublishBackgroundService>()
+            .AddHostedService<EmailNotificationsBackgroundService>()
             .AddHostedService<PastDueOrdersBackgroundService>();
 
         services
@@ -45,14 +44,12 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
             .AddSingleton<ISmsPublishTaskQueue, SmsPublishTaskQueue>()
-            .AddSingleton<IEmailPublishTaskQueue, EmailPublishTaskQueue>()
             .AddSingleton<INotificationLogService, NotificationLogService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
-            .AddSingleton<IComposedEmailPublishSignal, ComposedEmailPublishSignal>()
             .AddSingleton<IInstantOrderRequestService, InstantOrderRequestService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
