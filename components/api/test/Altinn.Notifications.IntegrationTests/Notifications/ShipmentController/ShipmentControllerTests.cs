@@ -336,8 +336,10 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal("Shipment not found", problemDetails.Title);
     }
 
-    [Fact]
-    public async Task GetById_OrderInRetryingStatus_ReturnsOkWithRetryingStatus()
+    [Theory]
+    [InlineData(ProcessingLifecycle.Order_Retrying, ProcessingLifecycleExt.Order_Retrying)]
+    [InlineData(ProcessingLifecycle.Order_Failed, ProcessingLifecycleExt.Order_Failed)]
+    public async Task GetById_OrderInGivenStatus_ReturnsOkWithMatchingStatus(ProcessingLifecycle orderStatus, ProcessingLifecycleExt expectedStatus)
     {
         // Arrange
         var shipmentId = Guid.NewGuid();
@@ -347,7 +349,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
                 It.Is<Guid>(g => g.Equals(shipmentId)),
                 It.Is<string>(s => s.Equals("ttd")),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateRetryingDeliveryManifest(shipmentId));
+            .ReturnsAsync(CreateDeliveryManifest(shipmentId, orderStatus));
 
         HttpClient client = GetTestClient(serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -367,7 +369,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         Assert.NotNull(manifest);
         Assert.Equal(shipmentId, manifest.ShipmentId);
-        Assert.Equal(ProcessingLifecycleExt.Order_Retrying, manifest.Status);
+        Assert.Equal(expectedStatus, manifest.Status);
     }
 
     [Fact]
@@ -464,7 +466,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         };
     }
 
-    private static Result<INotificationDeliveryManifest> CreateRetryingDeliveryManifest(Guid shipmentId)
+    private static Result<INotificationDeliveryManifest> CreateDeliveryManifest(Guid shipmentId, ProcessingLifecycle status)
     {
         var recipients = new List<IDeliveryManifest>
         {
@@ -475,11 +477,11 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         {
             Type = "Notification",
             ShipmentId = shipmentId,
-            Status = ProcessingLifecycle.Order_Retrying,
+            Status = status,
 
             LastUpdate = DateTime.UtcNow.AddHours(-1),
             Recipients = recipients.ToImmutableList(),
-            SendersReference = "RETRYING-ORDER-REF-A1B2C3"
+            SendersReference = "ORDER-REF-A1B2C3"
         };
     }
 }
