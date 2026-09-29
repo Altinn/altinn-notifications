@@ -51,6 +51,8 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.Order_Registered => ProcessingLifecycleExt.Order_Registered,
             ProcessingLifecycle.Order_Processing => ProcessingLifecycleExt.Order_Processing,
             ProcessingLifecycle.Order_SendConditionNotMet => ProcessingLifecycleExt.Order_SendConditionNotMet,
+            ProcessingLifecycle.Order_Retrying => ProcessingLifecycleExt.Order_Retrying,
+            ProcessingLifecycle.Order_Failed => ProcessingLifecycleExt.Order_Failed,
 
             // SMS statuses
             ProcessingLifecycle.SMS_New => ProcessingLifecycleExt.SMS_New,
