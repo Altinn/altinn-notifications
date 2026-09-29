@@ -107,6 +107,14 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
             TimeSpan.FromSeconds(30));
         Assert.NotNull(deadLetterMessage);
 
+        var attemptsObserved = await WaitForUtils.WaitForAsync(
+            () => Task.FromResult(Volatile.Read(ref attemptCount) >= expectedAttempts),
+            maxAttempts: 20,
+            delayMs: 250,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(attemptsObserved, "IEmailServiceClient.GetOperationUpdate was not called expected number of times within timeout.");
+
         // Assert - Verify the handler was called exactly as many times as the policy dictates
         Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
         Assert.Equal(expectedAttempts, attemptCount);
