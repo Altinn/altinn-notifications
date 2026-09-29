@@ -77,27 +77,27 @@ public class EmailNotificationService(
     public Task<bool> SendNotification(CancellationToken cancellationToken)
     {
         return SendClaimedNotification(
-            cancellationToken,
             (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token),
             (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
-            nameof(SendNotification));
+            nameof(SendNotification),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<bool> SendComposedNotification(CancellationToken cancellationToken)
     {
         return SendClaimedNotification(
-            cancellationToken,
             (unitOfWork, token) => _emailNotificationRepository.GetNewComposedNotificationAsync(unitOfWork, token),
             (notification, token) => _composedEmailCommandPublisher.PublishAsync(notification, token),
-            nameof(SendComposedNotification));
+            nameof(SendComposedNotification),
+            cancellationToken);
     }
 
     private async Task<bool> SendClaimedNotification<TNotification>(
-        CancellationToken cancellationToken,
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
-        string operationName)
+        string operationName,
+        CancellationToken cancellationToken)
         where TNotification : class
     {
         UnitOfWork unitOfWork;
