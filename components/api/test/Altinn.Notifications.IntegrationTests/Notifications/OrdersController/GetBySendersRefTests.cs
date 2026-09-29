@@ -31,9 +31,10 @@ public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
+        string uniqueOrg = $"org{Guid.NewGuid():N}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(uniqueOrg, scope: "altinn:serviceowner/notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
