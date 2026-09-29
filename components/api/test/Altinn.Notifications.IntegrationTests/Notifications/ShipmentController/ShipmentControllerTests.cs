@@ -337,6 +337,40 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
     }
 
     [Fact]
+    public async Task GetById_OrderInRetryingStatus_ReturnsOkWithRetryingStatus()
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid();
+        var serviceMock = new Mock<INotificationDeliveryManifestService>();
+        serviceMock
+            .Setup(s => s.GetDeliveryManifestAsync(
+                It.Is<Guid>(g => g.Equals(shipmentId)),
+                It.Is<string>(s => s.Equals("ttd")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateRetryingDeliveryManifest(shipmentId));
+
+        HttpClient client = GetTestClient(serviceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        string url = _basePath + "/" + shipmentId;
+        HttpRequestMessage request = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        Assert.NotNull(manifest);
+        Assert.Equal(shipmentId, manifest.ShipmentId);
+        Assert.Equal(ProcessingLifecycleExt.Order_Retrying, manifest.Status);
+    }
+
+    [Fact]
     public async Task GetById_OperationCanceled_ReturnsClientClosedRequestStatusCode()
     {
         // Arrange
@@ -427,6 +461,25 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
             Status = status,
             LastUpdate = lastUpdate,
             Destination = emailAddress
+        };
+    }
+
+    private static Result<INotificationDeliveryManifest> CreateRetryingDeliveryManifest(Guid shipmentId)
+    {
+        var recipients = new List<IDeliveryManifest>
+        {
+            CreateSmsDeliveryManifest("+4799999999", ProcessingLifecycle.SMS_Sending, DateTime.Now.AddHours(-1))
+        };
+
+        return new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = shipmentId,
+            Status = ProcessingLifecycle.Order_Retrying,
+
+            LastUpdate = DateTime.UtcNow.AddHours(-1),
+            Recipients = recipients.ToImmutableList(),
+            SendersReference = "RETRYING-ORDER-REF-A1B2C3"
         };
     }
 }
