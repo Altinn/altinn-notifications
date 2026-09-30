@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -162,11 +163,11 @@ public class SmsNotificationService : ISmsNotificationService
 
         foreach (var sms in smsNotifications)
         {
-            var (sender, wasSubstituted) = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
+            var smsSenderResolutionResult = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
 
-            if (wasSubstituted)
+            if (smsSenderResolutionResult.WasSubstituted)
             {
-                sms.Sender = sender;
+                sms.Sender = smsSenderResolutionResult.Sender;
                 await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
             }
         }
