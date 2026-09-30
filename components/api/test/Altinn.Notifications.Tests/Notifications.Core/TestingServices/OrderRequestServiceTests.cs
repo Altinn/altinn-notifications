@@ -3045,9 +3045,9 @@ public class OrderRequestServiceTests
         orderRepositoryMock.Verify(
             r => r.Create(
                 It.IsAny<NotificationOrderChainRequest>(),
-                It.Is<NotificationOrder>(o => o.RequestedSendTime == postponedSendTime),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == currentTime),
                 It.IsAny<List<NotificationOrder>>(),
-                It.IsAny<DateTime>(),
+                It.Is<DateTime>(d => d == postponedSendTime),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -3390,12 +3390,12 @@ public class OrderRequestServiceTests
         orderRepositoryMock.Verify(
             r => r.Create(
                 It.IsAny<NotificationOrderChainRequest>(),
-                It.Is<NotificationOrder>(o => o.RequestedSendTime == mainPostponedSendTime),
+                It.Is<NotificationOrder>(o => o.RequestedSendTime == mainRequestedSendTime),
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 2 &&
                     list[0].RequestedSendTime == reminderRequestedSendTime &&
                     list[1].RequestedSendTime == secondReminderPostponedSendTime),
-                It.IsAny<DateTime>(),
+                It.Is<DateTime>(d => d == mainPostponedSendTime),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 

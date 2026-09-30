@@ -166,7 +166,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, requestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
+                    long reminderOrderId = await InsertOrder(notificationOrder, notificationOrder.RequestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {
@@ -578,7 +578,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(order.SendersReference) ? (object)DBNull.Value : order.SendersReference);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, requestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SendingTimePolicy ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
