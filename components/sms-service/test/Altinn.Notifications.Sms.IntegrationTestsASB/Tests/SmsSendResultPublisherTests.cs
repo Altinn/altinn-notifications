@@ -74,29 +74,28 @@ public class SmsSendResultPublisherTests(IntegrationTestSmsAsbContainersFixture 
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<ISmsClient>(smsClientMock.Object);
         var factory = _fixture.WebHost;
-        {
-            // Arrange
-            var sendingService = factory.Host.Services.GetRequiredService<ISendingService>();
-            var sms = new Core.Sending.Sms(notificationId, "sender", "+4799999999", "Integration test SMS body");
-            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await sendingService.SendAsync(sms);
+        // Arrange
+        var sendingService = factory.Host.Services.GetRequiredService<ISendingService>();
+        var sms = new Core.Sending.Sms(notificationId, "sender", "+4799999999", "Integration test SMS body");
+        string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
 
-            // Assert - Receive the message from the queue
-            var received = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await sendingService.SendAsync(sms);
 
-            Assert.NotNull(received);
+        // Assert - Receive the message from the queue
+        var received = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
 
-            var command = JsonSerializer.Deserialize<SmsSendResultCommand>(received.Body.ToString());
-            Assert.NotNull(command);
-            Assert.Equal(notificationId, command.NotificationId);
-            Assert.Equal(gatewayReference, command.GatewayReference);
-            Assert.Equal("Accepted", command.SendResult);
-        }
+        Assert.NotNull(received);
+
+        var command = JsonSerializer.Deserialize<SmsSendResultCommand>(received.Body.ToString());
+        Assert.NotNull(command);
+        Assert.Equal(notificationId, command.NotificationId);
+        Assert.Equal(gatewayReference, command.GatewayReference);
+        Assert.Equal("Accepted", command.SendResult);
     }
 }

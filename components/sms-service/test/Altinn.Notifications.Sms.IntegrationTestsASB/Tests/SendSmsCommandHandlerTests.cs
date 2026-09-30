@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
@@ -44,30 +44,29 @@ public class SendSmsCommandHandlerTests(IntegrationTestSmsAsbContainersFixture f
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<ISendingService>(mockService.Object);
         var factory = _fixture.WebHost;
-        {
-            var queueName = GetQueueName(factory);
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, command);
+        var queueName = GetQueueName(factory);
 
-            // Assert
-            bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref sendAsyncCallCount) > 0),
-                maxAttempts: 20,
-                delayMs: 500,
-                cancellationToken: TestContext.Current.CancellationToken);
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, command);
 
-            Assert.True(handled, "ISendingService.SendAsync was not called within the expected time.");
+        // Assert
+        bool handled = await WaitForUtils.WaitForAsync(
+            () => Task.FromResult(Volatile.Read(ref sendAsyncCallCount) > 0),
+            maxAttempts: 20,
+            delayMs: 500,
+            cancellationToken: TestContext.Current.CancellationToken);
 
-            mockService.Verify(
-                s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
-                    sms.NotificationId == command.NotificationId &&
-                    sms.Recipient == command.MobileNumber &&
-                    sms.Message == command.Body &&
-                    sms.Sender == command.SenderNumber)),
-                Times.Once);
-        }
+        Assert.True(handled, "ISendingService.SendAsync was not called within the expected time.");
+
+        mockService.Verify(
+            s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
+                sms.NotificationId == command.NotificationId &&
+                sms.Recipient == command.MobileNumber &&
+                sms.Message == command.Body &&
+                sms.Sender == command.SenderNumber)),
+            Times.Once);
     }
 
     /// <summary>
@@ -97,31 +96,30 @@ public class SendSmsCommandHandlerTests(IntegrationTestSmsAsbContainersFixture f
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<ISendingService>(mockService.Object);
         var factory = _fixture.WebHost;
-        {
-            var policy = factory.WolverineSettings!.SendSmsQueuePolicy;
-            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            var queueName = GetQueueName(factory);
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, command);
+        var policy = factory.WolverineSettings!.SendSmsQueuePolicy;
+        int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+        var queueName = GetQueueName(factory);
 
-            // Assert - Verify the handler was called exactly as many times as the policy dictates
-            bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
-                maxAttempts: 40,
-                delayMs: 500,
-                cancellationToken: TestContext.Current.CancellationToken);
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, command);
 
-            Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
-            mockService.Verify(
-                s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
-                    sms.NotificationId == command.NotificationId &&
-                    sms.Recipient == command.MobileNumber &&
-                    sms.Message == command.Body &&
-                    sms.Sender == command.SenderNumber)),
-                Times.Exactly(expectedAttempts));
-        }
+        // Assert - Verify the handler was called exactly as many times as the policy dictates
+        bool handled = await WaitForUtils.WaitForAsync(
+            () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
+            maxAttempts: 40,
+            delayMs: 500,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(handled, "ISendingService.SendAsync was not retried as expected.");
+        mockService.Verify(
+            s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
+                sms.NotificationId == command.NotificationId &&
+                sms.Recipient == command.MobileNumber &&
+                sms.Message == command.Body &&
+                sms.Sender == command.SenderNumber)),
+            Times.Exactly(expectedAttempts));
     }
 
     /// <summary>
@@ -151,31 +149,30 @@ public class SendSmsCommandHandlerTests(IntegrationTestSmsAsbContainersFixture f
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<ISendingService>(mockService.Object);
         var factory = _fixture.WebHost;
-        {
-            var policy = factory.WolverineSettings!.SendSmsQueueGatewayErrorPolicy;
-            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            var queueName = GetQueueName(factory);
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, command);
+        var policy = factory.WolverineSettings!.SendSmsQueueGatewayErrorPolicy;
+        int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+        var queueName = GetQueueName(factory);
 
-            // Assert - Verify the handler was called exactly as many times as the gateway error policy dictates
-            bool handled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
-                maxAttempts: 40,
-                delayMs: 500,
-                cancellationToken: TestContext.Current.CancellationToken);
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, command);
 
-            Assert.True(handled, "ISendingService.SendAsync was not retried as expected for gateway errors.");
-            mockService.Verify(
-                s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
-                    sms.NotificationId == command.NotificationId &&
-                    sms.Recipient == command.MobileNumber &&
-                    sms.Message == command.Body &&
-                    sms.Sender == command.SenderNumber)),
-                Times.Exactly(expectedAttempts));
-        }
+        // Assert - Verify the handler was called exactly as many times as the gateway error policy dictates
+        bool handled = await WaitForUtils.WaitForAsync(
+            () => Task.FromResult(Volatile.Read(ref callCount) >= expectedAttempts),
+            maxAttempts: 40,
+            delayMs: 500,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(handled, "ISendingService.SendAsync was not retried as expected for gateway errors.");
+        mockService.Verify(
+            s => s.SendAsync(It.Is<Core.Sending.Sms>(sms =>
+                sms.NotificationId == command.NotificationId &&
+                sms.Recipient == command.MobileNumber &&
+                sms.Message == command.Body &&
+                sms.Sender == command.SenderNumber)),
+            Times.Exactly(expectedAttempts));
     }
 
     /// <summary>
@@ -191,33 +188,32 @@ public class SendSmsCommandHandlerTests(IntegrationTestSmsAsbContainersFixture f
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<ISendingService>(mockService.Object);
         var factory = _fixture.WebHost;
+
+        string queueName = GetQueueName(factory);
+
+        // Act - NotificationId = Guid.Empty triggers the guard clause which logs and returns early
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, new SendSmsCommand
         {
-            string queueName = GetQueueName(factory);
+            NotificationId = Guid.Empty,
+            MobileNumber = "+4799999999",
+            Body = "Test SMS body",
+            SenderNumber = "Altinn"
+        });
 
-            // Act - NotificationId = Guid.Empty triggers the guard clause which logs and returns early
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, new SendSmsCommand
-            {
-                NotificationId = Guid.Empty,
-                MobileNumber = "+4799999999",
-                Body = "Test SMS body",
-                SenderNumber = "Altinn"
-            });
+        // Allow time for the message to be processed
+        await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
-            // Allow time for the message to be processed
-            await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        // Assert - Message should NOT appear in the DLQ as it is discarded, not failed
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(2));
 
-            // Assert - Message should NOT appear in the DLQ as it is discarded, not failed
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(2));
+        Assert.Null(deadLetterMessage);
 
-            Assert.Null(deadLetterMessage);
-
-            // Assert - The sending service should never have been called
-            mockService.Verify(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()), Times.Never);
-        }
+        // Assert - The sending service should never have been called
+        mockService.Verify(s => s.SendAsync(It.IsAny<Core.Sending.Sms>()), Times.Never);
     }
 
     private static string GetQueueName(IntegrationTestWebApplicationFactory factory)

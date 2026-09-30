@@ -40,39 +40,37 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestApiAsbContainersFi
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<IAltinnServiceUpdateService>(mockService.Object);
         var factory = _fixture.WebHost;
+        string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
+
+        var command = new EmailServiceRateLimitCommand
         {
-            string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
+            Source = "Platform-Notifications-Email",
+            Data = """{"resource":"azure-communication-services-email","resetTime":"2026-01-01T00:00:00Z"}"""
+        };
 
-            var command = new EmailServiceRateLimitCommand
-            {
-                Source = "Platform-Notifications-Email",
-                Data = """{"resource":"azure-communication-services-email","resetTime":"2026-01-01T00:00:00Z"}"""
-            };
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, command);
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, command);
+        // Assert
+        var handlerCalled = await WaitForUtils.WaitForAsync(
+            () => Task.FromResult(mockService.Invocations.Count > 0),
+            maxAttempts: 20,
+            delayMs: 500,
+            cancellationToken: TestContext.Current.CancellationToken);
 
-            // Assert
-            var handlerCalled = await WaitForUtils.WaitForAsync(
-                () => Task.FromResult(mockService.Invocations.Count > 0),
-                maxAttempts: 20,
-                delayMs: 500,
-                cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(handlerCalled, "IAltinnServiceUpdateService.HandleServiceUpdate should have been called");
 
-            Assert.True(handlerCalled, "IAltinnServiceUpdateService.HandleServiceUpdate should have been called");
+        mockService.Verify(
+            s => s.HandleServiceUpdate(
+                It.IsAny<string>(),
+                It.IsAny<AltinnServiceUpdateSchema>(),
+                It.IsAny<string>()),
+            Times.Once);
 
-            mockService.Verify(
-                s => s.HandleServiceUpdate(
-                    It.IsAny<string>(),
-                    It.IsAny<AltinnServiceUpdateSchema>(),
-                    It.IsAny<string>()),
-                Times.Once);
-
-            Assert.Equal(command.Data, capturedData);
-            Assert.Equal("platform-notifications-email", capturedSource);
-            Assert.Equal(AltinnServiceUpdateSchema.ResourceLimitExceeded, capturedSchema);
-        }
+        Assert.Equal(command.Data, capturedData);
+        Assert.Equal("platform-notifications-email", capturedSource);
+        Assert.Equal(AltinnServiceUpdateSchema.ResourceLimitExceeded, capturedSchema);
     }
 
     [Fact]
@@ -89,33 +87,31 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestApiAsbContainersFi
         _fixture.ResetInstalledMocks();
         _fixture.InstallService<IAltinnServiceUpdateService>(mockService.Object);
         var factory = _fixture.WebHost;
+        string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
+        var policy = factory.WolverineSettings!.EmailServiceRateLimitQueuePolicy;
+
+        var totalPolicyDelayMs = policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum();
+        int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+        var deadLetterWaitTimeout = TimeSpan.FromMilliseconds(totalPolicyDelayMs) + TimeSpan.FromSeconds(10);
+
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await factory.SendToEndpointAsync(queueName, new EmailServiceRateLimitCommand
         {
-            string queueName = factory.WolverineSettings!.EmailServiceRateLimitQueueName;
-            var policy = factory.WolverineSettings!.EmailServiceRateLimitQueuePolicy;
+            Source = "platform-notifications-email",
+            Data = "{}"
+        });
 
-            var totalPolicyDelayMs = policy.CooldownDelaysMs.Sum() + policy.ScheduleDelaysMs.Sum();
-            int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
-            var deadLetterWaitTimeout = TimeSpan.FromMilliseconds(totalPolicyDelayMs) + TimeSpan.FromSeconds(10);
+        // Assert
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            deadLetterWaitTimeout);
+        Assert.NotNull(deadLetterMessage);
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await factory.SendToEndpointAsync(queueName, new EmailServiceRateLimitCommand
-            {
-                Source = "platform-notifications-email",
-                Data = "{}"
-            });
+        await WaitForUtils.WaitForAsync(() => Task.FromResult(attemptCount >= expectedAttempts), maxAttempts: 10, delayMs: 200, cancellationToken: TestContext.Current.CancellationToken);
 
-            // Assert
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                deadLetterWaitTimeout);
-            Assert.NotNull(deadLetterMessage);
-
-            await WaitForUtils.WaitForAsync(() => Task.FromResult(attemptCount >= expectedAttempts), maxAttempts: 10, delayMs: 200, cancellationToken: TestContext.Current.CancellationToken);
-
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
-            Assert.Equal(expectedAttempts, attemptCount);
-        }
+        Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+        Assert.Equal(expectedAttempts, attemptCount);
     }
 }

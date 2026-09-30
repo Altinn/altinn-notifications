@@ -31,51 +31,50 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestSmsAsbContainersFixt
     {
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
+
+        // Arrange
+        var publisher = factory.Host.Services.GetRequiredService<ISmsDeliveryReportPublisher>();
+        string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+        var deliveryTime = DateTime.UtcNow.ToString("o");
+        var result = new SendOperationResult
         {
-            // Arrange
-            var publisher = factory.Host.Services.GetRequiredService<ISmsDeliveryReportPublisher>();
-            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
-            var deliveryTime = DateTime.UtcNow.ToString("o");
-            var result = new SendOperationResult
+            NotificationId = Guid.NewGuid(),
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsSendResult.Delivered,
+            DeliveryReport = JsonSerializer.Serialize(new
             {
-                NotificationId = Guid.NewGuid(),
-                GatewayReference = Guid.NewGuid().ToString(),
-                SendResult = SmsSendResult.Delivered,
-                DeliveryReport = JsonSerializer.Serialize(new
-                {
-                    reference = "test-reference",
-                    receiver = "12345678",
-                    state = "DELIVRD",
-                    deliveryTime
-                })
-            };
+                reference = "test-reference",
+                receiver = "12345678",
+                state = "DELIVRD",
+                deliveryTime
+            })
+        };
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await publisher.PublishAsync(result);
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await publisher.PublishAsync(result);
 
-            // Assert - Receive the message from the queue and verify its content
-            var received = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
+        // Assert - Receive the message from the queue and verify its content
+        var received = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
 
-            Assert.NotNull(received);
+        Assert.NotNull(received);
 
-            var command = JsonSerializer.Deserialize<SmsDeliveryReportCommand>(received.Body.ToString());
-            Assert.NotNull(command);
-            Assert.Equal(result.NotificationId, command.NotificationId);
-            Assert.Equal(result.GatewayReference, command.GatewayReference);
-            Assert.Equal(result.SendResult.ToString(), command.SendResult);
+        var command = JsonSerializer.Deserialize<SmsDeliveryReportCommand>(received.Body.ToString());
+        Assert.NotNull(command);
+        Assert.Equal(result.NotificationId, command.NotificationId);
+        Assert.Equal(result.GatewayReference, command.GatewayReference);
+        Assert.Equal(result.SendResult.ToString(), command.SendResult);
 
-            // The delivery report is serialized as a JSON string, so we can deserialize it back to verify its content
-            var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
-            Assert.NotNull(deliveryReport);
-            Assert.Equal("test-reference", deliveryReport["reference"]);
-            Assert.Equal("12345678", deliveryReport["receiver"]);
-            Assert.Equal("DELIVRD", deliveryReport["state"]);
-            Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
-        }
+        // The delivery report is serialized as a JSON string, so we can deserialize it back to verify its content
+        var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
+        Assert.NotNull(deliveryReport);
+        Assert.Equal("test-reference", deliveryReport["reference"]);
+        Assert.Equal("12345678", deliveryReport["receiver"]);
+        Assert.Equal("DELIVRD", deliveryReport["state"]);
+        Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
     }
 
     /// <summary>
@@ -88,43 +87,42 @@ public class SmsDeliveryReportPublisherTests(IntegrationTestSmsAsbContainersFixt
     {
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
-        {
-            // Arrange
-            var statusService = factory.Host.Services.GetRequiredService<IStatusService>();
-            string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
-            string gatewayReference = Guid.NewGuid().ToString();
-            var deliveryTime = DateTime.UtcNow.ToString("o");
 
-            var drMessage = new LinkMobility.PSWin.Receiver.Model.DrMessage(
-                gatewayReference,
-                "12345678",
-                LinkMobility.PSWin.Receiver.Model.DeliveryState.DELIVRD,
-                deliveryTime);
+        // Arrange
+        var statusService = factory.Host.Services.GetRequiredService<IStatusService>();
+        string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
+        string gatewayReference = Guid.NewGuid().ToString();
+        var deliveryTime = DateTime.UtcNow.ToString("o");
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await statusService.UpdateStatusAsync(drMessage);
+        var drMessage = new LinkMobility.PSWin.Receiver.Model.DrMessage(
+            gatewayReference,
+            "12345678",
+            LinkMobility.PSWin.Receiver.Model.DeliveryState.DELIVRD,
+            deliveryTime);
 
-            // Assert - Receive the message from the queue
-            var received = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await statusService.UpdateStatusAsync(drMessage);
 
-            Assert.NotNull(received);
+        // Assert - Receive the message from the queue
+        var received = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
 
-            var command = JsonSerializer.Deserialize<SmsDeliveryReportCommand>(received.Body.ToString());
-            Assert.NotNull(command);
-            Assert.Equal(gatewayReference, command.GatewayReference);
-            Assert.Equal("Delivered", command.SendResult);
+        Assert.NotNull(received);
 
-            // Assert delivery report content
-            var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
-            Assert.NotNull(deliveryReport);
-            Assert.Equal(gatewayReference, deliveryReport["reference"]);
-            Assert.Equal("12345678", deliveryReport["receiver"]);
-            Assert.Equal("DELIVRD", deliveryReport["state"]);
-            Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
-        }
+        var command = JsonSerializer.Deserialize<SmsDeliveryReportCommand>(received.Body.ToString());
+        Assert.NotNull(command);
+        Assert.Equal(gatewayReference, command.GatewayReference);
+        Assert.Equal("Delivered", command.SendResult);
+
+        // Assert delivery report content
+        var deliveryReport = JsonSerializer.Deserialize<Dictionary<string, string>>(command.DeliveryReport!);
+        Assert.NotNull(deliveryReport);
+        Assert.Equal(gatewayReference, deliveryReport["reference"]);
+        Assert.Equal("12345678", deliveryReport["receiver"]);
+        Assert.Equal("DELIVRD", deliveryReport["state"]);
+        Assert.Equal(deliveryTime, deliveryReport["deliveryTime"]);
     }
 }
