@@ -352,7 +352,7 @@ public class InstantSmsOrderRequestServiceTests
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
         shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync(new ShortMessageSendResult()
         {
-            Success = true, 
+            Success = true,
             StatusCode = System.Net.HttpStatusCode.OK
         });
 

@@ -1,3 +1,5 @@
+using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
@@ -32,6 +34,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
                 "Missing WolverineSettings configuration for ASB integration tests.");
 
         Console.WriteLine($"[EmailFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
+
+        RegisterDelegatedService<IEmailServiceClient>(services);
+        RegisterDelegatedService<ISendingService>(services);
     }
 
     /// <inheritdoc/>

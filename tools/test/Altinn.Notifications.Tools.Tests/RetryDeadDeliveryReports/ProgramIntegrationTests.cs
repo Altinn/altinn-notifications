@@ -23,7 +23,7 @@ public class ProgramIntegrationTests
         {
             { "PostgreSQLSettings:ConnectionString", "Host=localhost;Database=test" },
             { "EventGrid:BaseUrl", string.Empty }, // Empty BaseUrl
-            { "EventGrid:AccessKey", "test-key" } 
+            { "EventGrid:AccessKey", "test-key" }
         };
 
         builder.Configuration.AddInMemoryCollection(inMemorySettings!);

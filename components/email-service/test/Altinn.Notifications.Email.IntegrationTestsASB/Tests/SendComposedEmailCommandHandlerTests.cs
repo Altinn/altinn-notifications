@@ -1,20 +1,24 @@
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-using Altinn.Notifications.Shared.TestInfrastructure.Utils;
-
-using Moq;
 
 using Xunit;
 
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixture fixture)
+public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestEmailContainersFixture _fixture = fixture;
     private static readonly TimeSpan _sendTimeout = TimeSpan.FromSeconds(30);
+
+    private AlwaysSucceedSendingService UseSendingService()
+    {
+        _fixture.ResetInstalledMocks();
+        var sendingService = new AlwaysSucceedSendingService();
+        _fixture.InstallService<ISendingService>(sendingService);
+        return sendingService;
+    }
 
     private static SendComposedEmailCommand ValidCommand(string contentType = "Plain") => new()
     {
@@ -34,88 +38,76 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
     public async Task HandleAsync_ValidHtmlCommand_SendingServiceReceivesMappedComposedEmail()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var command = ValidCommand(contentType: "Html");
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
 
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.ComposedEmailSendQueueName;
+        string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
-            // Assert
-            Assert.NotNull(capturedEmail);
-            Assert.Equal(command.Body, capturedEmail.Body);
-            Assert.Equal(command.Subject, capturedEmail.Subject);
-            Assert.Equal(command.ToAddress, capturedEmail.ToAddress);
-            Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
-            Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
-            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
-        }
+        // Assert
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(command.Body, capturedEmail.Body);
+        Assert.Equal(command.Subject, capturedEmail.Subject);
+        Assert.Equal(command.ToAddress, capturedEmail.ToAddress);
+        Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
+        Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
+        Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
     }
 
     [Fact]
     public async Task HandleAsync_PlainContentType_MapsCorrectly()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var command = ValidCommand(contentType: "Plain");
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
 
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.ComposedEmailSendQueueName;
+        string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
-            // Assert
-            Assert.NotNull(capturedEmail);
-            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
-        }
+        // Assert
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
     }
 
     [Fact]
     public async Task HandleAsync_UnknownContentType_DefaultsToPlainAndSendsSuccessfully()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var command = ValidCommand(contentType: "UnknownContentTypeXYZ");
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
 
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.ComposedEmailSendQueueName;
+        string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
-            // Assert - email is sent successfully with Plain as the fallback content type
-            Assert.NotNull(capturedEmail);
-            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
-            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
-        }
+        // Assert - email is sent successfully with Plain as the fallback content type
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
+        Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
     }
 
     [Fact]
     public async Task HandleAsync_WithAttachments_AttachmentsPassedToSendingService()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var attachment = new SasFileAttachment
         {
             Filename = "report.xlsx",
@@ -124,24 +116,20 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestContainersFixtu
         };
         var command = ValidCommand() with { Attachments = [attachment] };
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
 
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.ComposedEmailSendQueueName;
+        string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForComposedEmailAsync(_sendTimeout);
 
-            // Assert
-            Assert.NotNull(capturedEmail);
-            Assert.Single(capturedEmail.Attachments);
-            Assert.Equal(attachment.SasUrl, capturedEmail.Attachments[0].SasUrl);
-            Assert.Equal(attachment.Filename, capturedEmail.Attachments[0].Filename);
-            Assert.Equal(attachment.MimeType, capturedEmail.Attachments[0].MimeType);
-        }
+        // Assert
+        Assert.NotNull(capturedEmail);
+        Assert.Single(capturedEmail.Attachments);
+        Assert.Equal(attachment.SasUrl, capturedEmail.Attachments[0].SasUrl);
+        Assert.Equal(attachment.Filename, capturedEmail.Attachments[0].Filename);
+        Assert.Equal(attachment.MimeType, capturedEmail.Attachments[0].MimeType);
     }
 }
