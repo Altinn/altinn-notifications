@@ -81,7 +81,6 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
         var emailClientMock = await UseEmailClientMockAsync();
         var command = ValidCommand();
 
-        var webHost = _fixture.WebHost;
         emailClientMock
             .Setup(c => c.GetOperationUpdate(command.SendOperationId))
             .Callback(() =>
