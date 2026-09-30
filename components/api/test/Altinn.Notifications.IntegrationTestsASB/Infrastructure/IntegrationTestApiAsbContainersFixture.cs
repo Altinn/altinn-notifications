@@ -20,19 +20,12 @@ public class IntegrationTestApiAsbContainersFixture : IntegrationTestContainersF
 
     public override async ValueTask DisposeAsync()
     {
-        try
+        if (WebHost != null)
         {
-            if (WebHost != null)
-            {
-                await WebHost.DisposeAsync();
-            }
+            await WebHost.DisposeAsync();
+        }
 
-            await base.DisposeAsync();
-        }
-        finally
-        {
-            GC.SuppressFinalize(this);
-        }
+        await base.DisposeAsync();
     }
 
     /// <summary>
