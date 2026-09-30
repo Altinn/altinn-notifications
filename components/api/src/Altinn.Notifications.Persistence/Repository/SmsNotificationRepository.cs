@@ -26,6 +26,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
     private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
+    private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms()";
+    private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms()";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
 
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
@@ -88,6 +90,33 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
+    public async Task<Sms?> GetNewNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    {
+        string claimSmsBatchForSending = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Anytime => _claimAnytimeSmsSql,
+            _ => _claimDaytimeSmsSql,
+        };
+
+        await using var command = new NpgsqlCommand(claimSmsBatchForSending, unitOfWork.Connection, unitOfWork.Transaction);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new Sms(
+            reader.GetValue<Guid>("alternateid"),
+            reader.GetValue<string>("sendernumber"),
+            reader.GetValue<string>("mobilenumber"),
+            reader.GetValue<string>("body"));
+    }
+
+    /// <summary>
+    /// Retrieves pending SMS notifications eligible under the provided sending time policy.
+    /// </summary>
     public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         if (publishBatchSize <= 0)
@@ -95,23 +124,21 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             return [];
         }
 
-        var claimSmsBatchForSending = sendingTimePolicy switch
+        string claimSmsBatchForSending = sendingTimePolicy switch
         {
             SendingTimePolicy.Anytime => _claimAnytimeSmsBatchSql,
             _ => _claimDaytimeSmsBatchSql,
         };
 
         await using var command = _dataSource.CreateCommand(claimSmsBatchForSending);
-
         command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
         var result = new List<Sms>(publishBatchSize);
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            result.Add(new(
+            result.Add(new Sms(
                 reader.GetValue<Guid>("alternateid"),
                 reader.GetValue<string>("sendernumber"),
                 reader.GetValue<string>("mobilenumber"),

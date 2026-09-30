@@ -187,10 +187,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
     }
 
     /// <summary>
-    /// Verifies that publishing a valid batch of SMS notifications returns an empty list (success indicator).
+    /// Verifies that publishing multiple SMS notifications sequentially succeeds.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
+    public async Task PublishAsync_Multiple_SequentialSends_Succeed()
     {
         var factory = CreateFactory();
         var smsList = new List<Sms>
@@ -206,9 +206,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
-            var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
-
-            Assert.Empty(result);
+            foreach (Sms sms in smsList)
+            {
+                await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
+            }
 
             // Drain all published messages so the queue is clean for subsequent tests
             for (int i = 0; i < smsList.Count; i++)
@@ -219,11 +220,11 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
     }
 
     /// <summary>
-    /// Verifies that publishing a batch delivers one <see cref="SendSmsCommand"/> per SMS to the queue,
+    /// Verifies that publishing multiple SMS notifications delivers one <see cref="SendSmsCommand"/> per SMS to the queue,
     /// with all fields correctly mapped for each.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_ValidSmsList_DeliversAllCommandsToQueue()
+    public async Task PublishAsync_MultipleSms_DeliversAllCommandsToQueue()
     {
         var factory = CreateFactory();
         var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4711111111", "First batch message");
@@ -237,7 +238,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
-            await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
+            foreach (Sms sms in smsList)
+            {
+                await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
+            }
 
             var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
@@ -270,10 +274,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
     }
 
     /// <summary>
-    /// Verifies that publishing an empty batch returns an empty list without delivering any messages to the queue.
+    /// Verifies that not publishing any SMS leaves the queue empty.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutEnqueuingMessages()
+    public async Task PublishAsync_NoSmsPublished_QueueRemainsEmpty()
     {
         var factory = CreateFactory();
 
@@ -284,10 +288,6 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
-            var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
-
-            Assert.Empty(result);
-
             var message = await ServiceBusTestUtils.WaitForMessageAsync(
                 _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
 
@@ -297,16 +297,13 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
 
     /// <summary>
     /// Verifies that a pre-cancelled token causes <see cref="OperationCanceledException"/> to be thrown
-    /// before any messages in the batch are sent to the queue.
+    /// before any message is sent to the queue.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_PreCancelledTokenSingleSms_ThrowsOperationCanceledException()
     {
         var factory = CreateFactory();
-        var smsList = new List<Sms>
-        {
-            new(Guid.NewGuid(), "Altinn", "+4799999999", "Test message")
-        };
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "Test message");
 
         await using (factory)
         {
@@ -318,7 +315,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestContainersFixture fixtu
             using var cancellationTokenSource = new CancellationTokenSource();
             await cancellationTokenSource.CancelAsync();
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(smsList, cancellationTokenSource.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(sms, cancellationTokenSource.Token));
 
             await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
         }

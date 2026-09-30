@@ -17,19 +17,17 @@ public interface ISendSmsPublisher
     /// <param name="sms">The SMS object containing the message body and recipient information.</param>
     /// <param name="cancellationToken">The cancellation token used to propagate notification that the operation should be canceled.</param>
     /// <returns>
-    /// A task that represents the asynchronous operation. Returns <c>null</c> if the SMS was successfully published,
-    /// or the <see cref="Sms.NotificationId"/> if the publish operation failed.
+    /// A task that represents the asynchronous operation. Returns <c>null</c> when publish succeeds.
     /// </returns>
     Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Enqueues a batch of SMS notifications for asynchronous delivery to the SMS service.
+    /// Publishes a batch of SMS notifications asynchronously.
     /// </summary>
-    /// <param name="smsList">The collection of SMS notifications to deliver.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <param name="smsList">The SMS notifications to publish.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <returns>
-    /// A task that completes with a read-only list of <see cref="Sms"/> objects for notifications
-    /// that failed to deliver. An empty list indicates that all notifications were delivered successfully.
+    /// A task that completes with the subset of SMS notifications that failed to publish.
     /// </returns>
     Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken);
 }

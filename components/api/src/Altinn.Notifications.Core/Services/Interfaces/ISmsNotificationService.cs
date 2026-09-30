@@ -15,9 +15,11 @@ public interface ISmsNotificationService : INotificationService
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <param name="sendingTimePolicy">The policy to determine when SMS notifications should be sent.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+    /// <returns>
+    /// A task that represents the asynchronous operation.
+    /// The result is <see langword="true"/> when an SMS notification was found and processed; otherwise <see langword="false"/>.
+    /// </returns>
+    Task<bool> SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.

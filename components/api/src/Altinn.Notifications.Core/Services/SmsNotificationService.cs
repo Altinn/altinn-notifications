@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -17,10 +18,11 @@ namespace Altinn.Notifications.Core.Services;
 public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guidService;
-    private readonly int _publishBatchSize;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
     private readonly ISendSmsPublisher _smsPublisher;
+    private readonly IUnitOfWorkRepository _unitOfWorkRepository;
+    private readonly ILogger<SmsNotificationService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -30,15 +32,18 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
         ISendSmsPublisher smsPublisher,
-        IOptions<NotificationConfig> notificationConfig)
+        IOptions<NotificationConfig> notificationConfig,
+        IUnitOfWorkRepository unitOfWorkRepository,
+        ILogger<SmsNotificationService> logger)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
         _smsPublisher = smsPublisher;
+        _unitOfWorkRepository = unitOfWorkRepository;
+        _logger = logger;
 
-        var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
-        _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
+        _ = notificationConfig;
     }
 
     /// <inheritdoc/>
@@ -83,44 +88,55 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<bool> SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        List<Sms> newSmsNotifications;
-
-        do
+        UnitOfWork unitOfWork;
+        try
         {
-            newSmsNotifications = [];
+            unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", nameof(SendNotifications));
+            }
+
+            return false;
+        }
+
+        try
+        {
+            Sms? newSmsNotification = await _repository.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+            if (newSmsNotification is null)
+            {
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await _smsPublisher.PublishAsync(newSmsNotification, cancellationToken);
+            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "An error occurred while processing {OperationName}.", nameof(SendNotifications));
+            }
 
             try
             {
-                newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
-                if (newSmsNotifications.Count == 0)
-                {
-                    break;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var unpublishedSms = await _smsPublisher.PublishAsync(newSmsNotifications, cancellationToken);
-                foreach (var sms in unpublishedSms)
-                {
-                    await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
-                }
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
-            catch (OperationCanceledException)
+            catch (Exception)
             {
-                await ResetSendStatusToNewAsync(newSmsNotifications);
-
-                throw;
             }
-            catch (InvalidOperationException)
-            {
-                await ResetSendStatusToNewAsync(newSmsNotifications);
 
-                throw;
-            }
+            return false;
         }
-        while (newSmsNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
@@ -137,23 +153,6 @@ public class SmsNotificationService : ISmsNotificationService
             sendOperationResult.SendResult,
             sendOperationResult.GatewayReference,
             sendOperationResult.DeliveryReport);
-    }
-
-    /// <summary>
-    /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
-    /// </summary>
-    /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
-    private async Task ResetSendStatusToNewAsync(IEnumerable<Sms> smsNotifications)
-    {
-        if (smsNotifications is null)
-        {
-            return;
-        }
-
-        foreach (var sms in smsNotifications)
-        {
-            await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
-        }
     }
 
     /// <summary>

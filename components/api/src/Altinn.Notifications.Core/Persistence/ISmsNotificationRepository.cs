@@ -19,10 +19,10 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task AddNotification(SmsNotification notification, DateTime expiry);
 
     /// <summary>
-    /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
+    /// Retrieves the next pending SMS notification that is eligible under the specified sending time policy.
     /// </summary>
-    /// <param name="publishBatchSize">
-    /// Maximum number of SMS notifications to retrieve in a single batch.
+    /// <param name="unitOfWork">
+    /// The unit of work that provides the active connection and transaction.
     /// </param>
     /// <param name="cancellationToken">
     /// A token to observe for cancellation.
@@ -31,12 +31,21 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// Policy that determines which notifications are eligible for retrieval.
     /// </param>
     /// <returns>
-    /// A task that completes when retrieval finishes (no more eligible items) or when cancellation is requested.
-    /// The task result contains a list of SMS notifications to be processed, limited by the specified batch size.
+    /// A task that completes when retrieval finishes.
+    /// The result is the next pending SMS notification, or <see langword="null"/> when none are available.
     /// </returns>
     /// <exception cref="OperationCanceledException">
     /// Thrown if cancellation is requested before or during retrieval.
     /// </exception>
+    Task<Sms?> GetNewNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+
+    /// <summary>
+    /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
+    /// </summary>
+    /// <param name="publishBatchSize">Maximum number of notifications to retrieve.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">Policy that determines which notifications are eligible for retrieval.</param>
+    /// <returns>A task with a list of claimed SMS notifications.</returns>
     Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>

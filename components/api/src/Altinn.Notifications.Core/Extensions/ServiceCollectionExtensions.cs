@@ -29,8 +29,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddHostedService<SmsPublishBackgroundService>()
-            .AddHostedService<EmailNotificationsBackgroundService>()
-            .AddHostedService<PastDueOrdersBackgroundService>();
+            .AddHostedService<ProcessItemsBackgroundService>();
 
         services
             .AddSingleton<IGuidService, GuidService>()
