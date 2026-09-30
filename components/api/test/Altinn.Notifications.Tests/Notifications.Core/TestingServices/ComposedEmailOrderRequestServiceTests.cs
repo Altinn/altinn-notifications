@@ -118,9 +118,9 @@ public class ComposedEmailOrderRequestServiceTests
                     o.EmailAttachments.Count == 1 &&
                     o.Recipients.Any(r => r.AddressInfo.OfType<EmailAddressPoint>().Any(ep => ep.EmailAddress == "recipient@altinnxyz.no"))),
                 null,
-                It.IsAny<DateTime>(),
+                It.Is<DateTime>(d => d == request.RequestedSendTime),
                 It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) =>
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<ReminderNotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) =>
                 Assert.Equivalent(expectedOrder, o))
             .ReturnsAsync(new OrderChainCreateResult
             {
@@ -182,8 +182,8 @@ public class ComposedEmailOrderRequestServiceTests
         NotificationOrder? capturedOrder = null;
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.Is<DateTime>(d => d == request.RequestedSendTime), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<ReminderNotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
             .ReturnsAsync(new OrderChainCreateResult
             {
                 IsNewlyCreated = true,
@@ -235,8 +235,8 @@ public class ComposedEmailOrderRequestServiceTests
         NotificationOrder? capturedOrder = null;
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.Is<DateTime>(d => d == request.RequestedSendTime), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<ReminderNotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
             .ReturnsAsync(new OrderChainCreateResult
             {
                 IsNewlyCreated = true,
@@ -292,8 +292,8 @@ public class ComposedEmailOrderRequestServiceTests
         NotificationOrder? capturedOrder = null;
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), null, It.Is<DateTime>(d => d == request.RequestedSendTime), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<ReminderNotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
             .ReturnsAsync(new OrderChainCreateResult
             {
                 IsNewlyCreated = true,
@@ -371,9 +371,9 @@ public class ComposedEmailOrderRequestServiceTests
                 It.IsAny<NotificationOrderChainRequest>(),
                 It.Is<NotificationOrder>(o => o.EmailAttachments != null && o.EmailAttachments.Count == 3),
                 null,
-                It.IsAny<DateTime>(),
+                It.Is<DateTime>(d => d == request.RequestedSendTime),
                 It.IsAny<CancellationToken>()))
-            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<ReminderNotificationOrder>?, DateTime, CancellationToken>((_, o, _, _, _) => capturedOrder = o)
             .ReturnsAsync(new OrderChainCreateResult
             {
                 IsNewlyCreated = true,
