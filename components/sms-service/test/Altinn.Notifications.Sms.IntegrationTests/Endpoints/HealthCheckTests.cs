@@ -15,6 +15,7 @@ public class HealthCheckTests : IClassFixture<IntegrationTestWebApplicationFacto
     public async Task Health_Test()
     {
         // Arrange
+        _factory.ResetInstalledMocks();
         HttpClient httpClient = _factory.CreateClient();
 
         // Act

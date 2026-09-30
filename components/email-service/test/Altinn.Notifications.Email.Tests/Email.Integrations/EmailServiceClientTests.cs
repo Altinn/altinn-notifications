@@ -30,7 +30,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
             {
                 ConnectionString = "endpoint=https://test.communication.azure.com/;accesskey=testkey"
             };
-            
+
             var emailServiceAdminSettings = new EmailServiceAdminSettings
             {
                 IntermittentErrorDelay = 60

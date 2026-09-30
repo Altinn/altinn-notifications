@@ -72,7 +72,7 @@ public class EmailSendingOptionsValidatorTests
 
         // Act
         var actual = _validator.TestValidate(emailSendingOptions);
-        
+
         // Assert
         actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("Email only supports send time anytime");
     }

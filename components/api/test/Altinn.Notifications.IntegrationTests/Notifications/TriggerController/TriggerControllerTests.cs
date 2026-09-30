@@ -1,15 +1,8 @@
-﻿using System.Net;
+using System.Net;
 
 using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -17,12 +10,12 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
+public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string _basePath = "/notifications/api/v1/trigger";
-    private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
-    public TriggerControllerTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
+    public TriggerControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -72,10 +65,24 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_SendEmailNotifications_ReturnsOk()
+    public async Task Trigger_SendEmailNotifications_TaskQueued()
     {
         // Arrange
-        var client = GetTestClient();
+        var emailPublishTaskQueueMock = CreateIdleEmailQueueMock();
+        emailPublishTaskQueueMock
+            .Setup(e => e.TryEnqueue())
+            .Returns(true)
+            .Verifiable();
+
+        var composedEmailPublishSignalMock = CreateIdleComposedEmailSignalMock();
+        composedEmailPublishSignalMock
+            .Setup(e => e.TryEnqueue())
+            .Returns(true)
+            .Verifiable();
+
+        var client = GetTestClient(
+            emailPublishTaskQueue: emailPublishTaskQueueMock.Object,
+            composedEmailPublishSignal: composedEmailPublishSignalMock.Object);
 
         string url = _basePath + "/sendemail";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
@@ -85,6 +92,8 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(), Times.Once);
+        composedEmailPublishSignalMock.Verify(e => e.TryEnqueue(), Times.Once);
     }
 
     [Fact]
@@ -191,35 +200,56 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         return smsPublishTaskQueueMock;
     }
 
+    private static Mock<IEmailPublishTaskQueue> CreateIdleEmailQueueMock()
+    {
+        var taskCompletionSource = new TaskCompletionSource();
+        var emailPublishTaskQueueMock = new Mock<IEmailPublishTaskQueue>();
+        emailPublishTaskQueueMock
+            .Setup(e => e.WaitAsync(It.IsAny<CancellationToken>()))
+            .Returns(taskCompletionSource.Task);
+        return emailPublishTaskQueueMock;
+    }
+
+    private static Mock<IComposedEmailPublishSignal> CreateIdleComposedEmailSignalMock()
+    {
+        var taskCompletionSource = new TaskCompletionSource();
+        var composedEmailPublishSignalMock = new Mock<IComposedEmailPublishSignal>();
+        composedEmailPublishSignalMock
+            .Setup(e => e.WaitAsync(It.IsAny<CancellationToken>()))
+            .Returns(taskCompletionSource.Task);
+
+        return composedEmailPublishSignalMock;
+    }
+
     private HttpClient GetTestClient(
         IStatusFeedService? statusFeedService = null,
         ISmsPublishTaskQueue? smsPublishTaskQueue = null,
+        IEmailPublishTaskQueue? emailPublishTaskQueue = null,
         ISmsNotificationService? smsNotificationService = null,
         IOrderProcessingService? orderProcessingService = null,
         IEmailNotificationService? emailNotificationService = null,
+        IComposedEmailPublishSignal? composedEmailPublishSignal = null,
         INotificationScheduleService? notificationScheduleService = null)
     {
         smsPublishTaskQueue ??= CreateIdleSmsQueueMock().Object;
+        emailPublishTaskQueue ??= CreateIdleEmailQueueMock().Object;
         statusFeedService ??= new Mock<IStatusFeedService>().Object;
         smsNotificationService ??= new Mock<ISmsNotificationService>().Object;
         orderProcessingService ??= new Mock<IOrderProcessingService>().Object;
         emailNotificationService ??= new Mock<IEmailNotificationService>().Object;
+        composedEmailPublishSignal ??= new Mock<IComposedEmailPublishSignal>().Object;
         notificationScheduleService ??= new Mock<INotificationScheduleService>().Object;
 
-        return _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(statusFeedService);
+        _factory.InstallService(smsPublishTaskQueue);
+        _factory.InstallService(emailPublishTaskQueue);
+        _factory.InstallService(smsNotificationService);
+        _factory.InstallService(orderProcessingService);
+        _factory.InstallService(emailNotificationService);
+        _factory.InstallService(composedEmailPublishSignal);
+        _factory.InstallService(notificationScheduleService);
 
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(statusFeedService);
-                services.AddSingleton(smsPublishTaskQueue);
-                services.AddSingleton(smsNotificationService);
-                services.AddSingleton(orderProcessingService);
-                services.AddSingleton(emailNotificationService);
-                services.AddSingleton(notificationScheduleService);
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
+        return _factory.SharedClient;
     }
 }

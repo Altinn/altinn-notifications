@@ -5,7 +5,6 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Moq;
@@ -15,9 +14,24 @@ using Xunit;
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailSendResultPublisherTests(IntegrationTestContainersFixture fixture)
+public class EmailSendResultPublisherTests(IntegrationTestEmailContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestEmailContainersFixture _fixture = fixture;
+
+    private async Task<Mock<IEmailServiceClient>> UseEmailClientMockAsync()
+    {
+        var webHost = _fixture.WebHost;
+        string checkQueueName = webHost.WolverineSettings!.EmailStatusCheckQueueName;
+        string resultQueueName = webHost.WolverineSettings!.EmailSendResultQueueName;
+
+        await _fixture.DrainQueueAsync(checkQueueName);
+        await _fixture.DrainQueueAsync(resultQueueName);
+
+        _fixture.ResetInstalledMocks();
+        var emailClientMock = new Mock<IEmailServiceClient>();
+        _fixture.InstallService<IEmailServiceClient>(emailClientMock.Object);
+        return emailClientMock;
+    }
 
     private static CheckEmailSendStatusCommand ValidCheckCommand() => new()
     {
@@ -40,39 +54,33 @@ public class EmailSendResultPublisherTests(IntegrationTestContainersFixture fixt
     {
         // Arrange
         var command = ValidCheckCommand();
+        var emailClientMock = await UseEmailClientMockAsync();
 
-        var emailClientMock = new Mock<IEmailServiceClient>();
+        var webHost = _fixture.WebHost;
         emailClientMock
             .Setup(e => e.GetOperationUpdate(command.SendOperationId))
             .ReturnsAsync(terminalResult);
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => emailClientMock.Object)
-            .Initialize();
+        string checkQueueName = webHost.WolverineSettings!.EmailStatusCheckQueueName;
+        string resultQueueName = webHost.WolverineSettings!.EmailSendResultQueueName;
 
-        await using (factory)
-        {
-            string checkQueueName = factory.WolverineSettings!.EmailStatusCheckQueueName;
-            string resultQueueName = factory.WolverineSettings!.EmailSendResultQueueName;
+        // Act
+        await webHost.SendToQueueAsync(checkQueueName, command);
 
-            // Act
-            await factory.SendToQueueAsync(checkQueueName, command);
+        // Assert
+        var message = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            resultQueueName,
+            TimeSpan.FromSeconds(15));
 
-            // Assert
-            var message = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                resultQueueName,
-                TimeSpan.FromSeconds(15));
+        Assert.NotNull(message);
 
-            Assert.NotNull(message);
+        var resultCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(message.Body.ToString());
 
-            var resultCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(message.Body.ToString());
-            
-            Assert.NotNull(resultCommand);
+        Assert.NotNull(resultCommand);
 
-            Assert.Equal(command.SendOperationId, resultCommand.OperationId);
-            Assert.Equal(terminalResult.ToString(), resultCommand.SendResult);
-            Assert.Equal(command.NotificationId, resultCommand.NotificationId);
-        }
+        Assert.Equal(command.SendOperationId, resultCommand.OperationId);
+        Assert.Equal(terminalResult.ToString(), resultCommand.SendResult);
+        Assert.Equal(command.NotificationId, resultCommand.NotificationId);
     }
 }

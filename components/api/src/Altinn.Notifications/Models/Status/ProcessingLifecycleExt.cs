@@ -78,6 +78,16 @@ public enum ProcessingLifecycleExt
     Order_Processed = 5,
 
     /// <summary>
+    /// The order is currently being retried due to a previous failure in processing.
+    /// </summary>
+    Order_Retrying = 6,
+
+    /// <summary>
+    /// The order has failed due to an error in processing after exhausting all retry attempts.
+    /// </summary>
+    Order_Failed = 7,
+    
+    /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>

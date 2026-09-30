@@ -57,7 +57,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
 
             // Act
             var result = _validator.TestValidate(notificationOrder);
-            
+
             // Assert
             result.ShouldHaveValidationErrorFor(x => x.ConditionEndpoint)
                 .WithErrorMessage("ConditionEndpoint must use http or https scheme.");

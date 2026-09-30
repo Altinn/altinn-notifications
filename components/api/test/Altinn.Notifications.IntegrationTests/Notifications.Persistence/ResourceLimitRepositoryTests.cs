@@ -49,13 +49,13 @@ public sealed class ResourceLimitRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.True(result);
-        
+
         DateTime? actualTimeout = await GetEmailTimeoutFromDb();
         Assert.NotNull(actualTimeout);
         Assert.Equal(
-            newTimeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"), 
+            newTimeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),
             actualTimeout.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
-        
+
         // Verify only one row was affected (no new rows inserted)
         int rowCount = await GetResourceLimitLogRowCount();
         Assert.Equal(1, rowCount); // Should still be just one row
@@ -80,11 +80,11 @@ public sealed class ResourceLimitRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.True(result);
-        
+
         DateTime? actualTimeout = await GetEmailTimeoutFromDb();
         Assert.NotNull(actualTimeout);
         Assert.Equal(
-            timeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"), 
+            timeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),
             actualTimeout.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
     }
 
@@ -113,11 +113,11 @@ public sealed class ResourceLimitRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.True(result);
-        
+
         DateTime? actualTimeout = await GetEmailTimeoutFromDb();
         Assert.NotNull(actualTimeout);
         Assert.Equal(
-            timeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"), 
+            timeout.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),
             actualTimeout.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
     }
 

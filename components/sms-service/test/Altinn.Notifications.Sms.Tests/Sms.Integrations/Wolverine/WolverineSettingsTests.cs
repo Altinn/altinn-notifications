@@ -15,7 +15,7 @@ public class WolverineSettingsTests
 
         Assert.Equal(10, settings.SendSmsListenerCount);
         Assert.NotNull(settings.SendSmsQueuePolicy);
-        
+
         Assert.NotNull(settings.SendSmsQueueGatewayErrorPolicy);
         Assert.Equal(string.Empty, settings.SendSmsQueueName);
 
