@@ -43,7 +43,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
         };
 
         // Act - Send the command to the ASB queue (simulating the email service)
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Poll the database until the handler updates the status to "Delivered"
@@ -90,7 +90,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
         };
 
         // Act - Send a command that will trigger NpgsqlException on every attempt
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Wait for message to appear in dead letter queue after retries exhaust
@@ -126,7 +126,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
         };
 
         // Act - Send command with an unrecognized SendResult value
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Dead delivery report should be saved to the database
@@ -187,7 +187,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
             OperationId = operationId,
             SendResult = EmailNotificationResultType.Delivered.ToString()
         };
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
@@ -254,7 +254,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
             OperationId = operationId,
             SendResult = EmailNotificationResultType.Delivered.ToString()
         };
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Poll the dead delivery reports table until the report appears
@@ -311,7 +311,7 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
         };
 
         // Act
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, command);
 
         // Assert - Dead delivery report saved with the correct reason

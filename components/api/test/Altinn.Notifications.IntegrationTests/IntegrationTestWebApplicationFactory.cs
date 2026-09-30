@@ -1,23 +1,18 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-
+using System.Runtime.ExceptionServices;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
-
 using AltinnCore.Authentication.JwtCookie;
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -25,7 +20,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-
 using Moq;
 
 namespace Altinn.Notifications.IntegrationTests;
@@ -265,7 +259,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             }
             catch (TargetInvocationException ex) when (ex.InnerException != null)
             {
-                throw ex.InnerException;
+                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw; // unreachable, satisfies compiler
             }
         }
     }

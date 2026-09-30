@@ -39,7 +39,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixtur
         await PostgreUtil.UpdateSmsSendStatus(factory, notification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
         // Act - Send an SMS delivery report command to the queue via Wolverine (simulates the SMS service)
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
         {
             NotificationId = notification.Id,
@@ -83,7 +83,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixtur
         string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
 
         // Act - Send delivery report with a gatewayReference that doesn't match any notification
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
         {
             NotificationId = null,
@@ -237,7 +237,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixtur
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
         string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act - Send delivery report with an empty GatewayReference.
         // The handler throws InvalidDeliveryReportException, which is not in the
@@ -270,7 +270,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixtur
         var factory = _fixture.WebHost;
         string queueName = factory.WolverineSettings!.SmsDeliveryReportQueueName;
         string gatewayReference = Guid.NewGuid().ToString();
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act - Send delivery report with a SendResult value that is not a valid enum member.
         // Enum.Parse<SmsNotificationResultType> will throw ArgumentException, which is not
@@ -320,7 +320,7 @@ public class SmsDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixtur
         });
 
         // Act — send a delivery report command through Wolverine (stamps required envelope headers)
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToQueueAsync(queueName, new SmsDeliveryReportCommand
         {
             NotificationId = notification.Id,

@@ -42,7 +42,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
             new(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, [])
         };
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -65,7 +65,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
             new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, [])
         };
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -84,7 +84,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
     {
         var factory = CreateFactory();
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -112,7 +112,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         var notificationId = Guid.NewGuid();
         var email = new ComposedEmail(notificationId, "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html, []);
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -148,7 +148,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         var attachment = new SasFileReference { Filename = "report.pdf", MimeType = "application/pdf", SasUrl = _sasUrl };
         var email = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, [attachment]);
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
@@ -185,7 +185,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         var htmlEmail = new ComposedEmail(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, []);
         var emails = new List<ComposedEmail> { plainEmail, htmlEmail };
         {
-            await _fixture.DrainQueue(_composedEmailSendQueueName);
+            await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 

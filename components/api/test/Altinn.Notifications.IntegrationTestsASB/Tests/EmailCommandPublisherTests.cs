@@ -34,7 +34,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -54,7 +54,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -84,7 +84,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -106,7 +106,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var firstEmail = new Email(Guid.NewGuid(), "First", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         var secondEmail = new Email(Guid.NewGuid(), "Second", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -161,7 +161,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var notificationId = Guid.NewGuid();
         var email = new Email(notificationId, "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -199,7 +199,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
             new(Guid.NewGuid(), "Subject 2", "Body 2", "sender@altinnxyz.no", "recipient2@altinnxyz.no", EmailContentType.Html)
         };
 
-        await _fixture.DrainQueue(_emailSendQueueName);
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
 
         var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -220,7 +220,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
         var secondEmail = new Email(Guid.NewGuid(), "Second Subject", "Second Body", "sender@altinnxyz.no", "second@altinnxyz.no", EmailContentType.Html);
         var emails = new List<Email> { firstEmail, secondEmail };
 
-        await _fixture.DrainQueue(_emailSendQueueName);
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
         var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
         await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
@@ -264,7 +264,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
     {
         var factory = CreateFactory();
 
-        await _fixture.DrainQueue(_emailSendQueueName);
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
         var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
         var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
@@ -290,7 +290,7 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
             new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain)
         };
         {
-            await _fixture.DrainQueue(_emailSendQueueName);
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             using var cancellationTokenSource = new CancellationTokenSource();
             await cancellationTokenSource.CancelAsync();

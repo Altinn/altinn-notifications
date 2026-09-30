@@ -52,8 +52,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;
         string emailServiceRateLimitQueueName = webHost.WolverineSettings!.EmailServiceRateLimitQueueName;
 
-        await _fixture.DrainQueue(emailSendQueueName);
-        await _fixture.DrainQueue(emailServiceRateLimitQueueName);
+        await _fixture.DrainQueueAsync(emailSendQueueName);
+        await _fixture.DrainQueueAsync(emailServiceRateLimitQueueName);
 
         // Act
         await webHost.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
@@ -100,8 +100,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;
         string emailServiceRateLimitQueueName = webHost.WolverineSettings!.EmailServiceRateLimitQueueName;
 
-        await _fixture.DrainQueue(emailSendQueueName);
-        await _fixture.DrainQueue(emailServiceRateLimitQueueName);
+        await _fixture.DrainQueueAsync(emailSendQueueName);
+        await _fixture.DrainQueueAsync(emailServiceRateLimitQueueName);
 
         // Act
         await webHost.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());
@@ -139,8 +139,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;
         string emailServiceRateLimitQueueName = webHost.WolverineSettings!.EmailServiceRateLimitQueueName;
 
-        await _fixture.DrainQueue(emailSendQueueName);
-        await _fixture.DrainQueue(emailServiceRateLimitQueueName);
+        await _fixture.DrainQueueAsync(emailSendQueueName);
+        await _fixture.DrainQueueAsync(emailServiceRateLimitQueueName);
 
         // Act
         await webHost.SendToEndpointAsync(emailSendQueueName, ValidSendEmailCommand());

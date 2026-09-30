@@ -52,8 +52,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
         emailClientMock
             .Setup(c => c.GetOperationUpdate(command.SendOperationId))
             .ReturnsAsync(terminalResult);
-        await _fixture.DrainQueue(EmailStatusCheckQueueName);
-        await _fixture.DrainQueue(EmailSendResultQueueName);
+        await _fixture.DrainQueueAsync(EmailStatusCheckQueueName);
+        await _fixture.DrainQueueAsync(EmailSendResultQueueName);
 
         // Act
         await webHost.SendToQueueAsync(EmailStatusCheckQueueName, command);
@@ -89,8 +89,8 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
             })
             .ThrowsAsync(new InvalidOperationException("Simulated ACS error"));
 
-        await _fixture.DrainQueue(EmailStatusCheckQueueName);
-        await _fixture.DrainQueue(EmailSendResultQueueName);
+        await _fixture.DrainQueueAsync(EmailStatusCheckQueueName);
+        await _fixture.DrainQueueAsync(EmailSendResultQueueName);
 
         var policy = _fixture.WebHost.WolverineSettings!.EmailStatusCheckQueuePolicy;
         int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
@@ -122,7 +122,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
     public async Task CheckEmailSendStatus_WhenNotificationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
         var webHost = _fixture.WebHost;
-        await _fixture.DrainQueue(EmailStatusCheckQueueName);
+        await _fixture.DrainQueueAsync(EmailStatusCheckQueueName);
 
         // Act - NotificationId = Guid.Empty triggers ArgumentException in the handler guard clause
         await webHost.SendToQueueAsync(EmailStatusCheckQueueName, new CheckEmailSendStatusCommand
@@ -144,7 +144,7 @@ public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixt
     public async Task CheckEmailSendStatus_WhenSendOperationIdIsEmpty_GoesToDeadLetterQueueWithoutRetry()
     {
         var webHost = _fixture.WebHost;
-        await _fixture.DrainQueue(EmailStatusCheckQueueName);
+        await _fixture.DrainQueueAsync(EmailStatusCheckQueueName);
 
         // Act - SendOperationId = string.Empty triggers ArgumentException in the handler guard clause.
         // ArgumentException is not in the CheckEmailSendStatusHandlerPolicy chain → DLQ immediately.

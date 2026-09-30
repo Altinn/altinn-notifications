@@ -44,7 +44,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainers
         var webHost = _fixture.WebHost;
 
         string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -70,7 +70,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainers
         var webHost = _fixture.WebHost;
 
         string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -91,7 +91,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainers
         var webHost = _fixture.WebHost;
 
         string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -119,7 +119,7 @@ public class SendComposedEmailCommandHandlerTests(IntegrationTestEmailContainers
         var webHost = _fixture.WebHost;
 
         string queueName = webHost.WolverineSettings!.ComposedEmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);

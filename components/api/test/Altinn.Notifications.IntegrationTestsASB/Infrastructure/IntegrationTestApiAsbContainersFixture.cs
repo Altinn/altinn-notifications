@@ -58,7 +58,7 @@ public class IntegrationTestApiAsbContainersFixture : IntegrationTestContainersF
     /// Drains both the main queue and its dead-letter queue.
     /// </summary>
     /// <param name="queueName">Queue name to drain.</param>
-    internal async Task DrainQueue(string queueName)
+    internal async Task DrainQueueAsync(string queueName)
     {
         await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, queueName);
         await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, $"{queueName}/$deadletterqueue");

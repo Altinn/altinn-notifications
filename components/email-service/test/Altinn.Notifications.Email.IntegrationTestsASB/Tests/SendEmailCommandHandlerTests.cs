@@ -40,7 +40,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
 
         var webHost = _fixture.WebHost;
         string queueName = webHost.WolverineSettings!.EmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -73,7 +73,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
 
         var webHost = _fixture.WebHost;
         string queueName = webHost.WolverineSettings!.EmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -103,7 +103,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
         var webHost = _fixture.WebHost;
 
         string queueName = webHost.WolverineSettings!.EmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, command);
@@ -136,7 +136,7 @@ public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture 
         var policy = webHost.WolverineSettings!.EmailSendQueuePolicy;
         int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
         string queueName = webHost.WolverineSettings!.EmailSendQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
 
         // Act
         await webHost.SendToEndpointAsync(queueName, new SendEmailCommand

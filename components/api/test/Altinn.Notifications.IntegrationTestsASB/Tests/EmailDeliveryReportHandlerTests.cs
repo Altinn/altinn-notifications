@@ -40,7 +40,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
 
         // Act - Send a raw EventGrid delivery report to the queue (simulates ACS + Event Grid)
         string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
         // Assert - Poll the database until the handler updates the status to "Delivered"
@@ -81,7 +81,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
         // Act - Send delivery report with an operationId that doesn't match any notification
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
 
         // Assert - Poll the dead delivery reports table until the report appears after retries exhaust
@@ -195,7 +195,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         string operationId = Guid.NewGuid().ToString();
 
         // Act - Send delivery report that will trigger NpgsqlException on every attempt
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, operationId, "Delivered");
 
         // Assert - Wait for message to appear in dead letter queue after retries exhaust
@@ -267,7 +267,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         // Act - Send a delivery report where messageId is empty.
         // InvalidDeliveryReportException is not in the policy error chain, so the
         // message goes to the dead letter queue immediately without any retries.
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, operationId: string.Empty, status: "Delivered");
 
         // Assert - Message should appear in DLQ immediately (no retries)
@@ -294,7 +294,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         // Act - Send a delivery report with a status value that cannot be parsed.
         // Utils.ParseDeliveryStatus throws ArgumentException, which the handler
         // re-throws as InvalidDeliveryReportException — not in the policy chain → DLQ.
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, Guid.NewGuid().ToString(), status: "NotAValidAcsStatus");
 
         // Assert - Message should appear in DLQ immediately (no retries)
@@ -321,7 +321,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
         // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
         // branch and throws InvalidDeliveryReportException → DLQ immediately.
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendRawEventGridEventAsync(
             queueName,
             eventType: "Microsoft.Storage.BlobCreated",
@@ -362,7 +362,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         // Act - Send an event with a custom (non-Azure-system) event type so that
         // TryGetSystemEventData returns false. The handler's else branch throws
         // InvalidDeliveryReportException → DLQ immediately.
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendRawEventGridEventAsync(
             queueName,
             eventType: "Custom.Notification.Event",
@@ -443,7 +443,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         // Record the window around the original send — the ASB broker stamps EnqueuedTime here.
         // FirstSeen must stay anchored to this, not drift forward with each retry re-enqueue.
         var beforeSend = DateTime.UtcNow;
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await SendDeliveryReportAsync(queueName, unmatchedOperationId, "Delivered");
         var afterSend = DateTime.UtcNow;
 

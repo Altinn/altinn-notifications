@@ -5,7 +5,6 @@ using Altinn.Notifications.Sms.Integrations.Configuration;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 

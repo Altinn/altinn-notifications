@@ -24,8 +24,8 @@ public class EmailSendResultPublisherTests(IntegrationTestEmailContainersFixture
         string checkQueueName = webHost.WolverineSettings!.EmailStatusCheckQueueName;
         string resultQueueName = webHost.WolverineSettings!.EmailSendResultQueueName;
 
-        await _fixture.DrainQueue(checkQueueName);
-        await _fixture.DrainQueue(resultQueueName);
+        await _fixture.DrainQueueAsync(checkQueueName);
+        await _fixture.DrainQueueAsync(resultQueueName);
 
         _fixture.ResetInstalledMocks();
         var emailClientMock = new Mock<IEmailServiceClient>();

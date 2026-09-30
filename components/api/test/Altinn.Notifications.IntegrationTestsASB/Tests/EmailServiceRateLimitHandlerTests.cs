@@ -49,7 +49,7 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestApiAsbContainersFi
         };
 
         // Act
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToEndpointAsync(queueName, command);
 
         // Assert
@@ -95,7 +95,7 @@ public class EmailServiceRateLimitHandlerTests(IntegrationTestApiAsbContainersFi
         var deadLetterWaitTimeout = TimeSpan.FromMilliseconds(totalPolicyDelayMs) + TimeSpan.FromSeconds(10);
 
         // Act
-        await _fixture.DrainQueue(queueName);
+        await _fixture.DrainQueueAsync(queueName);
         await factory.SendToEndpointAsync(queueName, new EmailServiceRateLimitCommand
         {
             Source = "platform-notifications-email",

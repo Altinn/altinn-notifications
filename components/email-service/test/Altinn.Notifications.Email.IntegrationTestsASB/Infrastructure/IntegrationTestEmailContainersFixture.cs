@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
-using Altinn.Notifications.Email.Core.Sending;
-using Altinn.Notifications.Email.Integrations.Configuration;
+﻿using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
@@ -8,8 +6,6 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
 {
     public class IntegrationTestEmailContainersFixture : IntegrationTestContainersFixture
     {
-        private static readonly bool UseBaseBehaviour = false;
-
         /// <summary>
         /// Gets the shared email ASB test host instance.
         /// </summary>
@@ -43,7 +39,7 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
         /// Drains both the main queue and its dead-letter queue.
         /// </summary>
         /// <param name="queueName">Queue name to drain.</param>
-        internal async Task DrainQueue(string queueName)
+        internal async Task DrainQueueAsync(string queueName)
         {
             await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, queueName);
             await ServiceBusTestUtils.DrainQueueAsync(ServiceBusConnectionString, $"{queueName}/$deadletterqueue");
@@ -52,10 +48,6 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
         public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
-            if (UseBaseBehaviour)
-            {
-                return;
-            }
 
             // Needed if IsLocalASBDisabled in IntegrationTestContainersFixture is set to true
             ServiceBusConnectionString = string.IsNullOrEmpty(ServiceBusConnectionString)
@@ -75,11 +67,6 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
                 if (WebHost != null)
                 {
                     await WebHost.DisposeAsync();
-                }
-
-                if (UseBaseBehaviour)
-                {
-                    return;
                 }
 
                 await base.DisposeAsync();

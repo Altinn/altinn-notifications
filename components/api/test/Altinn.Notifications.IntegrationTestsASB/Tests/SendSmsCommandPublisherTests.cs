@@ -38,7 +38,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
             message: "Integration test SMS");
         {
             string smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -67,7 +67,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
             message: "Test message body");
         {
             var smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -105,7 +105,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
             message: "Test message");
         {
             var smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -114,7 +114,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(sms, cancellationTokenSource.Token));
 
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
         }
     }
 
@@ -138,7 +138,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
             message: "Second message");
         {
             var smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -192,7 +192,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
         };
         {
             var smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -220,7 +220,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
         var secondSms = new Sms(Guid.NewGuid(), "Altinn", "+4722222222", "Second batch message");
         var smsList = new List<Sms> { firstSms, secondSms };
         var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueue(smsSendQueueName);
+        await _fixture.DrainQueueAsync(smsSendQueueName);
 
         var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -263,7 +263,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
     {
         var factory = CreateFactory();
         var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueue(smsSendQueueName);
+        await _fixture.DrainQueueAsync(smsSendQueueName);
 
         var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -291,7 +291,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
         };
         {
             var smsSendQueueName = GetQueueName(factory);
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
@@ -300,7 +300,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(smsList, cancellationTokenSource.Token));
 
-            await _fixture.DrainQueue(smsSendQueueName);
+            await _fixture.DrainQueueAsync(smsSendQueueName);
         }
     }
 
