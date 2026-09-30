@@ -587,7 +587,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         order.RequestedSendTime = requestedSendTime;
         order.Type = orderType;
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
 
         await emailRepo.AddNotification(
                 new EmailNotification
@@ -614,7 +614,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         order.RequestedSendTime = requestedSendTime;
         order.Type = orderType;
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
 
         await smsRepo.AddNotification(
                 new SmsNotification
@@ -641,7 +641,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         order.Id = Guid.NewGuid();
         order.RequestedSendTime = requestedSendTime;
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
 
         await emailRepo.AddNotification(
                 new EmailNotification

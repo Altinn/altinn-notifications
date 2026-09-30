@@ -77,7 +77,7 @@ public class OrderRequestService : IOrderRequestService
             RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
         };
 
-        NotificationOrder savedOrder = await _repository.Create(order);
+        NotificationOrder savedOrder = await _repository.Create(order, order.RequestedSendTime);
 
         return new NotificationOrderRequestResponse()
         {
@@ -141,7 +141,7 @@ public class OrderRequestService : IOrderRequestService
         // 6. Persist atomically and return the response.
         //    If a concurrent first-time request won the race, result.IsNewlyCreated
         //    will be false and the existing chain's data is returned directly.
-        return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
+        return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value.Order, remindersResult.Value, mainOrderResult.Value.RequestedSendTime, cancellationToken);
     }
 
     /// <summary>
@@ -459,7 +459,7 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Constructs a complete notification order with all required properties</description></item>
     /// </list>
     /// </remarks>
-    private async Task<Result<NotificationOrder>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
+    private async Task<Result<MainNotificationOrderResult>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
         var deliveryDetails = ExtractDeliveryDetails(orderRequest.Recipient);
 
@@ -478,24 +478,26 @@ public class OrderRequestService : IOrderRequestService
             deliveryDetails.Channel,
             deliveryDetails.SmsSendingTimePolicy);
 
-        return new NotificationOrder
-        {
-            Created = currentTime,
-            Templates = templates,
-            Type = orderRequest.Type,
-            Id = orderRequest.OrderId,
-            Creator = orderRequest.Creator,
-            ResourceId = deliveryDetails.ResourceId,
-            ResourceAction = deliveryDetails.ResourceAction,
-            Recipients = deliveryDetails.Recipients,
-            NotificationChannel = deliveryDetails.Channel,
-            SendersReference = orderRequest.SendersReference,
-            RequestedSendTime = requestedSendTime,
-            ConditionEndpoint = orderRequest.ConditionEndpoint,
-            IgnoreReservation = deliveryDetails.IgnoreReservation,
-            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
-        };
+        return new MainNotificationOrderResult(
+            new NotificationOrder
+            {
+                Created = currentTime,
+                Templates = templates,
+                Type = orderRequest.Type,
+                Id = orderRequest.OrderId,
+                Creator = orderRequest.Creator,
+                ResourceId = deliveryDetails.ResourceId,
+                ResourceAction = deliveryDetails.ResourceAction,
+                Recipients = deliveryDetails.Recipients,
+                NotificationChannel = deliveryDetails.Channel,
+                SendersReference = orderRequest.SendersReference,
+                RequestedSendTime = orderRequest.RequestedSendTime,
+                ConditionEndpoint = orderRequest.ConditionEndpoint,
+                IgnoreReservation = deliveryDetails.IgnoreReservation,
+                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+                SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
+            },
+            requestedSendTime);
     }
 
     /// <summary>
@@ -699,6 +701,7 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="reminderOrders">
     /// Optional collection of follow-up notification orders to be delivered after the main notification.
     /// </param>
+    /// <param name="requestedSendTime">The requested send time for the notification order.</param>
     /// <param name="cancellationToken">
     /// A token that can be used to request cancellation of the asynchronous database operation.
     /// </param>
@@ -720,9 +723,9 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="InvalidOperationException">
     /// Thrown when the repository fails to persist the order chain.
     /// </exception>
-    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
+    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, DateTime requestedSendTime, CancellationToken cancellationToken)
     {
-        var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, requestedSendTime, cancellationToken);
 
         return new NotificationOrderChainResponse
         {
@@ -742,4 +745,12 @@ public class OrderRequestService : IOrderRequestService
             }
         };
     }
+
+    /// <summary>
+    /// Represents the outcome of creating the main notification order, pairing the constructed
+    /// <see cref="NotificationOrder"/> with the resolved requested send time.
+    /// </summary>
+    /// <param name="Order">The fully configured notification order ready for persistence and processing.</param>
+    /// <param name="RequestedSendTime">The resolved requested send time for the order.</param>
+    private sealed record MainNotificationOrderResult(NotificationOrder Order, DateTime RequestedSendTime);
 }

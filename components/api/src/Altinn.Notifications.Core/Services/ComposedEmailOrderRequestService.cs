@@ -61,7 +61,7 @@ public class ComposedEmailOrderRequestService(
             Templates = [new EmailTemplate(fromAddress, composedEmailSettings.Subject, composedEmailSettings.Body, composedEmailSettings.ContentType)]
         };
 
-        var result = await _repository.Create(orderRequest, mainOrder, null, cancellationToken);
+        var result = await _repository.Create(orderRequest, mainOrder, null, orderRequest.RequestedSendTime, cancellationToken);
 
         return new NotificationOrderChainResponse
         {

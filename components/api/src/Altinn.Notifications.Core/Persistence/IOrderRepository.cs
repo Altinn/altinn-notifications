@@ -14,12 +14,13 @@ public interface IOrderRepository
     /// Creates a new notification order in the database with processing status set to <see cref="OrderProcessingStatus.Registered"/>.
     /// </summary>
     /// <param name="order">The order to save</param>
+    /// <param name="requestedSendTime">The requested send time for the order.</param>
     /// <returns>The saved notification order</returns>
     /// <remarks>
     /// This method persists the notification order with <see cref="OrderProcessingStatus.Registered"/>, 
     /// indicating it is ready for asynchronous processing by the notification pipeline.
     /// </remarks>
-    public Task<NotificationOrder> Create(NotificationOrder order);
+    public Task<NotificationOrder> Create(NotificationOrder order, DateTime requestedSendTime);
 
     /// <summary>
     /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
@@ -27,6 +28,7 @@ public interface IOrderRepository
     /// <param name="orderChain">The chain containing settings for the notification sequence.</param>
     /// <param name="mainOrder">The primary notification order that will be sent first.</param>
     /// <param name="reminders">A list of follow-up notification orders that will be sent after the main notification conditions.</param>
+    /// <param name="requestedSendTime">The original send time, requested by the order request.</param>
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
@@ -40,7 +42,7 @@ public interface IOrderRepository
     /// When a concurrent request with the same idempotency key has already committed the chain,
     /// the insert is silently skipped and the existing chain's tracking data is returned.
     /// </remarks>
-    public Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
+    public Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new new high-priority instant notification order in the database.

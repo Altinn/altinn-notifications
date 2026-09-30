@@ -76,7 +76,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Assert
         string emailSql = $@"SELECT count(1) 
@@ -118,7 +118,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Assert
         string sql = $@"SELECT processedstatus 
@@ -152,7 +152,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Act
         NotificationOrderWithStatus? actual = await repo.GetOrderWithStatusById(order.Id, "test");
@@ -183,7 +183,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         foreach (OrderProcessingStatus statusType in Enum.GetValues<OrderProcessingStatus>())
         {
@@ -222,7 +222,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Record time before setting status
         DateTime beforeStatusUpdate = DateTime.UtcNow;
@@ -262,7 +262,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
@@ -298,7 +298,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
@@ -361,7 +361,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Act
         Result<NotificationOrderWithStatus, CancellationError> result = await repo.CancelOrder(order.Id, order.Creator.ShortName);
@@ -398,7 +398,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Act
         Result<NotificationOrderWithStatus, CancellationError> result = await repo.CancelOrder(order.Id, order.Creator.ShortName);
@@ -476,7 +476,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -650,7 +650,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -882,7 +882,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1127,7 +1127,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1241,7 +1241,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null, invalidOrder.RequestedSendTime, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1308,7 +1308,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await cancellationTokenSource.CancelAsync();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, cancellationTokenSource.Token));
     }
 
     [Fact]
@@ -1405,7 +1405,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             ]
         };
 
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -1530,7 +1530,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Inserts the order chain with reminder in the database.
-        await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -1704,7 +1704,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Insert the order chain with reminders in the database
-        await repo.Create(orderRequest, mainOrder, reminders, TestContext.Current.CancellationToken);
+        await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -1791,7 +1791,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Insert the order chain in the database
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -1849,7 +1849,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             ]
         };
 
-        var orderCreationResult = await repo.Create(notificationOrder);
+        var orderCreationResult = await repo.Create(notificationOrder, notificationOrder.RequestedSendTime);
         switch (currentStatus)
         {
             case OrderProcessingStatus.Registered:
@@ -2691,7 +2691,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act
         // Create the normal order
-        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null, TestContext.Current.CancellationToken);
+        var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null, normalNotificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Create the instant order
         var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1, TestContext.Current.CancellationToken);
@@ -2910,8 +2910,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, TestContext.Current.CancellationToken);
-        var result2 = await sut.Create(notificationOrderRequest2, notificationOrder2, null, TestContext.Current.CancellationToken);
+        var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, notificationOrder1.RequestedSendTime, TestContext.Current.CancellationToken);
+        var result2 = await sut.Create(notificationOrderRequest2, notificationOrder2, null, notificationOrder2.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(result1);
@@ -2978,7 +2978,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await sut.Create(notificationOrderRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await sut.Create(notificationOrderRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await sut.RetrieveInstantOrderTrackingInformation(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -3157,7 +3157,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
         };
 
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -3220,7 +3220,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
         };
 
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -3248,7 +3248,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailNotification = new EmailNotification
@@ -3305,7 +3305,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailNotification = new EmailNotification
@@ -3357,7 +3357,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Two notifications with the same Id triggers a unique constraint violation on the second insert,
@@ -3429,7 +3429,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
@@ -3470,7 +3470,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // Act
@@ -3508,7 +3508,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         // First delivery — normal path
@@ -3546,7 +3546,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
 
@@ -3611,7 +3611,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailResult = new EmailOrderProcessingResult(
@@ -3676,7 +3676,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailResult = new EmailOrderProcessingResult(
@@ -3739,7 +3739,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var notificationId = Guid.NewGuid();
@@ -3806,7 +3806,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var notificationId = Guid.NewGuid();
@@ -3884,7 +3884,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailNotifications = new List<EmailNotification>
@@ -3940,7 +3940,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailNotifications = new List<EmailNotification>
@@ -4004,7 +4004,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var emailResult = new EmailOrderProcessingResult([], ExpirationDateTime: null);
@@ -4052,7 +4052,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Order stays in Registered — never advanced to Processing
         var emailNotification = new EmailNotification
@@ -4108,7 +4108,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Order stays in Registered — never advanced to Processing
 
@@ -4187,7 +4187,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
         };
 
-        await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -4265,7 +4265,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert — ordersResult contains only the main order, no reminders
         Assert.NotNull(result);
@@ -4354,7 +4354,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -4461,8 +4461,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, TestContext.Current.CancellationToken);
-        var duplicateResult = await repo.Create(duplicateOrderRequest, duplicateOrder, null, TestContext.Current.CancellationToken);
+        var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, originalOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        var duplicateResult = await repo.Create(duplicateOrderRequest, duplicateOrder, null, duplicateOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(originalResult);
@@ -4535,7 +4535,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-            await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
+            await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, cancellationTokenSource.Token));
 
         // Verify nothing was persisted
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";

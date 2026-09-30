@@ -62,7 +62,7 @@ public static class TestDataUtil
         var emailRepo = TestServiceUtil.GetService<IEmailNotificationRepository>();
         
         // Create order using repository (ensures proper transaction handling)
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         
         // Set to Processing status to trigger notification creation
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
@@ -126,7 +126,7 @@ public static class TestDataUtil
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
 
         // Create order using repository (ensures proper transaction handling)
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         
         return order.Id;
     }

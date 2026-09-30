@@ -289,7 +289,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var notifications = new List<EmailNotification>
@@ -761,7 +761,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             Recipients = [new Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])]
         };
 
-        await orderRepo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await orderRepo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         EmailNotification emailNotification = new()
         {
@@ -979,7 +979,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             ]
         };
 
-        await orderRepo.Create(orderChainRequest, notificationOrder, null, TestContext.Current.CancellationToken);
+        await orderRepo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         EmailNotification emailNotification = new()
         {
