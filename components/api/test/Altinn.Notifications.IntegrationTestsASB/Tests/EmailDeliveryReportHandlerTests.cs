@@ -327,46 +327,40 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
     {
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
-        {
-            string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+        string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
-            var deadReportCountBefore = await PostgreUtil.RunSqlReturnOutput<long>(
-                _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports WHERE channel = 1 AND reason = 'UNRECOGNIZED_SEND_RESULT'");
+        // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
+        // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
+        // branch and throws InvalidDeliveryReportException → DLQ immediately.
+        await _fixture.DrainQueue(queueName);
+        await SendRawEventGridEventAsync(
+            queueName,
+            eventType: "Microsoft.Storage.BlobCreated",
+            data: new
+            {
+                api = "PutBlob",
+                clientRequestId = Guid.NewGuid().ToString(),
+                requestId = Guid.NewGuid().ToString(),
+                eTag = "0x8D4BCC2E4835CD0",
+                contentType = "text/plain",
+                contentLength = 524288,
+                blobType = "BlockBlob",
+                url = "https://example.blob.core.windows.net/testcontainer/testblob",
+                sequencer = "00000000000004420000000000028963"
+            });
 
-            // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
-            // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
-            // branch and throws InvalidDeliveryReportException → DLQ immediately.
-            await _fixture.DrainQueue(queueName);
-            await SendRawEventGridEventAsync(
-                queueName,
-                eventType: "Microsoft.Storage.BlobCreated",
-                data: new
-                {
-                    api = "PutBlob",
-                    clientRequestId = Guid.NewGuid().ToString(),
-                    requestId = Guid.NewGuid().ToString(),
-                    eTag = "0x8D4BCC2E4835CD0",
-                    contentType = "text/plain",
-                    contentLength = 524288,
-                    blobType = "BlockBlob",
-                    url = "https://example.blob.core.windows.net/testcontainer/testblob",
-                    sequencer = "00000000000004420000000000028963"
-                });
+        // Assert - Message should appear in DLQ immediately (no retries)
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
+        Assert.NotNull(deadLetterMessage);
 
-            // Assert - Message should appear in DLQ immediately (no retries)
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
-            Assert.NotNull(deadLetterMessage);
-
-            // Assert - no email-channel dead delivery report should be written for this path
-            var deadReportCountAfter = await PostgreUtil.RunSqlReturnOutput<long>(
-                _fixture.PostgresConnectionString,
-                "SELECT count(1) FROM notifications.deaddeliveryreports WHERE channel = 1 AND reason = 'UNRECOGNIZED_SEND_RESULT'");
-            Assert.Equal(deadReportCountBefore, deadReportCountAfter);
-        }
+        // Assert - No dead delivery report in DB
+        var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            _fixture.PostgresConnectionString,
+            "SELECT count(1) FROM notifications.deaddeliveryreports");
+        Assert.Equal(0, deadReportCount);
     }
 
     [Fact]
