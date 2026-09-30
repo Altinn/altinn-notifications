@@ -64,7 +64,6 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
 
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISendSmsPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<IPastDueOrderPublisher>()));
 
             // Remove the existing IContactPointService registration
             var contactPointDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IContactPointService));

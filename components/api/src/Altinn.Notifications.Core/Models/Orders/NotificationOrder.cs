@@ -51,6 +51,11 @@ public class NotificationOrder : IBaseNotificationOrder
     public OrderType Type { get; internal set; }
 
     /// <summary>
+    /// Gets or sets the status of the notification order
+    /// </summary>
+    public OrderProcessingStatus? OrderProcessingStatus { get; set; } = null;
+
+    /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
     public List<INotificationTemplate> Templates { get; internal set; } = [];

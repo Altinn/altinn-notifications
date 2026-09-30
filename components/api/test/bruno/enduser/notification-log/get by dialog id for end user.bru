@@ -1,0 +1,19 @@
+meta {
+  name: get by dialog id for end user
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/enduser/log?dialogId={{dialogporten_dialog_id}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  dialogId: {{dialogporten_dialog_id}}
+}
+
+vars:pre-request {
+  dialogporten_dialog_id: 01a0ae3d-df1d-790d-8343-cfbf38eeacfe
+}

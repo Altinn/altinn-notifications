@@ -7,9 +7,14 @@ using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
+using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models.Dashboard;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -749,6 +754,47 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
     }
 
+    [Theory]
+    [InlineData("004799999999")]
+    [InlineData("+4799999999")]
+    public async Task GetByPhoneNumber_AnyPrefixVariant_ReturnsSeededNotification(string lookupPhoneNumber)
+    {
+        // Arrange
+        // The SMS notification is stored exactly as received, with the international "00" prefix,
+        // e.g. "004799999999". A dashboard lookup using the stored value, the "+47" variant, or the
+        // bare number without any prefix should all return that same entry.
+        const string storedMobileNumber = "004799999999";
+
+        Guid orderId = await SeedOrderWithSmsNotification(
+            DateTime.UtcNow.AddHours(-8),
+            mobileNumber: storedMobileNumber);
+
+        try
+        {
+            IDashboardService realService = GetRealDashboardService();
+
+            HttpClient client = GetTestClient(realService);
+            SetValidAuthorization(client);
+
+            HttpRequestMessage request = CreateRequest("phonenumber", ("PhoneNumber", lookupPhoneNumber));
+
+            // Act
+            HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            var result = JsonSerializer.Deserialize<List<DashboardNotificationExt>>(content, _options);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(result);
+            var item = Assert.Single(result);
+            Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
+        }
+        finally
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds([orderId]);
+        }
+    }
+
     private static HttpRequestMessage CreateRequest(string pathAndQuery, params (string Name, string Value)[] headers)
     {
         HttpRequestMessage request = new(HttpMethod.Get, $"{_basePath}/recipients/notifications/{pathAndQuery}");
@@ -806,5 +852,39 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         }).CreateClient();
 
         return client;
+    }
+
+    private static DashboardService GetRealDashboardService()
+    {
+        var repository = ServiceUtil.GetServices([typeof(IDashboardRepository)])
+            .OfType<DashboardRepository>()
+            .First();
+
+        return new DashboardService(repository);
+    }
+
+    private static async Task<Guid> SeedOrderWithSmsNotification(DateTime requestedSendTime, string mobileNumber)
+    {
+        var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
+        var smsRepo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).OfType<SmsNotificationRepository>().First();
+
+        NotificationOrder order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        order.RequestedSendTime = requestedSendTime;
+
+        await orderRepo.Create(order);
+
+        await smsRepo.AddNotification(
+                new SmsNotification
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    RequestedSendTime = requestedSendTime,
+                    Recipient = new() { MobileNumber = mobileNumber },
+                    SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
+                },
+                requestedSendTime.AddDays(1));
+
+        return order.Id;
     }
 }
