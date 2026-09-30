@@ -1,4 +1,4 @@
-ï»¿using System.Text.Json;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -15,7 +15,6 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Options;
-
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -577,7 +576,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders.Select(o => new ReminderNotificationOrder(o, o.RequestedSendTime)).ToList(), mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -809,7 +808,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders.Select(o => new ReminderNotificationOrder(o, o.RequestedSendTime)).ToList(), mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1054,7 +1053,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Act
-        var result = await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        var result = await repo.Create(orderRequest, mainOrder, reminders.Select(o => new ReminderNotificationOrder(o, o.RequestedSendTime)).ToList(), mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -1457,7 +1456,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Inserts the order chain with reminder in the database.
-        await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        await repo.Create(orderRequest, mainOrder, reminders.Select(o => new ReminderNotificationOrder(o, o.RequestedSendTime)).ToList(), mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -1631,7 +1630,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         ];
 
         // Insert the order chain with reminders in the database
-        await repo.Create(orderRequest, mainOrder, reminders, mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
+        await repo.Create(orderRequest, mainOrder, reminders.Select(o => new ReminderNotificationOrder(o, o.RequestedSendTime)).ToList(), mainOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
@@ -2840,7 +2839,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null, notificationOrder1.RequestedSendTime, TestContext.Current.CancellationToken);
         var result2 = await sut.Create(notificationOrderRequest2, notificationOrder2, null, notificationOrder2.RequestedSendTime, TestContext.Current.CancellationToken);
 
-        // Assert â€” first call persists the chain, second returns the existing chain without inserting a duplicate.
+        // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(result1);
         Assert.True(result1.IsNewlyCreated);
         Assert.Equal(firstOrderId, result1.ShipmentId);
@@ -3100,7 +3099,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task GetComposedOrderChainTracking_WhenNotificationOrderExistsWithSameIdempotencyId_ReturnsNull()
     {
-        // Arrange â€” a Notification (type 0) order should NOT be returned by the Composed tracking function
+        // Arrange — a Notification (type 0) order should NOT be returned by the Composed tracking function
         OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         Guid orderId = Guid.NewGuid();
@@ -3152,7 +3151,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         var result = await repo.GetComposedOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
-        // Assert â€” Composed tracking must not return a Notification order
+        // Assert — Composed tracking must not return a Notification order
         Assert.Null(result);
     }
 
@@ -3438,10 +3437,10 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         await repo.Create(order, order.RequestedSendTime);
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
-        // First delivery â€” normal path
+        // First delivery — normal path
         await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
-        // Act â€” second delivery, order is already SendConditionNotMet (real duplicate-delivery race)
+        // Act — second delivery, order is already SendConditionNotMet (real duplicate-delivery race)
         // Should not throw and should not write a second status feed entry
         await SetOrderSendConditionNotMetAsyncWithUnitOfWork(repo, order, TestContext.Current.CancellationToken);
 
@@ -3845,7 +3844,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(repo, order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
-        // Assert â€” all terminal, so the order completes and every artifact of the transaction is present
+        // Assert — all terminal, so the order completes and every artifact of the transaction is present
         Assert.True(isCompleted);
 
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3898,7 +3897,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(repo, order, emailResult, smsResult, TestContext.Current.CancellationToken);
 
-        // Assert: vacuously completed â€” no notifications, but order finalised and status feed written
+        // Assert: vacuously completed — no notifications, but order finalised and status feed written
         Assert.True(isCompleted);
 
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
@@ -3981,7 +3980,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         var result = await repo.GetOrderChainTracking(creator, idempotencyId, TestContext.Current.CancellationToken);
 
-        // Assert â€” Notification tracking must not return a Composed order
+        // Assert — Notification tracking must not return a Composed order
         Assert.Null(result);
     }
 
@@ -4056,7 +4055,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Act
         var result = await repo.Create(orderChainRequest, notificationOrder, null, notificationOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
-        // Assert â€” ordersResult contains only the main order, no reminders
+        // Assert — ordersResult contains only the main order, no reminders
         Assert.NotNull(result);
         Assert.True(result.IsNewlyCreated);
         Assert.Equal(orderId, result.ShipmentId);
@@ -4253,7 +4252,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         var originalResult = await repo.Create(originalOrderRequest, originalOrder, null, originalOrder.RequestedSendTime, TestContext.Current.CancellationToken);
         var duplicateResult = await repo.Create(duplicateOrderRequest, duplicateOrder, null, duplicateOrder.RequestedSendTime, TestContext.Current.CancellationToken);
 
-        // Assert â€” first call persists the chain, second returns the existing chain without inserting a duplicate.
+        // Assert — first call persists the chain, second returns the existing chain without inserting a duplicate.
         Assert.NotNull(originalResult);
         Assert.True(originalResult.IsNewlyCreated);
         Assert.Equal(originalOrderId, originalResult.ShipmentId);

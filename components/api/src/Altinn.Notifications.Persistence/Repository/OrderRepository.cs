@@ -127,7 +127,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default)
+    public async Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<ReminderNotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -162,11 +162,12 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
             if (reminders != null)
             {
-                foreach (var notificationOrder in reminders)
+                foreach (var reminder in reminders)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, notificationOrder.RequestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
+                    var notificationOrder = reminder.Order;
+                    long reminderOrderId = await InsertOrder(notificationOrder, reminder.RequestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {

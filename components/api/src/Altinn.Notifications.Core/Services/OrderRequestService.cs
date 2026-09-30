@@ -637,9 +637,9 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    private async Task<Result<List<NotificationOrder>>> CreateReminderNotificationOrdersAsync(List<NotificationReminder>? notificationReminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<Result<List<ReminderNotificationOrder>>> CreateReminderNotificationOrdersAsync(List<NotificationReminder>? notificationReminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken)
     {
-        var reminders = new List<NotificationOrder>();
+        var reminders = new List<ReminderNotificationOrder>();
         if (notificationReminders is not { Count: > 0 })
         {
             return reminders;
@@ -666,24 +666,26 @@ public class OrderRequestService : IOrderRequestService
                 deliveryDetails.Channel,
                 deliveryDetails.SmsSendingTimePolicy);
 
-            reminders.Add(new NotificationOrder
-            {
-                Creator = creator,
-                Templates = templates,
-                Created = currentTime,
-                Type = notificationReminder.Type,
-                Id = notificationReminder.OrderId,
-                Recipients = deliveryDetails.Recipients,
-                ResourceId = deliveryDetails.ResourceId,
-                ResourceAction = deliveryDetails.ResourceAction,
-                NotificationChannel = deliveryDetails.Channel,
-                IgnoreReservation = deliveryDetails.IgnoreReservation,
-                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
-                SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
-                SendersReference = notificationReminder.SendersReference,
-                RequestedSendTime = requestedSendTime,
-                ConditionEndpoint = notificationReminder.ConditionEndpoint
-            });
+            reminders.Add(new ReminderNotificationOrder(
+                new NotificationOrder
+                {
+                    Creator = creator,
+                    Templates = templates,
+                    Created = currentTime,
+                    Type = notificationReminder.Type,
+                    Id = notificationReminder.OrderId,
+                    Recipients = deliveryDetails.Recipients,
+                    ResourceId = deliveryDetails.ResourceId,
+                    ResourceAction = deliveryDetails.ResourceAction,
+                    NotificationChannel = deliveryDetails.Channel,
+                    IgnoreReservation = deliveryDetails.IgnoreReservation,
+                    UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+                    SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+                    SendersReference = notificationReminder.SendersReference,
+                    RequestedSendTime = notificationReminder.RequestedSendTime,
+                    ConditionEndpoint = notificationReminder.ConditionEndpoint
+                },
+                requestedSendTime));
         }
 
         return reminders;
@@ -723,7 +725,7 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="InvalidOperationException">
     /// Thrown when the repository fails to persist the order chain.
     /// </exception>
-    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, DateTime requestedSendTime, CancellationToken cancellationToken)
+    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<ReminderNotificationOrder>? reminderOrders, DateTime requestedSendTime, CancellationToken cancellationToken)
     {
         var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, requestedSendTime, cancellationToken);
 
@@ -736,10 +738,10 @@ public class OrderRequestService : IOrderRequestService
                 ShipmentId = result.ShipmentId,
                 SendersReference = result.SendersReference,
                 Reminders = result.IsNewlyCreated
-                    ? reminderOrders?.Select(o => new NotificationOrderChainShipment
+                    ? reminderOrders?.Select(r => new NotificationOrderChainShipment
                     {
-                        ShipmentId = o.Id,
-                        SendersReference = o.SendersReference
+                        ShipmentId = r.Order.Id,
+                        SendersReference = r.Order.SendersReference
                     }).ToList()
                     : result.Reminders
             }

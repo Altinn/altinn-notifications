@@ -43,7 +43,7 @@ public interface IOrderRepository
     /// When a concurrent request with the same idempotency key has already committed the chain,
     /// the insert is silently skipped and the existing chain's tracking data is returned.
     /// </remarks>
-    public Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default);
+    public Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<ReminderNotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new new high-priority instant notification order in the database.
