@@ -10,6 +10,8 @@ using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Options;
 
+using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -93,9 +95,14 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
         var persistedOrder = await orderRepository.GetOrderById(result.Value.OrderChainReceipt.ShipmentId, "ttd");
         Assert.NotNull(persistedOrder);
 
+        // The postponed send time is only reflected in the requestedsendtime column; the
+        // notificationorder jsonb payload retains the original, unmodified requested send time.
         DateTime expectedPostponedSendTime = scheduleService.GetRequestedSendTimeForDaytimeSendCondition(eveningRequestedSendTime);
-        Assert.Equal(expectedPostponedSendTime, persistedOrder.RequestedSendTime);
-        Assert.NotEqual(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(result.Value.OrderChainReceipt.ShipmentId);
+
+        Assert.Equal(expectedPostponedSendTime, persistedRequestedSendTimeColumn);
+        Assert.NotEqual(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
+        Assert.Equal(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
     }
 
     [Fact]
@@ -151,12 +158,16 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
         Assert.NotNull(persistedOrder);
         Assert.Equal(NotificationChannel.EmailAndSms, persistedOrder.NotificationChannel);
 
+        // The postponed send time is only reflected in the requestedsendtime column; the
+        // notificationorder jsonb payload retains the original, unmodified requested send time.
         DateTime expectedPostponedSendTime = scheduleService.GetRequestedSendTimeForDaytimeSendCondition(eveningRequestedSendTime);
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(result.Value.OrderChainReceipt.ShipmentId);
 
         // Because send condition evaluation is order-level, the co-delivered Email notification
         // is postponed together with SMS to keep the single condition check close to send time.
-        Assert.Equal(expectedPostponedSendTime, persistedOrder.RequestedSendTime);
-        Assert.NotEqual(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
+        Assert.Equal(expectedPostponedSendTime, persistedRequestedSendTimeColumn);
+        Assert.NotEqual(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
+        Assert.Equal(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
     }
 
     [Fact]
@@ -206,6 +217,9 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
         var persistedOrder = await orderRepository.GetOrderById(result.Value.OrderChainReceipt.ShipmentId, "ttd");
         Assert.NotNull(persistedOrder);
         Assert.Equal(daytimeRequestedSendTime, persistedOrder.RequestedSendTime);
+
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(result.Value.OrderChainReceipt.ShipmentId);
+        Assert.Equal(daytimeRequestedSendTime, persistedRequestedSendTimeColumn);
     }
 
     [Fact]
@@ -254,6 +268,21 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
         var persistedOrder = await orderRepository.GetOrderById(result.Value.OrderChainReceipt.ShipmentId, "ttd");
         Assert.NotNull(persistedOrder);
         Assert.Equal(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
+
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(result.Value.OrderChainReceipt.ShipmentId);
+        Assert.Equal(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
+    }
+
+    /// <summary>
+    /// Retrieves the value of the notifications.orders.requestedsendtime column for the order with the
+    /// given alternate id. Unlike the jsonb notificationorder payload (which always retains the original,
+    /// unmodified requested send time for monitoring/troubleshooting purposes), this column reflects any
+    /// postponement applied to the effective send time.
+    /// </summary>
+    private static async Task<DateTime> GetRequestedSendTimeColumn(Guid orderId)
+    {
+        const string sql = "SELECT requestedsendtime FROM notifications.orders WHERE alternateid = @orderId";
+        return await PostgreUtil.RunSqlReturnOutput<DateTime>(sql, new NpgsqlParameter("orderId", orderId));
     }
 
     /// <summary>
