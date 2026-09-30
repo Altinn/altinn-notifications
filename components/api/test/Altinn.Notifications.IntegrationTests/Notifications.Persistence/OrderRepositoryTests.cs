@@ -3500,7 +3500,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToDelete.Add(order.Id);
-        await repo.Create(order);
+        await repo.Create(order, order.RequestedSendTime);
 
         // Act
         await SetRetryStatusWithUnitOfWork(repo, order.Id, "first retry", TestContext.Current.CancellationToken);

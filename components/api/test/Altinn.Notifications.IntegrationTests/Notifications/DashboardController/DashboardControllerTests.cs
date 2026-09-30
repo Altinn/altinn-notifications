@@ -872,7 +872,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         order.Id = Guid.NewGuid();
         order.RequestedSendTime = requestedSendTime;
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
 
         await smsRepo.AddNotification(
                 new SmsNotification
