@@ -403,6 +403,22 @@ public static class PostgreUtil
         return result;
     }
 
+    public static async Task<T> RunSqlReturnOutput<T>(string query, params NpgsqlParameter[] parameters)
+    {
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
+
+        if (parameters.Length > 0)
+        {
+            pgcom.Parameters.AddRange(parameters);
+        }
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        T result = reader.GetValue<T>(0);
+        return result;
+    }
+
     public static async Task<string?> GetStatusFeedOrderStatusJson(Guid orderId)
     {
         var sql = @"SELECT s.orderstatus::text 

@@ -58,4 +58,12 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// Thrown when both <paramref name="notificationId"/> and <paramref name="gatewayReference"/> are null or empty.
     /// </exception>
     Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null);
+
+    /// <summary>
+    /// Writes the substituted sender for an SMS notification to the database.
+    /// </summary>
+    /// <param name="notificationId">The unique identifier of the SMS notification.</param>
+    /// <param name="sender">The substituted sender to be written to the database.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task PersistSubstitutedSender(Guid notificationId, string sender);
 }

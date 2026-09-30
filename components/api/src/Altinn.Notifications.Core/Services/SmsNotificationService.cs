@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -21,6 +22,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
     private readonly ISendSmsPublisher _smsPublisher;
+    private readonly ISmsSenderSubstitutionService _senderSubstitutionService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -30,12 +32,14 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
         ISendSmsPublisher smsPublisher,
+        ISmsSenderSubstitutionService senderSubstitutionService,
         IOptions<NotificationConfig> notificationConfig)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
         _smsPublisher = smsPublisher;
+        _senderSubstitutionService = senderSubstitutionService;
 
         var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
         _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 500;
@@ -101,6 +105,8 @@ public class SmsNotificationService : ISmsNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
+                await ApplySenderSubstitution(newSmsNotifications);
+
                 var unpublishedSms = await _smsPublisher.PublishAsync(newSmsNotifications, cancellationToken);
                 foreach (var sms in unpublishedSms)
                 {
@@ -137,6 +143,34 @@ public class SmsNotificationService : ISmsNotificationService
             sendOperationResult.SendResult,
             sendOperationResult.GatewayReference,
             sendOperationResult.DeliveryReport);
+    }
+
+    /// <summary>
+    /// Substitutes the sender for SMS notifications whose recipient phone number matches a
+    /// configured substitution rule for the notification's service owner.
+    /// </summary>
+    /// <param name="smsNotifications">The batch of SMS notifications about to be published.</param>
+    /// <remarks>
+    /// Skips all work when no substitution rules are configured, so the common case (no
+    /// substitution in use) adds no per-recipient overhead.
+    /// </remarks>
+    private async Task ApplySenderSubstitution(List<Sms> smsNotifications)
+    {
+        if (!_senderSubstitutionService.HasRules)
+        {
+            return;
+        }
+
+        foreach (var sms in smsNotifications)
+        {
+            var smsSenderResolutionResult = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
+
+            if (smsSenderResolutionResult.WasSubstituted)
+            {
+                sms.Sender = smsSenderResolutionResult.Sender;
+                await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
+            }
+        }
     }
 
     /// <summary>
