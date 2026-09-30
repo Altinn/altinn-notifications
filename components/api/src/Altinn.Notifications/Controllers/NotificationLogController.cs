@@ -32,7 +32,7 @@ public class NotificationLogController(
     private readonly IDialogportenClient _dialogportenClient = dialogportenClient;
 
     /// <summary>
-    /// Retrieves notification log entries filtered by dialog identifier, transmission identifier, or both.
+    /// Retrieves notification log entries based on the provided Dialogporten identifiers.
     /// </summary>
     /// <param name="query">The Dialogporten identifiers to filter by. At least one must be provided.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
@@ -46,7 +46,8 @@ public class NotificationLogController(
     [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     [Obsolete("This endpoint is deprecated and deleted in a future release. No direct replacement is available.")]
-    public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> Get([FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> Get(
+        NotificationLogQueryExt query, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -71,8 +72,12 @@ public class NotificationLogController(
     }
 
     /// <summary>
-    /// Retrieves notification log entries filtered by dialog identifier, transmission identifier, or both.
+    /// Gives end users access to their own notification log entries based on the provided
+    /// Dialogporten identifiers.
     /// </summary>
+    /// <remarks>End users identified with the help of ID-porten will be using this endpoint
+    /// indirectly when looking at the activity log of a dialog in the portal. This is currently the
+    /// only way to access this endpoint and the data it provides.</remarks>
     /// <param name="query">The Dialogporten identifiers to filter by. At least one must be provided.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
@@ -85,7 +90,7 @@ public class NotificationLogController(
     [SwaggerResponse(400, "One or more query parameters are invalid", typeof(AltinnProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<ImmutableList<NotificationLogSummaryExt>>> GetForEnduser(
-        [FromQuery] NotificationLogQueryExt query, CancellationToken cancellationToken = default)
+        NotificationLogQueryExt query, CancellationToken cancellationToken = default)
     {
         try
         {
