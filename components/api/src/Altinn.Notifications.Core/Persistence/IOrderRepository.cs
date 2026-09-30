@@ -29,7 +29,7 @@ public interface IOrderRepository
     /// <param name="orderChain">The chain containing settings for the notification sequence.</param>
     /// <param name="mainOrder">The primary notification order that will be sent first.</param>
     /// <param name="reminders">A list of follow-up notification orders that will be sent after the main notification conditions.</param>
-    /// <param name="requestedSendTime">The original send time, requested by the order request.</param>
+    /// <param name="requestedSendTime">The requested send time for the order.</param>
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
