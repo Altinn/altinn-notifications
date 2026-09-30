@@ -23,7 +23,7 @@ public class SmsTests
     public void TryParse_ValidSms_True()
     {
         bool actualResult = Notifications.Sms.Core.Sending.Sms.TryParse(_serializedSms, out Notifications.Sms.Core.Sending.Sms actual);
-        
+
         Assert.True(actualResult);
         Assert.Equal(_id, actual.NotificationId);
         Assert.Equal("message", actual.Message);
@@ -33,7 +33,7 @@ public class SmsTests
     public void TryParse_EmptyString_False()
     {
         bool actualResult = Notifications.Sms.Core.Sending.Sms.TryParse(string.Empty, out _);
-        
+
         Assert.False(actualResult);
     }
 

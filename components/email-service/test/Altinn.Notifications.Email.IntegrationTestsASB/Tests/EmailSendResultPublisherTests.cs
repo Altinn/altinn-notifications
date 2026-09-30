@@ -76,7 +76,7 @@ public class EmailSendResultPublisherTests(IntegrationTestEmailContainersFixture
         Assert.NotNull(message);
 
         var resultCommand = JsonSerializer.Deserialize<EmailSendResultCommand>(message.Body.ToString());
-            
+
         Assert.NotNull(resultCommand);
 
         Assert.Equal(command.SendOperationId, resultCommand.OperationId);

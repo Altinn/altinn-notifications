@@ -88,7 +88,7 @@ public class UtilTests
 
         // Assert
         Assert.Null(result);
-    }    
+    }
 
     [Fact]
     public async Task GetAndMapDeadDeliveryReports_ReturnsEmptyList_WhenNoReportsFound()
@@ -270,7 +270,7 @@ public class UtilTests
                 DeliveryReportChannel.LinkMobility,
                 cts.Token),
             Times.Once);
-    }    
+    }
 
     [Fact]
     public void RetryExceededReason_ReturnsCorrectValue()

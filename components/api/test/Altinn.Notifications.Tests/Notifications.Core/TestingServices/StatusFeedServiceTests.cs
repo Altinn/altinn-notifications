@@ -42,7 +42,7 @@ public class StatusFeedServiceTests
                     ShipmentId = Guid.NewGuid(),
                     Recipients = new List<Recipient>
                     {
-                        new() 
+                        new()
                         {
                             Destination = "noreply@altinn.no",
                             Status = ProcessingLifecycle.Order_Completed,
@@ -58,7 +58,7 @@ public class StatusFeedServiceTests
 
         // Act
         var result = await sut.GetStatusFeed(seq, null, _creatorName, "asc", TestContext.Current.CancellationToken);
-        
+
         // Assert
         statusFeedRepository.Verify(
         x => x.GetStatusFeed(seq, _creatorName, "asc", _maxPageSize, It.IsAny<CancellationToken>()),
@@ -136,10 +136,10 @@ public class StatusFeedServiceTests
         // Arrange
         const int requestedPageSize = 100; // Smaller than max of 500
         const long seq = 0;
-        
+
         var mockRepository = new Mock<IStatusFeedRepository>();
         var expectedStatusFeedEntries = new List<StatusFeed>();
-        
+
         // Setup repository to capture the actual pageSize used
         mockRepository.Setup(x => x.GetStatusFeed(
                 It.IsAny<long>(),
@@ -148,15 +148,15 @@ public class StatusFeedServiceTests
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
-        
+
         var sut = new StatusFeedService(mockRepository.Object, _options);
-        
+
         // Act
         var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, "asc", TestContext.Current.CancellationToken);
-        
+
         // Assert
         Assert.NotNull(result);
-        
+
         // Verify that the repository was called with the requested page size (not the max)
         mockRepository.Verify(
             x => x.GetStatusFeed(
@@ -164,7 +164,7 @@ public class StatusFeedServiceTests
             _creatorName,
             "asc",
             requestedPageSize, // Should use the requested value of 100, not the max of 500
-            It.IsAny<CancellationToken>()), 
+            It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
