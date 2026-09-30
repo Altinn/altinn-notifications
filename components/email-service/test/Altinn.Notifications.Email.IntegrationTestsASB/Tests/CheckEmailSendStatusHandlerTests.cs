@@ -5,7 +5,6 @@ using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Status;
 using Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Moq;

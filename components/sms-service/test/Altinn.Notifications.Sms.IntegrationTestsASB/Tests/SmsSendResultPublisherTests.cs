@@ -1,7 +1,6 @@
 using System.Text.Json;
 
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
@@ -31,35 +30,34 @@ public class SmsSendResultPublisherTests(IntegrationTestSmsAsbContainersFixture 
     {
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
+
+        // Arrange
+        var dispatcher = factory.Host.Services.GetRequiredService<ISmsSendResultDispatcher>();
+        string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
+        var result = new SendOperationResult
         {
-            // Arrange
-            var dispatcher = factory.Host.Services.GetRequiredService<ISmsSendResultDispatcher>();
-            string queueName = factory.WolverineSettings!.SmsSendResultQueueName;
-            var result = new SendOperationResult
-            {
-                NotificationId = Guid.NewGuid(),
-                GatewayReference = Guid.NewGuid().ToString(),
-                SendResult = SmsSendResult.Accepted
-            };
+            NotificationId = Guid.NewGuid(),
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsSendResult.Accepted
+        };
 
-            // Act
-            await _fixture.DrainQueue(queueName);
-            await dispatcher.DispatchAsync(result);
+        // Act
+        await _fixture.DrainQueue(queueName);
+        await dispatcher.DispatchAsync(result);
 
-            // Assert - Receive the message from the queue and verify its content
-            var received = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(10));
+        // Assert - Receive the message from the queue and verify its content
+        var received = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
 
-            Assert.NotNull(received);
+        Assert.NotNull(received);
 
-            var command = JsonSerializer.Deserialize<SmsSendResultCommand>(received.Body.ToString());
-            Assert.NotNull(command);
-            Assert.Equal(result.NotificationId, command.NotificationId);
-            Assert.Equal(result.GatewayReference, command.GatewayReference);
-            Assert.Equal(result.SendResult.ToString(), command.SendResult);
-        }
+        var command = JsonSerializer.Deserialize<SmsSendResultCommand>(received.Body.ToString());
+        Assert.NotNull(command);
+        Assert.Equal(result.NotificationId, command.NotificationId);
+        Assert.Equal(result.GatewayReference, command.GatewayReference);
+        Assert.Equal(result.SendResult.ToString(), command.SendResult);
     }
 
     [Fact]

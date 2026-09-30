@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.LinkMobility;

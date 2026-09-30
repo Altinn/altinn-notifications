@@ -1,5 +1,3 @@
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-
 using Xunit;
 
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure;

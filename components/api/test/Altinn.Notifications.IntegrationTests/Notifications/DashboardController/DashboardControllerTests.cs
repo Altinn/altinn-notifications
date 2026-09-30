@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
-using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Models.Notification;
@@ -15,7 +14,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models.Dashboard;
 using Altinn.Notifications.Persistence.Repository;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using Moq;
