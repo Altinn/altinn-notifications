@@ -22,7 +22,11 @@ public class IntegrationTestSmsAsbContainersFixture : IntegrationTestContainersF
     {
         try
         {
-            await WebHost.DisposeAsync();
+            if (WebHost != null)
+            {
+                await WebHost.DisposeAsync();
+            }
+
             await base.DisposeAsync();
         }
         finally

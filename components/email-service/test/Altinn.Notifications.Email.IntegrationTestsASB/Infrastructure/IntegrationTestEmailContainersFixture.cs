@@ -72,7 +72,11 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Infrastructure
         {
             try
             {
-                await WebHost.DisposeAsync();
+                if (WebHost != null)
+                {
+                    await WebHost.DisposeAsync();
+                }
+
                 if (UseBaseBehaviour)
                 {
                     return;
