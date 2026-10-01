@@ -803,7 +803,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         var shipmentId = Guid.NewGuid().ToString();
         var notification = CreateNotification(emailAddress: _validEmail);
         _serviceMock
-            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DashboardNotification> { notification });
 
         HttpClient client = GetTestClient();
@@ -822,7 +822,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
 
-        _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -894,40 +894,12 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     }
 
     [Fact]
-    public async Task GetByShipmentId_WithFromAndToFilters_PassesRangeToServiceAndReturnsOk()
-    {
-        // Arrange
-        var shipmentId = Guid.NewGuid().ToString();
-        var from = DateTime.UtcNow.AddDays(-3);
-        var to = DateTime.UtcNow.AddDays(-1);
-        var notification = CreateNotification(emailAddress: _validEmail);
-
-        _serviceMock
-            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DashboardNotification> { notification });
-
-        HttpClient client = GetTestClient();
-        SetValidAuthorization(client);
-
-        HttpRequestMessage request = CreateRequest(
-            $"shipmentid?From={Uri.EscapeDataString(from.ToString("O"))}&To={Uri.EscapeDataString(to.ToString("O"))}",
-            ("ShipmentId", shipmentId));
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, from, to, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public async Task GetByShipmentId_NoMatchingNotifications_ReturnsOkWithEmptyList()
     {
         // Arrange
         var shipmentId = Guid.NewGuid().ToString();
         _serviceMock
-            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DashboardNotification>());
 
         HttpClient client = GetTestClient();
@@ -952,7 +924,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         // Arrange
         var serviceMock = new Mock<IDashboardService>();
         serviceMock
-            .Setup(s => s.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         HttpClient client = GetTestClient(serviceMock.Object);

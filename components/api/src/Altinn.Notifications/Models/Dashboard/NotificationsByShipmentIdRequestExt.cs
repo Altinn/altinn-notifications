@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Models.Dashboard;
 /// <summary>
 /// Request model for fetching notifications by shipment id.
 /// </summary>
-public class NotificationsByShipmentIdRequestExt : DashboardNotificationRequestExt
+public class NotificationsByShipmentIdRequestExt
 {
     /// <summary>
     /// The shipment id to look up.

@@ -14,8 +14,6 @@ internal sealed class NotificationsByShipmentIdRequestValidator : AbstractValida
     /// </summary>
     public NotificationsByShipmentIdRequestValidator()
     {
-        Include(new DashboardNotificationRequestValidator());
-
         RuleFor(x => x.ShipmentId)
             .NotEmpty().WithMessage("'ShipmentId' is required and cannot be empty")
             .Must(id => Guid.TryParse(id, out _)).WithMessage("'ShipmentId' must be a valid GUID.");

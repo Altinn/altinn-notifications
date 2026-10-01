@@ -150,7 +150,7 @@ public class DashboardController : ControllerBase
     /// <summary>
     /// Retrieves all notifications belonging to a shipment identified by its shipment id.
     /// </summary>
-    /// <param name="request">The request containing the shipment id and optional date range filters.</param>
+    /// <param name="request">The request containing the shipment id.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of notifications matching the search criteria.</returns>
     [HttpGet("recipients/notifications/shipmentid")]
@@ -165,7 +165,7 @@ public class DashboardController : ControllerBase
         return await ProcessDashboardRequestAsync(
             request,
             _shipmentIdValidator,
-            (req, ct) => _dashboardService.GetNotificationsByShipmentIdAsync(req.ShipmentId, req.From, req.To, ct),
+            (req, ct) => _dashboardService.GetNotificationsByShipmentIdAsync(req.ShipmentId, ct),
             cancellationToken);
     }
 

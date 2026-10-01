@@ -1,8 +1,6 @@
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid
 (
-    _shipmentid uuid,
-    _from_date timestamptz,
-    _to_date timestamptz
+    _shipmentid uuid
 )
 RETURNS TABLE (
     shipmentid uuid,
@@ -41,8 +39,6 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         WHERE o.alternateid = _shipmentid
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
 
         UNION ALL
 
@@ -63,19 +59,15 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         WHERE o.alternateid = _shipmentid
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
     )
     SELECT * FROM combined
     ORDER BY requestedsendtime DESC;
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid IS
-'Retrieves all email and SMS notifications belonging to a shipment identified by its shipment id (orders.alternateid) within a given date range.
+'Retrieves all email and SMS notifications belonging to a shipment identified by its shipment id (orders.alternateid).
 Parameters:
 - _shipmentid: The shipment id (orders.alternateid) to look up
-- _from_date: Start of the date range (inclusive) based on requestedsendtime
-- _to_date: End of the date range (exclusive) based on requestedsendtime
 Returns a table with the following columns:
 - shipmentid: The unique identifier for the shipment order
 - sendersreference: The sender''s reference for the order

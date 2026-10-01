@@ -581,11 +581,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         DashboardRepository sut = GetRepository();
 
         // Act
-        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
-            orderId.ToString(),
-            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
-            CancellationToken.None);
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId.ToString(), CancellationToken.None);
 
         // Assert
         var notification = Assert.Single(result);
@@ -604,30 +600,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         DashboardRepository sut = GetRepository();
 
         // Act
-        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
-            Guid.NewGuid().ToString(),
-            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
-            CancellationToken.None);
-
-        // Assert
-        Assert.Empty(result);
-    }
-
-    [Fact]
-    public async Task GetDashboardNotificationsByShipmentIdAsync_DateRangeExcludesNotifications_ReturnsEmpty()
-    {
-        // Arrange
-        Guid orderId = await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
-
-        DashboardRepository sut = GetRepository();
-
-        // Act
-        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(
-            orderId.ToString(),
-            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
-            CancellationToken.None);
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(Guid.NewGuid().ToString(), CancellationToken.None);
 
         // Assert
         Assert.Empty(result);

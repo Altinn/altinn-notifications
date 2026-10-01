@@ -10,28 +10,12 @@ get {
   auth: inherit
 }
 
-params:query {
-  ~from: {{dateFrom}}
-  ~to: {{dateTo}}
-}
-
 headers {
   ShipmentId: {{shipmentId}}
 }
 
 vars:pre-request {
-  shipmentId: bae680fb-c85a-4196-9f3a-12bd9457aff5
-}
-
-script:pre-request {
-  const from = bru.getEnvVar("dateFrom");
-  const to = bru.getEnvVar("dateTo");
-  
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
-  bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
-  bru.setVar("dateTo", to || new Date().toISOString());
+  shipmentId: 976d59fc-52c8-41f0-9ae3-78a2e9e791d1
 }
 
 settings {

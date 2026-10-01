@@ -442,53 +442,22 @@ public class DashboardServiceTests
         repository
             .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
                 It.IsAny<string>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var sut = new DashboardService(repository.Object);
-        DateTime from = DateTime.UtcNow.AddDays(-3);
-        DateTime to = DateTime.UtcNow;
 
         // Act
-        var result = await sut.GetNotificationsByShipmentIdAsync(_shipmentId, from, to, CancellationToken.None);
+        var result = await sut.GetNotificationsByShipmentIdAsync(_shipmentId, CancellationToken.None);
 
         // Assert
         repository.Verify(
-            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, from, to, It.IsAny<CancellationToken>()),
+            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, It.IsAny<CancellationToken>()),
             Times.Once);
 
         Assert.True(result.IsSuccess);
         var entry = Assert.Single(result.Value!);
         Assert.Equal(expected[0].ShipmentId, entry.ShipmentId);
-    }
-
-    [Fact]
-    public async Task GetNotificationsByShipmentIdAsync_NullDateRange_ForwardsNullsToRepository()
-    {
-        // Arrange
-        Mock<IDashboardRepository> repository = new();
-        repository
-            .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
-                It.IsAny<string>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        var sut = new DashboardService(repository.Object);
-
-        // Act
-        var result = await sut.GetNotificationsByShipmentIdAsync(_shipmentId, null, null, CancellationToken.None);
-
-        // Assert
-        repository.Verify(
-            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, null, null, It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value!);
     }
 
     [Fact]
@@ -499,8 +468,6 @@ public class DashboardServiceTests
         repository
             .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
                 It.IsAny<string>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -508,15 +475,11 @@ public class DashboardServiceTests
         using var cts = new CancellationTokenSource();
 
         // Act
-        await sut.GetNotificationsByShipmentIdAsync(_shipmentId, null, null, cts.Token);
+        await sut.GetNotificationsByShipmentIdAsync(_shipmentId, cts.Token);
 
         // Assert
         repository.Verify(
-            x => x.GetDashboardNotificationsByShipmentIdAsync(
-                _shipmentId,
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
-                cts.Token),
+            x => x.GetDashboardNotificationsByShipmentIdAsync(_shipmentId, cts.Token),
             Times.Once);
     }
 }

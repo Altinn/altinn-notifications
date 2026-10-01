@@ -46,8 +46,8 @@ public class DashboardService : IDashboardService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByShipmentIdAsync(string shipmentId, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
+    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByShipmentIdAsync(string shipmentId, CancellationToken cancellationToken)
     {
-        return await _dashboardRepository.GetDashboardNotificationsByShipmentIdAsync(shipmentId, dateTimeFrom, dateTimeTo, cancellationToken);
+        return await _dashboardRepository.GetDashboardNotificationsByShipmentIdAsync(shipmentId, cancellationToken);
     }
 }
