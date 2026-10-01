@@ -313,6 +313,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
         string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+        string marker = Guid.NewGuid().ToString("N");
 
         // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
         // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
@@ -330,7 +331,7 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
                 contentType = "text/plain",
                 contentLength = 524288,
                 blobType = "BlockBlob",
-                url = "https://example.blob.core.windows.net/testcontainer/testblob",
+                url = $"https://example.blob.core.windows.net/testcontainer/{marker}",
                 sequencer = "00000000000004420000000000028963"
             });
 
@@ -341,11 +342,12 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
             TimeSpan.FromSeconds(10));
         Assert.NotNull(deadLetterMessage);
 
-        // Assert - No dead delivery report in DB
-        var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+        // Assert - No dead delivery report should be saved for this event payload
+        var matchingDeadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
             _fixture.PostgresConnectionString,
-            "SELECT count(1) FROM notifications.deaddeliveryreports");
-        Assert.Equal(0, deadReportCount);
+            "SELECT count(1) FROM notifications.deaddeliveryreports WHERE deliveryreport::text LIKE '%' || $1 || '%'",
+            new NpgsqlParameter { Value = marker });
+        Assert.Equal(0, matchingDeadReportCount);
     }
 
     [Fact]
