@@ -312,7 +312,6 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
     {
         _fixture.ResetInstalledMocks();
         var factory = _fixture.WebHost;
-        await PostgreUtil.RunSql(_fixture.PostgresConnectionString, "DELETE FROM notifications.deaddeliveryreports");
         string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
 
         // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
