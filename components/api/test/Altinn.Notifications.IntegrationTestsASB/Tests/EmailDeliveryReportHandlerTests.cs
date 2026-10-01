@@ -307,46 +307,48 @@ public class EmailDeliveryReportHandlerTests(IntegrationTestApiAsbContainersFixt
         Assert.Null(deadReport);
     }
 
-    ////[Fact]
-    ////public async Task EmailDeliveryReport_WhenSystemEventTypeIsUnhandled_GoesToDeadLetterQueueWithoutRetry()
-    ////{
-    ////    _fixture.ResetInstalledMocks();
-    ////    var factory = _fixture.WebHost;
-    ////    string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+    [Fact]
+    public async Task EmailDeliveryReport_WhenSystemEventTypeIsUnhandled_GoesToDeadLetterQueueWithoutRetry()
+    {
+        _fixture.ResetInstalledMocks();
+        var factory = _fixture.WebHost;
+        string queueName = factory.WolverineSettings!.EmailDeliveryReportQueueName;
+        string marker = Guid.NewGuid().ToString("N");
 
-    ////    // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
-    ////    // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
-    ////    // branch and throws InvalidDeliveryReportException → DLQ immediately.
-    ////    await _fixture.DrainQueueAsync(queueName);
-    ////    await SendRawEventGridEventAsync(
-    ////        queueName,
-    ////        eventType: "Microsoft.Storage.BlobCreated",
-    ////        data: new
-    ////        {
-    ////            api = "PutBlob",
-    ////            clientRequestId = Guid.NewGuid().ToString(),
-    ////            requestId = Guid.NewGuid().ToString(),
-    ////            eTag = "0x8D4BCC2E4835CD0",
-    ////            contentType = "text/plain",
-    ////            contentLength = 524288,
-    ////            blobType = "BlockBlob",
-    ////            url = "https://example.blob.core.windows.net/testcontainer/testblob",
-    ////            sequencer = "00000000000004420000000000028963"
-    ////        });
+        // Act - Send a recognised Azure system event type (BlobCreated) that is NOT
+        // AcsEmailDeliveryReportReceivedEventData. The handler's switch hits the default
+        // branch and throws InvalidDeliveryReportException → DLQ immediately.
+        await _fixture.DrainQueueAsync(queueName);
+        await SendRawEventGridEventAsync(
+            queueName,
+            eventType: "Microsoft.Storage.BlobCreated",
+            data: new
+            {
+                api = "PutBlob",
+                clientRequestId = Guid.NewGuid().ToString(),
+                requestId = Guid.NewGuid().ToString(),
+                eTag = "0x8D4BCC2E4835CD0",
+                contentType = "text/plain",
+                contentLength = 524288,
+                blobType = "BlockBlob",
+                url = $"https://example.blob.core.windows.net/testcontainer/{marker}",
+                sequencer = "00000000000004420000000000028963"
+            });
 
-    ////    // Assert - Message should appear in DLQ immediately (no retries)
-    ////    var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-    ////        _fixture.ServiceBusConnectionString,
-    ////        queueName,
-    ////        TimeSpan.FromSeconds(10));
-    ////    Assert.NotNull(deadLetterMessage);
+        // Assert - Message should appear in DLQ immediately (no retries)
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(10));
+        Assert.NotNull(deadLetterMessage);
 
-    ////    // Assert - No dead delivery report in DB
-    ////    var deadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
-    ////        _fixture.PostgresConnectionString,
-    ////        "SELECT count(1) FROM notifications.deaddeliveryreports");
-    ////    Assert.Equal(0, deadReportCount);
-    ////}
+        // Assert - No dead delivery report should be saved for this event payload
+        var matchingDeadReportCount = await PostgreUtil.RunSqlReturnOutput<long>(
+            _fixture.PostgresConnectionString,
+            "SELECT count(1) FROM notifications.deaddeliveryreports WHERE deliveryreport::text LIKE '%' || $1 || '%'",
+            new NpgsqlParameter { Value = marker });
+        Assert.Equal(0, matchingDeadReportCount);
+    }
 
     [Fact]
     public async Task EmailDeliveryReport_WhenEventDataIsNotASystemEvent_GoesToDeadLetterQueueWithoutRetry()
