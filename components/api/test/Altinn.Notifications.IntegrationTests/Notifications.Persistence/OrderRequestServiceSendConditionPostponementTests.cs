@@ -1,6 +1,8 @@
 ﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -273,8 +275,72 @@ public sealed class OrderRequestServiceSendConditionPostponementTests : IAsyncLi
         Assert.Equal(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
     }
 
+    [Fact]
+    public async Task RegisterNotificationOrder_SmsWithCondition_RequestedAfterWindow_PostponesToNextDaytimeWindow()
+    {
+        // Arrange
+        var orderRepository = GetRealOrderRepository();
+        var scheduleService = GetRealScheduleService();
+        var service = CreateOrderRequestService(orderRepository, scheduleService, GetNoOpContactPointService());
+
+        DateTime eveningRequestedSendTime = new DateTime(2026, 6, 15, 20, 0, 0, DateTimeKind.Utc);
+        var orderRequest = CreateLegacySmsOrderRequest(eveningRequestedSendTime, new Uri("https://vg.no/condition"));
+
+        // Act
+        var response = await service.RegisterNotificationOrder(orderRequest);
+        Guid orderId = response.OrderId!.Value;
+        _orderIdsToDelete.Add(orderId);
+
+        // Assert
+        var persistedOrder = await orderRepository.GetOrderById(orderId, "ttd");
+        Assert.NotNull(persistedOrder);
+
+        DateTime expectedPostponedSendTime = scheduleService.GetRequestedSendTimeForDaytimeSendCondition(eveningRequestedSendTime);
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(orderId);
+
+        Assert.Equal(expectedPostponedSendTime, persistedRequestedSendTimeColumn);
+        Assert.NotEqual(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
+        Assert.Equal(eveningRequestedSendTime, persistedOrder.RequestedSendTime);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrder_NoConditionEndpoint_IsNotPostponed()
+    {
+        // Arrange
+        var orderRepository = GetRealOrderRepository();
+        var scheduleService = GetRealScheduleService();
+        var service = CreateOrderRequestService(orderRepository, scheduleService, GetNoOpContactPointService());
+
+        DateTime eveningRequestedSendTime = new DateTime(2026, 6, 15, 20, 0, 0, DateTimeKind.Utc);
+        var orderRequest = CreateLegacySmsOrderRequest(eveningRequestedSendTime, null);
+
+        // Act
+        var response = await service.RegisterNotificationOrder(orderRequest);
+        Guid orderId = response.OrderId!.Value;
+        _orderIdsToDelete.Add(orderId);
+
+        // Assert
+        DateTime persistedRequestedSendTimeColumn = await GetRequestedSendTimeColumn(orderId);
+        Assert.Equal(eveningRequestedSendTime, persistedRequestedSendTimeColumn);
+    }
+
+    private static NotificationOrderRequest CreateLegacySmsOrderRequest(DateTime requestedSendTime, Uri? conditionEndpoint)
+    {
+        return new NotificationOrderRequest(
+            sendersReference: "senders-reference",
+            creatorShortName: "ttd",
+            templates: [new SmsTemplate("Altinn", "Test SMS body")],
+            requestedSendTime: requestedSendTime,
+            notificationChannel: NotificationChannel.Sms,
+            recipients: [new Recipient([new SmsAddressPoint("+4799999999")])],
+            ignoreReservation: null,
+            resourceId: null,
+            conditionEndpoint: conditionEndpoint,
+            resourceAction: null);
+    }
+
     /// <summary>
-    /// Retrieves the value of the notifications.orders.requestedsendtime column for the order with the
+    /// Retrieves the value of the notifications.orders.requestedsendtime column
     /// given alternate id. Unlike the jsonb notificationorder payload (which always retains the original,
     /// unmodified requested send time for monitoring/troubleshooting purposes), this column reflects any
     /// postponement applied to the effective send time.

@@ -60,6 +60,14 @@ public class OrderRequestService : IOrderRequestService
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
+        DateTime originalSendTime = orderRequest.RequestedSendTime ?? currentTime;
+
+        var resolvedRequestedSendTime = ResolveRequestedSendTime(
+            originalSendTime,
+            orderRequest.ConditionEndpoint,
+            orderRequest.NotificationChannel,
+            SendingTimePolicy.Daytime);
+
         var order = new NotificationOrder
         {
             Id = orderId,
@@ -74,10 +82,10 @@ public class OrderRequestService : IOrderRequestService
             UseStaleContactInformation = false,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             NotificationChannel = orderRequest.NotificationChannel,
-            RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
+            RequestedSendTime = originalSendTime
         };
 
-        NotificationOrder savedOrder = await _repository.Create(order, order.RequestedSendTime);
+        NotificationOrder savedOrder = await _repository.Create(order, resolvedRequestedSendTime);
 
         return new NotificationOrderRequestResponse()
         {
