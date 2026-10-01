@@ -20,6 +20,8 @@ public class DashboardRepository : IDashboardRepository
     private const string _getNotificationsByPhoneNumber = "SELECT * from notifications.get_notifications_by_phone_number($1,$2,$3)"; // (_phonenumber, _from_date,_to_date)
     private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid($1::uuid)"; // (_shipmentid)
 
+    private const int _defaultDateRangeDays = 7;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardRepository"/> class.
     /// </summary>
@@ -33,7 +35,7 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         // default value is the past 7 days
-        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
+        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
         return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, from, to, cancellationToken);
     }
@@ -42,7 +44,7 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         // default value is the past 7 days
-        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
+        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
         return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, from, to, cancellationToken);
     }
@@ -51,7 +53,7 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByEmailAsync(string email, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         // default value is the past 7 days
-        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
+        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
         return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, from, to, cancellationToken);
     }
@@ -60,7 +62,7 @@ public class DashboardRepository : IDashboardRepository
     public Task<List<DashboardNotification>> GetDashboardNotificationsByPhoneNumberAsync(string phoneNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken)
     {
         // default value is the past 7 days
-        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-7)).ToUniversalTime();
+        DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
         return GetDashboardNotificationsAsync(_getNotificationsByPhoneNumber, phoneNumber, from, to, cancellationToken);
     }
