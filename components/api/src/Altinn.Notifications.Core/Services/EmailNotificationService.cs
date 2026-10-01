@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -6,6 +7,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
@@ -25,6 +27,7 @@ public class EmailNotificationService(
     IUnitOfWorkRepository unitOfWorkRepository,
     ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
+    private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IGuidService _guidService = guidService;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
@@ -100,6 +103,7 @@ public class EmailNotificationService(
         CancellationToken cancellationToken)
         where TNotification : class
     {
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName);
         UnitOfWork unitOfWork;
         try
         {

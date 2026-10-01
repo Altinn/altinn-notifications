@@ -25,8 +25,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private readonly ILogger<SmsNotificationRepository> _logger;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
-    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms()";
     private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms()";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
@@ -116,41 +114,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             reader.GetValue<string>("body"));
     }
 
-    /// <summary>
-    /// Retrieves pending SMS notifications eligible under the provided sending time policy.
-    /// </summary>
-    public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
-    {
-        if (publishBatchSize <= 0)
-        {
-            return [];
-        }
-
-        string claimSmsBatchForSending = sendingTimePolicy switch
-        {
-            SendingTimePolicy.Anytime => _claimAnytimeSmsBatchSql,
-            _ => _claimDaytimeSmsBatchSql,
-        };
-
-        await using var command = _dataSource.CreateCommand(claimSmsBatchForSending);
-        command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var result = new List<Sms>(publishBatchSize);
-
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            result.Add(new Sms(
-                reader.GetValue<Guid>("alternateid"),
-                reader.GetValue<string>("sendernumber"),
-                reader.GetValue<string>("mobilenumber"),
-                reader.GetValue<string>("body"),
-                reader.GetValue<string>("creatorname")));
-        }
-
-        return result;
-    }
-
     /// <inheritdoc/>
     /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and gateway reference are null or empty.</exception>
     public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null)
@@ -179,7 +142,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
     
     /// <inheritdoc/>
-    public async Task PersistSubstitutedSender(Guid notificationId, string sender)
+    public async Task PersistSubstitutedSender(UnitOfWork unitOfWork, Guid notificationId, string sender)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sender);
         
@@ -190,7 +153,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
             }
 
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_persistSubstitutedSenderSql);
+            await using NpgsqlCommand pgcom = new(_persistSubstitutedSenderSql, unitOfWork.Connection, unitOfWork.Transaction);
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sender);

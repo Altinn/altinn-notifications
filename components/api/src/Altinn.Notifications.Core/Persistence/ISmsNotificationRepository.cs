@@ -40,15 +40,6 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task<Sms?> GetNewNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
-    /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
-    /// </summary>
-    /// <param name="publishBatchSize">Maximum number of notifications to retrieve.</param>
-    /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <param name="sendingTimePolicy">Policy that determines which notifications are eligible for retrieval.</param>
-    /// <returns>A task with a list of claimed SMS notifications.</returns>
-    Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
-
-    /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.
     /// </summary>
     /// <param name="orderId">The unique identifier of the order.</param>
@@ -71,8 +62,9 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// <summary>
     /// Writes the substituted sender for an SMS notification to the database.
     /// </summary>
+    /// <param name="unitOfWork">The active unit of work that provides connection and transaction.</param>
     /// <param name="notificationId">The unique identifier of the SMS notification.</param>
     /// <param name="sender">The substituted sender to be written to the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task PersistSubstitutedSender(Guid notificationId, string sender);
+    Task PersistSubstitutedSender(UnitOfWork unitOfWork, Guid notificationId, string sender);
 }

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -7,6 +8,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,6 +19,7 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class SmsNotificationService : ISmsNotificationService
 {
+    private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -35,9 +38,8 @@ public class SmsNotificationService : ISmsNotificationService
         ISendSmsPublisher smsPublisher,
         IOptions<NotificationConfig> notificationConfig,
         IUnitOfWorkRepository unitOfWorkRepository,
-        ILogger<SmsNotificationService> logger)
-        ISmsSenderSubstitutionService senderSubstitutionService,
-        IOptions<NotificationConfig> notificationConfig)
+        ILogger<SmsNotificationService> logger,
+        ISmsSenderSubstitutionService senderSubstitutionService)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
@@ -94,6 +96,7 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task<bool> SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
+        using Activity? activity = _activitySource.StartActivity("SendNotifications")?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {
@@ -119,7 +122,7 @@ public class SmsNotificationService : ISmsNotificationService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            await ApplySenderSubstitution(newSmsNotification);
+            await ApplySenderSubstitution(unitOfWork, newSmsNotification);
             await _smsPublisher.PublishAsync(newSmsNotification, cancellationToken);
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
             return true;
@@ -163,44 +166,25 @@ public class SmsNotificationService : ISmsNotificationService
     /// Substitutes the sender for SMS notifications whose recipient phone number matches a
     /// configured substitution rule for the notification's service owner.
     /// </summary>
-    /// <param name="smsNotifications">The batch of SMS notifications about to be published.</param>
+    /// <param name="unitOfWork">The active unit of work for the current send operation.</param>
+    /// <param name="sms">The SMS notification about to be published.</param>
     /// <remarks>
     /// Skips all work when no substitution rules are configured, so the common case (no
     /// substitution in use) adds no per-recipient overhead.
     /// </remarks>
-    private async Task ApplySenderSubstitution(List<Sms> smsNotifications)
+    private async Task ApplySenderSubstitution(UnitOfWork unitOfWork, Sms sms)
     {
         if (!_senderSubstitutionService.HasRules)
         {
             return;
         }
 
-        foreach (var sms in smsNotifications)
-        {
-            var smsSenderResolutionResult = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
+        var smsSenderResolutionResult = _senderSubstitutionService.ResolveSender(sms.Sender, sms.Recipient, sms.Creator);
 
-            if (smsSenderResolutionResult.WasSubstituted)
-            {
-                sms.Sender = smsSenderResolutionResult.Sender;
-                await _repository.PersistSubstitutedSender(sms.NotificationId, sms.Sender);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Resets the send status to <see cref="SmsNotificationResultType.New"/> for the given SMS notifications.
-    /// </summary>
-    /// <param name="smsNotifications">The collection of SMS notifications to reset the send status for.</param>
-    private async Task ResetSendStatusToNewAsync(IEnumerable<Sms> smsNotifications)
-    {
-        if (smsNotifications is null)
+        if (smsSenderResolutionResult.WasSubstituted)
         {
-            return;
-        }
-
-        foreach (var sms in smsNotifications)
-        {
-            await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+            sms.Sender = smsSenderResolutionResult.Sender;
+            await _repository.PersistSubstitutedSender(unitOfWork, sms.NotificationId, sms.Sender);
         }
     }
 
