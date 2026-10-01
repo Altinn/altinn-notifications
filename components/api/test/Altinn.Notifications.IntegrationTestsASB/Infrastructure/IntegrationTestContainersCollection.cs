@@ -1,5 +1,3 @@
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Infrastructure;
@@ -9,6 +7,6 @@ namespace Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 /// All tests in this collection share the same container instances (PostgreSQL, MSSQL, Service Bus Emulator).
 /// </summary>
 [CollectionDefinition(nameof(IntegrationTestContainersCollection))]
-public class IntegrationTestContainersCollection : ICollectionFixture<IntegrationTestContainersFixture>
+public class IntegrationTestContainersCollection : ICollectionFixture<IntegrationTestApiAsbContainersFixture>
 {
 }

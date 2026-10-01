@@ -60,13 +60,13 @@ public static class TestDataUtil
 
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
         var emailRepo = TestServiceUtil.GetService<IEmailNotificationRepository>();
-        
+
         // Create order using repository (ensures proper transaction handling)
         await orderRepo.Create(order);
-        
+
         // Set to Processing status to trigger notification creation
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        
+
         // Create email notification
         var recipient = order.Recipients[0];
         var addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
@@ -82,7 +82,7 @@ public static class TestDataUtil
         };
 
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(7));
-        
+
         return (order.Id, emailNotification.Id);
     }
 
@@ -127,7 +127,7 @@ public static class TestDataUtil
 
         // Create order using repository (ensures proper transaction handling)
         await orderRepo.Create(order);
-        
+
         return order.Id;
     }
 
@@ -149,17 +149,17 @@ public static class TestDataUtil
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         await using var connection = await dataSource.OpenConnectionAsync();
         await using var command = connection.CreateCommand();
-        
+
         command.CommandText = @"
             UPDATE notifications.orders 
             SET processedstatus = @status::orderprocessingstate,
                 processed = @processed
             WHERE alternateid = @orderId";
-        
+
         command.Parameters.AddWithValue("status", status.ToString());
         command.Parameters.AddWithValue("processed", DateTime.UtcNow);
         command.Parameters.AddWithValue("orderId", orderId);
-        
+
         await command.ExecuteNonQueryAsync();
     }
 
@@ -171,14 +171,14 @@ public static class TestDataUtil
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         await using var connection = await dataSource.OpenConnectionAsync();
         await using var command = connection.CreateCommand();
-        
+
         command.CommandText = @"
             SELECT COUNT(*) 
             FROM notifications.statusfeed sf
             JOIN notifications.orders o ON sf.orderid = o._id
             WHERE o.alternateid = @orderId";
         command.Parameters.AddWithValue("orderId", orderId);
-        
+
         var result = await command.ExecuteScalarAsync();
         return Convert.ToInt32(result);
     }

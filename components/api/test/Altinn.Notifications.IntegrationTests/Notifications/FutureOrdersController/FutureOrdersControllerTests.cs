@@ -5,31 +5,22 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
-using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
 
 using FluentValidation;
 using FluentValidation.Results;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -40,7 +31,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers
 /// <summary>
 /// Integration tests for the <see cref="FutureOrdersController"/>.
 /// </summary>
-public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<FutureOrdersController>>
+public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private const string BasePath = "/notifications/api/v1/future/orders";
 
@@ -50,12 +41,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private readonly IntegrationTestWebApplicationFactory<FutureOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersControllerTests"/> class.
     /// </summary>
-    public FutureOrdersControllerTests(IntegrationTestWebApplicationFactory<FutureOrdersController> factory)
+    public FutureOrdersControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -98,7 +89,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Act
         var response = await client.PostAsync(
             BasePath,
-            new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json"), 
+            new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json"),
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -1224,16 +1215,9 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             orderRequestService = orderRequestServiceMock.Object;
         }
 
-        return _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(orderRequestService);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(orderRequestService);
+        return _factory.SharedClient;
     }
 
     /// <summary>

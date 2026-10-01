@@ -142,7 +142,7 @@ public class PreferredChannelProcessingServiceTests
                 }
             })
             .Returns(Task.CompletedTask);
-        
+
         var expectedEmailResult = new EmailOrderProcessingResult([], null);
         var expectedSmsResult = new SmsOrderProcessingResult([], null);
 
@@ -864,7 +864,7 @@ public class PreferredChannelProcessingServiceTests
         _emailProcessingMock
             .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
             .Returns(Task.FromResult(new EmailOrderProcessingResult([], null)));
-        
+
         _smsProcessingMock
             .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
             .Returns(Task.FromResult(new SmsOrderProcessingResult([], null)));
