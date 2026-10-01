@@ -4,6 +4,13 @@
 		<IsPackable>false</IsPackable>
 		<NoWarn>$(NoWarn);1591</NoWarn>
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+		<!--
+			xunit.v3 4.x defaults test projects to Microsoft.Testing.Platform (MTP) mode, which isn't
+			compatible with our VSTest-based CI pipeline (dotnet test --collect:"XPlat Code Coverage"
+			via coverlet.collector). Pin back to classic VSTest mode so discovery and coverage keep working.
+		-->
+		<IsTestingPlatformApplication>false</IsTestingPlatformApplication>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(IsTestProject)' == 'true'">
