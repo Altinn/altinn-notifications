@@ -19,6 +19,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
+[Collection(GlobalStateSerialCollection.Name)]
 public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;

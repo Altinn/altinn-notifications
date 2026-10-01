@@ -68,21 +68,18 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     public async Task Trigger_SendEmailNotifications_TaskQueued()
     {
         // Arrange
-        var emailPublishTaskQueueMock = CreateIdleEmailQueueMock();
-        emailPublishTaskQueueMock
-            .Setup(e => e.TryEnqueue())
-            .Returns(true)
+        var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+        emailNotificationServiceMock
+            .Setup(e => e.SendNotification(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true)
             .Verifiable();
-
-        var composedEmailPublishSignalMock = CreateIdleComposedEmailSignalMock();
-        composedEmailPublishSignalMock
-            .Setup(e => e.TryEnqueue())
-            .Returns(true)
+        emailNotificationServiceMock
+            .Setup(e => e.SendComposedNotification(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true)
             .Verifiable();
 
         var client = GetTestClient(
-            emailPublishTaskQueue: emailPublishTaskQueueMock.Object,
-            composedEmailPublishSignal: composedEmailPublishSignalMock.Object);
+            emailNotificationService: emailNotificationServiceMock.Object);
 
         string url = _basePath + "/sendemail";
         using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
@@ -92,8 +89,8 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        emailPublishTaskQueueMock.Verify(e => e.TryEnqueue(), Times.Once);
-        composedEmailPublishSignalMock.Verify(e => e.TryEnqueue(), Times.Once);
+        emailNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Once);
+        emailNotificationServiceMock.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
