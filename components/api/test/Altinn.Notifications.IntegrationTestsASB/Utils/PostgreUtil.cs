@@ -234,6 +234,23 @@ public static class PostgreUtil
     }
 
     /// <summary>
+    /// Deletes a dead delivery report by its primary key ID.
+    /// </summary>
+    public static async Task<bool> DeleteDeadDeliveryReportById(string connectionString, long id)
+    {
+        const string sql = """
+            DELETE FROM notifications.deaddeliveryreports WHERE id = @id
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("id", id);
+
+        var rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
     /// Returns the firstseen and lastattempt timestamps for a dead delivery report
     /// identified by its messageId.
     /// </summary>
