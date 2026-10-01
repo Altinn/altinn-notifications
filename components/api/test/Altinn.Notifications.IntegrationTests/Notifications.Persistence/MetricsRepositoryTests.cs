@@ -62,7 +62,7 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         MetricsRepository sut = (MetricsRepository)ServiceUtil
             .GetServices([typeof(IMetricsRepository)])
             .First(i => i.GetType() == typeof(MetricsRepository));
-        
+
         var date = DateTime.UtcNow;
 
         NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName, date);
@@ -73,7 +73,7 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.InRange(result.Metrics.Count, 2, int.MaxValue);
-        
+
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
         Assert.NotNull(metrics.Rate);

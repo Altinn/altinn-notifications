@@ -1,11 +1,10 @@
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Infrastructure;
@@ -55,6 +54,10 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             dataSourceBuilder.EnableDynamicJson();
             return dataSourceBuilder.Build();
         }));
+
+        RegisterDelegatedService<IEmailNotificationService>(services);
+        RegisterDelegatedService<ISmsNotificationService>(services);
+        RegisterDelegatedService<IAltinnServiceUpdateService>(services);
     }
 
     /// <inheritdoc/>

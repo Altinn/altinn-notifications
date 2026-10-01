@@ -144,7 +144,7 @@ public class SmsNotificationServiceTests
         // Assert
         Assert.NotNull(singleResult);
         Assert.Single(result);
-        Assert.Equivalent(expected, singleResult);  
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]

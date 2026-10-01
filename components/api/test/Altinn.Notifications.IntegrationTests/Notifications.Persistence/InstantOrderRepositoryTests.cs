@@ -203,7 +203,7 @@ public sealed class InstantOrderRepositoryTests : IAsyncLifetime
             instantEmailNotificationOrder,
             notificationOrder,
             emailNotification,
-            emailExpiryDateTime, 
+            emailExpiryDateTime,
             TestContext.Current.CancellationToken);
 
         // Assert

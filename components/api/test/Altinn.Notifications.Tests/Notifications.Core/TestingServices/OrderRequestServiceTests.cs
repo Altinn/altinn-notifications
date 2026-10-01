@@ -732,7 +732,7 @@ public class OrderRequestServiceTests
                 It.IsAny<List<ReminderNotificationOrder>?>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = orderChainId, ShipmentId = orderId, SendersReference = "self-identified-sms-preferred-ref" });    
+            .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = orderChainId, ShipmentId = orderId, SendersReference = "self-identified-sms-preferred-ref" });
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
@@ -2888,7 +2888,7 @@ public class OrderRequestServiceTests
                 .SetType(OrderType.Notification)
                 .SetRequestedSendTime(currentTime.AddHours(1))
                 .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
-                .Build(), 
+                .Build(),
             TestContext.Current.CancellationToken);
 
         // Assert

@@ -1,4 +1,6 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
+using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 
 using Microsoft.Extensions.Configuration;
@@ -32,6 +34,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
                 "Missing WolverineSettings configuration for ASB integration tests.");
 
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
+
+        RegisterDelegatedService<ISendingService>(services);
+        RegisterDelegatedService<ISmsClient>(services);
     }
 
     /// <inheritdoc/>

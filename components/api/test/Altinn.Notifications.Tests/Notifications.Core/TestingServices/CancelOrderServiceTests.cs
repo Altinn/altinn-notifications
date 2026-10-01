@@ -56,7 +56,7 @@ namespace Altinn.Notifications.Tests.Services
 
         [Fact]
         public async Task CancelOrder_OrderDoesNotExist_ReturnsCancellationError()
-        {  
+        {
             // Arrange      
             Guid orderId = Guid.NewGuid();
 
@@ -69,7 +69,7 @@ namespace Altinn.Notifications.Tests.Services
             // Assert
             result.Match(
                 success => throw new Exception("No success value should be returned if order is not found."),
-                error => 
+                error =>
                 {
                     Assert.Equal(CancellationError.OrderNotFound, error);
                     return true;

@@ -28,7 +28,7 @@ public class WolverineServiceCollectionExtensionsTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("   ")] 
+    [InlineData("   ")]
     public void AddWolverineServices_EmailStatusCheckQueueNameMissing_ThrowsInvalidOperationException(string? queueName)
     {
         // Arrange
@@ -159,7 +159,7 @@ public class WolverineServiceCollectionExtensionsTests
         Assert.Contains(nameof(WolverineSettings.EmailServiceRateLimitQueueName), exception.Message);
     }
 
-    [Fact]  
+    [Fact]
     public void AddIntegrationServices_WolverineEnabledWithAllPublishers_NoException()
     {
         // Arrange
