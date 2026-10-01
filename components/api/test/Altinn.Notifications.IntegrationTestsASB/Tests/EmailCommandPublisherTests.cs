@@ -39,6 +39,13 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
             await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
+
+            var message = await ServiceBusTestUtils.WaitForMessageAsync(
+                _fixture.ServiceBusConnectionString,
+                _emailSendQueueName,
+                TimeSpan.FromSeconds(10));
+
+            Assert.NotNull(message);
         }
     }
 
@@ -200,6 +207,19 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
 
         await publisher.PublishAsync(firstEmail, TestContext.Current.CancellationToken);
         await publisher.PublishAsync(secondEmail, TestContext.Current.CancellationToken);
+
+        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _emailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _emailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        Assert.NotNull(firstMessage);
+        Assert.NotNull(secondMessage);
     }
 
     /// <summary>

@@ -969,7 +969,7 @@ public class EmailNotificationServiceTests
             Times.Once);
     }
 
-    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService

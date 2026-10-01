@@ -34,6 +34,12 @@ public class ProcessItemsBackgroundServiceTests
             scheduleService.Object);
 
         await service.ExecuteForTest(CancellationToken.None);
+
+        emailService.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Never);
+        emailService.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
+        smsService.Verify(s => s.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
+        orderService.Verify(o => o.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
     [Fact]
@@ -73,6 +79,8 @@ public class ProcessItemsBackgroundServiceTests
             scheduleService.Object);
 
         await service.ExecuteForTest(cts.Token);
+
+        Assert.True(cts.IsCancellationRequested);
     }
 
     [Fact]
@@ -137,6 +145,12 @@ public class ProcessItemsBackgroundServiceTests
         await cts.CancelAsync();
 
         await service.ExecuteForTest(cts.Token);
+
+        emailService.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Never);
+        emailService.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
+        smsService.Verify(s => s.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
+        orderService.Verify(o => o.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
     private static NotificationConfig CreateConfig()

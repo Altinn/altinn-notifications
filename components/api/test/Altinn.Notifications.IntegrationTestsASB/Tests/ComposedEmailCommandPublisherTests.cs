@@ -45,6 +45,19 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
 
         await publisher.PublishAsync(firstEmail, TestContext.Current.CancellationToken);
         await publisher.PublishAsync(secondEmail, TestContext.Current.CancellationToken);
+
+        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _composedEmailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _composedEmailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        Assert.NotNull(firstMessage);
+        Assert.NotNull(secondMessage);
     }
 
     /// <summary>

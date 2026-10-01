@@ -147,6 +147,7 @@ public class EmailNotificationService(
             }
             catch (Exception)
             {
+                // Ignore rollback exceptions to avoid masking the original exception
             }
 
             return false;

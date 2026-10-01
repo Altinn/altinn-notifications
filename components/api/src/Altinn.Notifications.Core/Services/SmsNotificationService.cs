@@ -140,6 +140,7 @@ public class SmsNotificationService : ISmsNotificationService
             }
             catch (Exception)
             {
+                // If rollback fails, we can't do much about it. The unit of work will be disposed and the transaction rolled back automatically.
             }
 
             return false;
