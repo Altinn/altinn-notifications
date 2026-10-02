@@ -32,7 +32,6 @@ public class DashboardController : ControllerBase
     private readonly IValidator<NotificationsByOrgNumberRequestExt> _orgNumberValidator;
     private readonly IValidator<NotificationsByEmailRequestExt> _emailValidator;
     private readonly IValidator<NotificationsByPhoneNumberRequestExt> _phoneNumberValidator;
-    private readonly IValidator<NotificationsByShipmentIdRequestExt> _shipmentIdValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
@@ -42,21 +41,18 @@ public class DashboardController : ControllerBase
     /// <param name="orgNumberValidator">The validator for organization number lookup requests.</param>
     /// <param name="emailValidator">The validator for email lookup requests.</param>
     /// <param name="phoneNumberValidator">The validator for phone number lookup requests.</param>
-    /// <param name="shipmentIdValidator">The validator for shipment id lookup requests.</param>
     public DashboardController(
         IDashboardService dashboardService,
         IValidator<NotificationsByNinRequestExt> ninValidator,
         IValidator<NotificationsByOrgNumberRequestExt> orgNumberValidator,
         IValidator<NotificationsByEmailRequestExt> emailValidator,
-        IValidator<NotificationsByPhoneNumberRequestExt> phoneNumberValidator,
-        IValidator<NotificationsByShipmentIdRequestExt> shipmentIdValidator)
+        IValidator<NotificationsByPhoneNumberRequestExt> phoneNumberValidator)
     {
         _dashboardService = dashboardService;
         _ninValidator = ninValidator;
         _orgNumberValidator = orgNumberValidator;
         _emailValidator = emailValidator;
         _phoneNumberValidator = phoneNumberValidator;
-        _shipmentIdValidator = shipmentIdValidator;
     }
 
     /// <summary>
@@ -164,7 +160,7 @@ public class DashboardController : ControllerBase
     {
         return await ProcessDashboardRequestAsync(
             request,
-            _shipmentIdValidator,
+            validator: null,
             (req, ct) => _dashboardService.GetNotificationsByShipmentIdAsync(req.ShipmentId, ct),
             cancellationToken);
     }
@@ -174,15 +170,18 @@ public class DashboardController : ControllerBase
     /// </summary>
     private async Task<ActionResult<List<DashboardNotificationExt>>> ProcessDashboardRequestAsync<TRequest>(
         TRequest request,
-        IValidator<TRequest> validator,
+        IValidator<TRequest>? validator,
         Func<TRequest, CancellationToken, Task<Result<List<DashboardNotification>, ServiceError>>> getNotifications,
         CancellationToken cancellationToken)
     {
-        var validationResult = validator.Validate(request);
-        if (!validationResult.IsValid)
+        if (validator is not null)
         {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
+            var validationResult = validator.Validate(request);
+            if (!validationResult.IsValid)
+            {
+                validationResult.AddToModelState(ModelState);
+                return ValidationProblem(ModelState);
+            }
         }
 
         try

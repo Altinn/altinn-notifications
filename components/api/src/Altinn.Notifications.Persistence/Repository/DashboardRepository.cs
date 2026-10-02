@@ -18,7 +18,7 @@ public class DashboardRepository : IDashboardRepository
     private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
     private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email($1,$2,$3)"; // (_email, _from_date,_to_date)
     private const string _getNotificationsByPhoneNumber = "SELECT * from notifications.get_notifications_by_phone_number($1,$2,$3)"; // (_phonenumber, _from_date,_to_date)
-    private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid($1::uuid)"; // (_shipmentid)
+    private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid($1)"; // (_shipmentid)
 
     private const int _defaultDateRangeDays = 7;
 
@@ -37,7 +37,7 @@ public class DashboardRepository : IDashboardRepository
         // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
-        return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, from, to, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByNin, recipientNin, NpgsqlDbType.Text, from, to, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -46,7 +46,7 @@ public class DashboardRepository : IDashboardRepository
         // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
-        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, from, to, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByOrgNo, recipientOrgNo, NpgsqlDbType.Text, from, to, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -55,7 +55,7 @@ public class DashboardRepository : IDashboardRepository
         // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
-        return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, from, to, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByEmail, email, NpgsqlDbType.Text, from, to, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -64,13 +64,13 @@ public class DashboardRepository : IDashboardRepository
         // default value is the past 7 days
         DateTime from = (dateTimeFrom ?? DateTime.UtcNow.AddDays(-_defaultDateRangeDays)).ToUniversalTime();
         DateTime to = (dateTimeTo ?? DateTime.UtcNow).ToUniversalTime();
-        return GetDashboardNotificationsAsync(_getNotificationsByPhoneNumber, phoneNumber, from, to, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByPhoneNumber, phoneNumber, NpgsqlDbType.Text, from, to, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<List<DashboardNotification>> GetDashboardNotificationsByShipmentIdAsync(string shipmentId, CancellationToken cancellationToken)
+    public Task<List<DashboardNotification>> GetDashboardNotificationsByShipmentIdAsync(Guid shipmentId, CancellationToken cancellationToken)
     {
-        return GetDashboardNotificationsAsync(_getNotificationsByShipmentId, shipmentId, null, null, cancellationToken);
+        return GetDashboardNotificationsAsync(_getNotificationsByShipmentId, shipmentId, NpgsqlDbType.Uuid, null, null, cancellationToken);
     }
 
     /// <summary>
@@ -78,13 +78,15 @@ public class DashboardRepository : IDashboardRepository
     /// </summary>
     /// <param name="sqlCommand">The SQL command to execute. Must accept the recipient value as its first parameter, followed by 'from' and 'to' only when provided.</param>
     /// <param name="recipientValue">The recipient identifier to filter by (e.g. national identity number, organization number, email address, or shipment id).</param>
+    /// <param name="recipientValueType">The Npgsql type to send <paramref name="recipientValue"/> as.</param>
     /// <param name="dateTimeFrom">Start of the date range (inclusive), already resolved by the caller. Omitted from the command when null.</param>
     /// <param name="dateTimeTo">End of the date range (exclusive), already resolved by the caller. Omitted from the command when null.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A list of <see cref="DashboardNotification"/> in the order first seen in the result set, each with its associated delivery attempts.</returns>
     private async Task<List<DashboardNotification>> GetDashboardNotificationsAsync(
         string sqlCommand,
-        string recipientValue,
+        object recipientValue,
+        NpgsqlDbType recipientValueType,
         DateTime? dateTimeFrom,
         DateTime? dateTimeTo,
         CancellationToken cancellationToken)
@@ -94,7 +96,7 @@ public class DashboardRepository : IDashboardRepository
         var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, recipientValue);
+        pgcom.Parameters.AddWithValue(recipientValueType, recipientValue);
 
         if (dateTimeFrom.HasValue)
         {

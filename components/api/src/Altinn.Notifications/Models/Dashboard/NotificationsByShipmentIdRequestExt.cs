@@ -13,5 +13,5 @@ public class NotificationsByShipmentIdRequestExt
     /// </summary>
     [BindRequired]
     [FromHeader(Name = "ShipmentId")]
-    public required string ShipmentId { get; set; }
+    public required Guid ShipmentId { get; set; }
 }

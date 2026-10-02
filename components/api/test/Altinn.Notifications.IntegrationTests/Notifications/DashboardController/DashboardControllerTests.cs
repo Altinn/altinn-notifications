@@ -795,7 +795,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     public async Task GetByShipmentId_ValidRequest_ReturnsOkWithExpectedPayload()
     {
         // Arrange
-        var shipmentId = Guid.NewGuid().ToString();
+        var shipmentId = Guid.NewGuid();
         var notification = CreateNotification(emailAddress: _validEmail);
         _serviceMock
             .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))
@@ -804,7 +804,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         HttpClient client = GetTestClient();
         SetValidAuthorization(client);
 
-        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId));
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId.ToString()));
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -852,7 +852,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("valid GUID", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ShipmentId", content, StringComparison.OrdinalIgnoreCase);
         _serviceMock.VerifyNoOtherCalls();
     }
 
@@ -892,7 +892,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
     public async Task GetByShipmentId_NoMatchingNotifications_ReturnsOkWithEmptyList()
     {
         // Arrange
-        var shipmentId = Guid.NewGuid().ToString();
+        var shipmentId = Guid.NewGuid();
         _serviceMock
             .Setup(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DashboardNotification>());
@@ -900,7 +900,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         HttpClient client = GetTestClient();
         SetValidAuthorization(client);
 
-        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId));
+        HttpRequestMessage request = CreateRequest("shipmentid", ("ShipmentId", shipmentId.ToString()));
 
         // Act
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -919,7 +919,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         // Arrange
         var serviceMock = new Mock<IDashboardService>();
         serviceMock
-            .Setup(s => s.GetNotificationsByShipmentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetNotificationsByShipmentIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         HttpClient client = GetTestClient(serviceMock.Object);

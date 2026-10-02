@@ -19,7 +19,7 @@ public class DashboardServiceTests
     private const string _recipientOrgNo = "123456789";
     private const string _recipientEmail = "recipient@example.com";
     private const string _recipientPhoneNumber = "+4799999999";
-    private static readonly string _shipmentId = Guid.NewGuid().ToString();
+    private static readonly Guid _shipmentId = Guid.NewGuid();
 
     [Fact]
     public async Task GetNotificationsByNinAsync_ValidInput_ReturnsRepositoryResult()
@@ -441,7 +441,7 @@ public class DashboardServiceTests
         Mock<IDashboardRepository> repository = new();
         repository
             .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
-                It.IsAny<string>(),
+                It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
@@ -467,7 +467,7 @@ public class DashboardServiceTests
         Mock<IDashboardRepository> repository = new();
         repository
             .Setup(x => x.GetDashboardNotificationsByShipmentIdAsync(
-                It.IsAny<string>(),
+                It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 

@@ -58,5 +58,5 @@ public interface IDashboardService
     /// <param name="shipmentId">The shipment id (orders.alternateid) to look up.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria, or a <see cref="ServiceError"/>.</returns>
-    Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByShipmentIdAsync(string shipmentId, CancellationToken cancellationToken);
+    Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByShipmentIdAsync(Guid shipmentId, CancellationToken cancellationToken);
 }

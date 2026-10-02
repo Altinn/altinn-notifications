@@ -581,7 +581,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         DashboardRepository sut = GetRepository();
 
         // Act
-        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId.ToString(), CancellationToken.None);
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId, CancellationToken.None);
 
         // Assert
         var notification = Assert.Single(result);
@@ -600,7 +600,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         DashboardRepository sut = GetRepository();
 
         // Act
-        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Empty(result);
