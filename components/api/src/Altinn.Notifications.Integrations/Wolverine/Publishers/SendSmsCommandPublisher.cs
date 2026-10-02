@@ -19,14 +19,12 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken)
+    public async Task PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             await _messageBusPublisher.PublishCommandAsync(CreateCommand(sms), cancellationToken);
-
-            return null;
         }
         catch (OperationCanceledException)
         {
@@ -39,7 +37,7 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
                 "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.",
                 sms.NotificationId);
 
-            return sms;
+            throw;
         }
     }
 

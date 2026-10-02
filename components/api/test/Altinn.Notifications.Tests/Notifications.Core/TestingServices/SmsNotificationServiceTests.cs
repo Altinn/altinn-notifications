@@ -131,7 +131,7 @@ public class SmsNotificationServiceTests
         var publisher = new Mock<ISendSmsPublisher>();
         publisher
             .Setup(p => p.PublishAsync(sms, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Sms?)null);
+            .Returns(Task.CompletedTask);
 
         var senderSubstitution = new Mock<ISmsSenderSubstitutionService>();
         senderSubstitution.Setup(s => s.HasRules).Returns(false);
@@ -175,7 +175,7 @@ public class SmsNotificationServiceTests
         var publisher = new Mock<ISendSmsPublisher>();
         publisher
             .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Sms?)null);
+            .Returns(Task.CompletedTask);
 
         var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
         UnitOfWork unitOfWork = CreateUnitOfWork();

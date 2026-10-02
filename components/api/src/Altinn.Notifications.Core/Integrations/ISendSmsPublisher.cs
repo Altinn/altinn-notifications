@@ -17,9 +17,9 @@ public interface ISendSmsPublisher
     /// <param name="sms">The SMS object containing the message body and recipient information.</param>
     /// <param name="cancellationToken">The cancellation token used to propagate notification that the operation should be canceled.</param>
     /// <returns>
-    /// A task that represents the asynchronous operation. Returns <c>null</c> when publish succeeds.
+    /// A task that represents the asynchronous operation.
     /// </returns>
-    Task<Sms?> PublishAsync(Sms sms, CancellationToken cancellationToken);
+    Task PublishAsync(Sms sms, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes a batch of SMS notifications asynchronously.
