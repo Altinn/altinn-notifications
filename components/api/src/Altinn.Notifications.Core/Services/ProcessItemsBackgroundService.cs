@@ -35,10 +35,13 @@ public class ProcessItemsBackgroundService(
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_config.EmailNotificationsProcessLoopConfig.TaskCount == 0
-            || _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount == 0
-            || _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount == 0
-            || _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount == 0)
+        int totalTasks = _config.EmailNotificationsProcessLoopConfig.TaskCount
+            + _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount
+            + _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount
+            + _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount
+            + _config.PastDueOrdersProcessLoopConfig.TaskCount
+            + _config.RetryOrdersProcessLoopConfig.TaskCount;
+        if (totalTasks <= 0)
         {
             // Unit test case: No tasks configured, so we don't start any loops. This is useful for unit tests that don't want to start background processing.
             // Could also be used in production to disable email notification processing if needed.
@@ -147,6 +150,7 @@ public class ProcessItemsBackgroundService(
                     {
                         consecutiveRunsWithItemReturned = 0;
                         shouldDelay = true;
+                        manyItemsLately.Set(false);
                     }
                     else
                     {

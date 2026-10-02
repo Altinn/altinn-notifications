@@ -17,17 +17,18 @@ BEGIN
     SELECT id, emaillimittimeout
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE;
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN;
-    ELSE
-        UPDATE notifications.resourcelimitlog
-        SET emaillimittimeout = NULL
-        WHERE id = v_limitlog_id;
     END IF;
+
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL
+        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (

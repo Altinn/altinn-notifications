@@ -13,8 +13,8 @@ public interface IComposedEmailCommandPublisher
     /// <param name="email">The composed email to deliver.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>
-    /// A task that completes with <see langword="null"/> when publishing succeeds;
-    /// otherwise, the unpublished <see cref="ComposedEmail"/>.
+    /// A task that completes when publishing succeeds.
     /// </returns>
+    /// <exception cref="Exception">Thrown when publishing fails.</exception>
     Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken);
 }
