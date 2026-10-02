@@ -173,7 +173,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddSource("Wolverine");
 
-            tracing.AddSource("Altinn.Notifications.OrderProcessingService");
+            tracing.AddSource(BackgroundActivitySource.Name);
         });
 
     AddAzureMonitorTelemetryExporters(services, config);

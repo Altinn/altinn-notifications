@@ -96,8 +96,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        Email? emailToBeSent = await ExecuteInUnitOfWork(
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -145,8 +146,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
-        Email? interpolatedContent = await ExecuteInUnitOfWork(
+        Email? interpolatedContent = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -173,8 +175,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
 
         // Act
-        Email? result = await ExecuteInUnitOfWork(
+        Email? result = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -999,10 +1002,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        ComposedEmail? result = await ExecuteInUnitOfWork(
+        ComposedEmail? result = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            composedEmail => composedEmail.NotificationId == notificationId,
             TestContext.Current.CancellationToken,
-            commit: true);
+            commitOnMatch: true);
 
         // Assert — notification is returned
         Assert.NotNull(result);
@@ -1075,6 +1079,46 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         }
 
         return result;
+    }
+
+    private static async Task<TResult?> ExecuteClaimUntilMatchInUnitOfWork<TResult>(
+        Func<UnitOfWork, CancellationToken, Task<TResult?>> claim,
+        Func<TResult, bool> isMatch,
+        CancellationToken cancellationToken,
+        bool commitOnMatch = false,
+        int maxAttempts = 50)
+        where TResult : class
+    {
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            var unitOfWork = new UnitOfWork
+            {
+                Connection = connection,
+                Transaction = transaction
+            };
+
+            TResult? result = await claim(unitOfWork, cancellationToken);
+
+            if (result is not null && isMatch(result))
+            {
+                if (commitOnMatch)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                else
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                return result;
+            }
+
+            await transaction.RollbackAsync(cancellationToken);
+        }
+
+        return null;
     }
 
     [Fact]
