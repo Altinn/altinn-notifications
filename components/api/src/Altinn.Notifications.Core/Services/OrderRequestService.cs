@@ -193,18 +193,16 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="requestedSendTime">The originally requested UTC send time for the order.</param>
     /// <param name="conditionEndpoint">The order's condition endpoint, if any.</param>
     /// <param name="channel">The notification channel selected for the order.</param>
-    /// <param name="smsSendingTimePolicy">The SMS sending time policy associated with the order, if any.</param>
+    /// <param name="smsSendingTimePolicy">The sending time policy associated with the order, if any.</param>
     /// <returns>
     /// The original <paramref name="requestedSendTime"/>, unless the order has a send condition and includes
-    /// an SMS notification governed by <see cref="SendingTimePolicy.Daytime"/>, in which case the returned value
+    /// a notification governed by <see cref="SendingTimePolicy.Daytime"/>, in which case the returned value
     /// may be postponed to align with the next Daytime send window opening.
     /// </returns>
     /// <remarks>
-    /// Postponing the requested send time also affects any Email notification delivered as part of the same
-    /// order (for <see cref="NotificationChannel.EmailAndSms"/>, <see cref="NotificationChannel.EmailPreferred"/>,
-    /// and <see cref="NotificationChannel.SmsPreferred"/>). This is intentional: the send condition is evaluated
-    /// once per order, so ensuring that evaluation happens close to the actual SMS send time necessarily means
-    /// deferring the whole order &#8212; including any co-delivered Email &#8212; to the same time.
+    /// Postponing the requested send time affects the whole order, including every notification delivered as
+    /// part of it. This is intentional: the send condition is evaluated once per order, so ensuring that
+    /// evaluation happens close to the actual send time necessarily means deferring the whole order to the same time.
     /// </remarks>
     private DateTime ResolveRequestedSendTime(DateTime requestedSendTime, Uri? conditionEndpoint, NotificationChannel channel, SendingTimePolicy? smsSendingTimePolicy)
     {
