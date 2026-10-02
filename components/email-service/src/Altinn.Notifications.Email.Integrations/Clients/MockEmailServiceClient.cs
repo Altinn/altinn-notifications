@@ -1,9 +1,8 @@
 ﻿using System.Text.Json.Serialization;
+
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
-
-using Microsoft.Extensions.Logging;
 
 using Wolverine;
 
