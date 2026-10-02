@@ -50,4 +50,12 @@ public interface IDashboardRepository
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
     Task<List<DashboardNotification>> GetDashboardNotificationsByPhoneNumberAsync(string phoneNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves all notifications (email and SMS) belonging to a shipment identified by its shipment id.
+    /// </summary>
+    /// <param name="shipmentId">The shipment id (orders.alternateid) to look up.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByShipmentIdAsync(Guid shipmentId, CancellationToken cancellationToken);
 }
