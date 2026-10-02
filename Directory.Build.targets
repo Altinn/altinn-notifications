@@ -4,27 +4,27 @@
 		<IsPackable>false</IsPackable>
 		<NoWarn>$(NoWarn);1591</NoWarn>
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
-
-		<!--
-			xunit.v3 4.x defaults test projects to Microsoft.Testing.Platform (MTP) mode, which isn't
-			compatible with our VSTest-based CI pipeline (dotnet test --collect:"XPlat Code Coverage"
-			via coverlet.collector). Pin back to classic VSTest mode so discovery and coverage keep working.
-		-->
-		<IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+		<OutputType>Exe</OutputType>
+		<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(IsTestProject)' == 'true'">
 		<PackageReference Include="xunit.v3" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 
-		<PackageReference Include="coverlet.collector">
+		<PackageReference Include="xunit.runner.visualstudio">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
 		</PackageReference>
 
-		<PackageReference Include="xunit.runner.visualstudio">
+		<PackageReference Include="coverlet.MTP">
 			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
+			<IncludeAssets>compile;runtime;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
+		</PackageReference>
+
+		<PackageReference Include="Microsoft.Testing.Extensions.TrxReport">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>compile;runtime;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 
