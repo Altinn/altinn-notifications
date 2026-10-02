@@ -58,7 +58,7 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
-        var persistedOrder = await OrderRepo.Create(order);
+        var persistedOrder = await OrderRepo.Create(order, order.RequestedSendTime);
         return persistedOrder;
     }
 
@@ -84,7 +84,7 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
-        var persistedOrder = await OrderRepo.Create(order);
+        var persistedOrder = await OrderRepo.Create(order, order.RequestedSendTime);
         return persistedOrder;
     }
 
@@ -93,7 +93,7 @@ public static class PostgreUtil
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         e.Recipient.ToAddress = toAddress;
 
-        await OrderRepo.Create(o);
+        await OrderRepo.Create(o, o.RequestedSendTime);
         await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
         await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
@@ -123,20 +123,20 @@ public static class PostgreUtil
          */
         if (simulateCronJob && simulateConsumers)
         {
-            await OrderRepo.Create(o);
+            await OrderRepo.Create(o, o.RequestedSendTime);
             await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
             await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
             await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
         }
         else if (simulateCronJob && !simulateConsumers)
         {
-            await OrderRepo.Create(o);
+            await OrderRepo.Create(o, o.RequestedSendTime);
             await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
             await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         }
         else
         {
-            await OrderRepo.Create(o);
+            await OrderRepo.Create(o, o.RequestedSendTime);
             await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         }
 
@@ -152,7 +152,7 @@ public static class PostgreUtil
             o.SendersReference = sendersReference;
         }
 
-        await OrderRepo.Create(o);
+        await OrderRepo.Create(o, o.RequestedSendTime);
         await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
 
         return o;
@@ -186,20 +186,20 @@ public static class PostgreUtil
         */
         if (simulateCronJob && simulateConsumers)
         {
-            await OrderRepo.Create(order);
+            await OrderRepo.Create(order, order.RequestedSendTime);
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
             await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
         }
         else if (simulateCronJob && !simulateConsumers)
         {
-            await OrderRepo.Create(order);
+            await OrderRepo.Create(order, order.RequestedSendTime);
             await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
             await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
         else
         {
-            await OrderRepo.Create(order);
+            await OrderRepo.Create(order, order.RequestedSendTime);
             await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
 
@@ -254,7 +254,7 @@ public static class PostgreUtil
             SendResult = new(EmailNotificationResultType.Sending, timeStamp),
         };
 
-        await OrderRepo.Create(order);
+        await OrderRepo.Create(order, order.RequestedSendTime);
         await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await SmsNotificationRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1));
         await SmsNotificationRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1));

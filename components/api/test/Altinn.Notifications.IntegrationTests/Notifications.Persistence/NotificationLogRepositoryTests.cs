@@ -243,7 +243,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToCleanup.Add(order.Id);
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var firstEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "first@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
@@ -310,7 +310,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         };
 
         _orderIdsToCleanup.Add(order.Id);
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
 
         var firstEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "first@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
@@ -1022,6 +1022,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             orderChainRequest,
             notificationOrder,
             null,
+            notificationOrder.RequestedSendTime,
             TestContext.Current.CancellationToken);
 
         await orderRepository.SetProcessingStatus(
@@ -1129,6 +1130,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             orderChainRequest,
             notificationOrder,
             null,
+            notificationOrder.RequestedSendTime,
             TestContext.Current.CancellationToken);
 
         await orderRepository.SetProcessingStatus(

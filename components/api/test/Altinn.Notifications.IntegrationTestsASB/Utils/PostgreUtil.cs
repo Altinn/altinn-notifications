@@ -35,7 +35,7 @@ public static class PostgreUtil
         var orderRepo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
         var emailRepo = scope.ServiceProvider.GetRequiredService<IEmailNotificationRepository>();
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await emailRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1));
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
@@ -123,7 +123,7 @@ public static class PostgreUtil
         var orderRepo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
         var smsRepo = scope.ServiceProvider.GetRequiredService<ISmsNotificationRepository>();
 
-        await orderRepo.Create(order);
+        await orderRepo.Create(order, order.RequestedSendTime);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await smsRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1));
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);

@@ -97,7 +97,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -166,7 +166,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
         // Add an SMS notification to the order, and set its status.
@@ -276,7 +276,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -359,7 +359,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
         // Add a new SMS notification to the order.
@@ -455,7 +455,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(notificationOrder);
+        await orderRepository.Create(notificationOrder, notificationOrder.RequestedSendTime);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
         // Add a new Email notification to the order.
@@ -542,7 +542,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
         // Add a new SMS notification to the order.
@@ -647,7 +647,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
-        await orderRepository.Create(order);
+        await orderRepository.Create(order, order.RequestedSendTime);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
         // Add an Email notification to the order, and set its staus.

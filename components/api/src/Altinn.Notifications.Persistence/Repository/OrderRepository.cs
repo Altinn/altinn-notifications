@@ -101,13 +101,13 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrder> Create(NotificationOrder order)
+    public async Task<NotificationOrder> Create(NotificationOrder order, DateTime requestedSendTime)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            long dbOrderId = await InsertOrder(order, connection, transaction, OrderProcessingStatus.Registered);
+            long dbOrderId = await InsertOrder(order, requestedSendTime, connection, transaction, OrderProcessingStatus.Registered);
 
             EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
             await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
@@ -127,7 +127,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
+    public async Task<OrderChainCreateResult> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<ReminderNotificationOrder>? reminders, DateTime requestedSendTime, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -146,7 +146,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
+            long mainOrderId = await InsertOrder(mainOrder, requestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
             if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
             {
@@ -162,11 +162,12 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
             if (reminders != null)
             {
-                foreach (var notificationOrder in reminders)
+                foreach (var reminder in reminders)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
+                    var notificationOrder = reminder.Order;
+                    long reminderOrderId = await InsertOrder(notificationOrder, reminder.RequestedSendTime, connection, transaction, OrderProcessingStatus.Registered, result.InternalId, cancellationToken);
 
                     if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate reminderSmsTemplate)
                     {
@@ -570,7 +571,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         return reminderShipments;
     }
 
-    private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction, OrderProcessingStatus processingStatus = default, long? orderChainId = null, CancellationToken cancellationToken = default)
+    private static async Task<long> InsertOrder(NotificationOrder order, DateTime requestedSendTime, NpgsqlConnection connection, NpgsqlTransaction transaction, OrderProcessingStatus processingStatus = default, long? orderChainId = null, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertOrderSql, connection, transaction);
 
@@ -578,7 +579,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(order.SendersReference) ? (object)DBNull.Value : order.SendersReference);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, requestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SendingTimePolicy ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
@@ -838,7 +839,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         long chainDbId = await insertInstantOrderAction(connection, transaction, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
-        long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, chainDbId, cancellationToken);
+        long mainOrderId = await InsertOrder(notificationOrder, notificationOrder.RequestedSendTime, connection, transaction, OrderProcessingStatus.Processed, chainDbId, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
         await insertTemplateAction(mainOrderId, connection, transaction, cancellationToken);
