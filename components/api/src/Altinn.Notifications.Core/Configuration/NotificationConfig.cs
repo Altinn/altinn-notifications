@@ -68,56 +68,118 @@ public class NotificationConfig
     public int ExpiryOffsetSeconds { get; set; } = 300;
 
     /// <summary>
-    /// The number of past due tasks to run concurrently in the background service
-    /// </summary>
-    public int PastDueOrdersTaskCount { get; set; } = 30;
-
-    /// <summary>
-    /// The number of retry tasks to run concurrently in the background service
-    /// </summary>
-    public int RetryOrdersTaskCount { get; set; } = 1;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the past due orders background service when idle for the primary task.
-    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
-    /// </summary>
-    public int PastDueOrdersPrimaryTaskIdleDelaySeconds { get; set; } = 30;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the past due orders background service for all other tasks
-    /// than the primary task.
-    /// </summary>
-    public int PastDueOrdersAdditionalTasksIdleDelaySeconds { get; set; } = 5;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the retry orders background service when idle for the primary task.
-    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
-    /// </summary>
-    public int RetryOrdersPrimaryTaskIdleDelaySeconds { get; set; } = 30;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the retry orders background service for all other tasks
-    /// than the primary task.
-    /// </summary>
-    public int RetryOrdersAdditionalTasksIdleDelaySeconds { get; set; } = 5;
-
-    /// <summary>
     /// The number of seconds from now to skip while looking for orders to retry
     /// </summary>
     public int RetryOrdersDBDelaySeconds { get; set; } = 60;
 
     /// <summary>
-    /// The number of consecutive past due orders before ramping up the processing of past due orders. This is used to prevent overloading the system with too many past due orders at once.
-    /// </summary>
-    public int PastDueOrdersRampUpLimit { get; set; } = 10;
-
-    /// <summary>
-    /// The number of consecutive retry orders before ramping up the processing of retry orders. This is used to prevent overloading the system with too many retry orders at once.
-    /// </summary>
-    public int RetryOrdersRampUpLimit { get; set; } = 10;
-
-    /// <summary>
     /// The maximum number of retry attempts for a retry order.
     /// </summary>
     public int RetryOrdersMaxCount { get; set; } = 10;
+
+    /// <summary>
+    /// Configuration for the process loop of the past due orders background service
+    /// </summary>
+    public ProcessLoopConfig PastDueOrdersProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the retry orders background service
+    /// </summary>
+    public ProcessLoopConfig RetryOrdersProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the email notifications background service
+    /// </summary>
+    public ProcessLoopConfig EmailNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the composed email notifications background service
+    /// </summary>
+    public ProcessLoopConfig ComposedEmailNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the sms daytime notifications background service
+    /// </summary>
+    public ProcessLoopConfig SmsDaytimeNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the sms anytime notifications background service
+    /// </summary>
+    public ProcessLoopConfig SmsAnytimeNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        TaskIdleDelaySeconds = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+}
+
+/// <summary>
+/// Configuration class for process loop settings
+/// </summary>
+public class ProcessLoopConfig
+{
+    /// <summary>
+    /// The number of tasks to run concurrently in the background service
+    /// </summary>
+    public int TaskCount { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the background service task when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
+    /// </summary>
+    public int TaskIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the background service task when idle for the primary task.
+    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
+    /// </summary>
+    public int PrimaryTaskIdleDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// The delay in seconds between each iteration of the background service task for all other tasks
+    /// than the primary task.
+    /// </summary>
+    public int AdditionalTasksIdleDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// The number of consecutive tasks before ramping up the processing of tasks. This is used to prevent overloading the system with too many tasks at once.
+    /// </summary>
+    public int RampUpLimit { get; set; } = 10;
 }

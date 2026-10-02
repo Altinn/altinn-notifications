@@ -20,7 +20,7 @@ public class SendSmsCommandPublisherTests
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn", "+4799999999", "Test message body");
 
     [Fact]
-    public async Task PublishAsync_SuccessfulPublish_ReturnsNull()
+    public async Task PublishAsync_SuccessfulPublish_Completes()
     {
         // Arrange
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
@@ -31,14 +31,16 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
-        var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task PublishAsync_MessageBusThrowsException_ReturnsFailedSms()
+    public async Task PublishAsync_MessageBusThrowsException_RethrowsException()
     {
         // Arrange
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
@@ -48,11 +50,9 @@ public class SendSmsCommandPublisherTests
 
         var publisher = CreatePublisher(messageBusPublisherMock);
 
-        // Act
-        var result = await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(_sms, result);
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync(_sms, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -68,7 +68,8 @@ public class SendSmsCommandPublisherTests
         var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         // Act
-        await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync(_sms, TestContext.Current.CancellationToken));
 
         // Assert
         loggerMock.Verify(

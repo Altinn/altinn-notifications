@@ -17,20 +17,26 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ComposedEmail>> PublishAsync(IReadOnlyList<ComposedEmail> emails, CancellationToken cancellationToken)
+    public async Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
     {
-        if (emails.Count == 0)
-        {
-            return [];
-        }
-
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _messageBusPublisher.PublishBatchAsync(
-            emails,
-            CreateCommand,
-            OnPublishError,
-            cancellationToken);
+        try
+        {
+            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            if (ex is not InvalidOperationException)
+            {
+                _logger.LogError(
+                    ex,
+                    "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
+                    email.NotificationId);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -56,18 +62,5 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
                     SasUrl = a.SasUrl.ToString()
                 })]
         };
-    }
-
-    /// <summary>
-    /// Logs an error for a composed email that failed to publish.
-    /// </summary>
-    /// <param name="email">The composed email that failed to publish.</param>
-    /// <param name="ex">The exception raised during the publish attempt.</param>
-    private void OnPublishError(ComposedEmail email, Exception ex)
-    {
-        _logger.LogError(
-            ex,
-            "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
-            email.NotificationId);
     }
 }

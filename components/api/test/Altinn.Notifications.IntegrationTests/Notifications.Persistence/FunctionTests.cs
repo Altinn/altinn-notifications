@@ -1,6 +1,9 @@
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
 
 using Xunit;
 
@@ -9,8 +12,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
     [Collection(GlobalStateSerialCollection.Name)]
     public class FunctionTests : IAsyncLifetime
     {
-        private readonly int _publishBatchSize = 500;
-
         public ValueTask InitializeAsync()
         {
             return ValueTask.CompletedTask;
@@ -29,10 +30,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
         /// <summary>
         /// Scenario: Registered email limit timeout in db has passed
-        /// Expected side effect: Value is reset to NULL when getemails_statusnew_updatestatus is called by <see cref="EmailNotificationRepository"/>    
+        /// Expected side effect: Value is reset to NULL when claim_email is called by <see cref="EmailNotificationRepository"/>.
         /// </summary>
         [Fact]
-        public async Task Run_getemails_statusnew_updatestatus_ConfirmSideEffects()
+        public async Task Run_claim_email_ConfirmSideEffects()
         {
             // Arrange
             string sql = @"UPDATE notifications.resourcelimitlog
@@ -44,7 +45,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) });
             EmailNotificationRepository repository = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-            await repository.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+            await using NpgsqlConnection connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
+            await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var unitOfWork = new UnitOfWork
+            {
+                Connection = connection,
+                Transaction = transaction
+            };
+
+            await repository.GetNewNotificationAsync(unitOfWork, TestContext.Current.CancellationToken);
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
             // Assert
             sql = @"SELECT emaillimittimeout

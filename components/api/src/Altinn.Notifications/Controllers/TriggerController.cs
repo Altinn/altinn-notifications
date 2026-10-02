@@ -21,17 +21,15 @@ public class TriggerController(
     ISmsPublishTaskQueue smsPublishTaskQueue,
     INotificationScheduleService scheduleService,
     IOrderProcessingService orderProcessingService,
-    IEmailPublishTaskQueue emailPublishingTaskQueue,
-    IComposedEmailPublishSignal composedEmailPublishSignal,
+    IEmailNotificationService emailNotificationService,
     ITerminateExpiredNotificationsService terminateExpiredService) : ControllerBase
 {
     private readonly ILogger<TriggerController> _logger = logger;
     private readonly IStatusFeedService _statusFeedService = statusFeedService;
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue = smsPublishTaskQueue;
+    private readonly IEmailNotificationService _emailNotificationService = emailNotificationService;
     private readonly INotificationScheduleService _scheduleService = scheduleService;
     private readonly IOrderProcessingService _orderProcessingService = orderProcessingService;
-    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue = emailPublishingTaskQueue;
-    private readonly IComposedEmailPublishSignal _composedEmailPublishSignal = composedEmailPublishSignal;
     private readonly ITerminateExpiredNotificationsService _terminateExpiredService = terminateExpiredService;
 
     /// <summary>
@@ -65,18 +63,17 @@ public class TriggerController(
     }
 
     /// <summary>
-    /// Signals background processing of email notifications.
+    /// Endpoint to trigger processing for one pair of email notifications (normal and composed). This is intended for testing and debugging purposes, and should not be used in production
     /// </summary>
-    /// <returns>
-    /// Always returns 200 OK, regardless of whether a new task was enqueued.
-    /// </returns>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
     [Route("sendemail")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendEmailNotifications()
+    public async Task<ActionResult> Trigger_SendEmailNotifications(CancellationToken cancellationToken = default)
     {
-        _emailPublishTaskQueue.TryEnqueue();
-        _composedEmailPublishSignal.TryEnqueue();
+        await _emailNotificationService.SendNotification(cancellationToken);
+        await _emailNotificationService.SendComposedNotification(cancellationToken);
         return Ok();
     }
 

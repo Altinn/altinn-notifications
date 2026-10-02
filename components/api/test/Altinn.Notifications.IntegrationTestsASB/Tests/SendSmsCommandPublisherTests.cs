@@ -25,10 +25,10 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>
-    /// Verifies that publishing a valid SMS returns null (success indicator).
+    /// Verifies that publishing a valid SMS completes and enqueues a command.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_ValidSms_ReturnsNull()
+    public async Task PublishAsync_ValidSms_CompletesAndEnqueuesCommand()
     {
         var factory = CreateFactory();
         var sms = new Sms(
@@ -42,12 +42,14 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
 
         var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
 
-        var result = await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        var message = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            smsSendQueueName,
+            TimeSpan.FromSeconds(10));
 
-        // Drain the message from the queue so it doesn't pollute subsequent tests
-        await ServiceBusTestUtils.WaitForMessageAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
+        Assert.NotNull(message);
     }
 
     /// <summary>
@@ -175,7 +177,7 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
     }
 
     /// <summary>
-    /// Verifies that publishing a valid batch of SMS notifications returns an empty list (success indicator).
+    /// Verifies that publishing a valid batch of SMS notifications succeeds.
     /// </summary>
     [Fact]
     public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
