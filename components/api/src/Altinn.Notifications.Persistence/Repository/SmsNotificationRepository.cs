@@ -25,8 +25,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private readonly ILogger<SmsNotificationRepository> _logger;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms()";
-    private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms()";
+    private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms_v2()";
+    private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms_v2()";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _persistSubstitutedSenderSql = "update notifications.smsnotifications set substitutedsender = $2 where alternateid = $1"; // (_alternateid, _substitutedsender)
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)

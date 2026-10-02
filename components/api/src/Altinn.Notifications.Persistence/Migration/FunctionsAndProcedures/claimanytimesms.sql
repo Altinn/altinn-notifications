@@ -1,5 +1,5 @@
--- FUNCTION: notifications.claim_anytime_sms()
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms ()
+-- FUNCTION: notifications.claim_anytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
@@ -46,6 +46,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_anytime_sms() IS
+COMMENT ON FUNCTION notifications.claim_anytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';

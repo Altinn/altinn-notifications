@@ -69,20 +69,21 @@ $$;
 
 
 -- claimanytimesms.sql:
--- FUNCTION: notifications.claim_anytime_sms()
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms ()
+-- FUNCTION: notifications.claim_anytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
-  body text
+  body text,
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid
+    SELECT sms._id, sms._orderid, ord.creatorname
     FROM notifications.smsnotifications sms
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
@@ -102,20 +103,23 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody
+      sms.customizedbody,
+      claimed.creatorname
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body
+    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
+    upd.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_anytime_sms() IS
-'Claims and returns a single SMS notification (sendingtimepolicy = 1).';
+COMMENT ON FUNCTION notifications.claim_anytime_sms_v2() IS
+'Claims and returns an SMS notification (sendingtimepolicy = 1).
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimanytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_anytime_sms_batch_v2(integer)
@@ -196,17 +200,18 @@ BEGIN
     SELECT id, emaillimittimeout
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE;
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN;
-    ELSE
-        UPDATE notifications.resourcelimitlog
-        SET emaillimittimeout = NULL
-        WHERE id = v_limitlog_id;
     END IF;
+
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL
+        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
@@ -350,20 +355,21 @@ _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
 -- claimdaytimesms.sql:
--- FUNCTION: notifications.claim_daytime_sms()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms()
+-- FUNCTION: notifications.claim_daytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
-  body text
+  body text,
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid
+    SELECT sms._id, sms._orderid, ord.creatorname
     FROM notifications.smsnotifications sms
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
@@ -383,20 +389,23 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody
+      sms.customizedbody,
+      claimed.creatorname
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body
+    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
+    upd.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms() IS
-'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).';
+COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
+'Claims and returns an SMS notification (sendingtimepolicy = 2 or NULL).
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimdaytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_daytime_sms_batch_v2(integer)
@@ -469,8 +478,7 @@ BEGIN
     SELECT id, emaillimittimeout
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE;
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
@@ -483,11 +491,13 @@ BEGIN
                NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
-    ELSE
-        UPDATE notifications.resourcelimitlog
-        SET emaillimittimeout = NULL
-        WHERE id = v_limitlog_id;
     END IF;
+
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL
+        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (

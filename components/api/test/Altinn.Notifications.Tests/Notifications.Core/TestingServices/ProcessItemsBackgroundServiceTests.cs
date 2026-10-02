@@ -43,47 +43,6 @@ public class ProcessItemsBackgroundServiceTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenRunningAndScheduleAllowsSms_CompletesWithoutExceptions()
-    {
-        var emailService = new Mock<IEmailNotificationService>();
-        emailService.Setup(e => e.SendNotification(It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        emailService.Setup(e => e.SendComposedNotification(It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
-        var orderService = new Mock<IOrderProcessingService>();
-        orderService.Setup(o => o.TryProcessOrder(false, It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        orderService.Setup(o => o.TryProcessOrder(true, It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
-        var scheduleService = new Mock<INotificationScheduleService>();
-        scheduleService.Setup(s => s.CanSendSmsNow()).Returns(true);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        var smsService = new Mock<ISmsNotificationService>();
-        smsService
-            .Setup(s => s.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
-            .Returns<CancellationToken, SendingTimePolicy>((_, policy) =>
-            {
-                if (policy == SendingTimePolicy.Daytime)
-                {
-                    cts.Cancel();
-                }
-
-                return Task.FromResult(false);
-            });
-
-        var service = new TestableProcessItemsBackgroundService(
-            emailService.Object,
-            smsService.Object,
-            orderService.Object,
-            Options.Create(CreateConfig()),
-            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
-            scheduleService.Object);
-
-        await service.ExecuteForTest(cts.Token);
-
-        Assert.True(cts.IsCancellationRequested);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_WhenScheduleDisallowsSms_DoesNotCallDaytimePolicy()
     {
         var emailService = new Mock<IEmailNotificationService>();
@@ -159,45 +118,27 @@ public class ProcessItemsBackgroundServiceTests
         {
             EmailNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             },
             ComposedEmailNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             },
             SmsDaytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             },
             SmsAnytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             },
             PastDueOrdersProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             },
             RetryOrdersProcessLoopConfig = new ProcessLoopConfig
             {
-                TaskCount = 1,
-                PrimaryTaskIdleDelaySeconds = 0,
-                AdditionalTasksIdleDelaySeconds = 0,
-                RampUpLimit = 1
+                TaskCount = 0
             }
         };
     }

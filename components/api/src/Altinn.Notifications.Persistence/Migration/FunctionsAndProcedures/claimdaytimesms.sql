@@ -1,5 +1,5 @@
--- FUNCTION: notifications.claim_daytime_sms()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms ()
+-- FUNCTION: notifications.claim_daytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
@@ -46,6 +46,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms() IS
+COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 2 or NULL).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
