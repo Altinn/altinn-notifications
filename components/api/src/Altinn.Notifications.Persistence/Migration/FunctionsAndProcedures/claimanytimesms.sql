@@ -4,14 +4,15 @@ RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
-  body text
+  body text,
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid
+    SELECT sms._id, sms._orderid, ord.creatorname
     FROM notifications.smsnotifications sms
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
@@ -31,17 +32,20 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody
+      sms.customizedbody,
+      claimed.creatorname
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body
+    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
+    upd.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
 END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_anytime_sms() IS
-'Claims and returns a single SMS notification (sendingtimepolicy = 1).';
+'Claims and returns an SMS notification (sendingtimepolicy = 1).
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
