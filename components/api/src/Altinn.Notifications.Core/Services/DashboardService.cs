@@ -44,4 +44,10 @@ public class DashboardService : IDashboardService
     {
         return await _dashboardRepository.GetDashboardNotificationsByPhoneNumberAsync(phoneNumber, dateTimeFrom, dateTimeTo, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Result<List<DashboardNotification>, ServiceError>> GetNotificationsByShipmentIdAsync(Guid shipmentId, CancellationToken cancellationToken)
+    {
+        return await _dashboardRepository.GetDashboardNotificationsByShipmentIdAsync(shipmentId, cancellationToken);
+    }
 }

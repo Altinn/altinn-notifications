@@ -17,7 +17,8 @@ public static class SendEmailCommandHandler
     /// <param name="command">The send-email command to process.</param>
     /// <param name="sendingService">The service responsible for sending the email.</param>
     /// <param name="logger">The logger used to record processing errors.</param>
-    public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger)
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
@@ -42,7 +43,7 @@ public static class SendEmailCommandHandler
 
         try
         {
-            await sendingService.SendAsync(email);
+            await sendingService.SendAsync(email, cancellationToken);
 
             logger.LogInformation(
                 "Successfully dispatched email for NotificationId: {NotificationId}",

@@ -68,59 +68,6 @@ END;
 $$;
 
 
--- claimanytimesms.sql:
--- FUNCTION: notifications.claim_anytime_sms_v2()
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v2 ()
-RETURNS TABLE (
-  alternateid uuid,
-  sendernumber text,
-  mobilenumber text,
-  body text,
-  creatorname text
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
-    FROM notifications.smsnotifications sms
-    JOIN notifications.orders ord ON ord._id = sms._orderid
-    WHERE sms.result = 'New'::smsnotificationresulttype
-      AND sms.expirytime >= now()
-      AND ord.sendingtimepolicy = 1
-    ORDER BY sms._id
-    FOR UPDATE OF sms SKIP LOCKED
-    LIMIT 1
-  ),
-  updated_rows AS (
-    UPDATE notifications.smsnotifications sms
-    SET resulttime = now(),
-        result = 'Sending'::smsnotificationresulttype
-    FROM claimed_new_rows claimed
-    WHERE sms._id = claimed._id
-    RETURNING
-      sms._orderid,
-      sms.alternateid,
-      sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
-  )
-  SELECT
-    upd.alternateid,
-    txt.sendernumber,
-    upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
-  FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.claim_anytime_sms_v2() IS
-'Claims and returns an SMS notification (sendingtimepolicy = 1).
-Includes the order creatorname to support per-service-owner SMS sender substitution.';
-
 -- claimanytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_anytime_sms_batch_v2(integer)
 CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_batch_v2 (
@@ -179,92 +126,6 @@ COMMENT ON FUNCTION notifications.claim_anytime_sms_batch_v2(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 1).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
-
--- claimcomposedemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email()
-    RETURNS TABLE(
-        alternateid  uuid,
-        subject      text,
-        body         text,
-        fromaddress  text,
-        toaddress    text,
-        contenttype  text,
-        attachments  jsonb
-    )
-    LANGUAGE 'plpgsql'
-AS $BODY$
-DECLARE
-    latest_email_timeout timestamp;
-    v_limitlog_id integer;
-BEGIN
-    SELECT id, emaillimittimeout
-    INTO v_limitlog_id, latest_email_timeout
-    FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
-
-    -- Check for active email timeout.
-    IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
-        RETURN;
-    END IF;
-
-    UPDATE notifications.resourcelimitlog
-    SET emaillimittimeout = NULL
-    WHERE id = v_limitlog_id
-        AND emaillimittimeout IS NOT NULL
-        AND emaillimittimeout <= now();
-
-    RETURN QUERY
-    WITH claimed_new_rows AS (
-        SELECT
-            email._id,
-            email.alternateid,
-            email.customizedsubject,
-            email.customizedbody,
-            email.toaddress,
-            email._orderid
-        FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
-        WHERE email.result = 'New'::emailnotificationresulttype
-            AND email.expirytime >= now()
-            AND o.type = 'Composed'::notificationordertype
-        ORDER BY email._id
-        FOR UPDATE OF email SKIP LOCKED
-        LIMIT 1
-    ),
-    updated_rows AS (
-        UPDATE notifications.emailnotifications email
-        SET resulttime = now(),
-            result = 'Sending'::emailnotificationresulttype
-        FROM claimed_new_rows claimed
-        WHERE email._id = claimed._id
-        RETURNING
-            claimed.alternateid,
-            claimed.customizedsubject,
-            claimed.customizedbody,
-            claimed.toaddress,
-            claimed._orderid
-    )
-    SELECT
-        updated.alternateid,
-        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
-        COALESCE(NULLIF(updated.customizedbody, ''), txt.body)       AS body,
-        txt.fromaddress,
-        updated.toaddress,
-        txt.contenttype,
-        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments
-    FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o       ON o._id = updated._orderid;
-END;
-$BODY$;
-
-ALTER FUNCTION notifications.claim_composed_email()
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.claim_composed_email()
-    IS 'Claims and returns a single email notification for Composed orders (OrderType = 3).
-Returns an empty JSON array when no attachments are present.';
-
 
 -- claimcomposedemailbatch.sql:
 CREATE OR REPLACE FUNCTION notifications.claim_composed_email_batch(
@@ -354,59 +215,6 @@ Returns an empty JSON array when no attachments are present.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
--- claimdaytimesms.sql:
--- FUNCTION: notifications.claim_daytime_sms_v2()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v2 ()
-RETURNS TABLE (
-  alternateid uuid,
-  sendernumber text,
-  mobilenumber text,
-  body text,
-  creatorname text
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
-    FROM notifications.smsnotifications sms
-    JOIN notifications.orders ord ON ord._id = sms._orderid
-    WHERE sms.result = 'New'::smsnotificationresulttype
-      AND sms.expirytime >= now()
-      AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL)
-    ORDER BY sms._id
-    FOR UPDATE OF sms SKIP LOCKED
-    LIMIT 1
-  ),
-  updated_rows AS (
-    UPDATE notifications.smsnotifications sms
-    SET resulttime = now(),
-        result = 'Sending'::smsnotificationresulttype
-    FROM claimed_new_rows claimed
-    WHERE sms._id = claimed._id
-    RETURNING
-      sms._orderid,
-      sms.alternateid,
-      sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
-  )
-  SELECT
-    upd.alternateid,
-    txt.sendernumber,
-    upd.mobilenumber,
-    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
-  FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
-'Claims and returns an SMS notification (sendingtimepolicy = 2 or NULL).
-Includes the order creatorname to support per-service-owner SMS sender substitution.';
-
 -- claimdaytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_daytime_sms_batch_v2(integer)
 CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_batch_v2 (
@@ -465,91 +273,6 @@ COMMENT ON FUNCTION notifications.claim_daytime_sms_batch_v2(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
-
--- claimemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_email()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
-    LANGUAGE 'plpgsql'
-AS $BODY$
-DECLARE
-    latest_email_timeout timestamp;
-    v_limitlog_id integer;
-BEGIN
-    SELECT id, emaillimittimeout
-    INTO v_limitlog_id, latest_email_timeout
-    FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
-
-    -- Check for active email timeout.
-    IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
-        RETURN QUERY
-        SELECT NULL::uuid AS alternateid,
-               NULL::text AS subject,
-               NULL::text AS body,
-               NULL::text AS fromaddress,
-               NULL::text AS toaddress,
-               NULL::text AS contenttype
-        WHERE FALSE;
-        RETURN;
-    END IF;
-
-    UPDATE notifications.resourcelimitlog
-    SET emaillimittimeout = NULL
-    WHERE id = v_limitlog_id
-        AND emaillimittimeout IS NOT NULL
-        AND emaillimittimeout <= now();
-
-    RETURN QUERY
-    WITH claimed_new_rows AS (
-        SELECT
-            email._id,
-            email.alternateid,
-            email.customizedsubject,
-            email.customizedbody,
-            email.toaddress,
-            email._orderid
-        FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
-        WHERE email.result = 'New'::emailnotificationresulttype
-            AND email.expirytime >= now()
-            AND o.type <> 'Composed'::notificationordertype
-        ORDER BY email._id
-        FOR UPDATE OF email SKIP LOCKED
-        LIMIT 1
-    ),
-    updated_rows AS (
-        UPDATE notifications.emailnotifications email
-        SET resulttime = now(),
-            result = 'Sending'::emailnotificationresulttype
-        FROM claimed_new_rows claimed
-        WHERE email._id = claimed._id
-        RETURNING
-            claimed.alternateid,
-            claimed.customizedsubject,
-            claimed.customizedbody,
-            claimed.toaddress,
-            claimed._orderid
-    )
-    -- Join with large text data AFTER releasing locks
-    SELECT
-        updated.alternateid,
-        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
-        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
-        txt.fromaddress,
-        updated.toaddress,
-        txt.contenttype
-    FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
-END;
-$BODY$;
-
-ALTER FUNCTION notifications.claim_email()
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.claim_email()
-    IS 'Claims and returns a single email notification, excluding Composed orders (OrderType = 3).
-Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.';
-
 
 -- claimemailbatch.sql:
 CREATE OR REPLACE FUNCTION notifications.claim_email_batch_v2(
@@ -1376,6 +1099,93 @@ Returns a table with the following columns:
 - recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
 - address: The address the notification was sent to (the recipient''s phone number)
 - channel: The delivery channel (always ''sms'' for this function)
+- result: The delivery result status
+- resulttime: When the result was recorded';
+
+
+-- getnotificationsbyshipmentid.sql:
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid
+(
+    _shipmentid uuid
+)
+RETURNS TABLE (
+    shipmentid uuid,
+    sendersreference text,
+    creatorname text,
+    notificationtype text,
+    resourceid text,
+    notificationchannel text,
+    requestedsendtime timestamptz,
+    recipientnin text,
+    recipientorgno text,
+    address text,
+    channel text,
+    result text,
+    resulttime timestamptz
+)
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+AS $$
+    WITH combined AS (
+        SELECT
+            o.alternateid AS shipmentid,
+            o.sendersreference,
+            o.creatorname,
+            o.type::text AS notificationtype,
+            o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
+            o.requestedsendtime,
+            e.recipientnin,
+            e.recipientorgno,
+            e.toaddress AS address,
+            'email'::text AS channel,
+            e.result::text AS result,
+            e.resulttime
+        FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON o._id = e._orderid
+        WHERE o.alternateid = _shipmentid
+
+        UNION ALL
+
+        SELECT
+            o.alternateid AS shipmentid,
+            o.sendersreference,
+            o.creatorname,
+            o.type::text AS notificationtype,
+            o.notificationorder->>'ResourceId' AS resourceid,
+            o.notificationorder->>'NotificationChannel' AS notificationchannel,
+            o.requestedsendtime,
+            s.recipientnin,
+            s.recipientorgno,
+            s.mobilenumber AS address,
+            'sms'::text AS channel,
+            s.result::text AS result,
+            s.resulttime
+        FROM notifications.smsnotifications s
+        JOIN notifications.orders o ON o._id = s._orderid
+        WHERE o.alternateid = _shipmentid
+    )
+    SELECT * FROM combined
+    ORDER BY requestedsendtime DESC;
+$$;
+
+COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid IS
+'Retrieves all email and SMS notifications belonging to a shipment identified by its shipment id (orders.alternateid).
+Parameters:
+- _shipmentid: The shipment id (orders.alternateid) to look up
+Returns a table with the following columns:
+- shipmentid: The unique identifier for the shipment order
+- sendersreference: The sender''s reference for the order
+- creatorname: The short name of the organisation that created the order
+- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
+- resourceid: The Altinn resource the notification is related to (may be null)
+- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
+- requestedsendtime: When the notification was requested to be sent
+- recipientnin: The recipient''s national identity number, if the recipient was identified by NIN (may be null)
+- recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
+- address: The address the notification was sent to (email address or mobile number)
+- channel: The delivery channel (''email'' or ''sms'')
 - result: The delivery result status
 - resulttime: When the result was recorded';
 

@@ -42,7 +42,7 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
 
         var webHost = _fixture.WebHost;
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmailClientErrorResponse
             {
                 IntermittentErrorDelay = intermittentErrorDelaySeconds,
@@ -93,8 +93,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
 
         var webHost = _fixture.WebHost;
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
-            .Callback<Core.Sending.Email>(_ => clientInvoked.TrySetResult())
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
+            .Callback<Core.Sending.Email, CancellationToken>((_, _) => clientInvoked.TrySetResult())
             .ReturnsAsync(successResult);
 
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;
@@ -132,8 +132,8 @@ public class EmailServiceRateLimitPublisherTests(IntegrationTestEmailContainersF
 
         var webHost = _fixture.WebHost;
         emailClientMock
-            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>()))
-            .Callback<Core.Sending.Email>(_ => clientInvoked.TrySetResult())
+            .Setup(e => e.SendEmail(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
+            .Callback<Core.Sending.Email, CancellationToken>((_, _) => clientInvoked.TrySetResult())
             .ReturnsAsync(new EmailClientErrorResponse { SendResult = nonTransientResult });
 
         string emailSendQueueName = webHost.WolverineSettings!.EmailSendQueueName;

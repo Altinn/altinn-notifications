@@ -28,9 +28,9 @@ public class SendingService(
     private readonly IEmailServiceRateLimitDispatcher _emailServiceRateLimitDispatcher = emailServiceRateLimitDispatcher;
 
     /// <inheritdoc/>
-    public async Task SendAsync(Email email)
+    public async Task SendAsync(Email email, CancellationToken cancellationToken = default)
     {
-        Result<string, EmailClientErrorResponse> result = await _emailServiceClient.SendEmail(email);
+        Result<string, EmailClientErrorResponse> result = await _emailServiceClient.SendEmail(email, cancellationToken);
 
         await result.Match(
             async operationId =>

@@ -322,6 +322,11 @@ public class EmailSendResultHandlerTests(IntegrationTestApiAsbContainersFixture 
                 deadReport = await PostgreUtil.GetLatestDeadDeliveryReportByReason(
                     _fixture.PostgresConnectionString,
                     "INVALID_NOTIFICATION_IDENTIFIER");
+                if (deadReport is not null)
+                {
+                    await PostgreUtil.DeleteDeadDeliveryReportById(_fixture.PostgresConnectionString, deadReport.Id);
+                }
+
                 return deadReport is not null;
             },
             maxAttempts: 20,
