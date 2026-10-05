@@ -17,8 +17,8 @@ public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
             return;
         }
 
-        string? messageType = GetTagValue(activity, "messaging.message.type")
-            ?? GetTagValue(activity, "message.type")
+        string? messageType = GetTagValue(activity, "messaging.message_type")
+            ?? GetTagValue(activity, "message_type")
             ?? GetTagValue(activity, "wolverine.message_type")
             ?? GetTagValue(activity, "messaging.destination.name")
             ?? GetTagValue(activity, "messaging.destination");
@@ -34,8 +34,8 @@ public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
             return;
         }
 
-        if (!currentName.EndsWith(" receive", StringComparison.OrdinalIgnoreCase)
-            && !currentName.EndsWith(" send", StringComparison.OrdinalIgnoreCase))
+        if (!currentName.EndsWith("receive", StringComparison.OrdinalIgnoreCase)
+            && !currentName.EndsWith("send", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
