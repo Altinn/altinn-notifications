@@ -36,35 +36,31 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
     public void Dispose() => _metrics.Dispose();
 
     [Fact]
-    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_CopiesTraceHeadersToEnvelope()
+    public void EventGridEnvelopeMapper_MapEnvelopeToOutgoing_CopiesTraceHeadersAndParentIdToApplicationProperties()
     {
         // Arrange
         const string traceParent = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
         const string traceState = "vendor=state";
         const string baggage = "k=v";
-        var eventGridBody = "{}";
-
-        var message = ServiceBusModelFactory.ServiceBusReceivedMessage(
-            body: BinaryData.FromString(eventGridBody),
-            applicationProperties: new Dictionary<string, object>
-            {
-                ["Diagnostic-Id"] = traceParent,
-                ["traceparent"] = traceParent,
-                ["tracestate"] = traceState,
-                ["baggage"] = baggage,
-            });
 
         var mapper = new EventGridEnvelopeMapper();
-        var envelope = new Wolverine.Envelope();
+        var envelope = new global::Wolverine.Envelope
+        {
+            ParentId = traceParent,
+            Message = new EmailDeliveryReportCommand(ServiceBusModelFactory.ServiceBusReceivedMessage(body: BinaryData.FromString("{}"))),
+        };
+        envelope.Headers["tracestate"] = traceState;
+        envelope.Headers["baggage"] = baggage;
+        var outgoing = new ServiceBusMessage();
 
         // Act
-        mapper.MapIncomingToEnvelope(envelope, message);
+        mapper.MapEnvelopeToOutgoing(envelope, outgoing);
 
         // Assert
-        Assert.Equal(traceParent, envelope.Headers["Diagnostic-Id"]);
-        Assert.Equal(traceParent, envelope.Headers["traceparent"]);
-        Assert.Equal(traceState, envelope.Headers["tracestate"]);
-        Assert.Equal(baggage, envelope.Headers["baggage"]);
+        Assert.Equal(traceParent, outgoing.ApplicationProperties["Diagnostic-Id"]);
+        Assert.Equal(traceParent, outgoing.ApplicationProperties["traceparent"]);
+        Assert.Equal(traceState, outgoing.ApplicationProperties["tracestate"]);
+        Assert.Equal(baggage, outgoing.ApplicationProperties["baggage"]);
     }
 
     [Fact]

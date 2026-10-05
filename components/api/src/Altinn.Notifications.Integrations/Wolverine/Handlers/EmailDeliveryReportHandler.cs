@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 using Altinn.Notifications.Core;
@@ -19,6 +20,8 @@ namespace Altinn.Notifications.Integrations.Wolverine.Handlers;
 /// </summary>
 public static class EmailDeliveryReportHandler
 {
+    private static readonly ActivitySource _activitySource = new("Wolverine");
+
     /// <summary>
     /// Handles an email delivery report command by updating the notification send status
     /// and emitting a custom delivery report metric.
@@ -29,6 +32,8 @@ public static class EmailDeliveryReportHandler
         DeliveryReportMetrics metrics,
         ILogger logger)
     {
+        using var fallbackReceiveActivity = StartFallbackReceiveActivity(command);
+
         var eventGridEvent = EventGridEvent.Parse(command.Message.Body);
 
         // If the event is a system event, TryGetSystemEventData will return the deserialized system event
@@ -82,6 +87,52 @@ public static class EmailDeliveryReportHandler
                 eventGridEvent.EventType);
             throw new InvalidDeliveryReportException("Failed to parse system event data from Event Grid event.");
         }
+    }
+
+    private static Activity? StartFallbackReceiveActivity(EmailDeliveryReportCommand command)
+    {
+        if (Activity.Current is not null)
+        {
+            return null;
+        }
+
+        if (!TryReadApplicationProperty(command, "traceparent", out string? traceParent)
+            && !TryReadApplicationProperty(command, "Diagnostic-Id", out traceParent))
+        {
+            return null;
+        }
+
+        command.Message.ApplicationProperties.TryGetValue("tracestate", out var traceStateRaw);
+        string? traceState = traceStateRaw as string;
+
+        if (!ActivityContext.TryParse(traceParent, traceState, out ActivityContext parentContext))
+        {
+            return null;
+        }
+
+        Activity? activity = _activitySource.StartActivity(
+            "ASB receive Altinn.Notifications.Integrations.Wolverine.EmailDeliveryReportCommand",
+            ActivityKind.Consumer,
+            parentContext);
+
+        activity?.SetTag("messaging.system", "azure_service_bus");
+        activity?.SetTag("messaging.operation", "receive");
+        activity?.SetTag("messaging.message_type", nameof(EmailDeliveryReportCommand));
+
+        return activity;
+    }
+
+    private static bool TryReadApplicationProperty(EmailDeliveryReportCommand command, string key, out string? value)
+    {
+        value = null;
+
+        if (!command.Message.ApplicationProperties.TryGetValue(key, out var raw) || raw is not string text || string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        value = text;
+        return true;
     }
 
     private static async Task HandleDeliveryReport(

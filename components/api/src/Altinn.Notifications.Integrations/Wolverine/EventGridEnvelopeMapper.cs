@@ -50,6 +50,19 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceParentKey);
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
+
+        if (incoming.ApplicationProperties.TryGetValue(_diagnosticIdKey, out var diagnosticId)
+            && diagnosticId is string parentId
+            && !string.IsNullOrWhiteSpace(parentId))
+        {
+            envelope.ParentId = parentId;
+        }
+        else if (incoming.ApplicationProperties.TryGetValue(_traceParentKey, out var traceParent)
+                 && traceParent is string traceParentValue
+                 && !string.IsNullOrWhiteSpace(traceParentValue))
+        {
+            envelope.ParentId = traceParentValue;
+        }
     }
 
     /// <summary>
@@ -89,6 +102,18 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceParentKey);
         CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceStateKey);
         CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _baggageKey);
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_diagnosticIdKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_diagnosticIdKey] = envelope.ParentId;
+        }
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_traceParentKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_traceParentKey] = envelope.ParentId;
+        }
     }
 
     private static void CopyIncomingTraceHeaderIfPresent(ServiceBusReceivedMessage incoming, Envelope envelope, string key)
