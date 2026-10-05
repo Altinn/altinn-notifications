@@ -1,9 +1,8 @@
 ﻿using System.Text.Json.Serialization;
+
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
-
-using Microsoft.Extensions.Logging;
 
 using Wolverine;
 
@@ -30,11 +29,11 @@ public class MockEmailServiceClient : IEmailServiceClient
     }
 
     /// <inheritdoc/>
-    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email)
+    public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email, CancellationToken cancellationToken = default)
     {
         string operationId = email.NotificationId.ToString();
         Result<string, EmailClientErrorResponse> result = operationId;
-        await Task.Delay(AcsSendExecutionTimeMs);
+        await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
         return result;
     }
 

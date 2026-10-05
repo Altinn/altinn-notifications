@@ -24,7 +24,7 @@ internal sealed class AlwaysSucceedSendingService : ISendingService
     /// <summary>
     /// Captures <paramref name="email"/> and signals completion to any pending <see cref="WaitForEmailAsync"/> call.
     /// </summary>
-    public Task SendAsync(Core.Sending.Email email)
+    public Task SendAsync(Core.Sending.Email email, CancellationToken cancellationToken = default)
     {
         CapturedEmail = email;
         _tcs.TrySetResult(email);
