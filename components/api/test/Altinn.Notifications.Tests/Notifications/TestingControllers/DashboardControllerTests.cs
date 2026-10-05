@@ -855,4 +855,67 @@ public class DashboardControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(499, objectResult.StatusCode);
     }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_ValidInput_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid();
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
+        {
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+        };
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = shipmentId },
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result.Result);
+        _dashboardServiceMock.Verify(
+            x => x.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_NoNotificationsFound_Returns200WithEmptyList()
+    {
+        // Arrange
+        Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>();
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serviceResult);
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = Guid.NewGuid() },
+            CancellationToken.None);
+
+        // Assert
+        var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<List<DashboardNotificationExt>>(actionResult.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetNotificationsByShipmentId_ServiceThrowsOperationCanceled_Returns499()
+    {
+        // Arrange
+        _dashboardServiceMock
+            .Setup(x => x.GetNotificationsByShipmentIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act
+        var result = await _controller.GetNotificationsByShipmentId(
+            new NotificationsByShipmentIdRequestExt { ShipmentId = Guid.NewGuid() },
+            CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(499, objectResult.StatusCode);
+    }
 }
