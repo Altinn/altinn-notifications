@@ -56,31 +56,16 @@ public class MockEmailServiceClient : IEmailServiceClient
     {
         await Task.Delay(AcsUpdateExecutionTimeMs);
 
-        string? parentActivityId = Activity.Current?.Id;
+        string? traceParent = Activity.Current?.Id;
+        string? traceState = Activity.Current?.TraceStateString;
 
         _ = Task.Run(async () =>
         {
-            using var dispatchActivity = StartDispatchActivity(parentActivityId);
-
             await Task.Delay(AcsDeliveryReportDelayTimeMs);
-            await new DeliveryReportPublisher(_serviceProvider).DispatchAsync(operationId);
+            await new DeliveryReportPublisher(_serviceProvider).DispatchAsync(operationId, traceParent, traceState);
         });
 
         return Core.Status.EmailSendResult.Delivered;
-    }
-
-    private static Activity? StartDispatchActivity(string? parentActivityId)
-    {
-        if (string.IsNullOrWhiteSpace(parentActivityId))
-        {
-            return null;
-        }
-
-        var activity = new Activity("MockEmailServiceClient.DispatchDeliveryReport");
-        activity.SetParentId(parentActivityId);
-        activity.Start();
-
-        return activity;
     }
 }
 
@@ -103,7 +88,7 @@ public class DeliveryReportPublisher : Shared.Publishers.WolverinePublisher
     /// Dispatches a mock ACS delivery report event to the message bus.
     /// </summary>
     /// <returns></returns>
-    public async Task DispatchAsync(string operationId)
+    public async Task DispatchAsync(string operationId, string? traceParent = null, string? traceState = null)
     {
         var command = new MockEmailDeliveryReportCommand
         {
@@ -130,7 +115,25 @@ public class DeliveryReportPublisher : Shared.Publishers.WolverinePublisher
             DataVersion = "1.0",
         };
 
-        await PublishCommandAsync(command);
+        if (string.IsNullOrWhiteSpace(traceParent) && string.IsNullOrWhiteSpace(traceState))
+        {
+            await PublishCommandAsync(command);
+            return;
+        }
+
+        var deliveryOptions = new DeliveryOptions();
+
+        if (!string.IsNullOrWhiteSpace(traceParent))
+        {
+            deliveryOptions.Headers["traceparent"] = traceParent;
+        }
+
+        if (!string.IsNullOrWhiteSpace(traceState))
+        {
+            deliveryOptions.Headers["tracestate"] = traceState;
+        }
+
+        await PublishCommandAsync(command, deliveryOptions);
     }
 }
 
