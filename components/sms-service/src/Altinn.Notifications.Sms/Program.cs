@@ -1,5 +1,6 @@
 using System.Reflection;
 
+using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
@@ -159,6 +160,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddHttpClientInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
         });
 
     AddAzureMonitorTelemetryExporters(configuration, services, applicationInsightsConnectionString);
