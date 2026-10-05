@@ -16,6 +16,10 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
 {
     private const string _attemptsKey = "wolverine-attempts";
     private const string _enqueuedAtKey = "wolverine-enqueued-at";
+    private const string _diagnosticIdKey = "Diagnostic-Id";
+    private const string _traceParentKey = "traceparent";
+    private const string _traceStateKey = "tracestate";
+    private const string _baggageKey = "baggage";
 
     /// <summary>
     /// Maps the specified incoming service bus message to the provided envelope by assigning an email delivery report
@@ -41,6 +45,11 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         {
             envelope.SetEnqueuedAt(incoming.EnqueuedTime);
         }
+
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _diagnosticIdKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceParentKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
     }
 
     /// <summary>
@@ -74,6 +83,27 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         if (envelope.HasEnqueuedAt())
         {
             outgoing.ApplicationProperties[_enqueuedAtKey] = envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey];
+        }
+
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _diagnosticIdKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceParentKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceStateKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _baggageKey);
+    }
+
+    private static void CopyIncomingTraceHeaderIfPresent(ServiceBusReceivedMessage incoming, Envelope envelope, string key)
+    {
+        if (incoming.ApplicationProperties.TryGetValue(key, out var value) && value is string stringValue)
+        {
+            envelope.Headers[key] = stringValue;
+        }
+    }
+
+    private static void CopyOutgoingTraceHeaderIfPresent(Envelope envelope, ServiceBusMessage outgoing, string key)
+    {
+        if (envelope.Headers.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value))
+        {
+            outgoing.ApplicationProperties[key] = value;
         }
     }
 }

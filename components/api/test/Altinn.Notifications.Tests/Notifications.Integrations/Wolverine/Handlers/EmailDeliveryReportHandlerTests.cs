@@ -36,6 +36,38 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
     public void Dispose() => _metrics.Dispose();
 
     [Fact]
+    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_CopiesTraceHeadersToEnvelope()
+    {
+        // Arrange
+        const string traceParent = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
+        const string traceState = "vendor=state";
+        const string baggage = "k=v";
+        var eventGridBody = "{}";
+
+        var message = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString(eventGridBody),
+            applicationProperties: new Dictionary<string, object>
+            {
+                ["Diagnostic-Id"] = traceParent,
+                ["traceparent"] = traceParent,
+                ["tracestate"] = traceState,
+                ["baggage"] = baggage,
+            });
+
+        var mapper = new EventGridEnvelopeMapper();
+        var envelope = new Wolverine.Envelope();
+
+        // Act
+        mapper.MapIncomingToEnvelope(envelope, message);
+
+        // Assert
+        Assert.Equal(traceParent, envelope.Headers["Diagnostic-Id"]);
+        Assert.Equal(traceParent, envelope.Headers["traceparent"]);
+        Assert.Equal(traceState, envelope.Headers["tracestate"]);
+        Assert.Equal(baggage, envelope.Headers["baggage"]);
+    }
+
+    [Fact]
     public async Task Handle_ValidDeliveryReport_EmitsOneMetricWithCorrectTags()
     {
         // Arrange
