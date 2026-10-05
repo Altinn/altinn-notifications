@@ -115,41 +115,7 @@ public class DashboardRepository : IDashboardRepository
 
             while (await reader.ReadAsync(cancellationToken))
             {
-                string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
-                string? recipientOrgNo = hasRecipientOrgNo ? reader.GetValue<string?>("recipientorgno") : null;
-
-                var shipmentId = reader.GetValue<Guid>("shipmentid");
-                string channel = reader.GetValue<string>("channel");
-                string? address = reader.GetValue<string>("address");
-
-                var deliveryAttempt = new DashboardDeliveryAttempt(
-                    nationalIdentityNumber: recipientNin,
-                    organizationNumber: recipientOrgNo,
-                    channel: channel,
-                    emailAddress: channel == "email" ? address : null,
-                    mobileNumber: channel == "sms" ? address : null,
-                    result: reader.GetValue<string>("result"),
-                    resultTime: reader.GetValue<DateTime?>("resulttime"));
-
-                if (groups.TryGetValue(shipmentId, out var entry))
-                {
-                    entry.DeliveryAttempts.Add(deliveryAttempt);
-                }
-                else
-                {
-                    var channelString = reader.GetValue<string>("notificationchannel");
-                    var newEntry = (
-                        CreatorName: reader.GetValue<string>("creatorname"),
-                        ResourceId: reader.GetValue<string>("resourceid"),
-                        SendersReference: reader.GetValue<string>("sendersreference"),
-                        RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
-                        NotificationChannel: Enum.TryParse<NotificationChannel>(channelString, out var notificationChannel) ? notificationChannel : (NotificationChannel?)null,
-                        NotificationType: reader.GetValue<string>("notificationtype"),
-                        DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt });
-
-                    groups[shipmentId] = newEntry;
-                    orderList.Add(shipmentId);
-                }
+                ProcessRow(reader, hasRecipientNin, hasRecipientOrgNo, groups, orderList);
             }
         }
 
@@ -158,6 +124,54 @@ public class DashboardRepository : IDashboardRepository
             var e = groups[id];
             return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
         })];
+    }
+
+    /// <summary>
+    /// Reads the current row from <paramref name="reader"/> and either appends a new delivery attempt
+    /// to an existing shipment group, or creates a new group for it.
+    /// </summary>
+    private static void ProcessRow(
+        NpgsqlDataReader reader,
+        bool hasRecipientNin,
+        bool hasRecipientOrgNo,
+        Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)> groups,
+        List<Guid> orderList)
+    {
+        string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
+        string? recipientOrgNo = hasRecipientOrgNo ? reader.GetValue<string?>("recipientorgno") : null;
+
+        var shipmentId = reader.GetValue<Guid>("shipmentid");
+        string channel = reader.GetValue<string>("channel");
+        string? address = reader.GetValue<string>("address");
+
+        var deliveryAttempt = new DashboardDeliveryAttempt(
+            nationalIdentityNumber: recipientNin,
+            organizationNumber: recipientOrgNo,
+            channel: channel,
+            emailAddress: channel == "email" ? address : null,
+            mobileNumber: channel == "sms" ? address : null,
+            result: reader.GetValue<string>("result"),
+            resultTime: reader.GetValue<DateTime?>("resulttime"));
+
+        if (groups.TryGetValue(shipmentId, out var entry))
+        {
+            entry.DeliveryAttempts.Add(deliveryAttempt);
+        }
+        else
+        {
+            var channelString = reader.GetValue<string>("notificationchannel");
+            var newEntry = (
+                CreatorName: reader.GetValue<string>("creatorname"),
+                ResourceId: reader.GetValue<string>("resourceid"),
+                SendersReference: reader.GetValue<string>("sendersreference"),
+                RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
+                NotificationChannel: Enum.TryParse<NotificationChannel>(channelString, out var notificationChannel) ? notificationChannel : (NotificationChannel?)null,
+                NotificationType: reader.GetValue<string>("notificationtype"),
+                DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt });
+
+            groups[shipmentId] = newEntry;
+            orderList.Add(shipmentId);
+        }
     }
 
     /// <summary>
