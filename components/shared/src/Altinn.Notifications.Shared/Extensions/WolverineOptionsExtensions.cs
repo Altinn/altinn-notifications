@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Shared.Wolverine.Policies;
+
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
@@ -34,6 +36,7 @@ public static class WolverineOptionsExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(azureServiceBusConnectionString);
 
         opts.Policies.DisableConventionalLocalRouting();
+        opts.Policies.Add(new WolverineHandlerTimingPolicy());
         opts.EnableAutomaticFailureAcks = false;
         opts.EnableRemoteInvocation = false;
         opts.MultipleHandlerBehavior = MultipleHandlerBehavior.Separated;
