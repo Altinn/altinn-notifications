@@ -125,6 +125,7 @@ public class DeliveryReportPublisher : Shared.Publishers.WolverinePublisher
 
         if (!string.IsNullOrWhiteSpace(traceParent))
         {
+            deliveryOptions.Headers["Diagnostic-Id"] = traceParent;
             deliveryOptions.Headers["traceparent"] = traceParent;
         }
 
