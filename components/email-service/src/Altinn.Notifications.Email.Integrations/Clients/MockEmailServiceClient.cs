@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
@@ -55,13 +56,31 @@ public class MockEmailServiceClient : IEmailServiceClient
     {
         await Task.Delay(AcsUpdateExecutionTimeMs);
 
+        string? parentActivityId = Activity.Current?.Id;
+
         _ = Task.Run(async () =>
         {
+            using var dispatchActivity = StartDispatchActivity(parentActivityId);
+
             await Task.Delay(AcsDeliveryReportDelayTimeMs);
             await new DeliveryReportPublisher(_serviceProvider).DispatchAsync(operationId);
         });
 
         return Core.Status.EmailSendResult.Delivered;
+    }
+
+    private static Activity? StartDispatchActivity(string? parentActivityId)
+    {
+        if (string.IsNullOrWhiteSpace(parentActivityId))
+        {
+            return null;
+        }
+
+        var activity = new Activity("MockEmailServiceClient.DispatchDeliveryReport");
+        activity.SetParentId(parentActivityId);
+        activity.Start();
+
+        return activity;
     }
 }
 
