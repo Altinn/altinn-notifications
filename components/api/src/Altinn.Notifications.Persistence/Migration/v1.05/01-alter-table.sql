@@ -1,0 +1,3 @@
+ALTER TABLE notifications.orders  SET (autovacuum_vacuum_scale_factor = 0, autovacuum_vacuum_threshold = 1000, autovacuum_vacuum_cost_delay = 0);
+ALTER TABLE notifications.emailnotifications   SET (autovacuum_vacuum_scale_factor = 0, autovacuum_vacuum_threshold = 1000, autovacuum_vacuum_cost_delay = 0);
+ALTER TABLE notifications.smsnotifications   SET (autovacuum_vacuum_scale_factor = 0, autovacuum_vacuum_threshold = 1000, autovacuum_vacuum_cost_delay = 0);
