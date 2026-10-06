@@ -17,6 +17,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     private readonly IContactPointService _contactPointService;
     private readonly IEmailNotificationService _emailService;
     private readonly IKeywordsService _keywordsService;
+    private readonly INotificationScheduleService _notificationScheduleService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailOrderProcessingService"/> class.
@@ -24,11 +25,13 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     public EmailOrderProcessingService(
         IEmailNotificationService emailService,
         IContactPointService contactPointService,
-        IKeywordsService keywordsService)
+        IKeywordsService keywordsService,
+        INotificationScheduleService notificationScheduleService)
     {
         _emailService = emailService;
         _contactPointService = contactPointService;
         _keywordsService = keywordsService;
+        _notificationScheduleService = notificationScheduleService;
     }
 
     /// <inheritdoc/>
@@ -61,7 +64,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     public async Task<EmailOrderProcessingResult> ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
-        var expiryTime = order.RequestedSendTime.AddHours(48);
+        var expiryTime = GetExpirationDateTime(order);
         var notifications = new List<EmailNotification>();
 
         foreach (var recipient in recipients)
@@ -85,6 +88,23 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         }
 
         return new EmailOrderProcessingResult(notifications, expiryTime);
+    }
+
+    /// <summary>
+    /// Calculates the expiration date and time for the email notifications based on the order's email sending time policy.
+    /// </summary>
+    /// <param name="order">The notification order containing the requested send time and email sending time policy.</param>
+    /// <returns>
+    /// If the email sending time policy is <see cref="SendingTimePolicy.Daytime"/>, the expiration is determined by the notification schedule service.
+    /// Otherwise, it defaults to 48 hours after the requested send time.
+    /// </returns>
+    private DateTime GetExpirationDateTime(NotificationOrder order)
+    {
+        return order.EmailSendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _notificationScheduleService.GetEmailExpirationDateTime(order.RequestedSendTime),
+            _ => order.RequestedSendTime.AddHours(48),
+        };
     }
 
     /// <summary>

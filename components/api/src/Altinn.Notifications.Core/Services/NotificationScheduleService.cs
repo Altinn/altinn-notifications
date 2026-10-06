@@ -8,12 +8,17 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
-    /// Provides scheduling logic for SMS notifications.
+    /// Provides scheduling logic for SMS and email notifications.
     /// </summary>
     public class NotificationScheduleService : INotificationScheduleService
     {
-        private readonly TimeSpan _sendWindowEndTime;
-        private readonly TimeSpan _sendWindowStartTime;
+        /// <summary>
+        /// A daily send window in Norwegian local time, from <paramref name="Start"/> to <paramref name="End"/> (both exclusive).
+        /// </summary>
+        private readonly record struct SendWindow(TimeSpan Start, TimeSpan End);
+
+        private readonly SendWindow _smsSendWindow;
+        private readonly SendWindow _emailSendWindow;
 
         private readonly IDateTimeService _dateTimeService;
 
@@ -30,8 +35,8 @@ namespace Altinn.Notifications.Core.Services
         {
             _dateTimeService = dateTimeService;
 
-            _sendWindowEndTime = new(config.Value.SmsSendWindowEndHour, 0, 0);
-            _sendWindowStartTime = new(config.Value.SmsSendWindowStartHour, 0, 0);
+            _smsSendWindow = new(new(config.Value.SmsSendWindowStartHour, 0, 0), new(config.Value.SmsSendWindowEndHour, 0, 0));
+            _emailSendWindow = new(new(config.Value.EmailSendWindowStartHour, 0, 0), new(config.Value.EmailSendWindowEndHour, 0, 0));
 
             var norwegainTimeZoneId =
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _norwegainTimeZoneIdWindows : _norwegainTimeZoneIdLinux;
@@ -41,26 +46,54 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public bool CanSendSmsNow()
         {
-            DateTime dateTimeUtc = _dateTimeService.UtcNow();
-
-            var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(dateTimeUtc);
-
-            return equivalentDateTimeInNorway.TimeOfDay > _sendWindowStartTime && equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime;
+            return IsWithinSendWindow(_smsSendWindow);
         }
 
         /// <inheritdoc/>
         public DateTime GetSmsExpirationDateTime(DateTime referenceUtcDateTime)
         {
+            return GetExpirationDateTime(referenceUtcDateTime, _smsSendWindow);
+        }
+
+        /// <inheritdoc/>
+        public bool CanSendEmailNow()
+        {
+            return IsWithinSendWindow(_emailSendWindow);
+        }
+
+        /// <inheritdoc/>
+        public DateTime GetEmailExpirationDateTime(DateTime referenceUtcDateTime)
+        {
+            return GetExpirationDateTime(referenceUtcDateTime, _emailSendWindow);
+        }
+
+        /// <summary>
+        /// Determines whether the current time, in the Norwegian time zone, is within the given send window.
+        /// </summary>
+        private bool IsWithinSendWindow(SendWindow sendWindow)
+        {
+            DateTime dateTimeUtc = _dateTimeService.UtcNow();
+
+            var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(dateTimeUtc);
+
+            return equivalentDateTimeInNorway.TimeOfDay > sendWindow.Start && equivalentDateTimeInNorway.TimeOfDay < sendWindow.End;
+        }
+
+        /// <summary>
+        /// Calculates the expiry for a notification restricted to the given send window.
+        /// </summary>
+        private DateTime GetExpirationDateTime(DateTime referenceUtcDateTime, SendWindow sendWindow)
+        {
             var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(referenceUtcDateTime);
 
-            if (equivalentDateTimeInNorway.TimeOfDay > _sendWindowStartTime && equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime)
+            if (equivalentDateTimeInNorway.TimeOfDay > sendWindow.Start && equivalentDateTimeInNorway.TimeOfDay < sendWindow.End)
             {
                 return referenceUtcDateTime.AddHours(48);
             }
 
-            double hoursToAdd = equivalentDateTimeInNorway.TimeOfDay < _sendWindowStartTime ? 48 : 72;
+            double hoursToAdd = equivalentDateTimeInNorway.TimeOfDay < sendWindow.Start ? 48 : 72;
 
-            DateTime baseDateTime = equivalentDateTimeInNorway.Date.Add(_sendWindowStartTime);
+            DateTime baseDateTime = equivalentDateTimeInNorway.Date.Add(sendWindow.Start);
 
             DateTime expiryDateTime = baseDateTime.AddHours(hoursToAdd);
 

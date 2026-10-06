@@ -400,6 +400,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             Creator = instantEmailNotificationOrder.Creator,
             Created = instantEmailNotificationOrder.Created,
             SendingTimePolicy = SendingTimePolicy.Anytime,
+            EmailSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Email,
             RequestedSendTime = instantEmailNotificationOrder.Created,
             SendersReference = instantEmailNotificationOrder.SendersReference,

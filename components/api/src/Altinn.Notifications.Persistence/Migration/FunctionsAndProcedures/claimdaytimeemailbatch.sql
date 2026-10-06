@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.claim_email_batch_v2(
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_batch(
     _batchsize integer DEFAULT NULL::integer)
     RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
@@ -47,7 +47,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND o.type <> 'Composed'::notificationordertype
-            AND (o.emailsendingtimepolicy IS NULL OR o.emailsendingtimepolicy = 1)
+            AND o.emailsendingtimepolicy = 2
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
@@ -78,12 +78,11 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_email_batch_v2(integer)
+ALTER FUNCTION notifications.claim_daytime_email_batch(integer)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
-    IS 'Claims and returns batches of email notifications with sending time policy Anytime (emailsendingtimepolicy = 1 or NULL), excluding Composed orders (OrderType = 3).
-Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
-Daytime orders (emailsendingtimepolicy = 2) are claimed by claim_daytime_email_batch.
+COMMENT ON FUNCTION notifications.claim_daytime_email_batch(integer)
+    IS 'Claims and returns batches of email notifications with sending time policy Daytime (emailsendingtimepolicy = 2), excluding Composed orders (OrderType = 3).
+Orders with policy Anytime or NULL are claimed by claim_email_batch_v2.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 

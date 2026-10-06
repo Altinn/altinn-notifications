@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Hosting;
@@ -7,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Background service that runs a dedicated processing loop.
-/// Each loop cycle waits for queued work, executes email publishing, then marks is as available implicitly by calling wait, which will pop the item.
+/// Background service that runs a dedicated processing loop per <see cref="SendingTimePolicy"/>.
+/// Each loop waits for queued work, executes email publishing, and then marks the policy as available.
 /// </summary>
 public class EmailPublishBackgroundService : BackgroundService
 {
@@ -29,9 +30,12 @@ public class EmailPublishBackgroundService : BackgroundService
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var anytimeLoop = RunPolicyLoopAsync(SendingTimePolicy.Anytime, stoppingToken);
+        var daytimeLoop = RunPolicyLoopAsync(SendingTimePolicy.Daytime, stoppingToken);
+
         try
         {
-            await RunPolicyLoopAsync(stoppingToken);
+            await Task.WhenAll(anytimeLoop, daytimeLoop);
         }
         catch (OperationCanceledException)
         {
@@ -39,13 +43,13 @@ public class EmailPublishBackgroundService : BackgroundService
         }
     }
 
-    private async Task RunPolicyLoopAsync(CancellationToken cancellationToken)
+    private async Task RunPolicyLoopAsync(SendingTimePolicy sendingTimePolicy, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await _emailPublishTaskQueue.WaitAsync(cancellationToken);
+                await _emailPublishTaskQueue.WaitAsync(sendingTimePolicy, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -53,13 +57,13 @@ public class EmailPublishBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while waiting for work.");
+                _logger.LogError(ex, "Error while waiting for work for policy {Policy}.", sendingTimePolicy);
                 continue;
             }
 
             try
             {
-                await _emailNotificationService.SendNotifications(cancellationToken);
+                await _emailNotificationService.SendNotifications(cancellationToken, sendingTimePolicy);
             }
             catch (OperationCanceledException)
             {
@@ -67,7 +71,11 @@ public class EmailPublishBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while sending email notifications.");
+                _logger.LogError(ex, "Error while sending email notifications for policy {Policy}.", sendingTimePolicy);
+            }
+            finally
+            {
+                _emailPublishTaskQueue.MarkCompleted(sendingTimePolicy);
             }
         }
     }

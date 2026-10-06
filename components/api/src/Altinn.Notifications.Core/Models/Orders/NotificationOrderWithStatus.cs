@@ -56,9 +56,14 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
 
     /// <summary>
-    /// Gets the sending time policy for the notification order. Can be null
+    /// Gets the SMS sending time policy for the notification order. Can be null
     /// </summary>
     public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+
+    /// <summary>
+    /// Gets the email sending time policy for the notification order. Can be null
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.

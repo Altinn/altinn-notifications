@@ -48,6 +48,9 @@ public class NotificationOrder : IBaseNotificationOrder
     public SendingTimePolicy? SendingTimePolicy { get; internal set; }
 
     /// <inheritdoc/>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
+
+    /// <inheritdoc/>
     public OrderType Type { get; internal set; }
 
     /// <summary>
@@ -89,7 +92,8 @@ public class NotificationOrder : IBaseNotificationOrder
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
         string? resourceAction,
-        List<SasFileReference>? emailAttachments)
+        List<SasFileReference>? emailAttachments,
+        SendingTimePolicy? emailSendingTimePolicy = null)
     {
         Id = id;
         Type = type;
@@ -105,6 +109,7 @@ public class NotificationOrder : IBaseNotificationOrder
         IgnoreReservation = ignoreReservation;
         ConditionEndpoint = conditionEndpoint;
         SendingTimePolicy = sendingTimePolicy;
+        EmailSendingTimePolicy = emailSendingTimePolicy;
         NotificationChannel = notificationChannel;
         UseStaleContactInformation = useStaleContactInformation;
     }
