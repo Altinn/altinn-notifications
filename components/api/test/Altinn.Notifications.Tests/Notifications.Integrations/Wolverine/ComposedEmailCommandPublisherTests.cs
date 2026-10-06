@@ -45,6 +45,29 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Xunit.Fact]
+    public async Task PublishAsync_MessageBusThrowsInvalidOperationException_DoesNotLogErrorAndRethrows()
+    {
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+
+        var loggerMock = new Mock<ILogger<ComposedEmailCommandPublisher>>();
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+
+        await Xunit.Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken));
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Xunit.Fact]
     public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
