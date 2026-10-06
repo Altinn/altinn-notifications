@@ -44,7 +44,7 @@ public class EmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_CancellationDuringPublish_LogsAndThrowsOperationCanceledException()
+    public async Task PublishAsync_CancellationDuringPublish_ThrowsOperationCanceledException_AndDoesNotLogError()
     {
         using var cts = new CancellationTokenSource();
 
@@ -73,7 +73,7 @@ public class EmailCommandPublisherTests
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Xunit.Fact]
@@ -93,7 +93,7 @@ public class EmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsException_LogsAndRethrows()
+    public async Task PublishAsync_MessageBusThrowsException_Rethrows()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
         messageBusPublisherMock
@@ -112,7 +112,7 @@ public class EmailCommandPublisherTests
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Xunit.Fact]
