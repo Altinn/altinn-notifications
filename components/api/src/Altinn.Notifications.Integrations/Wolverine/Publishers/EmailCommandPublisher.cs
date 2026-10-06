@@ -20,20 +20,7 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessa
     public async Task PublishAsync(Email email, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        try
-        {
-            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            if (ex is not InvalidOperationException)
-            {
-                _logger.LogError(ex, "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.", email.NotificationId);
-            }
-
-            throw;
-        }
+        await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>
