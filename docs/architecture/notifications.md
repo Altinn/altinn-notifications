@@ -151,7 +151,8 @@ The following cron jobs are defined:
 
 | Job name                       | Schedule        | Description                                                                                |
 | ------------------------------ | --------------- | ------------------------------------------------------------------------------------------ |
-| send-email-trigger             | `*/1 * * * *`   | Triggers sending of all pending email notifications                                        |
+| send-email-trigger             | `*/1 * * * *`   | Triggers sending of email notifications with anytime send time policy (no time restriction) |
+| send-email-trigger-daytime     | `* 7-16 * * *`  | Triggers sending of email notifications with daytime send time policy (business hours only) |
 | send-sms-trigger               | `* 7-16 * * *`  | Triggers sending of SMS notifications with daytime send time policy (business hours only)  |
 | send-sms-trigger-anytime       | `*/1 * * * *`   | Triggers sending of SMS notifications with anytime send time policy (no time restriction)  |
 | terminate-expired-trigger      | `*/15 * * * *`  | Terminates SMS and email notifications that have passed their expiry time                  |
