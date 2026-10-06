@@ -119,6 +119,42 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_CancellationRequestedAfterClaim_RollsBackAndReturnsFalse()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .Callback(() => cts.Cancel())
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISendSmsPublisher>();
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(unitOfWork);
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        // Act
+        var result = await service.SendNotifications(cts.Token);
+
+        // Assert
+        Assert.False(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotifications_NotificationFound_PublishesAndCommits()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
@@ -197,6 +233,131 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_SubstitutionConfiguredButNotMatched_DoesNotPersistSubstitutedSender()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "digdir");
+
+        var senderSubstitution = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitution.Setup(s => s.HasRules).Returns(true);
+        senderSubstitution
+            .Setup(s => s.ResolveSender("Altinn", "+4799991111", "digdir"))
+            .Returns(new SmsSenderResolutionResult("Altinn", false));
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISendSmsPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(unitOfWork);
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object,
+            senderSubstitutionService: senderSubstitution.Object);
+
+        // Act
+        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+        repo.Verify(r => r.PersistSubstitutedSender(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
+        publisher.Verify(p => p.PublishAsync(sms, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotifications_WhenNoSubstitutionRules_DoesNotResolveSender()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "digdir");
+
+        var senderSubstitution = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitution.Setup(s => s.HasRules).Returns(false);
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISendSmsPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(CreateUnitOfWork());
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object,
+            senderSubstitutionService: senderSubstitution.Object);
+
+        // Act
+        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+        senderSubstitution.Verify(s => s.ResolveSender(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_WhenPersistSubstitutedSenderThrows_RollsBackAndReturnsFalse()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+34123456789", "message", "digdir");
+
+        var senderSubstitution = new Mock<ISmsSenderSubstitutionService>();
+        senderSubstitution.Setup(s => s.HasRules).Returns(true);
+        senderSubstitution
+            .Setup(s => s.ResolveSender("Altinn", "+34123456789", "digdir"))
+            .Returns(new SmsSenderResolutionResult("+4775006000", true));
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+        repo
+            .Setup(r => r.PersistSubstitutedSender(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("persist failed"));
+
+        var publisher = new Mock<ISendSmsPublisher>();
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(unitOfWork);
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object,
+            senderSubstitutionService: senderSubstitution.Object);
+
+        // Act
+        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotifications_PublishThrows_RollsBackAndReturnsFalse()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
@@ -227,6 +388,96 @@ public class SmsNotificationServiceTests
         Assert.False(result);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_CommitThrows_RollsBackAndReturnsFalse()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISendSmsPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(unitOfWork);
+        unitOfWorkRepository
+            .Setup(r => r.CommitUnitOfWork(unitOfWork))
+            .ThrowsAsync(new InvalidOperationException("commit failed"));
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        // Act
+        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotifications_PublishThrowsAndRollbackThrows_ReturnsFalse()
+    {
+        // Arrange
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISendSmsPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("publish failed"));
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository
+            .Setup(r => r.StartUnitOfWork())
+            .ReturnsAsync(unitOfWork);
+        unitOfWorkRepository
+            .Setup(r => r.RollbackUnitOfWork(unitOfWork))
+            .ThrowsAsync(new InvalidOperationException("rollback failed"));
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        // Act
+        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task TerminateExpiredNotifications_ForwardsToRepository()
+    {
+        // Arrange
+        var repo = new Mock<ISmsNotificationRepository>();
+        var service = GetService(repository: repo.Object);
+
+        // Act
+        await service.TerminateExpiredNotifications();
+
+        // Assert
+        repo.Verify(r => r.TerminateExpiredNotifications(), Times.Once);
     }
 
     [Fact]
