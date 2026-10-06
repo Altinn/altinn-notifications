@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -174,130 +173,6 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
         Assert.Equal(secondSms.Recipient, secondCommand.MobileNumber);
         Assert.Equal(secondSms.Sender, secondCommand.SenderNumber);
         Assert.Equal(secondSms.NotificationId, secondCommand.NotificationId);
-    }
-
-    /// <summary>
-    /// Verifies that publishing a valid batch of SMS notifications succeeds.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
-    {
-        var factory = CreateFactory();
-        var smsList = new List<Sms>
-        {
-            new(Guid.NewGuid(), "Altinn", "+4711111111", "First batch message"),
-            new(Guid.NewGuid(), "Altinn", "+4722222222", "Second batch message")
-        };
-
-        var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueueAsync(smsSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
-
-        var result = await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
-
-        Assert.Empty(result);
-
-        // Drain all published messages so the queue is clean for subsequent tests
-        for (int i = 0; i < smsList.Count; i++)
-        {
-            await ServiceBusTestUtils.WaitForMessageAsync(_fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
-        }
-    }
-
-    /// <summary>
-    /// Verifies that publishing a batch delivers one <see cref="SendSmsCommand"/> per SMS to the queue,
-    /// with all fields correctly mapped for each.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_ValidSmsList_DeliversAllCommandsToQueue()
-    {
-        var factory = CreateFactory();
-        var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4711111111", "First batch message");
-        var secondSms = new Sms(Guid.NewGuid(), "Altinn", "+4722222222", "Second batch message");
-        var smsList = new List<Sms> { firstSms, secondSms };
-        var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueueAsync(smsSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
-
-        await publisher.PublishAsync(smsList, TestContext.Current.CancellationToken);
-
-        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
-
-        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(10));
-
-        Assert.NotNull(firstMessage);
-        Assert.NotNull(secondMessage);
-
-        var commands = new[]
-        {
-            JsonSerializer.Deserialize<SendSmsCommand>(firstMessage.Body.ToString(), _jsonSerializerOptions),
-            JsonSerializer.Deserialize<SendSmsCommand>(secondMessage.Body.ToString(), _jsonSerializerOptions)
-        };
-
-        var firstCommand = commands.Single(c => c!.NotificationId == firstSms.NotificationId);
-        var secondCommand = commands.Single(c => c!.NotificationId == secondSms.NotificationId);
-
-        Assert.Equal(firstSms.Message, firstCommand!.Body);
-        Assert.Equal(firstSms.Recipient, firstCommand.MobileNumber);
-        Assert.Equal(firstSms.Sender, firstCommand.SenderNumber);
-        Assert.Equal(firstSms.NotificationId, firstCommand.NotificationId);
-
-        Assert.Equal(secondSms.Message, secondCommand!.Body);
-        Assert.Equal(secondSms.Recipient, secondCommand.MobileNumber);
-        Assert.Equal(secondSms.Sender, secondCommand.SenderNumber);
-        Assert.Equal(secondSms.NotificationId, secondCommand.NotificationId);
-    }
-
-    /// <summary>
-    /// Verifies that publishing an empty batch returns an empty list without delivering any messages to the queue.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutEnqueuingMessages()
-    {
-        var factory = CreateFactory();
-        var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueueAsync(smsSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
-
-        var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
-
-        Assert.Empty(result);
-
-        var message = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString, smsSendQueueName, TimeSpan.FromSeconds(5));
-
-        Assert.Null(message);
-    }
-
-    /// <summary>
-    /// Verifies that a pre-cancelled token causes <see cref="OperationCanceledException"/> to be thrown
-    /// before any messages in the batch are sent to the queue.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
-    {
-        var factory = CreateFactory();
-        var smsList = new List<Sms>
-        {
-            new(Guid.NewGuid(), "Altinn", "+4799999999", "Test message")
-        };
-
-        var smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueueAsync(smsSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
-
-        using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync();
-
-        await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(smsList, cancellationTokenSource.Token));
-
-        await _fixture.DrainQueueAsync(smsSendQueueName);
     }
 
     private IntegrationTestWebApplicationFactory CreateFactory()

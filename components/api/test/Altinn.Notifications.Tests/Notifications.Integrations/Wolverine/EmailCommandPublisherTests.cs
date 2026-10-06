@@ -24,12 +24,55 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_SuccessfulPublish_PublishesCommand()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
 
         await publisher.PublishAsync(_email, Xunit.TestContext.Current.CancellationToken);
 
         messageBusPublisherMock.Verify(
             m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Xunit.Fact]
+    public async Task PublishAsync_CancellationDuringPublish_LogsAndThrowsOperationCanceledException()
+    {
+        using var cts = new CancellationTokenSource();
+
+        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
+        messageBusPublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return Task.FromCanceled(cts.Token);
+            });
+
+        var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
+        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+
+        await Xunit.Assert.ThrowsAnyAsync<OperationCanceledException>(() => publisher.PublishAsync(_email, cts.Token));
+
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 

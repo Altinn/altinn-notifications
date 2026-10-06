@@ -709,7 +709,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_ComposedOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewNotificationAsync_ComposedOrderNotification_IsNotClaimed()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -782,12 +782,12 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        Email? batch = await ExecuteInUnitOfWork(
+        Email? email = await ExecuteInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
             TestContext.Current.CancellationToken);
 
-        // Assert — the Composed order's notification must not appear in the standard email batch
-        Assert.True(batch is null || batch.NotificationId != notificationId);
+        // Assert — the Composed order's notification must not appear in the standard email
+        Assert.True(email is null || email.NotificationId != notificationId);
 
         // Confirm the notification is still in 'New' state (not claimed)
         string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
@@ -806,7 +806,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'
@@ -842,7 +842,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         long expectedSize = 158304L;
         string deliveryReport = """{"messageId":"test-op","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'

@@ -26,30 +26,6 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
     private const string _emailSendQueueName = "altinn.notifications.email.send";
 
     /// <summary>
-    /// Verifies that publishing a valid email succeeds and enqueues a command.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_ValidEmail_Completes()
-    {
-        var factory = CreateFactory();
-        var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
-        {
-            await _fixture.DrainQueueAsync(_emailSendQueueName);
-
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
-
-            await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
-
-            var message = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                _emailSendQueueName,
-                TimeSpan.FromSeconds(10));
-
-            Assert.NotNull(message);
-        }
-    }
-
-    /// <summary>
     /// Verifies that <see cref="EmailContentType.Plain"/> is serialized as the string "Plain"
     /// when mapping from <see cref="Email.ContentType"/> (enum) to <see cref="EmailCommandBase.ContentType"/> (string).
     /// </summary>
@@ -58,46 +34,23 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
     {
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
-        {
-            await _fixture.DrainQueueAsync(_emailSendQueueName);
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
 
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+        var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
-            var message = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                _emailSendQueueName,
-                TimeSpan.FromSeconds(10));
+        var message = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _emailSendQueueName,
+            TimeSpan.FromSeconds(10));
 
-            Assert.NotNull(message);
+        Assert.NotNull(message);
 
-            var sendEmailCommand = JsonSerializer.Deserialize<SendEmailCommand>(message.Body.ToString());
+        var sendEmailCommand = JsonSerializer.Deserialize<SendEmailCommand>(message.Body.ToString());
 
-            Assert.NotNull(sendEmailCommand);
-            Assert.Equal(EmailContentType.Plain.ToString(), sendEmailCommand.ContentType);
-        }
-    }
-
-    /// <summary>
-    /// Verifies that a pre-cancelled token causes <see cref="OperationCanceledException"/>
-    /// to be thrown before the message is sent to the queue.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
-    {
-        var factory = CreateFactory();
-        var email = new Email(Guid.NewGuid(), "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
-        {
-            await _fixture.DrainQueueAsync(_emailSendQueueName);
-
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
-
-            using var cancellationTokenSource = new CancellationTokenSource();
-            await cancellationTokenSource.CancelAsync();
-
-            await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(email, cancellationTokenSource.Token));
-        }
+        Assert.NotNull(sendEmailCommand);
+        Assert.Equal(EmailContentType.Plain.ToString(), sendEmailCommand.ContentType);
     }
 
     /// <summary>

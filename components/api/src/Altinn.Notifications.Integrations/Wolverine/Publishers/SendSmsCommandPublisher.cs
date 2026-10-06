@@ -41,28 +41,6 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
         }
     }
 
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken)
-    {
-        return _messageBusPublisher.PublishBatchAsync(
-            smsList,
-            commandFactory: CreateCommand,
-            onError: (sms, exception) =>
-            {
-                if (exception is OperationCanceledException)
-                {
-                    _logger.LogInformation(
-                        exception,
-                        "SendSmsCommandPublisher cancelled before publishing SMS notification {NotificationId}; reporting as unpublished.",
-                        sms.NotificationId);
-                    return;
-                }
-
-                _logger.LogError(exception, "SendSmsCommandPublisher failed to publish SMS notification {NotificationId} to ASB queue.", sms.NotificationId);
-            },
-            cancellationToken: cancellationToken);
-    }
-
     /// <summary>
     /// Creates a <see cref="SendSmsCommand"/> from the provided <see cref="Sms"/> instance.
     /// </summary>
