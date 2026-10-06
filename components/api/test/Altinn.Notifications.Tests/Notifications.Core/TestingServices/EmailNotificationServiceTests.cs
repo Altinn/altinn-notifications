@@ -318,6 +318,26 @@ public class EmailNotificationServiceTests
                 ItExpr.IsAny<SendStatusIdentifierType>());
     }
 
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task SendNotifications_PassesSendingTimePolicyToRepository(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>(), sendingTimePolicy))
+            .ReturnsAsync([]);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None, sendingTimePolicy);
+
+        // Assert
+        repoMock.Verify(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>(), sendingTimePolicy), Times.Once);
+        repoMock.Verify(r => r.GetNewNotificationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.Is<SendingTimePolicy>(p => p != sendingTimePolicy)), Times.Never);
+    }
+
     [Fact]
     public async Task SendNotifications_CancellationRequested_StopsProcessing()
     {
@@ -514,7 +534,7 @@ public class EmailNotificationServiceTests
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
-            .Callback<int, CancellationToken>((_, _) => cts.Cancel())
+            .Callback<int, CancellationToken, SendingTimePolicy>((_, _, _) => cts.Cancel())
             .ReturnsAsync(emails);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
