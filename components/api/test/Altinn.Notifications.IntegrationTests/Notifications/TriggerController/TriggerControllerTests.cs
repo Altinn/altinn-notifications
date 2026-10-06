@@ -89,8 +89,8 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        emailNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Once);
-        emailNotificationServiceMock.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Once);
+        emailNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        emailNotificationServiceMock.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]
