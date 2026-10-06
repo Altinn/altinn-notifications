@@ -144,9 +144,9 @@ public class ComposedEmailCommandPublisherTests
         Xunit.Assert.Equal("from@test.no", capturedCommand.FromAddress);
         Xunit.Assert.Equal(notificationId, capturedCommand.NotificationId);
         Xunit.Assert.Equal(EmailContentType.Html.ToString(), capturedCommand.ContentType);
-        Xunit.Assert.Single(capturedCommand.Attachments);
-        Xunit.Assert.Equal("report.pdf", capturedCommand.Attachments[0].Filename);
-        Xunit.Assert.Equal("application/pdf", capturedCommand.Attachments[0].MimeType);
+        var attachment = Xunit.Assert.Single(capturedCommand.Attachments);
+        Xunit.Assert.Equal("report.pdf", attachment.Filename);
+        Xunit.Assert.Equal("application/pdf", attachment.MimeType);
     }
 
     private static ComposedEmailCommandPublisher CreatePublisher(
