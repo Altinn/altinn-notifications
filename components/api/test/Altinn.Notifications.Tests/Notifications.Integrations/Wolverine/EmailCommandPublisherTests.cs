@@ -4,8 +4,6 @@ using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.Logging;
-
 using Moq;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
@@ -24,27 +22,17 @@ public class EmailCommandPublisherTests
     public async Task PublishAsync_SuccessfulPublish_PublishesCommand()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         await publisher.PublishAsync(_email, Xunit.TestContext.Current.CancellationToken);
 
         messageBusPublisherMock.Verify(
             m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
-
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_CancellationDuringPublish_ThrowsOperationCanceledException_AndDoesNotLogError()
+    public async Task PublishAsync_CancellationDuringPublish_ThrowsOperationCanceledException()
     {
         using var cts = new CancellationTokenSource();
 
@@ -57,23 +45,13 @@ public class EmailCommandPublisherTests
                 return Task.FromCanceled(cts.Token);
             });
 
-        var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         await Xunit.Assert.ThrowsAnyAsync<OperationCanceledException>(() => publisher.PublishAsync(_email, cts.Token));
 
         messageBusPublisherMock.Verify(
             m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
-
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
     }
 
     [Xunit.Fact]
@@ -100,19 +78,9 @@ public class EmailCommandPublisherTests
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("Service Bus unavailable"));
 
-        var loggerMock = new Mock<ILogger<EmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         await Xunit.Assert.ThrowsAsync<TimeoutException>(() => publisher.PublishAsync(_email, Xunit.TestContext.Current.CancellationToken));
-
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
     }
 
     [Xunit.Fact]
@@ -142,10 +110,8 @@ public class EmailCommandPublisherTests
     }
 
     private static EmailCommandPublisher CreatePublisher(
-        Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<EmailCommandPublisher>>? loggerMock = null)
+        Mock<IMessageBusPublisher> messageBusPublisherMock)
     {
-        loggerMock ??= new Mock<ILogger<EmailCommandPublisher>>();
-        return new EmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
+        return new EmailCommandPublisher(messageBusPublisherMock.Object);
     }
 }
