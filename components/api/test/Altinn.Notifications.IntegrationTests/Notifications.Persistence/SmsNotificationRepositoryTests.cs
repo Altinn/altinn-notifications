@@ -667,6 +667,24 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_WithNullNotificationIdAndWhitespaceGatewayReference_ThrowsInvalidNotificationIdentifierException()
+    {
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(async () =>
+        {
+            await repo.UpdateSendStatus(null, SmsNotificationResultType.Accepted, "   ");
+        });
+
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
     {
         // Arrange
@@ -920,6 +938,34 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_WithWhitespaceDeliveryReport_LeavesDeliveryReportColumnNull()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        await repo.UpdateSendStatus(
+            smsNotification.Id,
+            SmsNotificationResultType.Accepted,
+            gatewayReference: Guid.NewGuid().ToString(),
+            deliveryReport: "   ");
+
+        // Assert
+        string reportSql = $@"
+            SELECT deliveryreport::text FROM notifications.smsnotifications
+            WHERE alternateid = '{smsNotification.Id}'";
+
+        string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(reportSql);
+        Assert.Null(persistedReport);
+    }
+
+    [Fact]
     public async Task PersistSubstitutedSender_ValidNotificationId_PersistsSubstitutedSenderToDatabase()
     {
         if (!await HasSubstitutedSenderColumnAsync())
@@ -1003,6 +1049,27 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
                 null,
                 It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_InvalidUnitOfWork_ThrowsInvalidOperationExceptionWithInnerException()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        UnitOfWork invalidUnitOfWork = new();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.PersistSubstitutedSender(invalidUnitOfWork, Guid.NewGuid(), "+4775006000"));
+
+        // Assert
+        Assert.Equal("Failed to persist substituted sender.", exception.Message);
+        Assert.NotNull(exception.InnerException);
     }
 
     [Fact]
