@@ -968,11 +968,6 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task PersistSubstitutedSender_ValidNotificationId_PersistsSubstitutedSenderToDatabase()
     {
-        if (!await HasSubstitutedSenderColumnAsync())
-        {
-            return;
-        }
-
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
         _orderIdsToCleanup.Add(order.Id);
@@ -997,11 +992,6 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task PersistSubstitutedSender_CalledTwice_OverwritesPreviousSubstitutedSender()
     {
-        if (!await HasSubstitutedSenderColumnAsync())
-        {
-            return;
-        }
-
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
         _orderIdsToCleanup.Add(order.Id);
@@ -1025,11 +1015,6 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task PersistSubstitutedSender_UnknownNotificationId_DoesNotThrowAndLogsWarning()
     {
-        if (!await HasSubstitutedSenderColumnAsync())
-        {
-            return;
-        }
-
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
         var repo = new SmsNotificationRepository(
@@ -1122,18 +1107,5 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         // directly and is neither wrapped in InvalidOperationException nor logged.
         await Assert.ThrowsAsync<ArgumentException>(
             () => PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.NewGuid(), sender));
-    }
-
-    private static async Task<bool> HasSubstitutedSenderColumnAsync()
-    {
-        const string sql = @"
-            SELECT COUNT(*)
-            FROM information_schema.columns
-            WHERE table_schema = 'notifications'
-              AND table_name = 'smsnotifications'
-              AND column_name = 'substitutedsender'";
-
-        int count = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-        return count == 1;
     }
 }

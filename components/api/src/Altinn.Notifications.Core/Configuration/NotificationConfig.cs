@@ -83,7 +83,6 @@ public class NotificationConfig
     public ProcessLoopConfig PastDueOrdersProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -95,7 +94,6 @@ public class NotificationConfig
     public ProcessLoopConfig RetryOrdersProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 1,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -107,7 +105,6 @@ public class NotificationConfig
     public ProcessLoopConfig EmailNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -119,7 +116,6 @@ public class NotificationConfig
     public ProcessLoopConfig ComposedEmailNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -131,7 +127,6 @@ public class NotificationConfig
     public ProcessLoopConfig SmsDaytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -143,7 +138,6 @@ public class NotificationConfig
     public ProcessLoopConfig SmsAnytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
-        TaskIdleDelaySeconds = 30,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
@@ -159,12 +153,6 @@ public class ProcessLoopConfig
     /// The number of tasks to run concurrently in the background service
     /// </summary>
     public int TaskCount { get; set; } = 30;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the background service task when idle for the primary task.
-    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
-    /// </summary>
-    public int TaskIdleDelaySeconds { get; set; } = 30;
 
     /// <summary>
     /// The delay in seconds between each iteration of the background service task when idle for the primary task.

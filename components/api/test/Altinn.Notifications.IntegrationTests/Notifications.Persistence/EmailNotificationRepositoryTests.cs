@@ -1089,16 +1089,16 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         int maxAttempts = 50)
         where TResult : class
     {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
         for (int i = 0; i < maxAttempts; i++)
         {
-            await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            var unitOfWork = new UnitOfWork
-            {
-                Connection = connection,
-                Transaction = transaction
-            };
-
             TResult? result = await claim(unitOfWork, cancellationToken);
 
             if (result is not null && isMatch(result))
@@ -1114,9 +1114,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
                 return result;
             }
-
-            await transaction.RollbackAsync(cancellationToken);
         }
+
+        await transaction.RollbackAsync(cancellationToken);
 
         return null;
     }
