@@ -214,7 +214,7 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationId), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId))));
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationId), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId)))).Verifiable();
 
         var service = GetTestService(repo: repoMock.Object);
 
@@ -243,7 +243,8 @@ public class EmailNotificationServiceTests
         repoMock.Setup(r => r.UpdateSendStatus(
             It.Is<Guid>(n => n == notificationId),
             It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
-            It.Is<string>(s => s.Equals(operationId))));
+            It.Is<string>(s => s.Equals(operationId))))
+            .Verifiable();
 
         var service = GetTestService(repo: repoMock.Object);
 
