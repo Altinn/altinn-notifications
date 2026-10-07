@@ -240,7 +240,7 @@ public class OrderRequestService : IOrderRequestService
         {
             Channel = NotificationChannel.Email,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
-            EmailSendingTimePolicy = recipientEmail.Settings!.SendingTimePolicy,
+            EmailSendingTimePolicy = recipientEmail.Settings.SendingTimePolicy,
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
         };
     }
