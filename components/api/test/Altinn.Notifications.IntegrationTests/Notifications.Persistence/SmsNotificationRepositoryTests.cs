@@ -212,7 +212,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task GetNewNotification_ShouldReturnCreatorNameMatchingOrderCreator(SendingTimePolicy sendingTimePolicy)
     {
         // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
+        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
         _orderIdsToCleanup.Add(order.Id);
 
         SmsNotificationRepository repo = ServiceUtil
