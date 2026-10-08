@@ -49,10 +49,6 @@ public class ServiceCollectionExtensionsTests
         // Assert
         Assert.Contains(services, d =>
             d.ServiceType == typeof(IHostedService) &&
-            d.ImplementationType == typeof(SmsPublishBackgroundService));
-
-        Assert.Contains(services, d =>
-            d.ServiceType == typeof(IHostedService) &&
             d.ImplementationType == typeof(ProcessItemsBackgroundService));
     }
 }

@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -22,7 +22,6 @@ public class TriggerControllerTests
     private readonly TriggerController _controller;
 
     private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
-    private readonly Mock<ISmsPublishTaskQueue> _smsPublishTaskQueueMock = new();
     private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock = new();
     private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
@@ -33,7 +32,7 @@ public class TriggerControllerTests
         _controller = new TriggerController(
         NullLogger<TriggerController>.Instance,
         _statusFeedServiceMock.Object,
-        _smsPublishTaskQueueMock.Object,
+        _smsNotificationServiceMock.Object,
         _notificationScheduleMock.Object,
         _orderProcessingServiceMock.Object,
         _emailNotificationServiceMock.Object,
@@ -47,6 +46,59 @@ public class TriggerControllerTests
         var result = await _controller.Trigger_SendEmailNotifications(TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public async Task Trigger_SendSmsNotificationsAnytime_CallsSmsNotificationServiceAndReturnsOk()
+    {
+        // Arrange
+        _smsNotificationServiceMock
+            .Setup(x => x.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.Trigger_SendSmsNotificationsAnytime(TestContext.Current.CancellationToken);
+
+        // Assert
+        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Once);
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public async Task Trigger_SendSmsNotificationsDaytime_WhenAllowed_CallsSmsNotificationServiceAndReturnsOk()
+    {
+        // Arrange
+        _notificationScheduleMock
+            .Setup(x => x.CanSendSmsNow())
+            .Returns(true);
+        _smsNotificationServiceMock
+            .Setup(x => x.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.Trigger_SendSmsNotificationsDaytime(TestContext.Current.CancellationToken);
+
+        // Assert
+        _notificationScheduleMock.Verify(x => x.CanSendSmsNow(), Times.Once);
+        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Once);
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public async Task Trigger_SendSmsNotificationsDaytime_WhenNotAllowed_DoesNotCallSmsNotificationServiceAndReturnsOk()
+    {
+        // Arrange
+        _notificationScheduleMock
+            .Setup(x => x.CanSendSmsNow())
+            .Returns(false);
+
+        // Act
+        var result = await _controller.Trigger_SendSmsNotificationsDaytime(TestContext.Current.CancellationToken);
+
+        // Assert
+        _notificationScheduleMock.Verify(x => x.CanSendSmsNow(), Times.Once);
+        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
         Assert.IsType<OkResult>(result);
     }
 

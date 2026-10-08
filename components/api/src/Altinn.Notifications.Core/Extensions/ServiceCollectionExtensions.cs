@@ -1,4 +1,3 @@
-using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -37,7 +36,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IValidateOptions<SmsSenderSubstitutionConfig>, SmsSenderSubstitutionConfigValidator>();
 
         services
-            .AddHostedService<SmsPublishBackgroundService>()
             .AddHostedService<ProcessItemsBackgroundService>();
 
         services
@@ -51,15 +49,12 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
-            .AddSingleton<ISmsPublishTaskQueue, SmsPublishTaskQueue>()
-            .AddSingleton<IEmailPublishTaskQueue, EmailPublishTaskQueue>()
             .AddSingleton<INotificationLogService, NotificationLogService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
-            .AddSingleton<IComposedEmailPublishSignal, ComposedEmailPublishSignal>()
             .AddSingleton<IInstantOrderRequestService, InstantOrderRequestService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()

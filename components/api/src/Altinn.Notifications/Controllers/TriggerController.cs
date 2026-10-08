@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +17,7 @@ namespace Altinn.Notifications.Controllers;
 public class TriggerController(
     ILogger<TriggerController> logger,
     IStatusFeedService statusFeedService,
-    ISmsPublishTaskQueue smsPublishTaskQueue,
+    ISmsNotificationService smsNotificationService,
     INotificationScheduleService scheduleService,
     IOrderProcessingService orderProcessingService,
     IEmailNotificationService emailNotificationService,
@@ -26,7 +25,7 @@ public class TriggerController(
 {
     private readonly ILogger<TriggerController> _logger = logger;
     private readonly IStatusFeedService _statusFeedService = statusFeedService;
-    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue = smsPublishTaskQueue;
+    private readonly ISmsNotificationService _smsNotificationService = smsNotificationService;
     private readonly IEmailNotificationService _emailNotificationService = emailNotificationService;
     private readonly INotificationScheduleService _scheduleService = scheduleService;
     private readonly IOrderProcessingService _orderProcessingService = orderProcessingService;
@@ -121,38 +120,38 @@ public class TriggerController(
     }
 
     /// <summary>
-    /// Signals background processing of SMS notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
+    /// Triggers SMS notification processing using the <see cref="SendingTimePolicy.Anytime"/> policy.
     /// </summary>
     /// <returns>
-    /// Always returns 200 OK. The response does not indicate whether a new task was actually queued.
+    /// Always returns 200 OK.
     /// </returns>
     [HttpPost]
     [Route("sendsmsanytime")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendSmsNotificationsAnytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
     {
-        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
+        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Anytime);
         return Ok();
     }
 
     /// <summary>
-    /// Signals background processing of SMS notifications restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
+    /// Triggers SMS notification processing restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
     /// </summary>
     /// <returns>
-    /// Always returns 200 OK, regardless of whether processing was skipped (outside window) or a new task was enqueued.
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window).
     /// </returns>
     [HttpPost]
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendSmsNotificationsDaytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime(CancellationToken cancellationToken = default)
     {
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }
 
-        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Daytime);
+        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Daytime);
         return Ok();
     }
 }
