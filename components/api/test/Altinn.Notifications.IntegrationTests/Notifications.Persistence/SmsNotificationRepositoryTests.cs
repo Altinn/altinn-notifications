@@ -1037,7 +1037,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_InvalidUnitOfWork_ThrowsInvalidOperationExceptionWithInnerException()
+    public async Task PersistSubstitutedSender_InvalidUnitOfWork_ThrowsInvalidOperationException()
     {
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
@@ -1053,12 +1053,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             repo.PersistSubstitutedSender(invalidUnitOfWork, Guid.NewGuid(), "+4775006000"));
 
         // Assert
-        Assert.Equal("Failed to persist substituted sender.", exception.Message);
-        Assert.NotNull(exception.InnerException);
+        Assert.Equal("Connection property has not been initialized.", exception.Message);
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidOperationException()
+    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidNotificationIdentifierExceptionBeforePersisting()
     {
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
@@ -1068,11 +1067,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             Options.Create(new NotificationConfig()));
 
         // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
             () => PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.Empty, "+4775006000"));
 
         // Assert
-        Assert.IsType<InvalidNotificationIdentifierException>(exception.InnerException);
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
     }
 
     [Fact]

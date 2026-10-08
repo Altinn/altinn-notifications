@@ -21,9 +21,10 @@ public class SendSmsCommandPublisher(ILogger<SendSmsCommandPublisher> logger, IM
     /// <inheritdoc/>
     public async Task PublishAsync(Sms sms, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
             await _messageBusPublisher.PublishCommandAsync(CreateCommand(sms), cancellationToken);
         }
         catch (OperationCanceledException)

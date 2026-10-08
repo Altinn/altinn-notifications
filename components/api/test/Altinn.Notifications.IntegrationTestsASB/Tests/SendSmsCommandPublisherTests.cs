@@ -24,34 +24,6 @@ public class SendSmsCommandPublisherTests(IntegrationTestApiAsbContainersFixture
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>
-    /// Verifies that publishing a valid SMS completes and enqueues a command.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_ValidSms_CompletesAndEnqueuesCommand()
-    {
-        var factory = CreateFactory();
-        var sms = new Sms(
-            notificationId: Guid.NewGuid(),
-            sender: "Altinn",
-            recipient: "+4799999999",
-            message: "Integration test SMS");
-
-        string smsSendQueueName = GetQueueName(factory);
-        await _fixture.DrainQueueAsync(smsSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<ISendSmsPublisher>();
-
-        await publisher.PublishAsync(sms, TestContext.Current.CancellationToken);
-
-        var message = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString,
-            smsSendQueueName,
-            TimeSpan.FromSeconds(10));
-
-        Assert.NotNull(message);
-    }
-
-    /// <summary>
     /// Verifies that all fields from <see cref="Sms"/> are correctly mapped to
     /// <see cref="SendSmsCommand"/> properties when the message is delivered to the queue.
     /// </summary>

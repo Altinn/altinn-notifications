@@ -138,9 +138,10 @@ public class SmsNotificationService : ISmsNotificationService
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // If rollback fails, we can't do much about it. The unit of work will be disposed and the transaction rolled back automatically.
+                _logger.LogError(ex, "An error occurred while processing {OperationName}.", nameof(SendNotification));
             }
 
             return false;

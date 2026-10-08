@@ -18,42 +18,6 @@ public class SendSmsCommandPublisherTests
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn", "+4799999999", "Test message body");
 
     [Fact]
-    public async Task PublishAsync_SuccessfulPublish_Completes()
-    {
-        // Arrange
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        // Act
-        await publisher.PublishAsync(_sms, TestContext.Current.CancellationToken);
-
-        // Assert
-        messageBusPublisherMock.Verify(
-            m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task PublishAsync_MessageBusThrowsException_RethrowsException()
-    {
-        // Arrange
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
-
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => publisher.PublishAsync(_sms, TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
     public async Task PublishAsync_MessageBusThrowsException_LogsError()
     {
         // Arrange
@@ -140,6 +104,9 @@ public class SendSmsCommandPublisherTests
         Assert.Equal("Hello World", capturedCommand.Body);
         Assert.Equal("TestSender", capturedCommand.SenderNumber);
         Assert.Equal(notificationId, capturedCommand.NotificationId);
+        messageBusPublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static SendSmsCommandPublisher CreatePublisher(

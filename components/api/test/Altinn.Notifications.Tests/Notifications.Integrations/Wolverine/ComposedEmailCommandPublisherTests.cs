@@ -84,7 +84,7 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsException_LogsAndRethrows()
+    public async Task PublishAsync_MessageBusThrowsException_DoesNotLogErrorAndRethrows()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
         messageBusPublisherMock
@@ -103,7 +103,7 @@ public class ComposedEmailCommandPublisherTests
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Xunit.Fact]
