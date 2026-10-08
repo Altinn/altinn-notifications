@@ -528,7 +528,7 @@ public class OrderProcessingServiceTests
             l => l.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Unhandled error in past due order loop.")),
+                It.Is<It.IsAnyType>((state, _) => $"{state}".Contains("Unhandled error in past due order loop.")),
                 It.IsAny<InvalidOperationException>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
