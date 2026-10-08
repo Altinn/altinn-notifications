@@ -130,7 +130,7 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
     {
-        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Anytime);
+        await _smsNotificationService.SendNotification(SendingTimePolicy.Anytime, cancellationToken);
         return Ok();
     }
 
@@ -151,7 +151,7 @@ public class TriggerController(
             return Ok();
         }
 
-        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Daytime);
+        await _smsNotificationService.SendNotification(SendingTimePolicy.Daytime, cancellationToken);
         return Ok();
     }
 }

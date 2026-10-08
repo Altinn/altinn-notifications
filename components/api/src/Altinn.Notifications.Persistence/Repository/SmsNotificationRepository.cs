@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
@@ -12,7 +14,6 @@ using Microsoft.Extensions.Options;
 
 using Npgsql;
 using NpgsqlTypes;
-using System.Data;
 
 namespace Altinn.Notifications.Persistence.Repository;
 

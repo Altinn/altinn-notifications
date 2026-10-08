@@ -92,7 +92,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
         smsNotificationServiceMock
-            .Setup(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .Setup(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .Verifiable();
 
@@ -106,7 +106,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        smsNotificationServiceMock.Verify(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Once);
+        smsNotificationServiceMock.Verify(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
         smsNotificationServiceMock
-            .Setup(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .Setup(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .Verifiable();
 
@@ -138,7 +138,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         scheduleServiceMock.Verify(e => e.CanSendSmsNow(), Times.Once);
-        smsNotificationServiceMock.Verify(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Once);
+        smsNotificationServiceMock.Verify(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         scheduleServiceMock.Verify(e => e.CanSendSmsNow(), Times.Once);
-        smsNotificationServiceMock.Verify(e => e.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
+        smsNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private HttpClient GetTestClient(

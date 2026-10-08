@@ -81,7 +81,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_StartUnitOfWorkThrows_ReturnsFalse()
+    public async Task SendNotification_StartUnitOfWorkThrows_ReturnsFalse()
     {
         var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
         unitOfWorkRepository
@@ -90,13 +90,13 @@ public class SmsNotificationServiceTests
 
         var service = GetService(unitOfWorkRepository: unitOfWorkRepository.Object);
 
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result);
     }
 
     [Fact]
-    public async Task SendNotifications_NoNotification_RollsBackAndReturnsFalse()
+    public async Task SendNotification_NoNotification_RollsBackAndReturnsFalse()
     {
         var repo = new Mock<ISmsNotificationRepository>();
         repo
@@ -111,7 +111,7 @@ public class SmsNotificationServiceTests
 
         var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object);
 
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
@@ -119,7 +119,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_CancellationRequestedAfterClaim_RollsBackAndReturnsFalse()
+    public async Task SendNotification_CancellationRequestedAfterClaim_RollsBackAndReturnsFalse()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
@@ -145,7 +145,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepository.Object);
 
         // Act
-        var result = await service.SendNotifications(cts.Token);
+        var result = await service.SendNotification(cancellationToken: cts.Token);
 
         // Assert
         Assert.False(result);
@@ -155,7 +155,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_NotificationFound_PublishesAndCommits()
+    public async Task SendNotification_NotificationFound_PublishesAndCommits()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
 
@@ -184,7 +184,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepository.Object,
             senderSubstitutionService: senderSubstitution.Object);
 
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result);
         publisher.Verify(p => p.PublishAsync(sms, It.IsAny<CancellationToken>()), Times.Once);
@@ -193,7 +193,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_SubstitutionConfiguredAndMatched_PersistsSubstitutedSenderWithUnitOfWork()
+    public async Task SendNotification_SubstitutionConfiguredAndMatched_PersistsSubstitutedSenderWithUnitOfWork()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+34123456789", "message", "digdir");
 
@@ -225,7 +225,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepository.Object,
             senderSubstitutionService: senderSubstitution.Object);
 
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result);
         Assert.Equal("+4775006000", sms.Sender);
@@ -233,7 +233,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_SubstitutionConfiguredButNotMatched_DoesNotPersistSubstitutedSender()
+    public async Task SendNotification_SubstitutionConfiguredButNotMatched_DoesNotPersistSubstitutedSender()
     {
         // Arrange
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "digdir");
@@ -267,7 +267,7 @@ public class SmsNotificationServiceTests
             senderSubstitutionService: senderSubstitution.Object);
 
         // Act
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
@@ -276,7 +276,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_WhenNoSubstitutionRules_DoesNotResolveSender()
+    public async Task SendNotification_WhenNoSubstitutionRules_DoesNotResolveSender()
     {
         // Arrange
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "digdir");
@@ -306,7 +306,7 @@ public class SmsNotificationServiceTests
             senderSubstitutionService: senderSubstitution.Object);
 
         // Act
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
@@ -314,7 +314,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_WhenPersistSubstitutedSenderThrows_RollsBackAndReturnsFalse()
+    public async Task SendNotification_WhenPersistSubstitutedSenderThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+34123456789", "message", "digdir");
@@ -348,7 +348,7 @@ public class SmsNotificationServiceTests
             senderSubstitutionService: senderSubstitution.Object);
 
         // Act
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -358,7 +358,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_PublishThrows_RollsBackAndReturnsFalse()
+    public async Task SendNotification_PublishThrows_RollsBackAndReturnsFalse()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
 
@@ -383,7 +383,7 @@ public class SmsNotificationServiceTests
             commandPublisher: publisher.Object,
             unitOfWorkRepository: unitOfWorkRepository.Object);
 
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
@@ -391,7 +391,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_CommitThrows_RollsBackAndReturnsFalse()
+    public async Task SendNotification_CommitThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
@@ -421,7 +421,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepository.Object);
 
         // Act
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -430,7 +430,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_PublishThrowsAndRollbackThrows_ReturnsFalse()
+    public async Task SendNotification_PublishThrowsAndRollbackThrows_ReturnsFalse()
     {
         // Arrange
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message");
@@ -460,7 +460,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepository.Object);
 
         // Act
-        var result = await service.SendNotifications(TestContext.Current.CancellationToken);
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
