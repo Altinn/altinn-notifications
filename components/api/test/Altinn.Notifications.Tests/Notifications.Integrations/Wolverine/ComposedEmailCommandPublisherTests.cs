@@ -147,6 +147,7 @@ public class ComposedEmailCommandPublisherTests
         var attachment = Xunit.Assert.Single(capturedCommand.Attachments);
         Xunit.Assert.Equal("report.pdf", attachment.Filename);
         Xunit.Assert.Equal("application/pdf", attachment.MimeType);
+        Xunit.Assert.Equal("https://blob.example.com/container/report.pdf?sv=2021&sig=abc", attachment.SasUrl);
     }
 
     private static ComposedEmailCommandPublisher CreatePublisher(

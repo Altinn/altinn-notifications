@@ -31,23 +31,6 @@ public class NotificationConfig
     public int StatusFeedMaxPageSize { get; set; } = 500;
 
     /// <summary>
-    /// The maximum number of SMS notifications claimed and published in one batch.
-    /// </summary>
-    public int SmsPublishBatchSize { get; set; } = 500;
-
-    /// <summary>
-    /// The maximum number of email notifications claimed and published in one batch.
-    /// </summary>
-    public int EmailPublishBatchSize { get; set; } = 500;
-
-    /// <summary>
-    /// The maximum number of composed email notifications claimed and published in one batch.
-    /// Defaults to 50 (vs 500 for standard emails) because each composed email triggers
-    /// concurrent blob downloads at send time, making the per-message cost significantly higher.
-    /// </summary>
-    public int ComposedEmailPublishBatchSize { get; set; } = 50;
-
-    /// <summary>
     /// The number of expired notifications to terminate per batch.
     /// </summary>
     public int TerminationBatchSize { get; set; } = 100;
@@ -142,32 +125,4 @@ public class NotificationConfig
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
     };
-}
-
-/// <summary>
-/// Configuration class for process loop settings
-/// </summary>
-public class ProcessLoopConfig
-{
-    /// <summary>
-    /// The number of tasks to run concurrently in the background service
-    /// </summary>
-    public int TaskCount { get; set; } = 30;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the background service task when idle for the primary task.
-    /// The primary task is the first task that is started and is responsible for triggering additional tasks if needed.
-    /// </summary>
-    public int PrimaryTaskIdleDelaySeconds { get; set; } = 30;
-
-    /// <summary>
-    /// The delay in seconds between each iteration of the background service task for all other tasks
-    /// than the primary task.
-    /// </summary>
-    public int AdditionalTasksIdleDelaySeconds { get; set; } = 5;
-
-    /// <summary>
-    /// The number of consecutive tasks before ramping up the processing of tasks. This is used to prevent overloading the system with too many tasks at once.
-    /// </summary>
-    public int RampUpLimit { get; set; } = 10;
 }

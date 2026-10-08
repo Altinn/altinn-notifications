@@ -57,6 +57,16 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
 
         Assert.NotNull(firstMessage);
         Assert.NotNull(secondMessage);
+
+        var firstCommand = JsonSerializer.Deserialize<SendComposedEmailCommand>(firstMessage.Body.ToString());
+        var secondCommand = JsonSerializer.Deserialize<SendComposedEmailCommand>(secondMessage.Body.ToString());
+
+        Assert.NotNull(firstCommand);
+        Assert.NotNull(secondCommand);
+
+        var receivedIds = new[] { firstCommand.NotificationId, secondCommand.NotificationId };
+        Assert.Contains(firstEmail.NotificationId, receivedIds);
+        Assert.Contains(secondEmail.NotificationId, receivedIds);
     }
 
     /// <summary>
@@ -119,6 +129,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         Assert.Equal("sender@altinnxyz.no", command.FromAddress);
         Assert.Equal("recipient@altinnxyz.no", command.ToAddress);
         Assert.Equal(EmailContentType.Html.ToString(), command.ContentType);
+        Assert.Empty(command.Attachments);
     }
 
     /// <summary>

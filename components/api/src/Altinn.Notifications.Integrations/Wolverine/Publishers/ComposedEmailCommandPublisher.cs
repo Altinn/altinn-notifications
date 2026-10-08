@@ -20,23 +20,7 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
     public async Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        try
-        {
-            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            if (ex is not InvalidOperationException)
-            {
-                _logger.LogError(
-                    ex,
-                    "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
-                    email.NotificationId);
-            }
-
-            throw;
-        }
+        await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>
