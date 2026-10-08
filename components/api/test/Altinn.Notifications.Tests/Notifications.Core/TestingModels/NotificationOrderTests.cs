@@ -145,6 +145,35 @@ public class NotificationOrderTests
         Assert.Equal(expected, actual);
     }
 
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public void SerializeAndDeserialize_EmailSendingTimePolicy_IsPreserved(SendingTimePolicy emailSendingTimePolicy)
+    {
+        // Arrange
+        _order.SendingTimePolicy = SendingTimePolicy.Anytime;
+        _order.EmailSendingTimePolicy = emailSendingTimePolicy;
+
+        // Act
+        var actual = NotificationOrder.Deserialize(_order.Serialize());
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal(emailSendingTimePolicy, actual.EmailSendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, actual.SendingTimePolicy);
+    }
+
+    [Fact]
+    public void Deserialize_OrderWithoutEmailSendingTimePolicy_HasNullEmailSendingTimePolicy()
+    {
+        // Act
+        var actual = NotificationOrder.Deserialize(_serializedOrder);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Null(actual.EmailSendingTimePolicy);
+    }
+
     [Fact]
     public void TryParse_EmptyString_False()
     {

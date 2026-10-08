@@ -100,9 +100,9 @@ public static class PostgreUtil
         return (o, e);
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SendingTimePolicy? emailSendingTimePolicy = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy);
 
         if (sendersReference != null)
         {
@@ -637,7 +637,7 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
@@ -647,7 +647,8 @@ public static class PostgreUtil
             @sendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -718,6 +719,7 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -803,7 +805,7 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
@@ -813,7 +815,8 @@ public static class PostgreUtil
             @sendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -881,6 +884,7 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 

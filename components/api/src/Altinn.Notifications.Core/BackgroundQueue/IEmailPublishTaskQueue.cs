@@ -1,21 +1,11 @@
-﻿namespace Altinn.Notifications.Core.BackgroundQueue;
+﻿using Altinn.Notifications.Core.Enums;
+
+namespace Altinn.Notifications.Core.BackgroundQueue;
 
 /// <summary>
-/// Represents a signal for coordinating email publish operations (at most one queued or running).
+/// Represents a queue for coordinating email publish operations per <see cref="SendingTimePolicy"/>.
+/// At most one work item per policy can be active or pending at any given time.
 /// </summary>
-public interface IEmailPublishTaskQueue
+public interface IEmailPublishTaskQueue : ISendingTimePolicyTaskQueue
 {
-    /// <summary>
-    /// Attempts to enqueue a work item.
-    /// </summary>
-    /// <returns><c>true</c> if a work item was signaled; <c>false</c> if one is already queued.</returns>
-    bool TryEnqueue();
-
-    /// <summary>
-    /// Waits asynchronously until a work item is signaled.
-    /// </summary>
-    /// <param name="cancellationToken">A token that cancels the wait if triggered.</param>
-    /// <returns>A task that completes when a signal is received.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the wait is canceled via <paramref name="cancellationToken"/>.</exception>
-    Task WaitAsync(CancellationToken cancellationToken);
 }

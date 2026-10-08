@@ -2194,6 +2194,140 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrderChain_RecipientOrganizationWithEmailAndSms_StoresEmailAndSmsSendingTimePoliciesSeparately()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        // SMS has Anytime policy while Email has Daytime policy
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("brg"))
+            .SetType(OrderType.Notification)
+            .SetRequestedSendTime(currentTime.AddHours(2))
+            .SetIdempotencyId("0F33BC0A-7D0E-4E86-9A6E-1D0C2B7F4A11")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientOrganization = new RecipientOrganization
+                {
+                    OrgNumber = "312508729",
+                    ChannelSchema = NotificationChannel.EmailAndSms,
+                    ResourceId = "urn:altinn:resource:email-sms-resource-name",
+                    SmsSettings = new SmsSendingOptions { Sender = "Brønnøysund", Body = "SMS body", SendingTimePolicy = SendingTimePolicy.Anytime },
+                    EmailSettings = new EmailSendingOptions { Subject = "Email subject", Body = "Email body", SendingTimePolicy = SendingTimePolicy.Daytime }
+                }
+            })
+            .Build();
+
+        NotificationOrder? createdOrder = null;
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, order, _, _) => createdOrder = order)
+            .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = orderChainId, ShipmentId = orderId });
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), OrderLifecycleStage.Registration, It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                    recipient.AddressInfo.Add(new EmailAddressPoint("organization@altinn.xyz"));
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(createdOrder);
+        Assert.Equal(SendingTimePolicy.Anytime, createdOrder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Daytime, createdOrder.EmailSendingTimePolicy);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_EmailRecipientWithReminder_SetsOnlyEmailSendingTimePolicyOnMainOrderAndReminder()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid reminderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("brg"))
+            .SetType(OrderType.Notification)
+            .SetRequestedSendTime(currentTime.AddHours(2))
+            .SetIdempotencyId("5C7A1F0E-62E9-4D5C-8D7E-8A6B1C2D3E4F")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "recipient@altinn.xyz",
+                    Settings = new EmailSendingOptions { Subject = "Main", Body = "Main body", SendingTimePolicy = SendingTimePolicy.Daytime }
+                }
+            })
+            .SetReminders(
+            [
+                new NotificationReminder
+                {
+                    DelayDays = 7,
+                    OrderId = reminderId,
+                    Type = OrderType.Reminder,
+                    RequestedSendTime = currentTime.AddDays(7),
+                    Recipient = new NotificationRecipient
+                    {
+                        RecipientEmail = new RecipientEmail
+                        {
+                            EmailAddress = "recipient@altinn.xyz",
+                            Settings = new EmailSendingOptions { Subject = "Reminder", Body = "Reminder body", SendingTimePolicy = SendingTimePolicy.Anytime }
+                        }
+                    }
+                }
+            ])
+            .Build();
+
+        NotificationOrder? createdMainOrder = null;
+        List<NotificationOrder>? createdReminders = null;
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, order, reminders, _) =>
+            {
+                createdMainOrder = order;
+                createdReminders = reminders;
+            })
+            .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = orderChainId, ShipmentId = orderId, Reminders = [new NotificationOrderChainShipment { ShipmentId = reminderId }] });
+
+        var service = GetTestService(orderRepositoryMock.Object, guid: orderId, dateTime: currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(createdMainOrder);
+        Assert.Null(createdMainOrder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Daytime, createdMainOrder.EmailSendingTimePolicy);
+
+        Assert.NotNull(createdReminders);
+        var reminder = Assert.Single(createdReminders);
+        Assert.Null(reminder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, reminder.EmailSendingTimePolicy);
+    }
+
+    [Fact]
     public async Task RegisterNotificationOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange

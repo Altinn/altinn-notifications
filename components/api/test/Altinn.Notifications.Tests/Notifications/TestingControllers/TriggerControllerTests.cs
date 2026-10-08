@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -50,8 +51,41 @@ public class TriggerControllerTests
         var result = _controller.Trigger_SendEmailNotifications();
 
         // Assert
-        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(), Times.Once);
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(SendingTimePolicy.Anytime), Times.Once);
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(SendingTimePolicy.Daytime), Times.Never);
         _composedEmailPublishSignalMock.Verify(x => x.TryEnqueue(), Times.Once);
+
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public void Trigger_SendEmailNotificationsDaytime_WhenAllowed_EnqueuesDaytimeOnly()
+    {
+        // Arrange
+        _notificationScheduleMock.Setup(x => x.CanSendEmailNow()).Returns(true);
+
+        // Act
+        var result = _controller.Trigger_SendEmailNotificationsDaytime();
+
+        // Assert
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(SendingTimePolicy.Daytime), Times.Once);
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(SendingTimePolicy.Anytime), Times.Never);
+        _composedEmailPublishSignalMock.Verify(x => x.TryEnqueue(), Times.Never);
+
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public void Trigger_SendEmailNotificationsDaytime_WhenOutsideWindow_DoesNotEnqueue()
+    {
+        // Arrange
+        _notificationScheduleMock.Setup(x => x.CanSendEmailNow()).Returns(false);
+
+        // Act
+        var result = _controller.Trigger_SendEmailNotificationsDaytime();
+
+        // Assert
+        _emailPublishTaskQueueMock.Verify(x => x.TryEnqueue(It.IsAny<SendingTimePolicy>()), Times.Never);
 
         Assert.IsType<OkResult>(result);
     }
