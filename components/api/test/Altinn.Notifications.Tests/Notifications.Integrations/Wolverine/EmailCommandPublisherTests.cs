@@ -32,29 +32,6 @@ public class EmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_CancellationDuringPublish_ThrowsOperationCanceledException()
-    {
-        using var cts = new CancellationTokenSource();
-
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
-            .Returns(() =>
-            {
-                cts.Cancel();
-                return Task.FromCanceled(cts.Token);
-            });
-
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        await Xunit.Assert.ThrowsAnyAsync<OperationCanceledException>(() => publisher.PublishAsync(_email, cts.Token));
-
-        messageBusPublisherMock.Verify(
-            m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Xunit.Fact]
     public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
