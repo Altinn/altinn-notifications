@@ -1,0 +1,24 @@
+meta {
+  name: Get notifications by shipment id
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/shipmentid
+  body: none
+  auth: inherit
+}
+
+headers {
+  ShipmentId: {{shipmentId}}
+}
+
+vars:pre-request {
+  shipmentId: 976d59fc-52c8-41f0-9ae3-78a2e9e791d1
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

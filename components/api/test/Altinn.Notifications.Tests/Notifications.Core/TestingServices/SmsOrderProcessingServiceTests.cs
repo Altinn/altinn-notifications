@@ -165,7 +165,7 @@ public class SmsOrderProcessingServiceTests
             .ReturnsAsync(new List<SmsNotification>());
 
         var service = GetTestService(
-            smsService: notificationServiceMock.Object, 
+            smsService: notificationServiceMock.Object,
             notificationScheduleService: notificationScheduleServiceMock.Object);
 
         // Act

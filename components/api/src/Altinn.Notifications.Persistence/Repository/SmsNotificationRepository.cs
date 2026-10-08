@@ -22,12 +22,13 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 {
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
+    private readonly ILogger<SmsNotificationRepository> _logger;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
-    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
+    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch_v2(_batchsize := @batchsize)";
+    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch_v2(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
-
+    private const string _persistSubstitutedSenderSql = "update notifications.smsnotifications set substitutedsender = $2 where alternateid = $1"; // (_alternateid, _substitutedsender)
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
 
     /// <inheritdoc/>
@@ -42,6 +43,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger, IOptions<NotificationConfig> config) : base(dataSource, logger, config)
     {
         _dataSource = dataSource;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -115,7 +117,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 reader.GetValue<Guid>("alternateid"),
                 reader.GetValue<string>("sendernumber"),
                 reader.GetValue<string>("mobilenumber"),
-                reader.GetValue<string>("body")));
+                reader.GetValue<string>("body"),
+                reader.GetValue<string>("creatorname")));
         }
 
         return result;
@@ -146,5 +149,37 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             gatewayReference,
             statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
             SendStatusIdentifierType.GatewayReference);
+    }
+    
+    /// <inheritdoc/>
+    public async Task PersistSubstitutedSender(Guid notificationId, string sender)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sender);
+        
+        try
+        {
+            if (notificationId == Guid.Empty)
+            {
+                throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
+            }
+
+            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_persistSubstitutedSenderSql);
+
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sender);
+
+            var rowsAffected = await pgcom.ExecuteNonQueryAsync();
+
+            if (rowsAffected == 0)
+            {
+                _logger.LogWarning("No rows were updated when persisting substituted sender for SMS notification with ID {NotificationId}. This may indicate that the notification does not exist.", notificationId);
+            }
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException(
+                "Failed to persist substituted sender.",
+                e);
+        }
     }
 }

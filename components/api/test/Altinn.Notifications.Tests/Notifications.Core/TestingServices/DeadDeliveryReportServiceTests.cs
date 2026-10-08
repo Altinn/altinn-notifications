@@ -51,8 +51,8 @@ public class DeadDeliveryReportServiceTests
         {
             FirstSeen = DateTime.UtcNow,
             LastAttempt = DateTime.UtcNow.AddMinutes(5),
-            DeliveryReport = report!, 
-            Channel = DeliveryReportChannel.AzureCommunicationServices, 
+            DeliveryReport = report!,
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
             Resolved = false,
             AttemptCount = 1
         };
@@ -133,7 +133,7 @@ public class DeadDeliveryReportServiceTests
     {
         // Arrange
         var deadDeliveryReport = new DeadDeliveryReport
-        {   
+        {
             FirstSeen = DateTime.UtcNow,
             LastAttempt = DateTime.UtcNow.AddMinutes(5),
             DeliveryReport = "{}",
@@ -141,7 +141,7 @@ public class DeadDeliveryReportServiceTests
             Resolved = false,
             AttemptCount = 1
         };
-        
+
         _repositoryMock
             .Setup(x => x.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(1L));

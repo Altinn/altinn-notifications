@@ -79,11 +79,11 @@ public class ProcessingLifecycleMapperTests
     }
 
     [Theory]
-    [InlineData("cancelled",    ProcessingLifecycle.Order_Cancelled)]
-    [InlineData("completed",    ProcessingLifecycle.Order_Completed)]
-    [InlineData("processed",    ProcessingLifecycle.Order_Processed)]
-    [InlineData("registered",   ProcessingLifecycle.Order_Registered)]
-    [InlineData("processing",   ProcessingLifecycle.Order_Processing)]
+    [InlineData("cancelled", ProcessingLifecycle.Order_Cancelled)]
+    [InlineData("completed", ProcessingLifecycle.Order_Completed)]
+    [InlineData("processed", ProcessingLifecycle.Order_Processed)]
+    [InlineData("registered", ProcessingLifecycle.Order_Registered)]
+    [InlineData("processing", ProcessingLifecycle.Order_Processing)]
     [InlineData("sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet)]
     public void GetOrderLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
     {

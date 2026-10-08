@@ -144,19 +144,44 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves all notifications belonging to a shipment identified by its shipment id.
+    /// </summary>
+    /// <param name="request">The request containing the shipment id.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A list of notifications matching the search criteria.</returns>
+    [HttpGet("recipients/notifications/shipmentid")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "Successfully retrieved notifications", typeof(List<DashboardNotificationExt>))]
+    [SwaggerResponse(400, "Invalid request parameters")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
+    public async Task<ActionResult<List<DashboardNotificationExt>>> GetNotificationsByShipmentId(
+        NotificationsByShipmentIdRequestExt request,
+        CancellationToken cancellationToken = default)
+    {
+        return await ProcessDashboardRequestAsync(
+            request,
+            validator: null,
+            (req, ct) => _dashboardService.GetNotificationsByShipmentIdAsync(req.ShipmentId, ct),
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Validates the request and retrieves notifications, handling common error scenarios.
     /// </summary>
     private async Task<ActionResult<List<DashboardNotificationExt>>> ProcessDashboardRequestAsync<TRequest>(
         TRequest request,
-        IValidator<TRequest> validator,
+        IValidator<TRequest>? validator,
         Func<TRequest, CancellationToken, Task<Result<List<DashboardNotification>, ServiceError>>> getNotifications,
         CancellationToken cancellationToken)
     {
-        var validationResult = validator.Validate(request);
-        if (!validationResult.IsValid)
+        if (validator is not null)
         {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
+            var validationResult = validator.Validate(request);
+            if (!validationResult.IsValid)
+            {
+                validationResult.AddToModelState(ModelState);
+                return ValidationProblem(ModelState);
+            }
         }
 
         try

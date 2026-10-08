@@ -29,7 +29,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            
+
             _sut = new StatusFeedController(_statusFeedService.Object, _validator)
             {
                 ControllerContext = new ControllerContext

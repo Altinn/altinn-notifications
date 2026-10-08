@@ -113,10 +113,10 @@ public sealed class IntegrationContainersFixture : IAsyncLifetime
 
             string candidate = Path.Combine(
                 currentDir,
-                "components", 
-                "api", 
+                "components",
+                "api",
                 "src",
-                "Altinn.Notifications.Persistence", 
+                "Altinn.Notifications.Persistence",
                 "Migration");
 
             if (Directory.Exists(candidate))

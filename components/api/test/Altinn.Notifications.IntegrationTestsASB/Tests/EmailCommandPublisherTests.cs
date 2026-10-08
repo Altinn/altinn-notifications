@@ -20,9 +20,9 @@ namespace Altinn.Notifications.IntegrationTestsASB.Tests;
 /// and delivered to the Azure Service Bus queue via Wolverine.
 /// </summary>
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture)
+public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestApiAsbContainersFixture _fixture = fixture;
     private const string _emailSendQueueName = "altinn.notifications.email.send";
 
     /// <summary>
@@ -33,10 +33,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     {
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -55,10 +53,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     {
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -87,10 +83,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     {
         var factory = CreateFactory();
         var email = new Email(Guid.NewGuid(), "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -111,10 +105,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         var factory = CreateFactory();
         var firstEmail = new Email(Guid.NewGuid(), "First", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
         var secondEmail = new Email(Guid.NewGuid(), "Second", "<p>message</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -168,10 +160,8 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         var factory = CreateFactory();
         var notificationId = Guid.NewGuid();
         var email = new Email(notificationId, "Hello", "<p>World</p>", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Html);
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
@@ -209,16 +199,13 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
             new(Guid.NewGuid(), "Subject 2", "Body 2", "sender@altinnxyz.no", "recipient2@altinnxyz.no", EmailContentType.Html)
         };
 
-        await using (factory)
-        {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
 
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+        var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+        var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
 
-            Assert.Empty(result);
-        }
+        Assert.Empty(result);
     }
 
     /// <summary>
@@ -233,42 +220,40 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         var secondEmail = new Email(Guid.NewGuid(), "Second Subject", "Second Body", "sender@altinnxyz.no", "second@altinnxyz.no", EmailContentType.Html);
         var emails = new List<Email> { firstEmail, secondEmail };
 
-        await using (factory)
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
+        var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+
+        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+
+        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
+
+        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
+
+        Assert.NotNull(firstMessage);
+        Assert.NotNull(secondMessage);
+
+        var commands = new[]
         {
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+            JsonSerializer.Deserialize<SendEmailCommand>(firstMessage.Body.ToString()),
+            JsonSerializer.Deserialize<SendEmailCommand>(secondMessage.Body.ToString())
+        };
 
-            await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+        var firstCommand = commands.Single(c => c!.NotificationId == firstEmail.NotificationId);
+        var secondCommand = commands.Single(c => c!.NotificationId == secondEmail.NotificationId);
 
-            var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
+        Assert.Equal(firstEmail.Body, firstCommand!.Body);
+        Assert.Equal(firstEmail.Subject, firstCommand.Subject);
+        Assert.Equal(firstEmail.ToAddress, firstCommand.ToAddress);
+        Assert.Equal(firstEmail.FromAddress, firstCommand.FromAddress);
+        Assert.Equal(firstEmail.ContentType.ToString(), firstCommand.ContentType);
 
-            var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(10));
-
-            Assert.NotNull(firstMessage);
-            Assert.NotNull(secondMessage);
-
-            var commands = new[]
-            {
-                JsonSerializer.Deserialize<SendEmailCommand>(firstMessage.Body.ToString()),
-                JsonSerializer.Deserialize<SendEmailCommand>(secondMessage.Body.ToString())
-            };
-
-            var firstCommand = commands.Single(c => c!.NotificationId == firstEmail.NotificationId);
-            var secondCommand = commands.Single(c => c!.NotificationId == secondEmail.NotificationId);
-
-            Assert.Equal(firstEmail.Body, firstCommand!.Body);
-            Assert.Equal(firstEmail.Subject, firstCommand.Subject);
-            Assert.Equal(firstEmail.ToAddress, firstCommand.ToAddress);
-            Assert.Equal(firstEmail.FromAddress, firstCommand.FromAddress);
-            Assert.Equal(firstEmail.ContentType.ToString(), firstCommand.ContentType);
-
-            Assert.Equal(secondEmail.Body, secondCommand!.Body);
-            Assert.Equal(secondEmail.Subject, secondCommand.Subject);
-            Assert.Equal(secondEmail.ToAddress, secondCommand.ToAddress);
-            Assert.Equal(secondEmail.FromAddress, secondCommand.FromAddress);
-            Assert.Equal(secondEmail.ContentType.ToString(), secondCommand.ContentType);
-        }
+        Assert.Equal(secondEmail.Body, secondCommand!.Body);
+        Assert.Equal(secondEmail.Subject, secondCommand.Subject);
+        Assert.Equal(secondEmail.ToAddress, secondCommand.ToAddress);
+        Assert.Equal(secondEmail.FromAddress, secondCommand.FromAddress);
+        Assert.Equal(secondEmail.ContentType.ToString(), secondCommand.ContentType);
     }
 
     /// <summary>
@@ -279,21 +264,17 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
     {
         var factory = CreateFactory();
 
-        await using (factory)
-        {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
+        await _fixture.DrainQueueAsync(_emailSendQueueName);
+        var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+        var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
 
-            var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
+        Assert.Empty(result);
 
-            Assert.Empty(result);
+        var message = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
 
-            var message = await ServiceBusTestUtils.WaitForMessageAsync(
-                _fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
-
-            Assert.Null(message);
-        }
+        Assert.Null(message);
     }
 
     /// <summary>
@@ -308,15 +289,13 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
         {
             new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain)
         };
-
-        await using (factory)
         {
-            await ServiceBusTestUtils.WaitForEmptyAsync(_fixture.ServiceBusConnectionString, _emailSendQueueName, TimeSpan.FromSeconds(5));
-
-            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
+            await _fixture.DrainQueueAsync(_emailSendQueueName);
 
             using var cancellationTokenSource = new CancellationTokenSource();
             await cancellationTokenSource.CancelAsync();
+
+            var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(emails, cancellationTokenSource.Token));
         }
@@ -324,6 +303,7 @@ public class EmailCommandPublisherTests(IntegrationTestContainersFixture fixture
 
     private IntegrationTestWebApplicationFactory CreateFactory()
     {
-        return new IntegrationTestWebApplicationFactory(_fixture).Initialize();
+        _fixture.ResetInstalledMocks();
+        return _fixture.WebHost;
     }
 }
