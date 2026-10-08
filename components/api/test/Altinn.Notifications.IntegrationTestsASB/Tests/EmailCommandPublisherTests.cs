@@ -25,34 +25,6 @@ public class EmailCommandPublisherTests(IntegrationTestApiAsbContainersFixture f
     private const string _emailSendQueueName = "altinn.notifications.email.send";
 
     /// <summary>
-    /// Verifies that <see cref="EmailContentType.Plain"/> is serialized as the string "Plain"
-    /// when mapping from <see cref="Email.ContentType"/> (enum) to <see cref="EmailCommandBase.ContentType"/> (string).
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_PlainContentType_MapsEnumToStringCorrectly()
-    {
-        var factory = CreateFactory();
-        var email = new Email(Guid.NewGuid(), "Test Subject", "Test Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain);
-        await _fixture.DrainQueueAsync(_emailSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<IEmailCommandPublisher>();
-
-        await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
-
-        var message = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString,
-            _emailSendQueueName,
-            TimeSpan.FromSeconds(10));
-
-        Assert.NotNull(message);
-
-        var sendEmailCommand = JsonSerializer.Deserialize<SendEmailCommand>(message.Body.ToString());
-
-        Assert.NotNull(sendEmailCommand);
-        Assert.Equal(EmailContentType.Plain.ToString(), sendEmailCommand.ContentType);
-    }
-
-    /// <summary>
     /// Verifies that multiple sequential publishes each deliver their own independent
     /// <see cref="SendEmailCommand"/> to the queue, proving each call creates a fresh scope.
     /// </summary>

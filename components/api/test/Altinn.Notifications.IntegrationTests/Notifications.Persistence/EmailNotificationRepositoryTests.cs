@@ -187,6 +187,34 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetNewNotificationAsync_ExpiredNotificationWithNewStatus_IsNotPickedUp()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = '{EmailNotificationResultType.New}',
+                expirytime = NOW() - INTERVAL '10 minutes'
+            WHERE alternateid = '{emailNotification.Id}'");
+
+        // Act
+        Email? claimedNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.Null(claimedNotification);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateStatusAndOperationId()
     {
         // Arrange
@@ -782,17 +810,27 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        Email? email = await ExecuteInUnitOfWork(
+        // Try to claim this specific composed notification through the standard email claim path.
+        // The helper advances claims within the same transaction, so non-matching earlier rows do not
+        // cause a false positive.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
-            TestContext.Current.CancellationToken);
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — the Composed order's notification must not appear in the standard email
-        Assert.True(email is null || email.NotificationId != notificationId);
+        // Assert — composed notification must never be claimable via standard email claim path.
+        Assert.Null(claimedAsStandardEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: the composed claim path should be able to claim the same notification.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsComposedEmail);
+        Assert.Equal(notificationId, claimedAsComposedEmail.NotificationId);
     }
 
     [Fact]
@@ -1036,17 +1074,27 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        ComposedEmail? resultNotification = await ExecuteInUnitOfWork(
+        // Try to claim this specific standard notification through the composed claim path.
+        // The helper advances claims within one transaction, avoiding false positives caused by
+        // unrelated earlier rows.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
-            TestContext.Current.CancellationToken);
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — standard notification must not be returned as composed notification
-        Assert.True(resultNotification is null || resultNotification.NotificationId != emailNotification.Id);
+        // Assert — standard notification must never be claimable through composed path.
+        Assert.Null(claimedAsComposedEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed by claim_composed_email)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: standard claim path should be able to claim this same notification.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsStandardEmail);
+        Assert.Equal(emailNotification.Id, claimedAsStandardEmail.NotificationId);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
