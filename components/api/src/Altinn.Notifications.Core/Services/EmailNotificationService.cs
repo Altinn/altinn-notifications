@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Configuration;
+using System.Diagnostics;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -7,8 +7,8 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
-using Microsoft.Extensions.Options;
+using Altinn.Notifications.Core.Shared;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -22,16 +22,16 @@ public class EmailNotificationService(
     IGuidService guidService,
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
-    IOptions<NotificationConfig> notificationConfig,
     IEmailNotificationRepository emailNotificationRepository,
-    IComposedEmailCommandPublisher composedEmailCommandPublisher) : IEmailNotificationService
+    IComposedEmailCommandPublisher composedEmailCommandPublisher,
+    IUnitOfWorkRepository unitOfWorkRepository,
+    ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
+    private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IGuidService _guidService = guidService;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
-    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
-    private readonly int _composedEmailPublishBatchSize = notificationConfig.Value.ComposedEmailPublishBatchSize;
     private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
@@ -77,70 +77,81 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(CancellationToken cancellationToken)
+    public Task<bool> SendNotification(CancellationToken cancellationToken)
     {
-        List<Email> claimedNotifications;
-
-        do
-        {
-            IReadOnlyList<Email> unpublishedNotifications = [];
-
-            try
-            {
-                unpublishedNotifications =
-                    claimedNotifications =
-                    await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (claimedNotifications.Count == 0)
-                {
-                    break;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                unpublishedNotifications = await _emailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
-
-                await ResetSendStatusToNewAsync(unpublishedNotifications);
-            }
-            catch (Exception)
-            {
-                await ResetSendStatusToNewAsync(unpublishedNotifications);
-
-                throw;
-            }
-        }
-        while (claimedNotifications.Count > 0);
+        return SendClaimedNotification(
+            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendNotification),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task SendComposedNotifications(CancellationToken cancellationToken)
+    public Task<bool> SendComposedNotification(CancellationToken cancellationToken)
     {
-        List<ComposedEmail> claimedNotifications;
-        IReadOnlyList<ComposedEmail> unpublishedNotifications = [];
+        return SendClaimedNotification(
+            (unitOfWork, token) => _emailNotificationRepository.GetNewComposedNotificationAsync(unitOfWork, token),
+            (notification, token) => _composedEmailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendComposedNotification),
+            cancellationToken);
+    }
 
-        do
+    private async Task<bool> SendClaimedNotification<TNotification>(
+        Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
+        Func<TNotification, CancellationToken, Task> publishNotification,
+        string operationName,
+        CancellationToken cancellationToken)
+        where TNotification : class
+    {
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName);
+        UnitOfWork unitOfWork;
+        try
         {
+            unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(e, "Failed to start a unit of work for {OperationName}.", operationName);
+            }
+
+            return false;
+        }
+
+        try
+        {
+            TNotification? claimedNotification = await getNewNotification(unitOfWork, cancellationToken);
+            if (claimedNotification is null)
+            {
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await publishNotification(claimedNotification, cancellationToken);
+            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(e, "An error occurred while processing {OperationName}.", operationName);
+            }
+
             try
             {
-                unpublishedNotifications = 
-                    claimedNotifications =
-                    await _emailNotificationRepository.GetNewComposedNotificationsAsync(_composedEmailPublishBatchSize, cancellationToken);
-                if (claimedNotifications.Count == 0)
-                {
-                    break;
-                }
-
-                unpublishedNotifications = await _composedEmailCommandPublisher.PublishAsync(claimedNotifications, cancellationToken);
-
-                await ResetSendStatusToNewAsync(unpublishedNotifications);
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
             catch (Exception)
             {
-                await ResetSendStatusToNewAsync(unpublishedNotifications);
-
-                throw;
+                // Ignore rollback exceptions to avoid masking the original exception
             }
+
+            return false;
         }
-        while (claimedNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
@@ -158,23 +169,6 @@ public class EmailNotificationService(
             sendOperationResult.OperationId,
             sendOperationResult.DeliveryReport,
             sendOperationResult.TotalAttachmentSizeBytes);
-    }
-
-    /// <summary>
-    /// Resets the send status to <see cref="EmailNotificationResultType.New"/> for the given emails.
-    /// </summary>
-    /// <param name="emails">The collection of emails to reset the send status for.</param>
-    private async Task ResetSendStatusToNewAsync(IEnumerable<Email> emails)
-    {
-        if (emails is null)
-        {
-            return;
-        }
-
-        foreach (var email in emails)
-        {
-            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-        }
     }
 
     /// <summary>

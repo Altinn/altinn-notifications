@@ -3,60 +3,20 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.Logging;
-
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
 /// email notifications to an Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
-public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : IEmailCommandPublisher
+public class EmailCommandPublisher(IMessageBusPublisher messageBusPublisher) : IEmailCommandPublisher
 {
-    private readonly ILogger<EmailCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
+    public Task PublishAsync(Email email, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        try
-        {
-            await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
-            return null;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.", email.NotificationId);
-            return email;
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<Email>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
-    {
-        return _messageBusPublisher.PublishBatchAsync(
-            emails,
-            commandFactory: CreateCommand,
-            onError: (email, exception) =>
-            {
-                if (exception is OperationCanceledException)
-                {
-                    _logger.LogInformation(
-                        exception,
-                        "EmailCommandPublisher cancelled before publishing email notification {NotificationId}; reporting as unpublished.",
-                        email.NotificationId);
-                    return;
-                }
-
-                _logger.LogError(exception, "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.", email.NotificationId);
-            },
-            cancellationToken: cancellationToken);
+        return _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddCoreServices_ValidConfig_RegistersSmsAndEmailPublishBackgroundServices()
+    public void AddCoreServices_ValidConfig_RegistersSmsAndEmailNotificationsBackgroundServices()
     {
         // Arrange
         var config = new ConfigurationBuilder()
@@ -49,10 +49,6 @@ public class ServiceCollectionExtensionsTests
         // Assert
         Assert.Contains(services, d =>
             d.ServiceType == typeof(IHostedService) &&
-            d.ImplementationType == typeof(SmsPublishBackgroundService));
-
-        Assert.Contains(services, d =>
-            d.ServiceType == typeof(IHostedService) &&
-            d.ImplementationType == typeof(EmailPublishBackgroundService));
+            d.ImplementationType == typeof(ProcessItemsBackgroundService));
     }
 }

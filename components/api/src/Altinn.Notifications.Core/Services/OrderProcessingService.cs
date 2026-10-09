@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
@@ -26,7 +27,7 @@ public class OrderProcessingService(
     ILogger<OrderProcessingService> logger,
     IUnitOfWorkRepository unitOfWorkRepository) : IOrderProcessingService
 {
-    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.OrderProcessingService");
+    private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
 
     /// <inheritdoc/>
     public async Task<bool> TryProcessOrder(bool processRetry, CancellationToken cancellationToken = default)

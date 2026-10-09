@@ -3,34 +3,21 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.Logging;
-
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IComposedEmailCommandPublisher"/> that publishes
 /// composed email notifications to a dedicated Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
-public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
+public class ComposedEmailCommandPublisher(IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
 {
-    private readonly ILogger<ComposedEmailCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ComposedEmail>> PublishAsync(IReadOnlyList<ComposedEmail> emails, CancellationToken cancellationToken)
+    public async Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
     {
-        if (emails.Count == 0)
-        {
-            return [];
-        }
-
         cancellationToken.ThrowIfCancellationRequested();
-
-        return await _messageBusPublisher.PublishBatchAsync(
-            emails,
-            CreateCommand,
-            OnPublishError,
-            cancellationToken);
+        await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>
@@ -56,18 +43,5 @@ public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher
                     SasUrl = a.SasUrl.ToString()
                 })]
         };
-    }
-
-    /// <summary>
-    /// Logs an error for a composed email that failed to publish.
-    /// </summary>
-    /// <param name="email">The composed email that failed to publish.</param>
-    /// <param name="ex">The exception raised during the publish attempt.</param>
-    private void OnPublishError(ComposedEmail email, Exception ex)
-    {
-        _logger.LogError(
-            ex,
-            "ComposedEmailCommandPublisher failed to publish composed email notification {NotificationId} to ASB queue.",
-            email.NotificationId);
     }
 }
