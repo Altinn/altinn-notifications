@@ -32,12 +32,12 @@ foreach (var project in projects)
     }
 }
 
-AddService("api", projects[0], 5090)
+AddService("api", projects[0], 5090, "swagger")
     .WaitFor(postgres)
     .WaitFor(serviceBus);
-AddService("email", projects[1], 5091)
+AddService("email", projects[1], 5091, "swagger")
     .WaitFor(serviceBus);
-AddService("sms", projects[2], 5092)
+AddService("sms", projects[2], 5092, string.Empty)
     .WaitFor(serviceBus);
 
 builder.Build().Run();
@@ -47,7 +47,12 @@ builder.Build().Run();
 //
 // The ports stay fixed and unproxied because the services address each other by
 // hardcoded localhost URLs (see PlatformSettings in the API's appsettings.json).
-IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port) =>
-    builder.AddProject(name, projectPath, launchProfileName: null)
+IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath)
+{
+    string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
+
+    return builder.AddProject(name, projectPath, launchProfileName: null)
         .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
+        .WithUrl(swaggerUrl, "Swagger")
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+}
