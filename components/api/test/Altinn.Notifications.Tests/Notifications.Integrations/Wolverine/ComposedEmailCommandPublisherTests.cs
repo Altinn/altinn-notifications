@@ -5,8 +5,6 @@ using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.Logging;
-
 using Moq;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
@@ -45,26 +43,16 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsInvalidOperationException_DoesNotLogErrorAndRethrows()
+    public async Task PublishAsync_MessageBusThrowsInvalidOperationException()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
         messageBusPublisherMock
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
-        var loggerMock = new Mock<ILogger<ComposedEmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         await Xunit.Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken));
-
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
     }
 
     [Xunit.Fact]
@@ -84,26 +72,16 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsException_DoesNotLogErrorAndRethrows()
+    public async Task PublishAsync_MessageBusThrowsException()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
         messageBusPublisherMock
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("Service Bus unavailable"));
 
-        var loggerMock = new Mock<ILogger<ComposedEmailCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         await Xunit.Assert.ThrowsAsync<TimeoutException>(() => publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken));
-
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
     }
 
     [Xunit.Fact]
@@ -151,10 +129,8 @@ public class ComposedEmailCommandPublisherTests
     }
 
     private static ComposedEmailCommandPublisher CreatePublisher(
-        Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<ComposedEmailCommandPublisher>>? loggerMock = null)
+        Mock<IMessageBusPublisher> messageBusPublisherMock)
     {
-        loggerMock ??= new Mock<ILogger<ComposedEmailCommandPublisher>>();
-        return new ComposedEmailCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
+        return new ComposedEmailCommandPublisher(messageBusPublisherMock.Object);
     }
 }

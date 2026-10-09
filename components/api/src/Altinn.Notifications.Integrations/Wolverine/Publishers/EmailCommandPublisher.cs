@@ -14,10 +14,9 @@ public class EmailCommandPublisher(IMessageBusPublisher messageBusPublisher) : I
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task PublishAsync(Email email, CancellationToken cancellationToken)
+    public Task PublishAsync(Email email, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+        return _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>

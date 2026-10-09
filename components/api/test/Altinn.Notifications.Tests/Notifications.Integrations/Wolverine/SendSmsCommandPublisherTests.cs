@@ -18,7 +18,7 @@ public class SendSmsCommandPublisherTests
     private readonly Sms _sms = new(Guid.NewGuid(), "Altinn", "+4799999999", "Test message body");
 
     [Fact]
-    public async Task PublishAsync_MessageBusThrowsException_LogsError()
+    public async Task PublishAsync_MessageBusThrowsInvalidOperationException()
     {
         // Arrange
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
@@ -26,22 +26,11 @@ public class SendSmsCommandPublisherTests
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
 
-        var loggerMock = new Mock<ILogger<SendSmsCommandPublisher>>();
-        var publisher = CreatePublisher(messageBusPublisherMock, loggerMock);
+        var publisher = CreatePublisher(messageBusPublisherMock);
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => publisher.PublishAsync(_sms, TestContext.Current.CancellationToken));
-
-        // Assert
-        loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     [Fact]
@@ -110,11 +99,8 @@ public class SendSmsCommandPublisherTests
     }
 
     private static SendSmsCommandPublisher CreatePublisher(
-        Mock<IMessageBusPublisher> messageBusPublisherMock,
-        Mock<ILogger<SendSmsCommandPublisher>>? loggerMock = null)
+        Mock<IMessageBusPublisher> messageBusPublisherMock)
     {
-        loggerMock ??= new Mock<ILogger<SendSmsCommandPublisher>>();
-
-        return new SendSmsCommandPublisher(loggerMock.Object, messageBusPublisherMock.Object);
+        return new SendSmsCommandPublisher(messageBusPublisherMock.Object);
     }
 }
