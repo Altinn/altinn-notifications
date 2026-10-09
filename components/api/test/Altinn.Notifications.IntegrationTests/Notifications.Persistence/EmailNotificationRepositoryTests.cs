@@ -197,6 +197,19 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
         _orderIdsToDelete.Add(order.Id);
 
+        var nonExpiredNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                ToAddress = "test@email.com"
+            }
+        };
+
+        await repo.AddNotification(nonExpiredNotification, DateTime.UtcNow.AddDays(1));
+
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.New}',
@@ -210,8 +223,16 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             TestContext.Current.CancellationToken,
             maxAttempts: 200);
 
+        Email? claimedNonExpiredNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == nonExpiredNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
         // Assert
         Assert.Null(claimedNotification);
+        Assert.NotNull(claimedNonExpiredNotification);
+        Assert.Equal(nonExpiredNotification.Id, claimedNonExpiredNotification.NotificationId);
     }
 
     [Fact]
