@@ -126,7 +126,7 @@ public class ComposedEmailPublishBackgroundServiceTests
             l => l.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("waiting for composed email")),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("waiting for composed email")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -213,7 +213,7 @@ public class ComposedEmailPublishBackgroundServiceTests
             l => l.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("sending composed email")),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("sending composed email")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
