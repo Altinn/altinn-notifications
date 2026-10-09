@@ -69,6 +69,10 @@ public static class FailureActionsExtensions
                 };
 
                 await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+
+                // A custom action does not settle the message on its own. Without this the Service Bus lock
+                // expires and the message is redelivered and processed again.
+                await envelope.CompleteAsync();
             },
             "Save Dead Delivery Report");
     }

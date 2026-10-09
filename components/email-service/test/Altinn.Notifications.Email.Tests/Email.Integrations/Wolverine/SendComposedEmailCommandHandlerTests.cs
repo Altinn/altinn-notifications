@@ -78,7 +78,7 @@ public class SendComposedEmailCommandHandlerTests
             l => l.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("unknown ContentType") && v.ToString()!.Contains(command.NotificationId.ToString())),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("unknown ContentType") && $"{v}".Contains(command.NotificationId.ToString())),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -111,7 +111,7 @@ public class SendComposedEmailCommandHandlerTests
             l => l.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email") && v.ToString()!.Contains(_validCommand.NotificationId.ToString())),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("failed to send email") && $"{v}".Contains(_validCommand.NotificationId.ToString())),
                 (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -139,7 +139,7 @@ public class SendComposedEmailCommandHandlerTests
             l => l.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email")),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("failed to send email")),
                 (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

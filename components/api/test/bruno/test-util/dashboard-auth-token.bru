@@ -1,0 +1,34 @@
+meta {
+  name: dashboard-auth-token
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{process.env.TOKEN_GENERATOR_URL}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:notifications.support.admin&org=ttd
+  body: none
+  auth: basic
+}
+
+params:query {
+  env: {{Environment}}
+  scopes: altinn:notifications.support.admin
+  org: ttd
+}
+
+auth:basic {
+  username: {{process.env.TOKEN_BASIC_AUTH_USER}}
+  password: {{process.env.TOKEN_BASIC_AUTH_PW}}
+}
+
+script:post-response {
+  let data = res.getBody();
+
+  if (!data || data.trim() === '') {
+    console.error('Failed to retrieve a valid token');
+    return;
+  }
+  bru.setEnvVar("dashboard_jwt", data);
+  bru.setEnvVar("dashboard_jwt_from", Date.now());
+  bru.setEnvVar("dashboard_jwt_env", bru.getEnvVar("Environment"));
+}
