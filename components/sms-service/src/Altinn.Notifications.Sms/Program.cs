@@ -185,6 +185,13 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
         }));
     }
 
+    if (!string.IsNullOrEmpty(config.GetValue<string>("OTEL_EXPORTER_OTLP_ENDPOINT")))
+    {
+        services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddOtlpExporter());
+        services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
+    }
+
     if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;

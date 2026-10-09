@@ -266,6 +266,13 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
         }));
     }
 
+    if (!string.IsNullOrEmpty(config.GetValue<string>("OTEL_EXPORTER_OTLP_ENDPOINT")))
+    {
+        services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddOtlpExporter());
+        services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
+    }
+
     var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
     if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
