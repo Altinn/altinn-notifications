@@ -1103,32 +1103,6 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 
-    private static async Task<TResult> ExecuteInUnitOfWork<TResult>(
-        Func<UnitOfWork, CancellationToken, Task<TResult>> action,
-        CancellationToken cancellationToken,
-        bool commit = false)
-    {
-        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-        var unitOfWork = new UnitOfWork
-        {
-            Connection = connection,
-            Transaction = transaction
-        };
-
-        TResult result = await action(unitOfWork, cancellationToken);
-        if (commit)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
-        else
-        {
-            await transaction.RollbackAsync(cancellationToken);
-        }
-
-        return result;
-    }
-
     private static async Task<TResult?> ExecuteClaimUntilMatchInUnitOfWork<TResult>(
         Func<UnitOfWork, CancellationToken, Task<TResult?>> claim,
         Func<TResult, bool> isMatch,
