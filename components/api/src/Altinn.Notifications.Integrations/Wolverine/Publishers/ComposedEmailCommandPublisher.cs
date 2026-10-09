@@ -3,17 +3,14 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Publishers;
 
-using Microsoft.Extensions.Logging;
-
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IComposedEmailCommandPublisher"/> that publishes
 /// composed email notifications to a dedicated Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
 /// </summary>
-public class ComposedEmailCommandPublisher(ILogger<ComposedEmailCommandPublisher> logger, IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
+public class ComposedEmailCommandPublisher(IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
 {
-    private readonly ILogger<ComposedEmailCommandPublisher> _logger = logger;
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
