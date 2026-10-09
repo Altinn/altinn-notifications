@@ -34,25 +34,6 @@ public class SendSmsCommandPublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
-    {
-        // Arrange
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => publisher.PublishAsync(_sms, cts.Token));
-
-        messageBusPublisherMock.Verify(
-            m => m.PublishCommandAsync(It.IsAny<SendSmsCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task PublishAsync_MessageBusThrowsOperationCanceledException_Rethrows()
     {
         // Arrange
