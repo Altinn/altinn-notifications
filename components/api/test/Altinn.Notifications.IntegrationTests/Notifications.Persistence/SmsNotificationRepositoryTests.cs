@@ -42,6 +42,37 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
+    private static async Task<Sms?> ExecuteClaimUntilMatchInUnitOfWorkAsync(
+        SmsNotificationRepository repo,
+        Func<Sms, bool> isMatch,
+        SendingTimePolicy sendingTimePolicy,
+        CancellationToken cancellationToken,
+        int maxAttempts = 200)
+    {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        UnitOfWork unitOfWork = new()
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            Sms? result = await repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+
+            if (result is not null && isMatch(result))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return result;
+            }
+        }
+
+        await transaction.RollbackAsync(cancellationToken);
+        return null;
+    }
+
     private static async Task<Sms?> ClaimSingleNotificationWithUnitOfWorkAsync(
         SmsNotificationRepository repo,
         SendingTimePolicy sendingTimePolicy,
@@ -383,7 +414,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customizedBody);
 
         // Act
-        Sms? itemWithCustomizedBody = await ClaimSingleNotificationWithUnitOfWorkAsync(sut, SendingTimePolicy.Daytime, commit: true);
+        Sms? itemWithCustomizedBody = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
+            sut,
+            sms => sms.NotificationId == smsNotification.Id,
+            SendingTimePolicy.Daytime,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(itemWithCustomizedBody);
