@@ -41,6 +41,10 @@ api.WaitFor(postgres).WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
+AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
+AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
+AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
+
 builder.Build().Run();
 
 // The launch profiles are skipped on purpose: email and sms hardcode ASPNETCORE_URLS
@@ -57,3 +61,8 @@ IResourceBuilder<ProjectResource> AddService(string name, string projectPath, in
         .WithUrl(swaggerUrl, "Swagger")
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 }
+
+void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution) =>
+    builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
+        .WithExplicitStart()
+        .WithParentRelationship(service.Resource);
