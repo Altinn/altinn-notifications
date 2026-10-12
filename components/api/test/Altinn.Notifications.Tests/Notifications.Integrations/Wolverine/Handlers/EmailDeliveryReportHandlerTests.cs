@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
@@ -61,6 +59,105 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         Assert.Equal(traceParent, outgoing.ApplicationProperties["traceparent"]);
         Assert.Equal(traceState, outgoing.ApplicationProperties["tracestate"]);
         Assert.Equal(baggage, outgoing.ApplicationProperties["baggage"]);
+    }
+
+    [Fact]
+    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_MapsAttemptsEnqueuedAtAndTraceHeaders()
+    {
+        // Arrange
+        const string traceParent = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
+        const string traceState = "vendor=state";
+        const string baggage = "k=v";
+        DateTimeOffset enqueuedTime = DateTimeOffset.UtcNow;
+
+        Dictionary<string, object> applicationProperties = new()
+        {
+            ["wolverine-attempts"] = 3,
+            ["wolverine-enqueued-at"] = "2025-01-01T12:00:00.0000000Z",
+            ["Diagnostic-Id"] = traceParent,
+            ["traceparent"] = traceParent,
+            ["tracestate"] = traceState,
+            ["baggage"] = baggage
+        };
+
+        ServiceBusReceivedMessage incoming = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString("{}"),
+            enqueuedTime: enqueuedTime,
+            properties: applicationProperties);
+
+        var mapper = new EventGridEnvelopeMapper();
+        var envelope = new global::Wolverine.Envelope();
+
+        // Act
+        mapper.MapIncomingToEnvelope(envelope, incoming);
+
+        ServiceBusMessage roundTrippedOutgoing = new();
+        mapper.MapEnvelopeToOutgoing(envelope, roundTrippedOutgoing);
+
+        // Assert
+        Assert.IsType<EmailDeliveryReportCommand>(envelope.Message);
+        Assert.Equal(typeof(EmailDeliveryReportCommand).FullName, envelope.MessageType);
+        Assert.Equal(3, envelope.Attempts);
+        Assert.Equal("2025-01-01T12:00:00.0000000Z", roundTrippedOutgoing.ApplicationProperties["wolverine-enqueued-at"]);
+        Assert.Equal(traceParent, envelope.ParentId);
+        Assert.Equal(traceParent, envelope.Headers["Diagnostic-Id"]);
+        Assert.Equal(traceParent, envelope.Headers["traceparent"]);
+        Assert.Equal(traceState, envelope.Headers["tracestate"]);
+        Assert.Equal(baggage, envelope.Headers["baggage"]);
+    }
+
+    [Fact]
+    public async Task Handle_WithTraceParentAndNoCurrentActivity_StartsFallbackReceiveActivity()
+    {
+        // Arrange
+        const string traceParent = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
+        string messageId = Guid.NewGuid().ToString();
+        int startedActivities = 0;
+        string? startedDisplayName = null;
+        string? messagingSystemTag = null;
+        string? messagingOperationTag = null;
+        string? messagingTypeTag = null;
+
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "Wolverine",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = activity =>
+            {
+                startedActivities++;
+                startedDisplayName = activity.DisplayName;
+            },
+            ActivityStopped = activity =>
+            {
+                messagingSystemTag = activity.Tags.FirstOrDefault(t => t.Key == "messaging.system").Value;
+                messagingOperationTag = activity.Tags.FirstOrDefault(t => t.Key == "messaging.operation").Value;
+                messagingTypeTag = activity.Tags.FirstOrDefault(t => t.Key == "messaging.message_type").Value;
+            }
+        };
+
+        ActivitySource.AddActivityListener(listener);
+
+        var command = BuildCommand(
+            messageId,
+            status: "Delivered",
+            applicationProperties: new Dictionary<string, object>
+            {
+                ["traceparent"] = traceParent
+            });
+
+        // Act
+        await EmailDeliveryReportHandler.Handle(
+            command,
+            _serviceMock.Object,
+            _metrics,
+            NullLogger.Instance);
+
+        // Assert
+        Assert.Equal(1, startedActivities);
+        Assert.Equal("ASB receive Altinn.Notifications.Integrations.Wolverine.EmailDeliveryReportCommand", startedDisplayName);
+        Assert.Equal("azure_service_bus", messagingSystemTag);
+        Assert.Equal("receive", messagingOperationTag);
+        Assert.Equal(nameof(EmailDeliveryReportCommand), messagingTypeTag);
     }
 
     [Fact]
@@ -268,7 +365,8 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         string statusMessage = "OK",
         string? recipientMailServerHostName = null,
         string sender = "sender@example.com",
-        string recipient = "recipient@example.com")
+        string recipient = "recipient@example.com",
+        Dictionary<string, object>? applicationProperties = null)
     {
         var eventGridEvent = new
         {
@@ -295,6 +393,14 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
 
         string body = JsonSerializer.Serialize(eventGridEvent);
         var message = ServiceBusModelFactory.ServiceBusReceivedMessage(body: BinaryData.FromString(body));
+
+        if (applicationProperties is not null)
+        {
+            message = ServiceBusModelFactory.ServiceBusReceivedMessage(
+                body: BinaryData.FromString(body),
+                properties: applicationProperties);
+        }
+
         return new EmailDeliveryReportCommand(message);
     }
 
