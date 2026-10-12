@@ -161,6 +161,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddHttpClientInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
             tracing.AddProcessor<WolverineActivityNameProcessor>();
+            tracing.AddSource("Wolverine");
         });
 
     AddAzureMonitorTelemetryExporters(configuration, services, applicationInsightsConnectionString);

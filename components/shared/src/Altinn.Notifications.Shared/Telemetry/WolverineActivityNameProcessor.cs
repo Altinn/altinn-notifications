@@ -17,11 +17,10 @@ public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
             return;
         }
 
-        string? messageType = GetTagValue(activity, "messaging.message_type")
+        string? messageType = GetDestinationName(activity)
+            ?? GetTagValue(activity, "messaging.message_type")
             ?? GetTagValue(activity, "message_type")
-            ?? GetTagValue(activity, "wolverine.message_type")
-            ?? GetTagValue(activity, "messaging.destination.name")
-            ?? GetTagValue(activity, "messaging.destination");
+            ?? GetTagValue(activity, "wolverine.message_type");
 
         if (string.IsNullOrWhiteSpace(messageType))
         {
@@ -46,6 +45,48 @@ public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
         }
 
         activity.DisplayName = $"{currentName} {messageType}";
+    }
+
+    private static string? GetDestinationName(Activity activity)
+    {
+        foreach (var tag in activity.TagObjects)
+        {
+            if (!string.Equals(tag.Key, "messaging.destination.name", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(tag.Key, "messaging.destination", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (tag.Value is Uri uri)
+            {
+                string queueName = uri.AbsolutePath.Trim('/');
+                if (!string.IsNullOrWhiteSpace(queueName))
+                {
+                    return queueName;
+                }
+
+                continue;
+            }
+
+            if (tag.Value is string text)
+            {
+                if (Uri.TryCreate(text, UriKind.Absolute, out Uri? parsedUri))
+                {
+                    string queueName = parsedUri.AbsolutePath.Trim('/');
+                    if (!string.IsNullOrWhiteSpace(queueName))
+                    {
+                        return queueName;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return text;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static string? GetTagValue(Activity activity, string tagName)

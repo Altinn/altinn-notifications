@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Azure.Messaging.ServiceBus;
 
@@ -51,15 +52,7 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
 
-        if (incoming.ApplicationProperties.TryGetValue(_traceParentKey, out var traceParent)
-            && traceParent is string traceParentValue
-            && !string.IsNullOrWhiteSpace(traceParentValue))
-        {
-            envelope.ParentId = traceParentValue;
-        }
-        else if (incoming.ApplicationProperties.TryGetValue(_diagnosticIdKey, out var diagnosticId)
-                 && diagnosticId is string parentId
-                 && !string.IsNullOrWhiteSpace(parentId))
+        if (TryGetValidParentId(incoming, out string? parentId))
         {
             envelope.ParentId = parentId;
         }
@@ -130,5 +123,46 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         {
             outgoing.ApplicationProperties[key] = value;
         }
+    }
+
+    private static bool TryGetValidParentId(ServiceBusReceivedMessage incoming, out string? parentId)
+    {
+        parentId = null;
+        incoming.ApplicationProperties.TryGetValue(_traceStateKey, out var traceStateRaw);
+        string? traceState = traceStateRaw as string;
+
+        if (TryParseTraceContext(incoming, _traceParentKey, traceState, out string? traceParent))
+        {
+            parentId = traceParent;
+            return true;
+        }
+
+        if (TryParseTraceContext(incoming, _diagnosticIdKey, traceState, out string? diagnosticId))
+        {
+            parentId = diagnosticId;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseTraceContext(ServiceBusReceivedMessage incoming, string key, string? traceState, out string? parentId)
+    {
+        parentId = null;
+
+        if (!incoming.ApplicationProperties.TryGetValue(key, out var value)
+            || value is not string candidate
+            || string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        if (!ActivityContext.TryParse(candidate, traceState, out _))
+        {
+            return false;
+        }
+
+        parentId = candidate;
+        return true;
     }
 }

@@ -132,6 +132,53 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
     }
 
     [Fact]
+    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_WithInvalidTraceParentAndValidDiagnosticId_UsesDiagnosticId()
+    {
+        // Arrange
+        const string invalidTraceParent = "invalid-trace-parent";
+        const string diagnosticId = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
+
+        ServiceBusReceivedMessage incoming = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString("{}"),
+            properties: new Dictionary<string, object>
+            {
+                ["traceparent"] = invalidTraceParent,
+                ["Diagnostic-Id"] = diagnosticId
+            });
+
+        var mapper = new EventGridEnvelopeMapper();
+        var envelope = new global::Wolverine.Envelope();
+
+        // Act
+        mapper.MapIncomingToEnvelope(envelope, incoming);
+
+        // Assert
+        Assert.Equal(diagnosticId, envelope.ParentId);
+    }
+
+    [Fact]
+    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_WithInvalidTraceParentAndInvalidDiagnosticId_DoesNotSetParentId()
+    {
+        // Arrange
+        ServiceBusReceivedMessage incoming = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString("{}"),
+            properties: new Dictionary<string, object>
+            {
+                ["traceparent"] = "invalid-trace-parent",
+                ["Diagnostic-Id"] = "also-invalid"
+            });
+
+        var mapper = new EventGridEnvelopeMapper();
+        var envelope = new global::Wolverine.Envelope();
+
+        // Act
+        mapper.MapIncomingToEnvelope(envelope, incoming);
+
+        // Assert
+        Assert.Null(envelope.ParentId);
+    }
+
+    [Fact]
     public async Task Handle_WithTraceParentAndNoCurrentActivity_StartsFallbackReceiveActivity()
     {
         // Arrange

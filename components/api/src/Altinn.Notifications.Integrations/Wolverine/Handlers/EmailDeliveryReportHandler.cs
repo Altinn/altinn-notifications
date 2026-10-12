@@ -132,7 +132,7 @@ public static class EmailDeliveryReportHandler
             return false;
         }
 
-        return ActivityContext.TryParse(traceParent, traceState, out parentContext);
+        return ActivityContext.TryParse(traceParent, traceState, isRemote: true, out parentContext);
     }
 
     private static bool TryReadApplicationProperty(EmailDeliveryReportCommand command, string key, out string? value)
