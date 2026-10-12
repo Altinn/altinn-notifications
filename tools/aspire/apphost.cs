@@ -2,6 +2,8 @@
 #:property AspireUseCliBundle=true
 
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 const string Components = "../../components";
 
@@ -35,7 +37,9 @@ var sms = AddService("sms", projects[2], 5092, string.Empty);
 // The start commands are no-ops when the containers are already running; the log tail
 // keeps the resource running so the container output shows up in the dashboard.
 var postgres = builder.AddExecutable("postgres", "sh", ".", "-c", "podman start notifications-db && exec podman logs -f notifications-db");
-var serviceBus = builder.AddExecutable("servicebus", "sh", "../asb-emulator", "-c", "podman compose up -d && exec podman logs -f servicebus-emulator");
+var serviceBus = builder.AddExecutable("servicebus", "sh", "../asb-emulator", "-c", "podman compose up -d && exec podman logs -f servicebus-emulator")
+    .WithHttpEndpoint(port: 5300, targetPort: 5300, name: "management", isProxied: false)
+    .WithHttpHealthCheck("/health", endpointName: "management");
 
 api.WaitFor(postgres).WaitFor(serviceBus);
 email.WaitFor(serviceBus);
@@ -62,7 +66,49 @@ IResourceBuilder<ProjectResource> AddService(string name, string projectPath, in
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 }
 
-void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution) =>
-    builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
+// The tests stay hidden until they are first run from the service's "Run tests" command,
+// so they don't clutter the resource list and log filters.
+void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
+{
+    var tests = builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
         .WithExplicitStart()
         .WithParentRelationship(service.Resource);
+
+    builder.Eventing.Subscribe<BeforeStartEvent>(async (e, ct) =>
+    {
+        var notifications = e.Services.GetRequiredService<ResourceNotificationService>();
+        await notifications.PublishUpdateAsync(tests.Resource, s => s with { IsHidden = true });
+
+        var stopping = e.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        _ = ShowTestResultAsync(notifications, tests.Resource, stopping);
+    });
+
+    service.WithCommand(
+        "run-tests",
+        "Run tests",
+        async context =>
+        {
+            await context.Services.GetRequiredService<ResourceNotificationService>().PublishUpdateAsync(tests.Resource, s => s with { IsHidden = false });
+            return await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(tests.Resource, KnownResourceCommands.StartCommand, context.CancellationToken);
+        },
+        new CommandOptions { IconName = "Beaker", IsHighlighted = false });
+}
+
+// Replaces the generic "Finished" state with Passed or Failed based on the dotnet test exit code.
+async Task ShowTestResultAsync(ResourceNotificationService notifications, IResource tests, CancellationToken cancellationToken)
+{
+    await foreach (var update in notifications.WatchAsync(cancellationToken))
+    {
+        string? state = update.Snapshot.State?.Text;
+        if (update.Resource != tests || update.Snapshot.ExitCode is not int exitCode || (state != KnownResourceStates.Finished && state != KnownResourceStates.Exited))
+        {
+            continue;
+        }
+
+        var result = exitCode == 0
+            ? new ResourceStateSnapshot("Passed", KnownResourceStateStyles.Success)
+            : new ResourceStateSnapshot("Failed", KnownResourceStateStyles.Error);
+
+        await notifications.PublishUpdateAsync(tests, s => s with { State = result });
+    }
+}
