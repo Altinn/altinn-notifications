@@ -36,7 +36,6 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
         ISendSmsPublisher smsPublisher,
-        IOptions<NotificationConfig> notificationConfig,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
         ISmsSenderSubstitutionService senderSubstitutionService)
@@ -48,8 +47,6 @@ public class SmsNotificationService : ISmsNotificationService
         _unitOfWorkRepository = unitOfWorkRepository;
         _logger = logger;
         _senderSubstitutionService = senderSubstitutionService;
-
-        _ = notificationConfig;
     }
 
     /// <inheritdoc/>

@@ -530,7 +530,6 @@ public class SmsNotificationServiceTests
             dateTimeService.Object,
             repository,
             commandPublisher,
-            Options.Create(new NotificationConfig()),
             unitOfWorkRepository,
             new Mock<ILogger<SmsNotificationService>>().Object,
             senderSubstitutionService);
