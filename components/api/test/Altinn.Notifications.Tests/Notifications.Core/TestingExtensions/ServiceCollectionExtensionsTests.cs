@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-using Altinn.Notifications.Core.Extensions;
+﻿using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Services;
 
 using Microsoft.Extensions.Configuration;

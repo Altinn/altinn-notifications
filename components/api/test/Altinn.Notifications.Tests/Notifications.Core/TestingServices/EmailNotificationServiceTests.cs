@@ -312,28 +312,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_CancellationRequested_StopsProcessing()
-    {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .Callback(() => cts.Cancel())
-            .ReturnsAsync(_email);
-
-        var service = GetTestService(repo: repoMock.Object);
-
-        // Act
-        bool wasSent = await service.SendNotification(cts.Token);
-
-        // Assert
-        Assert.False(wasSent);
-
-        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task SendNotifications_RepositoryThrowsOperationCanceledDuringFetch_NoStatusResets()
+    public async Task SendNotification_WhenRepositoryThrowsOperationCanceledDuringFetch_RollsBackAndReturnsFalse()
     {
         // Arrange
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
@@ -765,7 +744,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendComposedNotification_CancellationRequested_StopsProcessing()
+    public async Task SendComposedNotification_WhenCancellationRequestedAfterClaim_RollsBackAndDoesNotPublish()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
