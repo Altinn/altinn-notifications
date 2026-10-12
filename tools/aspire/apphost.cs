@@ -1,4 +1,4 @@
-#:sdk Aspire.AppHost.Sdk@13.5.4
+#:sdk Aspire.AppHost.Sdk@13.6.1
 #:property AspireUseCliBundle=true
 
 using System.Diagnostics;
@@ -6,12 +6,6 @@ using System.Diagnostics;
 const string Components = "../../components";
 
 var builder = DistributedApplication.CreateBuilder(args);
-
-// The containers live in Podman, not in Aspire, so they keep running when Aspire stops.
-// The start commands are no-ops when the containers are already running; the log tail
-// keeps the resource running so the container output shows up in the dashboard.
-var postgres = builder.AddExecutable("postgres", "sh", ".", "-c", "podman start notifications-db && exec podman logs -f notifications-db");
-var serviceBus = builder.AddExecutable("servicebus", "sh", "../asb-emulator", "-c", "podman compose up -d && exec podman logs -f servicebus-emulator");
 
 string[] projects =
 [
@@ -32,13 +26,20 @@ foreach (var project in projects)
     }
 }
 
-AddService("api", projects[0], 5090, "swagger")
-    .WaitFor(postgres)
-    .WaitFor(serviceBus);
-AddService("email", projects[1], 5091, "swagger")
-    .WaitFor(serviceBus);
-AddService("sms", projects[2], 5092, string.Empty)
-    .WaitFor(serviceBus);
+// The dashboard lists resources in the order they are added, so the containers are added last.
+var api = AddService("api", projects[0], 5090, "swagger");
+var email = AddService("email", projects[1], 5091, "swagger");
+var sms = AddService("sms", projects[2], 5092, string.Empty);
+
+// The containers live in Podman, not in Aspire, so they keep running when Aspire stops.
+// The start commands are no-ops when the containers are already running; the log tail
+// keeps the resource running so the container output shows up in the dashboard.
+var postgres = builder.AddExecutable("postgres", "sh", ".", "-c", "podman start notifications-db && exec podman logs -f notifications-db");
+var serviceBus = builder.AddExecutable("servicebus", "sh", "../asb-emulator", "-c", "podman compose up -d && exec podman logs -f servicebus-emulator");
+
+api.WaitFor(postgres).WaitFor(serviceBus);
+email.WaitFor(serviceBus);
+sms.WaitFor(serviceBus);
 
 builder.Build().Run();
 
