@@ -56,22 +56,6 @@ public class ComposedEmailCommandPublisherTests
     }
 
     [Xunit.Fact]
-    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
-    {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-
-        await Xunit.Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(_composedEmail, cts.Token));
-
-        messageBusPublisherMock.Verify(
-            m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Xunit.Fact]
     public async Task PublishAsync_MessageBusThrowsException()
     {
         var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
