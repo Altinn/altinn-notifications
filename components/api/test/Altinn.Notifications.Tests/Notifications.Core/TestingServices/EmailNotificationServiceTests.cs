@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -116,7 +110,6 @@ public class EmailNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(48);
         var emailRecipient = new EmailRecipient() { IsReserved = true };
         var emailAddressPoints = new List<EmailAddressPoint>() { new("email@domain.com") };
 
@@ -134,7 +127,6 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
@@ -222,7 +214,7 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationId), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId))));
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationId), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId)))).Verifiable();
 
         var service = GetTestService(repo: repoMock.Object);
 
@@ -251,7 +243,8 @@ public class EmailNotificationServiceTests
         repoMock.Setup(r => r.UpdateSendStatus(
             It.Is<Guid>(n => n == notificationId),
             It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
-            It.Is<string>(s => s.Equals(operationId))));
+            It.Is<string>(s => s.Equals(operationId))))
+            .Verifiable();
 
         var service = GetTestService(repo: repoMock.Object);
 
@@ -319,28 +312,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_CancellationRequested_StopsProcessing()
-    {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .Callback(() => cts.Cancel())
-            .ReturnsAsync(_email);
-
-        var service = GetTestService(repo: repoMock.Object);
-
-        // Act
-        bool wasSent = await service.SendNotification(cts.Token);
-
-        // Assert
-        Assert.False(wasSent);
-
-        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task SendNotifications_RepositoryThrowsOperationCanceledDuringFetch_NoStatusResets()
+    public async Task SendNotification_WhenRepositoryThrowsOperationCanceledDuringFetch_RollsBackAndReturnsFalse()
     {
         // Arrange
         var emailNotificationRepositoryMock = new Mock<IEmailNotificationRepository>();
@@ -348,24 +320,85 @@ public class EmailNotificationServiceTests
             .Setup(e => e.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException()); // Simulate cancellation during fetch
 
-        var service = GetTestService(repo: emailNotificationRepositoryMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: emailNotificationRepositoryMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        emailNotificationRepositoryMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_CancellationAfterPublishBeforeNextFetch_NoStatusResets()
+    public async Task SendNotification_WhenStartUnitOfWorkThrows_ReturnsFalseAndDoesNotPublish()
+    {
+        // Arrange
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock
+            .Setup(u => u.StartUnitOfWork())
+            .ThrowsAsync(new InvalidOperationException("db unavailable"));
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Never);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenNoNotificationClaimed_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock
-            .SetupSequence(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Email?)null);
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>())).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenPublishSucceeds_CommitsUnitOfWork()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(_email);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
@@ -375,22 +408,21 @@ public class EmailNotificationServiceTests
 
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
-        // Act & Assert
+        // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
+        // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
         Assert.True(wasSent);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_AllEmailsPublishedSuccessfully_NoStatusResets()
+    public async Task SendNotification_WhenPublishSucceeds_UsesCommitNotRollback()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_email)
-            .ReturnsAsync((Email?)null);
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_email);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
@@ -411,21 +443,17 @@ public class EmailNotificationServiceTests
         Assert.True(wasSent);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_PublisherFailsForAllEmails_AllEmailsResetToNew()
+    public async Task SendNotification_WhenPublisherFails_RollsBackUnitOfWork()
     {
         // Arrange
         Email firstEmail = new(Guid.NewGuid(), "first.email.subject", "first.email.body", "from-first@domain.com", "to-first@domain.com", EmailContentType.Plain);
-        Email secondEmail = new(Guid.NewGuid(), "second.email.subject", "second.email.body", "from-second@domain.com", "to-second@domain.com", EmailContentType.Plain);
-        Email thirdEmail = new(Guid.NewGuid(), "third.email.subject", "third.email.body", "from-third@domain.com", "to-third@domain.com", EmailContentType.Plain);
 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(firstEmail)
-            .ReturnsAsync((Email?)null);
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstEmail);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
@@ -445,82 +473,71 @@ public class EmailNotificationServiceTests
         Assert.False(wasSent);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_PublisherFailsForSubset_OnlyFailedEmailsResetToNew()
-    {
-        // Arrange
-        Email firstEmail = new(Guid.NewGuid(), "first.email.subject", "first.email.body", "from-first@domain.com", "to-first@domain.com", EmailContentType.Plain);
-        Email secondEmail = new(Guid.NewGuid(), "second.email.subject", "second.email.body", "from-second@domain.com", "to-second@domain.com", EmailContentType.Plain);
-        Email thirdEmail = new(Guid.NewGuid(), "third.email.subject", "third.email.body", "from-third@domain.com", "to-third@domain.com", EmailContentType.Plain);
-
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(firstEmail)
-            .ReturnsAsync((Email?)null);
-
-        var publisherMock = new Mock<IEmailCommandPublisher>();
-        publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
-
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(wasSent);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SendNotifications_EmptyBatch_PublisherNotCalled()
+    public async Task SendNotification_WhenCommitThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Email?)null);
-
-        var publisherMock = new Mock<IEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
-        Assert.False(wasSent);
-    }
-
-    [Fact]
-    public async Task SendNotifications_MultipleBatches_PublisherCalledForEachBatch()
-    {
-        // Arrange
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.SetupSequence(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_email)
-            .ReturnsAsync(_email)
-            .ReturnsAsync((Email?)null);
+            .ReturnsAsync(_email);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+        unitOfWorkRepositoryMock.Setup(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()))
+            .ThrowsAsync(new InvalidOperationException("commit failed"));
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>())).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
         // Assert
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
-        Assert.True(wasSent);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        Assert.False(wasSent);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
     }
 
     [Fact]
-    public async Task SendNotifications_CancellationAfterFetchBeforePublish_StatusResetForBatch()
+    public async Task SendNotification_WhenPublisherThrowsAndRollbackThrows_ReturnsFalse()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_email);
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("publish failed"));
+
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()))
+            .ThrowsAsync(new InvalidOperationException("rollback failed"));
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenCancellationRequestedAfterClaim_RollsBackAndDoesNotPublish()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
@@ -531,7 +548,15 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(_email);
 
         var publisherMock = new Mock<IEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(cts.Token);
@@ -540,11 +565,12 @@ public class EmailNotificationServiceTests
         Assert.False(wasSent);
 
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_PublisherThrowsOperationCanceled_StatusResetForBatch()
+    public async Task SendNotification_WhenPublisherThrowsOperationCanceled_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -555,19 +581,27 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_PublisherThrowsInvalidOperationException_ExceptionPropagatesAndStatusReset()
+    public async Task SendNotification_WhenPublisherThrowsInvalidOperation_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -578,19 +612,27 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
 
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendNotifications_PublisherThrowsUnexpectedException_ExceptionPropagatesAndStatusReset()
+    public async Task SendNotification_WhenPublisherThrowsUnexpectedException_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -601,15 +643,23 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("Unexpected timeout"));
 
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
@@ -621,19 +671,80 @@ public class EmailNotificationServiceTests
             .Setup(e => e.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var service = GetTestService(repo: emailNotificationRepositoryMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(repo: emailNotificationRepositoryMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        emailNotificationRepositoryMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_CancellationRequested_StopsProcessing()
+    public async Task SendComposedNotification_WhenStartUnitOfWorkThrows_ReturnsFalseAndDoesNotPublish()
+    {
+        // Arrange
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock
+            .Setup(u => u.StartUnitOfWork())
+            .ThrowsAsync(new InvalidOperationException("db unavailable"));
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+        repoMock.Verify(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Never);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendComposedNotification_WhenNoNotificationClaimed_RollsBackAndReturnsFalse()
+    {
+        // Arrange
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .Setup(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComposedEmail?)null);
+
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>())).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendComposedNotification_WhenCancellationRequestedAfterClaim_RollsBackAndDoesNotPublish()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
@@ -643,7 +754,15 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(_composedEmail);
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(cts.Token);
@@ -652,30 +771,12 @@ public class EmailNotificationServiceTests
         Assert.False(wasSent);
 
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_EmptyBatch_PublisherNotCalled()
-    {
-        // Arrange
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ComposedEmail?)null);
-
-        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(wasSent);
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SendComposedNotification_AllEmailsPublishedSuccessfully_NoStatusResets()
+    public async Task SendComposedNotification_WhenPublishSucceeds_UsesCommitNotRollback()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -701,11 +802,10 @@ public class EmailNotificationServiceTests
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_PublisherFailsForAllEmails_NoStatusResets()
+    public async Task SendComposedNotification_WhenPublisherFails_RollsBackUnitOfWork()
     {
         // Arrange
         ComposedEmail first = new(Guid.NewGuid(), "s1", "b1", "from@domain.com", "to1@domain.com", EmailContentType.Plain, []);
@@ -732,36 +832,10 @@ public class EmailNotificationServiceTests
         Assert.False(wasSent);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_PublisherFailsForSubset_NoStatusResets()
-    {
-        // Arrange
-        ComposedEmail first = new(Guid.NewGuid(), "s1", "b1", "from@domain.com", "to1@domain.com", EmailContentType.Plain, []);
-        ComposedEmail second = new(Guid.NewGuid(), "s2", "b2", "from@domain.com", "to2@domain.com", EmailContentType.Plain, []);
-
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(first);
-
-        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
-        publisherMock.Setup(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
-
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(wasSent);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SendComposedNotification_PublisherCalledForSingleNotification()
+    public async Task SendComposedNotification_WhenCommitThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -772,19 +846,28 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+        unitOfWorkRepositoryMock.Setup(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()))
+            .ThrowsAsync(new InvalidOperationException("commit failed"));
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>())).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(wasSent);
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        Assert.False(wasSent);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
     }
 
     [Fact]
-    public async Task SendComposedNotification_PublisherThrowsOperationCanceled_NoStatusResets()
+    public async Task SendComposedNotification_WhenPublisherThrowsOperationCanceled_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -795,19 +878,27 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_PublisherThrowsInvalidOperationException_ExceptionPropagatesAndNoStatusResets()
+    public async Task SendComposedNotification_WhenPublisherThrowsInvalidOperation_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -818,19 +909,27 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Misconfiguration"));
 
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendComposedNotification_PublisherThrowsUnexpectedException_ExceptionPropagatesAndNoStatusResets()
+    public async Task SendComposedNotification_WhenPublisherThrowsUnexpectedException_RollsBackAndReturnsFalse()
     {
         // Arrange
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -841,15 +940,23 @@ public class EmailNotificationServiceTests
         publisherMock.Setup(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("Unexpected timeout"));
 
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = new();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            composedEmailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
         bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
-
-        repoMock.Verify(r => r.UpdateSendStatus(It.IsAny<Guid?>(), EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]

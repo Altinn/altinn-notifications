@@ -73,7 +73,7 @@ public class ProcessItemsBackgroundService(
                 Task[] smsDaytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manySmsDaytimeNotificationsLately,
-                        ct => smsSendingService.SendNotifications(ct, SendingTimePolicy.Daytime),
+                        ct => smsSendingService.SendNotification(SendingTimePolicy.Daytime, ct),
                         notificationScheduleService.CanSendSmsNow,
                         isFirstInstance: i == 0,
                         _config.SmsDaytimeNotificationsProcessLoopConfig,
@@ -82,7 +82,7 @@ public class ProcessItemsBackgroundService(
                 Task[] smsAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manySmsAnytimeNotificationsLately,
-                        ct => smsSendingService.SendNotifications(ct, SendingTimePolicy.Anytime),
+                        ct => smsSendingService.SendNotification(SendingTimePolicy.Anytime, ct),
                         null,
                         isFirstInstance: i == 0,
                         _config.SmsAnytimeNotificationsProcessLoopConfig,

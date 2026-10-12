@@ -62,6 +62,7 @@ The solution is supported by multiple cron jobs running in the same Kubernetes c
 - **Altinn Authorization**: used to filter recipients being sent to an organization.
 - **Altinn Profile**: used to retrieve recipient information.
 - **Altinn Register**: used to retrieve recipient information.
+- **Dialogporten**: involved in authorization check of user access to a given dialog.
 
 ### External
 

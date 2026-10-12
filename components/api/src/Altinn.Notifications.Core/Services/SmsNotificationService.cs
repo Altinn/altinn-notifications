@@ -36,7 +36,6 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
         ISendSmsPublisher smsPublisher,
-        IOptions<NotificationConfig> notificationConfig,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
         ISmsSenderSubstitutionService senderSubstitutionService)
@@ -48,8 +47,6 @@ public class SmsNotificationService : ISmsNotificationService
         _unitOfWorkRepository = unitOfWorkRepository;
         _logger = logger;
         _senderSubstitutionService = senderSubstitutionService;
-
-        _ = notificationConfig;
     }
 
     /// <inheritdoc/>
@@ -94,9 +91,9 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotifications")?.SetTag("Policy", sendingTimePolicy);
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {
@@ -106,7 +103,7 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", nameof(SendNotifications));
+                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", nameof(SendNotification));
             }
 
             return false;
@@ -131,16 +128,17 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "An error occurred while processing {OperationName}.", nameof(SendNotifications));
+                _logger.LogError(e, "An error occurred while processing {OperationName}.", nameof(SendNotification));
             }
 
             try
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // If rollback fails, we can't do much about it. The unit of work will be disposed and the transaction rolled back automatically.
+                _logger.LogError(ex, "An error occurred while processing {OperationName}.", nameof(SendNotification));
             }
 
             return false;

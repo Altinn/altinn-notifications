@@ -187,6 +187,55 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetNewNotificationAsync_ExpiredNotificationWithNewStatus_IsNotPickedUp()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        var nonExpiredNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                ToAddress = "test@email.com"
+            }
+        };
+
+        await repo.AddNotification(nonExpiredNotification, DateTime.UtcNow.AddDays(1));
+
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = '{EmailNotificationResultType.New}',
+                expirytime = NOW() - INTERVAL '10 minutes'
+            WHERE alternateid = '{emailNotification.Id}'");
+
+        // Act
+        Email? claimedNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Email? claimedNonExpiredNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == nonExpiredNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.Null(claimedNotification);
+        Assert.NotNull(claimedNonExpiredNotification);
+        Assert.Equal(nonExpiredNotification.Id, claimedNonExpiredNotification.NotificationId);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateStatusAndOperationId()
     {
         // Arrange
@@ -709,7 +758,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_ComposedOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewNotificationAsync_ComposedOrderNotification_IsNotClaimed()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -782,17 +831,27 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        Email? batch = await ExecuteInUnitOfWork(
+        // Try to claim this specific composed notification through the standard email claim path.
+        // The helper advances claims within the same transaction, so non-matching earlier rows do not
+        // cause a false positive.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
-            TestContext.Current.CancellationToken);
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — the Composed order's notification must not appear in the standard email batch
-        Assert.True(batch is null || batch.NotificationId != notificationId);
+        // Assert — composed notification must never be claimable via standard email claim path.
+        Assert.Null(claimedAsStandardEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: the composed claim path should be able to claim the same notification.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsComposedEmail);
+        Assert.Equal(notificationId, claimedAsComposedEmail.NotificationId);
     }
 
     [Fact]
@@ -806,7 +865,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'
@@ -842,7 +901,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         long expectedSize = 158304L;
         string deliveryReport = """{"messageId":"test-op","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'
@@ -1036,49 +1095,33 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        ComposedEmail? resultNotification = await ExecuteInUnitOfWork(
+        // Try to claim this specific standard notification through the composed claim path.
+        // The helper advances claims within one transaction, avoiding false positives caused by
+        // unrelated earlier rows.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
             (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
-            TestContext.Current.CancellationToken);
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — standard notification must not be returned as composed notification
-        Assert.True(resultNotification is null || resultNotification.NotificationId != emailNotification.Id);
+        // Assert — standard notification must never be claimable through composed path.
+        Assert.Null(claimedAsComposedEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed by claim_composed_email)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: standard claim path should be able to claim this same notification.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsStandardEmail);
+        Assert.Equal(emailNotification.Id, claimedAsStandardEmail.NotificationId);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
-
-    private static async Task<TResult> ExecuteInUnitOfWork<TResult>(
-        Func<UnitOfWork, CancellationToken, Task<TResult>> action,
-        CancellationToken cancellationToken,
-        bool commit = false)
-    {
-        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-        var unitOfWork = new UnitOfWork
-        {
-            Connection = connection,
-            Transaction = transaction
-        };
-
-        TResult result = await action(unitOfWork, cancellationToken);
-        if (commit)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
-        else
-        {
-            await transaction.RollbackAsync(cancellationToken);
-        }
-
-        return result;
     }
 
     private static async Task<TResult?> ExecuteClaimUntilMatchInUnitOfWork<TResult>(
@@ -1089,16 +1132,16 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         int maxAttempts = 50)
         where TResult : class
     {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
         for (int i = 0; i < maxAttempts; i++)
         {
-            await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            var unitOfWork = new UnitOfWork
-            {
-                Connection = connection,
-                Transaction = transaction
-            };
-
             TResult? result = await claim(unitOfWork, cancellationToken);
 
             if (result is not null && isMatch(result))
@@ -1114,9 +1157,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
                 return result;
             }
-
-            await transaction.RollbackAsync(cancellationToken);
         }
+
+        await transaction.RollbackAsync(cancellationToken);
 
         return null;
     }

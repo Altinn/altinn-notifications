@@ -4,5 +4,31 @@ meta {
 }
 
 auth {
-  mode: inherit
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{dashboard_jwt}}
+}
+
+script:pre-request {
+  //Auto-fetch a valid auth-token with the support admin scope
+  if(
+    //no token
+    !bru.getEnvVar("dashboard_jwt") || bru.getEnvVar("dashboard_jwt") === "null" ||
+
+    //new env
+    bru.getEnvVar("dashboard_jwt_env") !== bru.getEnvVar("Environment") ||
+
+    //old token (expired)
+    (bru.getEnvVar("dashboard_jwt_from") + 15*60*1000) < Date.now()
+    ){
+    const requestResponse = await bru.runRequest("test-util/dashboard-auth-token");
+
+    if(requestResponse.status == 200){
+      console.log('Automatically (re)-aquired a dashboard JWT');
+    }else{
+      console.log('Failed automatically (re)-aquirering a dashboard JWT');
+    }
+  }
 }

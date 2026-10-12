@@ -18,7 +18,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up K6
-        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+        uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1 # v1.2.2
       - name: Create k6 secrets file
         id: k6-secrets
         env:
@@ -35,37 +35,37 @@ jobs:
           printf 'subscriptionKey=%s\n' "$APIM_SUBSCRIPTION_KEY" >> "$SECRETS_FILE"
           echo "file=$SECRETS_FILE" >> "$GITHUB_OUTPUT"
       - name: Run API v2 tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-v2.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=Prod # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run API v2 recipientOrganization tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no-v2.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_URN_RESOURCE_ID }}
           inspect-flags: -e altinn_env=Prod # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run email notification order use case tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-email.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ vars.AUTOMATEDTEST_NINRECIPIENT }}
           inspect-flags: -e altinn_env=Prod # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run contact(s) lookup by organization number use case tests with generating an email notification
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-org-no.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e orgNoRecipient=${{ vars.AUTOMATEDTEST_ORG_NO_RECIPIENT }} -e resourceId=${{ vars.AUTOMATEDTEST_RESOURCE_ID }}
           inspect-flags: -e altinn_env=Prod # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run sms notification order use case tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-sms.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e smsRecipient=${{ vars.AUTOMATEDTEST_SMSRECIPIENT }}
           inspect-flags: -e altinn_env=Prod # Supplies the value for pre-run validation, when env vars / flags are not yet defined
       - name: Run composed-email notification order use case tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         with:
           path: components/api/test/k6/src/tests/orders-composed-email-v2.js
           flags: --secret-source=file=${{ steps.k6-secrets.outputs.file }} -e emailRecipient=${{ vars.AUTOMATEDTEST_EMAILRECIPIENT }}

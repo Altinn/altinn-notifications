@@ -20,14 +20,4 @@ public interface ISendSmsPublisher
     /// A task that represents the asynchronous operation.
     /// </returns>
     Task PublishAsync(Sms sms, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Publishes a batch of SMS notifications asynchronously.
-    /// </summary>
-    /// <param name="smsList">The SMS notifications to publish.</param>
-    /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns>
-    /// A task that completes with the subset of SMS notifications that failed to publish.
-    /// </returns>
-    Task<IReadOnlyList<Sms>> PublishAsync(IReadOnlyList<Sms> smsList, CancellationToken cancellationToken);
 }

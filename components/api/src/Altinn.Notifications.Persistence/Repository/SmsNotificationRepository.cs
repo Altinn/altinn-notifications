@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
@@ -92,13 +94,13 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <inheritdoc/>
     public async Task<Sms?> GetNewNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        string claimSmsBatchForSending = sendingTimePolicy switch
+        string claimSmsForSending = sendingTimePolicy switch
         {
             SendingTimePolicy.Anytime => _claimAnytimeSmsSql,
             _ => _claimDaytimeSmsSql,
         };
 
-        await using var command = new NpgsqlCommand(claimSmsBatchForSending, unitOfWork.Connection, unitOfWork.Transaction);
+        await using var command = new NpgsqlCommand(claimSmsForSending, unitOfWork.Connection, unitOfWork.Transaction);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -108,11 +110,11 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         }
 
         return new Sms(
-            reader.GetValue<Guid>("alternateid"),
-            reader.GetValue<string>("sendernumber"),
-            reader.GetValue<string>("mobilenumber"),
-            reader.GetValue<string>("body"),
-            reader.GetValue<string>("creatorname"));
+            await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+            await reader.GetFieldValueAsync<string>("sendernumber", cancellationToken),
+            await reader.GetFieldValueAsync<string>("mobilenumber", cancellationToken),
+            await reader.GetFieldValueAsync<string>("body", cancellationToken),
+            await reader.GetFieldValueAsync<string>("creatorname", cancellationToken));
     }
 
     /// <inheritdoc/>
@@ -146,31 +148,21 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     public async Task PersistSubstitutedSender(UnitOfWork unitOfWork, Guid notificationId, string sender)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sender);
-        
-        try
+        if (notificationId == Guid.Empty)
         {
-            if (notificationId == Guid.Empty)
-            {
-                throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
-            }
-
-            await using NpgsqlCommand pgcom = new(_persistSubstitutedSenderSql, unitOfWork.Connection, unitOfWork.Transaction);
-
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sender);
-
-            var rowsAffected = await pgcom.ExecuteNonQueryAsync();
-
-            if (rowsAffected == 0)
-            {
-                _logger.LogWarning("No rows were updated when persisting substituted sender for SMS notification with ID {NotificationId}. This may indicate that the notification does not exist.", notificationId);
-            }
+            throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
         }
-        catch (Exception e)
+
+        await using NpgsqlCommand pgcom = new(_persistSubstitutedSenderSql, unitOfWork.Connection, unitOfWork.Transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sender);
+
+        var rowsAffected = await pgcom.ExecuteNonQueryAsync();
+
+        if (rowsAffected == 0)
         {
-            throw new InvalidOperationException(
-                "Failed to persist substituted sender.",
-                e);
+            _logger.LogWarning("No rows were updated when persisting substituted sender for SMS notification with ID {NotificationId}. This may indicate that the notification does not exist.", notificationId);
         }
     }
 }
