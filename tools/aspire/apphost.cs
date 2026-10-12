@@ -49,7 +49,23 @@ AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
 
-builder.Build().Run();
+var app = builder.Build();
+
+HashSet<string> pendingRestarts = [];
+List<FileSystemWatcher> watchers =
+[
+    WatchSource(app.Services, "api/src", api),
+    WatchSource(app.Services, "email-service/src", email),
+    WatchSource(app.Services, "sms-service/src", sms),
+    WatchSource(app.Services, "shared/src", api, email, sms),
+];
+
+app.Run();
+
+foreach (var watcher in watchers)
+{
+    watcher.Dispose();
+}
 
 // The launch profiles are skipped on purpose: email and sms hardcode ASPNETCORE_URLS
 // to localhost:509x, which collides with the 127.0.0.1:509x Aspire injects.
@@ -92,6 +108,65 @@ void AddTests(string name, IResourceBuilder<ProjectResource> service, string sol
             return await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(tests.Resource, KnownResourceCommands.StartCommand, context.CancellationToken);
         },
         new CommandOptions { IconName = "Beaker", IsHighlighted = false });
+}
+
+// Shows a dashboard notification with a Restart button when a service's source changes.
+// Only .cs, .csproj and .json files count: the API build regenerates a .sql file under
+// src on every run, which would otherwise raise a new alert after each restart.
+FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<ProjectResource>[] affected)
+{
+    string[] extensions = [".cs", ".csproj", ".json"];
+    var watcher = new FileSystemWatcher(Path.Combine(builder.AppHostDirectory, Components, folder)) { IncludeSubdirectories = true };
+
+    FileSystemEventHandler onChange = (_, e) =>
+    {
+        string separator = Path.DirectorySeparatorChar.ToString();
+        if (!extensions.Contains(Path.GetExtension(e.FullPath)) || e.FullPath.Contains($"{separator}bin{separator}") || e.FullPath.Contains($"{separator}obj{separator}"))
+        {
+            return;
+        }
+
+        foreach (var service in affected)
+        {
+            _ = NotifyChangedAsync(services, service.Resource);
+        }
+    };
+
+    watcher.Changed += onChange;
+    watcher.Created += onChange;
+    watcher.Deleted += onChange;
+    watcher.Renamed += (sender, e) => onChange(sender, e);
+    watcher.EnableRaisingEvents = true;
+    return watcher;
+}
+
+async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service)
+{
+    // One notification per service at a time; the short delay lets a save of several files settle first.
+    lock (pendingRestarts)
+    {
+        if (!pendingRestarts.Add(service.Name))
+        {
+            return;
+        }
+    }
+
+    await Task.Delay(TimeSpan.FromSeconds(2));
+
+    var result = await services.GetRequiredService<IInteractionService>().PromptNotificationAsync(
+        $"{service.Name} has changed",
+        "Restart it to pick up the changes.",
+        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Restart" });
+
+    lock (pendingRestarts)
+    {
+        pendingRestarts.Remove(service.Name);
+    }
+
+    if (!result.Canceled && result.Data)
+    {
+        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RestartCommand);
+    }
 }
 
 // Replaces the generic "Finished" state with Passed or Failed based on the dotnet test exit code.
