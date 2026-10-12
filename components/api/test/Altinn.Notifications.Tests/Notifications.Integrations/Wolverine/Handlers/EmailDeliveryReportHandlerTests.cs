@@ -107,6 +107,31 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
     }
 
     [Fact]
+    public void EventGridEnvelopeMapper_MapIncomingToEnvelope_PrefersTraceParentOverDiagnosticIdForParentId()
+    {
+        // Arrange
+        const string traceParent = "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01";
+        const string diagnosticId = "00-cccccccccccccccccccccccccccccccc-dddddddddddddddd-01";
+
+        ServiceBusReceivedMessage incoming = ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString("{}"),
+            properties: new Dictionary<string, object>
+            {
+                ["traceparent"] = traceParent,
+                ["Diagnostic-Id"] = diagnosticId
+            });
+
+        var mapper = new EventGridEnvelopeMapper();
+        var envelope = new global::Wolverine.Envelope();
+
+        // Act
+        mapper.MapIncomingToEnvelope(envelope, incoming);
+
+        // Assert
+        Assert.Equal(traceParent, envelope.ParentId);
+    }
+
+    [Fact]
     public async Task Handle_WithTraceParentAndNoCurrentActivity_StartsFallbackReceiveActivity()
     {
         // Arrange
@@ -158,6 +183,50 @@ public sealed class EmailDeliveryReportHandlerTests : IDisposable
         Assert.Equal("azure_service_bus", messagingSystemTag);
         Assert.Equal("receive", messagingOperationTag);
         Assert.Equal(nameof(EmailDeliveryReportCommand), messagingTypeTag);
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidTraceParentAndValidDiagnosticId_StartsFallbackReceiveActivity()
+    {
+        // Arrange
+        const string invalidTraceParent = "invalid-traceparent";
+        const string diagnosticId = "00-c03d7491b87f32b5a4b3985f9504a463-f2122e353c32834f-01";
+        string messageId = Guid.NewGuid().ToString();
+        int startedActivities = 0;
+        string? startedDisplayName = null;
+
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "Wolverine",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = activity =>
+            {
+                startedActivities++;
+                startedDisplayName = activity.DisplayName;
+            }
+        };
+
+        ActivitySource.AddActivityListener(listener);
+
+        var command = BuildCommand(
+            messageId,
+            status: "Delivered",
+            applicationProperties: new Dictionary<string, object>
+            {
+                ["traceparent"] = invalidTraceParent,
+                ["Diagnostic-Id"] = diagnosticId
+            });
+
+        // Act
+        await EmailDeliveryReportHandler.Handle(
+            command,
+            _serviceMock.Object,
+            _metrics,
+            NullLogger.Instance);
+
+        // Assert
+        Assert.Equal(1, startedActivities);
+        Assert.Equal("ASB receive Altinn.Notifications.Integrations.Wolverine.EmailDeliveryReportCommand", startedDisplayName);
     }
 
     [Fact]

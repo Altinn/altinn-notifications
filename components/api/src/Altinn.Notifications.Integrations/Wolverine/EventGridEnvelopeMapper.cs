@@ -51,17 +51,17 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
         CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
 
-        if (incoming.ApplicationProperties.TryGetValue(_diagnosticIdKey, out var diagnosticId)
-            && diagnosticId is string parentId
-            && !string.IsNullOrWhiteSpace(parentId))
-        {
-            envelope.ParentId = parentId;
-        }
-        else if (incoming.ApplicationProperties.TryGetValue(_traceParentKey, out var traceParent)
-                 && traceParent is string traceParentValue
-                 && !string.IsNullOrWhiteSpace(traceParentValue))
+        if (incoming.ApplicationProperties.TryGetValue(_traceParentKey, out var traceParent)
+            && traceParent is string traceParentValue
+            && !string.IsNullOrWhiteSpace(traceParentValue))
         {
             envelope.ParentId = traceParentValue;
+        }
+        else if (incoming.ApplicationProperties.TryGetValue(_diagnosticIdKey, out var diagnosticId)
+                 && diagnosticId is string parentId
+                 && !string.IsNullOrWhiteSpace(parentId))
+        {
+            envelope.ParentId = parentId;
         }
     }
 

@@ -105,7 +105,9 @@ public static class EmailDeliveryReportHandler
         command.Message.ApplicationProperties.TryGetValue("tracestate", out var traceStateRaw);
         string? traceState = traceStateRaw as string;
 
-        if (!ActivityContext.TryParse(traceParent, traceState, out ActivityContext parentContext))
+        if (!TryParseParentContext(traceParent, traceState, out ActivityContext parentContext)
+            && (!TryReadApplicationProperty(command, "Diagnostic-Id", out string? diagnosticId)
+                || !TryParseParentContext(diagnosticId, traceState, out parentContext)))
         {
             return null;
         }
@@ -120,6 +122,17 @@ public static class EmailDeliveryReportHandler
         activity?.SetTag("messaging.message_type", nameof(EmailDeliveryReportCommand));
 
         return activity;
+    }
+
+    private static bool TryParseParentContext(string? traceParent, string? traceState, out ActivityContext parentContext)
+    {
+        if (string.IsNullOrWhiteSpace(traceParent))
+        {
+            parentContext = default;
+            return false;
+        }
+
+        return ActivityContext.TryParse(traceParent, traceState, out parentContext);
     }
 
     private static bool TryReadApplicationProperty(EmailDeliveryReportCommand command, string key, out string? value)
