@@ -19,8 +19,11 @@ public sealed class WolverineHandlerTimingPolicy : IHandlerPolicy
     {
         foreach (var chain in chains)
         {
-            chain.Middleware.Insert(0, new MethodCall(typeof(WolverineHandlerTimingMiddleware), nameof(WolverineHandlerTimingMiddleware.Before)));
-            chain.Postprocessors.Add(new MethodCall(typeof(WolverineHandlerTimingMiddleware), nameof(WolverineHandlerTimingMiddleware.After)));
+            chain.Middleware.Insert(
+                0,
+                new global::Wolverine.Middleware.TryFinallyWrapperFrame(
+                    new MethodCall(typeof(WolverineHandlerTimingMiddleware), nameof(WolverineHandlerTimingMiddleware.Before)),
+                    [new MethodCall(typeof(WolverineHandlerTimingMiddleware), nameof(WolverineHandlerTimingMiddleware.After))]));
         }
     }
 }
