@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 const string Components = "../../components";
 
@@ -29,9 +30,9 @@ foreach (var project in projects)
 }
 
 // The dashboard lists resources in the order they are added, so the containers are added last.
-var api = AddService("api", projects[0], 5090, "swagger");
-var email = AddService("email", projects[1], 5091, "swagger");
-var sms = AddService("sms", projects[2], 5092, string.Empty);
+var api = AddService("api", projects[0], 5090, "swagger", "altinn-notifications");
+var email = AddService("email", projects[1], 5091, "swagger", "altinn-notifications-email");
+var sms = AddService("sms", projects[2], 5092, string.Empty, "altinn-notifications-sms");
 
 // The containers live in Podman, not in Aspire, so they keep running when Aspire stops.
 // The start commands are no-ops when the containers are already running; the log tail
@@ -72,14 +73,86 @@ foreach (var watcher in watchers)
 //
 // The ports stay fixed and unproxied because the services address each other by
 // hardcoded localhost URLs (see PlatformSettings in the API's appsettings.json).
-IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath)
+IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
 {
     string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
 
-    return builder.AddProject(name, projectPath, launchProfileName: null)
+    var service = builder.AddProject(name, projectPath, launchProfileName: null)
         .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
         .WithUrl(swaggerUrl, "Swagger")
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+
+    AddClusterSwitch(service, clusterService, port);
+    return service;
+}
+
+// "Use cluster" stops the local service and port-forwards the same port to the service in the
+// current kube context instead; "Use local" switches back. kubectl output goes to the service's log.
+void AddClusterSwitch(IResourceBuilder<ProjectResource> service, string clusterService, int port)
+{
+    Process? forward = null;
+
+    service.WithCommand(
+        "use-cluster",
+        "Use cluster",
+        async context =>
+        {
+            await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service.Resource, KnownResourceCommands.StopCommand, context.CancellationToken);
+
+            var logger = context.Services.GetRequiredService<ResourceLoggerService>().GetLogger(service.Resource);
+            forward = StartPortForward(clusterService, port, logger);
+            var started = forward;
+            context.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() => started.Kill());
+
+            await context.Services.GetRequiredService<ResourceNotificationService>().PublishUpdateAsync(service.Resource, s => s with { State = new ResourceStateSnapshot("Cluster", KnownResourceStateStyles.Info) });
+            return CommandResults.Success();
+        },
+        new CommandOptions { IconName = "Cloud", UpdateState = _ => forward is null ? ResourceCommandState.Enabled : ResourceCommandState.Hidden });
+
+    service.WithCommand(
+        "use-local",
+        "Use local",
+        async context =>
+        {
+            forward?.Kill();
+            forward = null;
+            return await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service.Resource, KnownResourceCommands.StartCommand, context.CancellationToken);
+        },
+        new CommandOptions { IconName = "Desktop", UpdateState = _ => forward is null ? ResourceCommandState.Hidden : ResourceCommandState.Enabled });
+}
+
+static Process StartPortForward(string clusterService, int port, ILogger logger)
+{
+    var process = new Process
+    {
+        StartInfo = new ProcessStartInfo("kubectl", ["port-forward", $"service/{clusterService}", $"{port}:80"])
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        },
+        EnableRaisingEvents = true,
+    };
+
+    process.OutputDataReceived += (_, e) =>
+    {
+        if (e.Data is not null)
+        {
+            logger.LogInformation("{Line}", e.Data);
+        }
+    };
+    process.ErrorDataReceived += (_, e) =>
+    {
+        if (e.Data is not null)
+        {
+            logger.LogError("{Line}", e.Data);
+        }
+    };
+    process.Exited += (_, _) => logger.LogWarning("kubectl port-forward exited with code {ExitCode}", process.ExitCode);
+
+    process.Start();
+    process.BeginOutputReadLine();
+    process.BeginErrorReadLine();
+    return process;
 }
 
 // The tests stay hidden until they are first run from the service's "Run tests" command,
