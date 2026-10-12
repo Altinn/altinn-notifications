@@ -14,10 +14,9 @@ public class ComposedEmailCommandPublisher(IMessageBusPublisher messageBusPublis
     private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
 
     /// <inheritdoc/>
-    public async Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
+    public Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        await _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+        return _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
     }
 
     /// <summary>

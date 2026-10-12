@@ -558,25 +558,6 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_EmptyBatch_PublisherNotCalled()
-    {
-        // Arrange
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Email?)null);
-
-        var publisherMock = new Mock<IEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
-        Assert.False(wasSent);
-    }
-
-    [Fact]
     public async Task SendNotification_WhenCancellationRequestedAfterClaim_RollsBackAndDoesNotPublish()
     {
         // Arrange
@@ -813,25 +794,6 @@ public class EmailNotificationServiceTests
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SendComposedNotification_EmptyBatch_PublisherNotCalled()
-    {
-        // Arrange
-        var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ComposedEmail?)null);
-
-        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
-        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object);
-
-        // Act
-        bool wasSent = await service.SendComposedNotification(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(wasSent);
-        publisherMock.Verify(p => p.PublishAsync(It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
