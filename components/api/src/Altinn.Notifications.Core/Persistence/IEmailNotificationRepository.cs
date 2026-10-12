@@ -16,28 +16,26 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task AddNotification(EmailNotification notification, DateTime expiry);
 
     /// <summary>
-    /// Retrieves pending email notifications.
+    /// Retrieves the next pending email notification within the provided unit of work.
     /// </summary>
-    /// <param name="publishBatchSize">Maximum number of email notifications to retrieve in a single batch.</param>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>
-    /// A task that completes when the retrieval for a single batch finishes or when cancellation is requested.
-    /// The result contains up to <paramref name="publishBatchSize"/> pending email notifications.
-    /// May return an empty list if none are available.
+    /// A task that completes when retrieval finishes. The result is the next pending email notification,
+    /// or <see langword="null"/> if none are available.
     /// </returns>
-    /// <exception cref="OperationCanceledException">Thrown if cancellation is requested before or during retrieval.</exception>
-    public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Retrieves pending composed email notifications.
+    /// Retrieves the next pending composed email notification within the provided unit of work.
     /// </summary>
-    /// <param name="publishBatchSize">Maximum number of notifications to retrieve in one batch.</param>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>
-    /// A task that completes when retrieval finishes. The result contains up to
-    /// <paramref name="publishBatchSize"/> composed email notifications. May return an empty list.
+    /// A task that completes when retrieval finishes. The result is the next pending composed email notification,
+    /// or <see langword="null"/> if none are available.
     /// </returns>
-    public Task<List<ComposedEmail>> GetNewComposedNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<ComposedEmail?> GetNewComposedNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of an email notification and optionally persists

@@ -143,7 +143,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
-    services.AddSingleton(new ActivitySource("Altinn.Notifications.OrderProcessingService"));
+    services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
 
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
@@ -173,7 +173,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddSource("Wolverine");
 
-            tracing.AddSource("Altinn.Notifications.OrderProcessingService");
+            tracing.AddSource(BackgroundActivitySource.Name);
         });
 
     AddAzureMonitorTelemetryExporters(services, config);
