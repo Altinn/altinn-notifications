@@ -16,6 +16,7 @@ using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using AltinnCore.Authentication.JwtCookie;
@@ -168,6 +169,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddHttpClientInstrumentation();
 
             tracing.AddProcessor<RequestFilterProcessor>();
+
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
 
             tracing.AddNpgsql();
 
