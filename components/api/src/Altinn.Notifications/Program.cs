@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Npgsql;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -265,12 +266,10 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
             otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
         }));
     }
-
-    if (!string.IsNullOrEmpty(config.GetValue<string>("OTEL_EXPORTER_OTLP_ENDPOINT")))
+    else if (!string.IsNullOrEmpty(config["OTEL_EXPORTER_OTLP_ENDPOINT"]))
     {
-        services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddOtlpExporter());
-        services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
-        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
+        // UseOtlpExporter throws if combined with the signal-specific exporter above.
+        services.AddOpenTelemetry().UseOtlpExporter();
     }
 
     var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
