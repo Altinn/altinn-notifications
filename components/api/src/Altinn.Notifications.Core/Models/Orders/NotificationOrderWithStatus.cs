@@ -58,7 +58,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <summary>
     /// Gets the SMS sending time policy for the notification order. Can be null
     /// </summary>
-    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+    public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
 
     /// <summary>
     /// Gets the email sending time policy for the notification order. Can be null

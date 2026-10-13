@@ -293,7 +293,7 @@ public class OrderRequestServiceTests
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
             SendersReference = "self-identified-sms-ref",
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             RequestedSendTime = currentTime.AddMinutes(10),
             Templates = [new SmsTemplate("Altinn", "Test SMS body")],
@@ -407,7 +407,7 @@ public class OrderRequestServiceTests
             Created = currentTime,
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             RequestedSendTime = currentTime.AddMinutes(10),
             SendersReference = "self-identified-preferred-ref",
             NotificationChannel = NotificationChannel.EmailPreferred,
@@ -704,7 +704,7 @@ public class OrderRequestServiceTests
             ResourceId = resourceId,
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             RequestedSendTime = currentTime.AddMinutes(10),
             NotificationChannel = NotificationChannel.SmsPreferred,
             SendersReference = "self-identified-sms-preferred-ref",
@@ -722,7 +722,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(o =>
                     o.Id == orderId &&
-                    o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                    o.SmsSendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.SmsPreferred &&
                     o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
                     o.EmailAttachments == null),
@@ -830,7 +830,7 @@ public class OrderRequestServiceTests
             ResourceId = resourceId,
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             RequestedSendTime = currentTime.AddMinutes(10),
             NotificationChannel = NotificationChannel.EmailAndSms,
             SendersReference = "self-identified-email-and-sms-ref",
@@ -848,7 +848,7 @@ public class OrderRequestServiceTests
                 It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(o =>
                     o.Id == orderId &&
-                    o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                    o.SmsSendingTimePolicy == SendingTimePolicy.Daytime &&
                     o.NotificationChannel == NotificationChannel.EmailAndSms &&
                     o.Recipients.Any(r => r.ExternalIdentity == externalIdentity) &&
                     o.EmailAttachments == null),
@@ -1104,7 +1104,7 @@ public class OrderRequestServiceTests
             SendersReference = "reminder-ref",
             RequestedSendTime = currentTime.AddDays(7),
             NotificationChannel = NotificationChannel.Sms,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             Templates = [new SmsTemplate("Altinn", "Reminder SMS body")],
             Recipients = [new Recipient([], externalIdentity: externalIdentity)]
         };
@@ -2174,7 +2174,7 @@ public class OrderRequestServiceTests
                 o.Id == orderId &&
                 o.Type == OrderType.Notification &&
                 o.SendersReference == "REF-42DBDAB8281C" &&
-                o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                o.SmsSendingTimePolicy == SendingTimePolicy.Daytime &&
                 o.NotificationChannel == NotificationChannel.EmailAndSms &&
                 o.Recipients.Any(r => r.OrganizationNumber == "312508729") &&
                 o.EmailAttachments == null),
@@ -2250,7 +2250,7 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(createdOrder);
-        Assert.Equal(SendingTimePolicy.Anytime, createdOrder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, createdOrder.SmsSendingTimePolicy);
         Assert.Equal(SendingTimePolicy.Daytime, createdOrder.EmailSendingTimePolicy);
     }
 
@@ -2318,12 +2318,12 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(createdMainOrder);
-        Assert.Null(createdMainOrder.SendingTimePolicy);
+        Assert.Null(createdMainOrder.SmsSendingTimePolicy);
         Assert.Equal(SendingTimePolicy.Daytime, createdMainOrder.EmailSendingTimePolicy);
 
         Assert.NotNull(createdReminders);
         var reminder = Assert.Single(createdReminders);
-        Assert.Null(reminder.SendingTimePolicy);
+        Assert.Null(reminder.SmsSendingTimePolicy);
         Assert.Equal(SendingTimePolicy.Anytime, reminder.EmailSendingTimePolicy);
     }
 
@@ -2450,7 +2450,7 @@ public class OrderRequestServiceTests
         Assert.NotNull(createdOrder);
         Assert.Equal(channel, createdOrder.NotificationChannel);
         Assert.Equal(SendingTimePolicy.Daytime, createdOrder.EmailSendingTimePolicy);
-        Assert.Equal(channelIncludesSms ? SendingTimePolicy.Anytime : null, createdOrder.SendingTimePolicy);
+        Assert.Equal(channelIncludesSms ? SendingTimePolicy.Anytime : null, createdOrder.SmsSendingTimePolicy);
     }
 
     [Fact]
@@ -3136,7 +3136,7 @@ public class OrderRequestServiceTests
         orderRepositoryMock.Verify(
             r => r.Create(
             It.IsAny<NotificationOrderChainRequest>(),
-            It.Is<NotificationOrder>(o => o.SendingTimePolicy == shouldEqual),
+            It.Is<NotificationOrder>(o => o.SmsSendingTimePolicy == shouldEqual),
             It.IsAny<List<NotificationOrder>>(),
             It.IsAny<CancellationToken>()),
             Times.Once);
@@ -3166,7 +3166,7 @@ public class OrderRequestServiceTests
         // Assert
         orderRepositoryMock.Verify(
             r => r.Create(
-                It.Is<NotificationOrder>(o => o.SendingTimePolicy == null)),
+                It.Is<NotificationOrder>(o => o.SmsSendingTimePolicy == null)),
             Times.Once);
     }
 

@@ -23,7 +23,7 @@ public class ProcessItemsBackgroundServiceTests
         var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
 
         var config = CreateConfig();
-        config.EmailNotificationsProcessLoopConfig.TaskCount = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 0;
 
         var service = new TestableProcessItemsBackgroundService(
             emailService.Object,
@@ -169,7 +169,7 @@ public class ProcessItemsBackgroundServiceTests
     {
         // Arrange
         var config = CreateConfig();
-        config.EmailNotificationsProcessLoopConfig.TaskCount = 1;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
         SetZeroIdleDelays(config);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -209,7 +209,7 @@ public class ProcessItemsBackgroundServiceTests
     {
         // Arrange
         var config = CreateConfig();
-        config.EmailNotificationsProcessLoopConfig.TaskCount = 1;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
         SetZeroIdleDelays(config);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -321,7 +321,7 @@ public class ProcessItemsBackgroundServiceTests
     {
         return new NotificationConfig
         {
-            EmailNotificationsProcessLoopConfig = new ProcessLoopConfig
+            EmailAnytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
                 TaskCount = 0
             },
@@ -354,9 +354,9 @@ public class ProcessItemsBackgroundServiceTests
 
     private static void SetZeroIdleDelays(NotificationConfig config)
     {
-        config.EmailNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
-        config.EmailNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
-        config.EmailNotificationsProcessLoopConfig.RampUpLimit = 1;
+        config.EmailAnytimeNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.RampUpLimit = 1;
 
         config.EmailDaytimeNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
         config.EmailDaytimeNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;

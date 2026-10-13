@@ -29,8 +29,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
-    private const string _getEmailNotificationSql = "SELECT * FROM notifications.claim_email()";
-    private const string _getDaytimeEmailNotificationSql = "SELECT * FROM notifications.claim_daytime_email()";
+    private const string _claimAnytimeEmailSql = "SELECT * FROM notifications.claim_anytime_email()";
+    private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email()";
     private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
@@ -126,8 +126,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     {
         string claimEmailForSending = sendingTimePolicy switch
         {
-            SendingTimePolicy.Daytime => _getDaytimeEmailNotificationSql,
-            _ => _getEmailNotificationSql,
+            SendingTimePolicy.Daytime => _claimDaytimeEmailSql,
+            _ => _claimAnytimeEmailSql,
         };
 
         await using NpgsqlCommand pgcom = new(claimEmailForSending, unitOfWork.Connection, unitOfWork.Transaction);

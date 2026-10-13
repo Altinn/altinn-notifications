@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Files;
@@ -45,7 +46,11 @@ public class NotificationOrder : IBaseNotificationOrder
     public DateTime Created { get; internal set; }
 
     /// <inheritdoc/>
-    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+    /// <remarks>
+    /// The JSON name is kept as <c>sendingTimePolicy</c> so that orders already persisted before this property was renamed can still be deserialized.
+    /// </remarks>
+    [JsonPropertyName("sendingTimePolicy")]
+    public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
 
     /// <inheritdoc/>
     public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
@@ -88,7 +93,7 @@ public class NotificationOrder : IBaseNotificationOrder
         string? sendersReference,
         DateTime requestedSendTime,
         List<Recipient> recipients,
-        SendingTimePolicy? sendingTimePolicy,
+        SendingTimePolicy? smsSendingTimePolicy,
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
         string? resourceAction,
@@ -108,7 +113,7 @@ public class NotificationOrder : IBaseNotificationOrder
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;
         ConditionEndpoint = conditionEndpoint;
-        SendingTimePolicy = sendingTimePolicy;
+        SmsSendingTimePolicy = smsSendingTimePolicy;
         EmailSendingTimePolicy = emailSendingTimePolicy;
         NotificationChannel = notificationChannel;
         UseStaleContactInformation = useStaleContactInformation;

@@ -449,7 +449,7 @@ public class OrderRequestService : IOrderRequestService
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
             UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+            SmsSendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
             EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy
         };
     }
@@ -630,7 +630,7 @@ public class OrderRequestService : IOrderRequestService
                 NotificationChannel = deliveryDetails.Channel,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
                 UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
-                SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+                SmsSendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
                 EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,

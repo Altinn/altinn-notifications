@@ -93,9 +93,9 @@ public class NotificationConfig
     };
 
     /// <summary>
-    /// Configuration for the process loop of the email notifications background service
+    /// Configuration for the process loop of the email daytime notifications background service
     /// </summary>
-    public ProcessLoopConfig EmailNotificationsProcessLoopConfig { get; set; } = new()
+    public ProcessLoopConfig EmailDaytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
         PrimaryTaskIdleDelaySeconds = 30,
@@ -104,9 +104,9 @@ public class NotificationConfig
     };
 
     /// <summary>
-    /// Configuration for the process loop of the email daytime notifications background service
+    /// Configuration for the process loop of the email anytime notifications background service
     /// </summary>
-    public ProcessLoopConfig EmailDaytimeNotificationsProcessLoopConfig { get; set; } = new()
+    public ProcessLoopConfig EmailAnytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
         PrimaryTaskIdleDelaySeconds = 30,

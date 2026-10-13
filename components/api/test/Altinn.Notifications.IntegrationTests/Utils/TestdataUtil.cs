@@ -15,7 +15,7 @@ public static class TestdataUtil
         order.Id = Guid.NewGuid();
         if (sendingTimePolicy != null)
         {
-            order.SendingTimePolicy = sendingTimePolicy;
+            order.SmsSendingTimePolicy = sendingTimePolicy;
         }
 
         var recipient = order.Recipients[0];

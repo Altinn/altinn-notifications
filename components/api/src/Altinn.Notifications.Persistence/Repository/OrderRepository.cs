@@ -580,7 +580,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SendingTimePolicy ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SmsSendingTimePolicy ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, processingStatus.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, orderChainId.HasValue ? (object)orderChainId.Value : DBNull.Value);

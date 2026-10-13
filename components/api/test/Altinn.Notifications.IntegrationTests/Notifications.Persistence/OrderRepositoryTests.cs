@@ -1928,7 +1928,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = "ref-P5Q7R9S1",
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             ResourceId = "urn:altinn:resource:D208D0E6E5B4",
             ConditionEndpoint = new Uri("https://vg.no/condition"),
             NotificationChannel = NotificationChannel.EmailPreferred,

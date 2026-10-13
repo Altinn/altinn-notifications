@@ -428,7 +428,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(creatorShortName, initiatedNotificationOrder.Creator.ShortName);
         Assert.Equal(orderCreationDateTime, initiatedNotificationOrder.RequestedSendTime);
         Assert.Equal(NotificationChannel.Sms, initiatedNotificationOrder.NotificationChannel);
-        Assert.Equal(SendingTimePolicy.Anytime, initiatedNotificationOrder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, initiatedNotificationOrder.SmsSendingTimePolicy);
 
         Assert.NotNull(initiatedNotificationOrder.Templates);
         Assert.Single(initiatedNotificationOrder.Templates);
