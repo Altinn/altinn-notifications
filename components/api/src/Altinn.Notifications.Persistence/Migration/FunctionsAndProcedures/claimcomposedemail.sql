@@ -78,5 +78,5 @@ ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_composed_email()
-    IS 'Claims and returns a single email notification for Composed orders (OrderType = 3).
+    IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';

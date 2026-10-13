@@ -83,7 +83,7 @@ AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
+    SELECT sms._id, sms._orderid
     FROM notifications.smsnotifications sms
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
@@ -102,17 +102,17 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
+    ord.creatorname
   FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
+  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
+  JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
@@ -367,7 +367,7 @@ AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
+    SELECT sms._id, sms._orderid
     FROM notifications.smsnotifications sms
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
@@ -386,17 +386,17 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
+    ord.creatorname
   FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
+  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
+  JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
@@ -2050,13 +2050,13 @@ AS $BODY$
 DECLARE
     __orderid BIGINT;
 	__iscomposed BOOLEAN;
-    __sendingpolicy SMALLINT;
+    __sendingtimepolicy SMALLINT;
 BEGIN
     SELECT
         _id,
-        CASE TYPE WHEN 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE TYPE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
-        INTO __orderid, __iscomposed, __sendingpolicy
+        CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
+        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -2073,7 +2073,7 @@ BEGIN
         expirytime,
         total_attachment_size_bytes,
 		iscomposed,
-        sendingpolicy
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -2088,7 +2088,7 @@ BEGIN
         _expirytime,
         _total_attachment_size_bytes,
 		__iscomposed,
-        __sendingpolicy
+        __sendingtimepolicy
     );
 END;
 $BODY$;
@@ -2412,12 +2412,12 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
-    __sendingpolicy SMALLINT;
+    __sendingtimepolicy SMALLINT;
 BEGIN
     SELECT
         _id,
-        CASE TYPE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
-        INTO __orderid, __sendingpolicy
+        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -2431,7 +2431,7 @@ BEGIN
         result,
         resulttime,
         expirytime,
-        sendingpolicy
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -2443,7 +2443,7 @@ BEGIN
         _result::smsnotificationresulttype,
         _resulttime,
         _expirytime,
-        __sendingpolicy
+        __sendingtimepolicy
     );
 END;
 $BODY$;

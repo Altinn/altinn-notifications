@@ -10,11 +10,11 @@ DROP INDEX IF EXISTS notifications.notifications_emailnotifications_result_new_v
 DROP INDEX IF EXISTS notifications.notifications_emailnotifications_result_new;
 
 CREATE INDEX IF NOT EXISTS notifications_smsnotifications_expirytime_filtered_anytime
-	ON notifications.smsnotifications (expirytime)
+	ON notifications.smsnotifications (expirytime) INCLUDE (_id, _orderid)
 	WHERE (result = 'New'::smsnotificationresulttype and sendingtimepolicy = 1);
 
 CREATE INDEX IF NOT EXISTS notifications_smsnotifications_expirytime_filtered_daytime
-	ON notifications.smsnotifications (expirytime)
+	ON notifications.smsnotifications (expirytime) INCLUDE (_id, _orderid)
 	WHERE (result = 'New'::smsnotificationresulttype and sendingtimepolicy = 2);
 
 DROP INDEX IF EXISTS notifications.notifications_smsnotifications_result_new;

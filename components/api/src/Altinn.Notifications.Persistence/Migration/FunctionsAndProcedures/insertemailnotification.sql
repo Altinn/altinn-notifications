@@ -16,13 +16,13 @@ AS $BODY$
 DECLARE
     __orderid BIGINT;
 	__iscomposed BOOLEAN;
-    __sendingpolicy SMALLINT;
+    __sendingtimepolicy SMALLINT;
 BEGIN
     SELECT
         _id,
-        CASE TYPE WHEN 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE TYPE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
-        INTO __orderid, __iscomposed, __sendingpolicy
+        CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
+        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -39,7 +39,7 @@ BEGIN
         expirytime,
         total_attachment_size_bytes,
 		iscomposed,
-        sendingpolicy
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -54,7 +54,7 @@ BEGIN
         _expirytime,
         _total_attachment_size_bytes,
 		__iscomposed,
-        __sendingpolicy
+        __sendingtimepolicy
     );
 END;
 $BODY$;
