@@ -59,7 +59,7 @@ public interface IBaseNotificationOrder
 
     /// <summary>
     /// Gets the sending time policy for the SMS notifications of the notification order.
-    /// Null when the order has no SMS template. See <see cref="EmailSendingTimePolicy"/> for email.
+    /// Null when the order has no SMS template.
     /// </summary>
     public SendingTimePolicy? SmsSendingTimePolicy { get; }
 

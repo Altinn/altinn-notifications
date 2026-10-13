@@ -47,7 +47,10 @@ public class NotificationOrder : IBaseNotificationOrder
 
     /// <inheritdoc/>
     /// <remarks>
-    /// The JSON name is kept as <c>sendingTimePolicy</c> so that orders already persisted before this property was renamed can still be deserialized.
+    /// Legacy JSON name: this property was originally called <c>SendingTimePolicy</c> (SMS was the only channel with a policy),
+    /// and was renamed to <c>SmsSendingTimePolicy</c> when email got its own policy. Orders are persisted as JSON, so the
+    /// original <c>sendingTimePolicy</c> name is kept to keep reading orders stored under it. It can only be changed together
+    /// with a migration of the stored orders.
     /// </remarks>
     [JsonPropertyName("sendingTimePolicy")]
     public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
