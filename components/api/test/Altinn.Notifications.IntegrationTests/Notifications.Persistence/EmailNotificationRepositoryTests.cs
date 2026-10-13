@@ -782,7 +782,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedAndNotificationLogEntries()
+    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedOnly()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true, resultType: EmailNotificationResultType.Delivered);
@@ -796,20 +796,18 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        // Act - should not throw and should insert status feed and notification log
-        // Note: alternateId is the notification ID, not the order ID
+        // Act - alternateId is the notification ID, not the order ID
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
         var task = (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
         await task;
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
-        // Assert - verify status feed entry was inserted
+        // Assert - status feed is written; logging is done per notification by LogFinalNotificationResult
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
 
-        // Assert - verify notification log entry was inserted for the completed order
         int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
-        Assert.Equal(1, notificationLogCount);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
