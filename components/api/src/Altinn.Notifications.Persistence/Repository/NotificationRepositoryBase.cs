@@ -5,8 +5,10 @@ using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -133,6 +135,8 @@ public abstract class NotificationRepositoryBase
 
             foreach (var alternateId in expiredIds)
             {
+                await LogFinalNotificationResult(connection, transaction, alternateId);
+
                 if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
                 {
                     await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
@@ -149,7 +153,28 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
+    /// Logs the final results of the shipment of a just-updated notification as soon as they are persisted, independently of the state of sibling notifications.
+    /// Pending and already logged notifications are not written, so only new final results add rows.
+    /// </summary>
+    /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
+    /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
+    /// <param name="notificationAlternateId">The alternate ID of the notification that was just updated.</param>
+    protected async Task LogFinalNotificationResult(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid notificationAlternateId)
+    {
+        var orderStatus = 
+            await GetShipmentTracking(notificationAlternateId, connection, transaction)
+            ?? throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
+
+        var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderStatus.ShipmentId, connection, transaction);
+        if (skippedNotificationIds.Count > 0)
+        {
+            _logger.LogDebug("{Count} notification log entries for shipment {ShipmentId} already existed and were skipped.", skippedNotificationIds.Count, orderStatus.ShipmentId);
+        }
+    }
+
+    /// <summary>
     /// Inserts the status feed for a completed order based on the specified alternate ID.
+    /// The notification log is not written here, as each notification is logged when its final result is persisted.
     /// </summary>
     /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
     /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
@@ -163,12 +188,6 @@ public abstract class NotificationRepositoryBase
             if (!inserted)
             {
                 _logger.LogError("Status feed entry for completed order {AlternateId} already existed; this order was processed more than once.", alternateId);
-            }
-
-            var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderStatus.ShipmentId, connection, transaction);
-            foreach (var skippedNotificationId in skippedNotificationIds)
-            {
-                _logger.LogError("Notification log entry for notification {NotificationId} (shipment {AlternateId}) already existed; this notification was processed more than once.", skippedNotificationId, alternateId);
             }
         }
         else
@@ -317,10 +336,12 @@ public abstract class NotificationRepositoryBase
             // Handle not found or expired cases
             HandleUpdateResult(resultAlternateId, isExpired, identifierForError, identifierTypeForError, channel);
 
-            // Proceed with order completion logic if update was successful
-            // Skip order completion check for intermediate statuses (Succeeded, Accepted)
+            // Log the final result right away, then check whether the whole order is completed.
+            // Skip both for intermediate statuses (Succeeded, Accepted)
             if (wasUpdated && resultAlternateId.HasValue && !statusIsAcceptedOrSucceeded)
             {
+                await LogFinalNotificationResult(connection, transaction, resultAlternateId.Value);
+
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
                     resultAlternateId.Value,
                     connection,

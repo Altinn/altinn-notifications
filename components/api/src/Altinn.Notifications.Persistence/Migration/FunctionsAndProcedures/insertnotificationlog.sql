@@ -210,7 +210,8 @@ BEGIN
             status,
             requestedsendtime,
             lastupdatetime
-        FROM candidates
+        FROM candidates c
+        WHERE NOT EXISTS (SELECT 1 FROM notifications.notificationlog nl WHERE nl.notificationid = c.notificationid)
         ON CONFLICT (notificationid) DO NOTHING
         RETURNING notificationid
     )
@@ -231,8 +232,8 @@ COMMENT ON FUNCTION notifications.insert_notification_log_v2(uuid) IS
 Queries emailnotifications and smsnotifications joined with orders to derive all log fields.
 Only notifications with a final result are logged. Pending notifications (email: New, Sending, Succeeded; sms: New, Sending, Accepted) are ignored,
 so they can be logged by a later call once they reach a final result, independently of the other notifications in the shipment.
-Idempotent: rows are keyed by the source notification''s alternateid (notificationid), so a retried call
-for a shipment that was already logged inserts nothing new for those notifications (ON CONFLICT DO NOTHING).
+Idempotent: rows are keyed by the source notification''s alternateid (notificationid). Notifications that are already logged are filtered out before the insert,
+so a retried call writes no row and consumes no identity value for them, and reports them as skipped.
 Required parameters: _shipmentId - the alternate ID of the order for which to insert log entries.
 Returns: NULL if every final-result candidate notification was logged successfully, otherwise the uuid[] of notificationids that were skipped because a log entry already existed for them.
 Supersedes notifications.insert_notification_log(uuid), which is kept for backward compatibility and logs pending notifications too.';
