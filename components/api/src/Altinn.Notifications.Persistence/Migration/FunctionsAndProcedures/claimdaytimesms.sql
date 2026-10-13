@@ -14,11 +14,10 @@ BEGIN
   WITH claimed_new_rows AS (
     SELECT sms._id, sms._orderid, ord.creatorname
     FROM notifications.smsnotifications sms
-    JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL)
-    ORDER BY sms._id
+      AND sms.sendingtimepolicy = 2
+    ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
   ),

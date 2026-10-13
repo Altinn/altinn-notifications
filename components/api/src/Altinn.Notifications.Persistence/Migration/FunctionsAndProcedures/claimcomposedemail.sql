@@ -40,11 +40,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type = 'Composed'::notificationordertype
-        ORDER BY email._id
+            AND email.iscomposed = true
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),

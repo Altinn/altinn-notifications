@@ -15,8 +15,14 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
+	__iscomposed BOOLEAN;
+    __sendingpolicy SMALLINT;
 BEGIN
-    SELECT _id INTO __orderid
+    SELECT
+        _id,
+        CASE TYPE WHEN 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
+        CASE TYPE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __iscomposed, __sendingpolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -31,7 +37,9 @@ BEGIN
         result,
         resulttime,
         expirytime,
-        total_attachment_size_bytes
+        total_attachment_size_bytes,
+		iscomposed,
+        sendingpolicy
     )
     VALUES (
         __orderid,
@@ -44,7 +52,9 @@ BEGIN
         _result::emailnotificationresulttype,
         _resulttime,
         _expirytime,
-        _total_attachment_size_bytes
+        _total_attachment_size_bytes,
+		__iscomposed,
+        __sendingpolicy
     );
 END;
 $BODY$;

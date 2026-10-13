@@ -13,8 +13,12 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
+    __sendingpolicy SMALLINT;
 BEGIN
-    SELECT _id INTO __orderid
+    SELECT
+        _id,
+        CASE TYPE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __sendingpolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -27,7 +31,8 @@ BEGIN
         customizedbody,
         result,
         resulttime,
-        expirytime
+        expirytime,
+        sendingpolicy
     )
     VALUES (
         __orderid,
@@ -38,7 +43,8 @@ BEGIN
         _customizedbody,
         _result::smsnotificationresulttype,
         _resulttime,
-        _expirytime
+        _expirytime,
+        __sendingpolicy
     );
 END;
 $BODY$;
