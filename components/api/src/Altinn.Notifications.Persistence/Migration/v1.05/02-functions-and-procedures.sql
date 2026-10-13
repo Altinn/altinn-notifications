@@ -524,7 +524,7 @@ ALTER FUNCTION notifications.claim_daytime_email()
 
 COMMENT ON FUNCTION notifications.claim_daytime_email()
     IS 'Claims and returns a single email notification with sending time policy Daytime (emailsendingtimepolicy = 2), excluding Composed orders (OrderType = 3).
-Orders with policy Anytime or NULL are claimed by claim_email.';
+Orders with policy Anytime or NULL are claimed by claim_anytime_email.';
 
 
 -- claimdaytimesms.sql:
