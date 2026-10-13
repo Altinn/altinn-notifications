@@ -112,6 +112,7 @@ public class SmsNotificationService : ISmsNotificationService
         try
         {
             Sms? newSmsNotification = await _repository.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+            activity?.SetTag("Count", newSmsNotification == null ? 0 : 1);
             if (newSmsNotification is null)
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
