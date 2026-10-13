@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
@@ -15,6 +16,8 @@ using Altinn.Notifications.Persistence.Repository;
 using Npgsql;
 
 using Xunit;
+
+using LoggedEntry = (string Channel, string Destination, string Status);
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
@@ -159,7 +162,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     {
         // Arrange — standalone order has no orderschain row, so orderchainid is NULL.
         (NotificationOrder order, EmailNotification _) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true);
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true, resultType: EmailNotificationResultType.Delivered);
 
         _orderIdsToCleanup.Add(order.Id);
 
@@ -189,7 +192,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true);
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateCronJob: true, simulateConsumers: true, resultType: EmailNotificationResultType.Delivered);
 
         _orderIdsToCleanup.Add(order.Id);
 
@@ -353,6 +356,161 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         string thirdNotificationCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE notificationid = '{thirdEmail.Id}'";
         int thirdNotificationCount = await PostgreUtil.RunSqlReturnOutput<int>(thirdNotificationCountSql);
         Assert.Equal(1, thirdNotificationCount);
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_EmailDeliveredAndSmsAccepted_LogsOnlyTheEmail()
+    {
+        // Arrange
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification email = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered);
+        SmsNotification sms = await AddSmsNotificationAsync(orderId, SmsNotificationResultType.Accepted);
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertLoggedAsync(orderId, Expected(email, "Delivered"));
+        Assert.DoesNotContain(sms.Id, (await GetLoggedAsync(orderId)).Keys);
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_SmsDeliveredAndEmailSucceeded_LogsOnlyTheSms()
+    {
+        // Arrange
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification email = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Succeeded);
+        SmsNotification sms = await AddSmsNotificationAsync(orderId, SmsNotificationResultType.Delivered);
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertLoggedAsync(orderId, Expected(sms, "Delivered"));
+        Assert.DoesNotContain(email.Id, (await GetLoggedAsync(orderId)).Keys);
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_AllNotificationsPending_LogsNothingAndSkipsNothing()
+    {
+        // Arrange
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Sending);
+        await AddSmsNotificationAsync(orderId, SmsNotificationResultType.New);
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertLoggedAsync(orderId);
+        Assert.Equal(0, await PostgreUtil.SelectNotificationLogEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_FailedAndExpiredResults_AreLogged()
+    {
+        // Arrange
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification email = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Failed_TTL);
+        SmsNotification sms = await AddSmsNotificationAsync(orderId, SmsNotificationResultType.Failed_RecipientReserved);
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertLoggedAsync(orderId, Expected(email, "Failed_TTL"), Expected(sms, "Failed_RecipientReserved"));
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_PendingNotificationBecomesFinal_LogsItWithoutDuplicatingOrOverwritingEarlierEntry()
+    {
+        // Arrange
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification email = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered);
+        SmsNotification sms = await AddSmsNotificationAsync(orderId, SmsNotificationResultType.Accepted);
+
+        IReadOnlyList<Guid> firstSkippedIds = await InsertNotificationLogAsync(orderId);
+        Assert.Empty(firstSkippedIds);
+
+        await AssertLoggedAsync(orderId, Expected(email, "Delivered"));
+
+        await PostgreUtil.UpdateNotificationResult<SmsNotification>(orderId, "Failed_TTL");
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert — only the already-logged email is reported as skipped, its entry is unchanged, and the sms is now logged
+        Guid skippedId = Assert.Single(skippedIds);
+        Assert.Equal(email.Id, skippedId);
+
+        await AssertLoggedAsync(orderId, Expected(email, "Delivered"), Expected(sms, "Failed_TTL"));
+        Assert.Equal(2, await PostgreUtil.SelectNotificationLogEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_EmailResultTypes_AreLoggedExactlyWhenFinal()
+    {
+        // Arrange
+        HashSet<string> persistedLabels = await PostgreUtil.GetEnumLabels("emailnotificationresulttype");
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        var expectedLogged = new Dictionary<Guid, LoggedEntry>();
+        var expectedSkipped = new List<string>();
+
+        foreach (EmailNotificationResultType result in Enum.GetValues<EmailNotificationResultType>().Where(r => persistedLabels.Contains(r.ToString())))
+        {
+            EmailNotification notification = await AddEmailNotificationAsync(orderId, result);
+            if (result.IsFinal())
+            {
+                KeyValuePair<Guid, LoggedEntry> expected = Expected(notification, result.ToString());
+                expectedLogged.Add(expected.Key, expected.Value);
+            }
+            else
+            {
+                expectedSkipped.Add(result.ToString());
+            }
+        }
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertExactlyFinalResultsLoggedAsync(orderId, expectedLogged, expectedSkipped);
+    }
+
+    [Fact]
+    public async Task InsertNotificationLogEntry_SmsResultTypes_AreLoggedExactlyWhenFinal()
+    {
+        // Arrange
+        HashSet<string> persistedLabels = await PostgreUtil.GetEnumLabels("smsnotificationresulttype");
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        var expectedLogged = new Dictionary<Guid, LoggedEntry>();
+        var expectedSkipped = new List<string>();
+
+        foreach (SmsNotificationResultType result in Enum.GetValues<SmsNotificationResultType>().Where(r => persistedLabels.Contains(r.ToString())))
+        {
+            SmsNotification notification = await AddSmsNotificationAsync(orderId, result);
+            if (result.IsFinal())
+            {
+                KeyValuePair<Guid, LoggedEntry> expected = Expected(notification, result.ToString());
+                expectedLogged.Add(expected.Key, expected.Value);
+            }
+            else
+            {
+                expectedSkipped.Add(result.ToString());
+            }
+        }
+
+        // Act
+        IReadOnlyList<Guid> skippedIds = await InsertNotificationLogAsync(orderId);
+
+        // Assert
+        Assert.Empty(skippedIds);
+        await AssertExactlyFinalResultsLoggedAsync(orderId, expectedLogged, expectedSkipped);
     }
 
     [Fact]
@@ -941,6 +1099,112 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
                 Guid.NewGuid().ToString(),
                 "   ",
                 TestContext.Current.CancellationToken));
+    }
+
+    private static KeyValuePair<Guid, LoggedEntry> Expected(EmailNotification notification, string status) =>
+        new(notification.Id, ("Email", notification.Recipient.ToAddress!, status));
+
+    private static KeyValuePair<Guid, LoggedEntry> Expected(SmsNotification notification, string status) =>
+        new(notification.Id, ("Sms", notification.Recipient.MobileNumber!, status));
+
+    private static async Task<Dictionary<Guid, LoggedEntry>> GetLoggedAsync(Guid shipmentId)
+    {
+        List<NotificationLogEntry> entries = await PostgreUtil.GetNotificationLogEntries(shipmentId);
+        return entries.ToDictionary(e => e.NotificationId, e => (e.Channel, e.Destination, e.Status));
+    }
+
+    private static async Task AssertLoggedAsync(Guid shipmentId, params KeyValuePair<Guid, LoggedEntry>[] expected)
+    {
+        Assert.Equal(expected.ToDictionary(e => e.Key, e => e.Value), await GetLoggedAsync(shipmentId));
+    }
+
+    private static async Task AssertExactlyFinalResultsLoggedAsync(Guid shipmentId, Dictionary<Guid, LoggedEntry> expectedLogged, List<string> expectedSkipped)
+    {
+        // Guard against a vacuous pass: both sides of the final/pending split must be exercised.
+        Assert.NotEmpty(expectedLogged);
+        Assert.NotEmpty(expectedSkipped);
+
+        Dictionary<Guid, LoggedEntry> logged = await GetLoggedAsync(shipmentId);
+        Assert.True(
+            expectedLogged.Count == logged.Count && expectedLogged.All(e => logged.TryGetValue(e.Key, out LoggedEntry actual) && actual == e.Value),
+            $"Database and domain disagree on final results. Expected logged: [{string.Join(", ", expectedLogged.Values.Select(v => v.Status).Order())}]. Actual logged: [{string.Join(", ", logged.Values.Select(v => v.Status).Order())}]. Expected not logged: [{string.Join(", ", expectedSkipped.Order())}].");
+    }
+
+    private static async Task<IReadOnlyList<Guid>> InsertNotificationLogAsync(Guid shipmentId)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+        IReadOnlyList<Guid> skippedIds = await NotificationLogRepository.InsertNotificationLogEntry(shipmentId, connection, transaction);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        return skippedIds;
+    }
+
+    private async Task<Guid> CreateEmailAndSmsOrderAsync()
+    {
+        OrderRepository orderRepo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = $"log-final-result-{Guid.NewGuid():N}",
+            Type = OrderType.Notification,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                new SmsTemplate("Altinn", "sms-body")
+            ]
+        };
+
+        _orderIdsToCleanup.Add(order.Id);
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        return order.Id;
+    }
+
+    private static async Task<EmailNotification> AddEmailNotificationAsync(Guid orderId, EmailNotificationResultType result)
+    {
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        var notification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = $"{Guid.NewGuid():N}@example.com" },
+            SendResult = new(result, DateTime.UtcNow)
+        };
+
+        await emailRepo.AddNotification(notification, DateTime.UtcNow.AddDays(1));
+        return notification;
+    }
+
+    private static async Task<SmsNotification> AddSmsNotificationAsync(Guid orderId, SmsNotificationResultType result)
+    {
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        var notification = new SmsNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { MobileNumber = "+4791111111" },
+            SendResult = new(result, DateTime.UtcNow)
+        };
+
+        await smsRepo.AddNotification(notification, DateTime.UtcNow.AddDays(1));
+        return notification;
     }
 
     private static NotificationLogRepository GetNotificationLogRepository()

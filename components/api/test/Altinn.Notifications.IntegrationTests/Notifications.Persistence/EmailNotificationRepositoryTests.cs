@@ -681,7 +681,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedAndNotificationLogEntries()
     {
         // Arrange
-        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true, resultType: EmailNotificationResultType.Delivered);
         _orderIdsToDelete.Add(order.Id);
 
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
