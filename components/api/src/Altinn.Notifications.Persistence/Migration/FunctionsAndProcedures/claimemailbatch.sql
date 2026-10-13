@@ -84,6 +84,6 @@ ALTER FUNCTION notifications.claim_email_batch_v2(integer)
 COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
     IS 'Claims and returns batches of email notifications with sending time policy Anytime (emailsendingtimepolicy = 1 or NULL), excluding Composed orders (OrderType = 3).
 Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
-Daytime orders (emailsendingtimepolicy = 2) are claimed by claim_daytime_email_batch.
+Daytime orders (emailsendingtimepolicy = 2) are not claimed by this function; they are claimed one at a time by claim_daytime_email.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 

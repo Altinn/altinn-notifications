@@ -2650,4 +2650,144 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientComposedEmail);
         Assert.Null(result.Recipient.RecipientComposedEmail.Settings.Attachments);
     }
+
+    [Theory]
+    [InlineData(SendingTimePolicyExt.Anytime, SendingTimePolicyExt.Daytime, SendingTimePolicy.Anytime, SendingTimePolicy.Daytime)]
+    [InlineData(SendingTimePolicyExt.Daytime, SendingTimePolicyExt.Anytime, SendingTimePolicy.Daytime, SendingTimePolicy.Anytime)]
+    public void MapToNotificationOrderChainRequest_WithEmailRecipientAndReminder_MapsEmailSendingTimePolicyForMainOrderAndReminder(
+        SendingTimePolicyExt mainPolicyExt,
+        SendingTimePolicyExt reminderPolicyExt,
+        SendingTimePolicy expectedMainPolicy,
+        SendingTimePolicy expectedReminderPolicy)
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            IdempotencyId = "2B3D0D0E-8C36-4C6B-9C86-4F1E9E1B7A10",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Main body",
+                        Subject = "Main subject",
+                        SendingTimePolicy = mainPolicyExt
+                    }
+                }
+            },
+
+            Reminders =
+            [
+                new NotificationReminderExt
+                {
+                    DelayDays = 3,
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientEmail = new RecipientEmailExt
+                        {
+                            EmailAddress = "recipient@example.com",
+                            Settings = new EmailSendingOptionsExt
+                            {
+                                Body = "Reminder body",
+                                Subject = "Reminder subject",
+                                SendingTimePolicy = reminderPolicyExt
+                            }
+                        }
+                    }
+                }
+            ]
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientEmail);
+        Assert.Equal(expectedMainPolicy, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+
+        Assert.NotNull(result.Reminders);
+        var reminder = Assert.Single(result.Reminders);
+        Assert.NotNull(reminder.Recipient.RecipientEmail);
+        Assert.Equal(expectedReminderPolicy, reminder.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+    }
+
+    [Theory]
+    [InlineData(NotificationChannelExt.EmailAndSms)]
+    [InlineData(NotificationChannelExt.EmailPreferred)]
+    [InlineData(NotificationChannelExt.SmsPreferred)]
+    public void MapToNotificationOrderChainRequest_WithOrganizationRecipient_MapsEmailAndSmsSendingTimePoliciesIndependently(NotificationChannelExt channel)
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            IdempotencyId = "C4E3A1A2-3B8E-4F0B-A3F5-2D7B6C1E9F55",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "987654321",
+                    ChannelSchema = channel,
+                    ResourceId = "urn:altinn:resource:4321",
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Body = "Organization SMS body",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    },
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Organization email body",
+                        Subject = "Organization email subject",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientOrganization);
+        Assert.NotNull(result.Recipient.RecipientOrganization.SmsSettings);
+        Assert.NotNull(result.Recipient.RecipientOrganization.EmailSettings);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.SmsSettings.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmailSettingsWithoutSendingTimePolicy_DefaultsToAnytime()
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            IdempotencyId = "9A2E6F54-5C73-4B0A-8F3A-0D1E4B7C2A31",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Body",
+                        Subject = "Subject"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest("ttd");
+
+        // Assert
+        Assert.NotNull(result.Recipient.RecipientEmail);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+    }
 }

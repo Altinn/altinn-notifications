@@ -7,6 +7,7 @@ using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Extensions;
 using Altinn.Notifications.Email.Telemetry;
+using Altinn.Notifications.Shared.Telemetry;
 
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
@@ -143,6 +144,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
             tracing.AddHttpClientInstrumentation();
             tracing.AddSource("Wolverine");
         });

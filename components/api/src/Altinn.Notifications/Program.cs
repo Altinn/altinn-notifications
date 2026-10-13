@@ -16,6 +16,7 @@ using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using AltinnCore.Authentication.JwtCookie;
@@ -143,7 +144,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
-    services.AddSingleton(new ActivitySource("Altinn.Notifications.OrderProcessingService"));
+    services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
 
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
@@ -169,11 +170,13 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddProcessor<RequestFilterProcessor>();
 
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
+
             tracing.AddNpgsql();
 
             tracing.AddSource("Wolverine");
 
-            tracing.AddSource("Altinn.Notifications.OrderProcessingService");
+            tracing.AddSource(BackgroundActivitySource.Name);
         });
 
     AddAzureMonitorTelemetryExporters(services, config);

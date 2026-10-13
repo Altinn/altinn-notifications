@@ -2327,6 +2327,132 @@ public class OrderRequestServiceTests
         Assert.Equal(SendingTimePolicy.Anytime, reminder.EmailSendingTimePolicy);
     }
 
+    [Theory]
+    [InlineData("Person", NotificationChannel.Email)]
+    [InlineData("Person", NotificationChannel.EmailPreferred)]
+    [InlineData("Person", NotificationChannel.SmsPreferred)]
+    [InlineData("Person", NotificationChannel.EmailAndSms)]
+    [InlineData("Organization", NotificationChannel.Email)]
+    [InlineData("Organization", NotificationChannel.EmailPreferred)]
+    [InlineData("Organization", NotificationChannel.SmsPreferred)]
+    [InlineData("Organization", NotificationChannel.EmailAndSms)]
+    [InlineData("ExternalIdentity", NotificationChannel.Email)]
+    [InlineData("ExternalIdentity", NotificationChannel.EmailPreferred)]
+    [InlineData("ExternalIdentity", NotificationChannel.SmsPreferred)]
+    [InlineData("ExternalIdentity", NotificationChannel.EmailAndSms)]
+    public async Task RegisterNotificationOrderChain_EmailSettings_SetEmailSendingTimePolicyOnOrderForAllRecipientTypesAndChannels(string recipientType, NotificationChannel channel)
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        bool channelIncludesSms = channel != NotificationChannel.Email;
+
+        var emailSettings = new EmailSendingOptions
+        {
+            Subject = "Email subject",
+            Body = "Email body",
+            SendingTimePolicy = SendingTimePolicy.Daytime
+        };
+
+        SmsSendingOptions? smsSettings = channelIncludesSms
+            ? new SmsSendingOptions { Sender = "Sender", Body = "SMS body", SendingTimePolicy = SendingTimePolicy.Anytime }
+            : null;
+
+        NotificationRecipient recipient = recipientType switch
+        {
+            "Person" => new NotificationRecipient
+            {
+                RecipientPerson = new RecipientPerson
+                {
+                    ChannelSchema = channel,
+                    EmailSettings = emailSettings,
+                    SmsSettings = smsSettings,
+                    NationalIdentityNumber = "29105573746",
+                    ResourceId = "urn:altinn:resource:test-resource"
+                }
+            },
+            "Organization" => new NotificationRecipient
+            {
+                RecipientOrganization = new RecipientOrganization
+                {
+                    ChannelSchema = channel,
+                    EmailSettings = emailSettings,
+                    SmsSettings = smsSettings,
+                    OrgNumber = "312508729",
+                    ResourceId = "urn:altinn:resource:test-resource"
+                }
+            },
+            _ => new NotificationRecipient
+            {
+                RecipientExternalIdentity = new RecipientExternalIdentity
+                {
+                    ChannelSchema = channel,
+                    EmailSettings = emailSettings,
+                    SmsSettings = smsSettings,
+                    ResourceId = "urn:altinn:resource:test-resource",
+                    ExternalIdentity = "urn:altinn:person:idporten-email:user@example.com"
+                }
+            }
+        };
+
+        NotificationOrder? createdOrder = null;
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>?, CancellationToken>((_, order, _, _) => createdOrder = order)
+            .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = orderChainId, ShipmentId = orderId });
+
+        static void AddContactPoints(List<Recipient> recipients)
+        {
+            foreach (var recipientToUpdate in recipients)
+            {
+                recipientToUpdate.AddressInfo.Add(new EmailAddressPoint("recipient@altinn.xyz"));
+                recipientToUpdate.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+            }
+        }
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(c => c.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) => AddContactPoints(recipients))
+            .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) => AddContactPoints(recipients))
+            .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) => AddContactPoints(recipients))
+            .Returns(Task.CompletedTask);
+        contactPointServiceMock
+            .Setup(c => c.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?, OrderLifecycleStage, bool, string?>((_, recipients, _, _, _, _) => AddContactPoints(recipients))
+            .Returns(Task.CompletedTask);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetRecipient(recipient)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("brg"))
+            .SetType(OrderType.Notification)
+            .SetRequestedSendTime(currentTime.AddHours(2))
+            .SetIdempotencyId("3F1B6D1E-6A55-4C4B-8E3C-2B8B7B1D7C42")
+            .Build();
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(createdOrder);
+        Assert.Equal(channel, createdOrder.NotificationChannel);
+        Assert.Equal(SendingTimePolicy.Daytime, createdOrder.EmailSendingTimePolicy);
+        Assert.Equal(channelIncludesSms ? SendingTimePolicy.Anytime : null, createdOrder.SendingTimePolicy);
+    }
+
     [Fact]
     public async Task RegisterNotificationOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
     {

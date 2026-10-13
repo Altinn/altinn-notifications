@@ -378,7 +378,7 @@ public class SendingServiceTests
             l => l.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(id.ToString())),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains(id.ToString())),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

@@ -137,6 +137,10 @@ The clients are used to retrieve recipient data and to authorize user access.
 - [AuthorizationService](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Authorization/AuthorizationService.cs)
   consumes Altinn Authorization's Decision API to verify that all users with registered contact points for an organization are authorized. The decision request will ask
   if a given user still has read access to the resource that the notification is about.
+- [DialogportenClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Dialogporten/DialogportenClient.cs)
+  consumes Dialogporten enduser API to verify that the user has access to a given dialog. The client obtains the token used in the call against Notifications from
+  Arbeidsflate, and use it in the call to Dialogporten. The response code is used to determine wheter the user has read access to the dialog. Notifications is using 
+  this as access control in front of the notification log. (This is a temporary solution while we wait for Authorization to have this capability.)
 
 **External APIs:**
 
@@ -151,8 +155,7 @@ The following cron jobs are defined:
 
 | Job name                       | Schedule        | Description                                                                                |
 | ------------------------------ | --------------- | ------------------------------------------------------------------------------------------ |
-| send-email-trigger             | `*/1 * * * *`   | Triggers sending of email notifications with anytime send time policy (no time restriction) |
-| send-email-trigger-daytime     | `* 7-16 * * *`  | Triggers sending of email notifications with daytime send time policy (business hours only) |
+| send-email-trigger             | `*/1 * * * *`   | Triggers sending of all pending email notifications                                        |
 | send-sms-trigger               | `* 7-16 * * *`  | Triggers sending of SMS notifications with daytime send time policy (business hours only)  |
 | send-sms-trigger-anytime       | `*/1 * * * *`   | Triggers sending of SMS notifications with anytime send time policy (no time restriction)  |
 | terminate-expired-trigger      | `*/15 * * * *`  | Terminates SMS and email notifications that have passed their expiry time                  |

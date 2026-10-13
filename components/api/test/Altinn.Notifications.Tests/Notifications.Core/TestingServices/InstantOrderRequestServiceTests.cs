@@ -527,7 +527,9 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantEmailNotificationOrder>(order =>
                     order.OrderId == emailOrderId &&
                     order.IdempotencyId == "email-idempotency-id"),
-                It.IsAny<NotificationOrder>(),
+                It.Is<NotificationOrder>(order =>
+                    order.NotificationChannel == NotificationChannel.Email &&
+                    order.EmailSendingTimePolicy == SendingTimePolicy.Anytime),
                 It.IsAny<EmailNotification>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()),

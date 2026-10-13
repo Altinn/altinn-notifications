@@ -1,20 +1,15 @@
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_batch(
-    _batchsize integer DEFAULT NULL::integer)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email()
     RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
-    v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
     latest_email_timeout timestamp;
     v_limitlog_id integer;
 BEGIN
     SELECT id, emaillimittimeout
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE;
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
@@ -27,11 +22,13 @@ BEGIN
                NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
-    ELSE
-        UPDATE notifications.resourcelimitlog
-        SET emaillimittimeout = NULL
-        WHERE id = v_limitlog_id;
     END IF;
+
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL
+        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
@@ -50,7 +47,7 @@ BEGIN
             AND o.emailsendingtimepolicy = 2
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
-        LIMIT v_batchsize
+        LIMIT 1
     ),
     updated_rows AS (
         UPDATE notifications.emailnotifications email
@@ -78,11 +75,9 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_daytime_email_batch(integer)
+ALTER FUNCTION notifications.claim_daytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_daytime_email_batch(integer)
-    IS 'Claims and returns batches of email notifications with sending time policy Daytime (emailsendingtimepolicy = 2), excluding Composed orders (OrderType = 3).
-Orders with policy Anytime or NULL are claimed by claim_email_batch_v2.
-_batchsize: requested batch size (defaults to 500 if NULL or <1).';
-
+COMMENT ON FUNCTION notifications.claim_daytime_email()
+    IS 'Claims and returns a single email notification with sending time policy Daytime (emailsendingtimepolicy = 2), excluding Composed orders (OrderType = 3).
+Orders with policy Anytime or NULL are claimed by claim_email.';

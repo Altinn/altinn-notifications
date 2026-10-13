@@ -44,4 +44,8 @@
 		</None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Notifications.Core\BackgroundQueues\" />
+	</ItemGroup>
+
 </Project>

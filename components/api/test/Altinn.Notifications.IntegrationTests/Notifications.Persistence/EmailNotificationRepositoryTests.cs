@@ -19,9 +19,9 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
+[Collection(GlobalStateSerialCollection.Name)]
 public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly int _publishBatchSize = 500;
     private readonly List<Guid> _orderIdsToDelete;
     private readonly List<Guid> _orderChainIdsToDelete;
 
@@ -85,7 +85,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_ReturnsNotificationInBatch()
+    public async Task GetNewNotificationAsync_ReturnsNotification()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -96,16 +96,20 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);
+        Assert.NotNull(emailToBeSent);
+        Assert.Equal(emailNotification.Id, emailToBeSent.NotificationId);
     }
 
     [Theory]
     [InlineData(SendingTimePolicy.Anytime)]
     [InlineData(SendingTimePolicy.Daytime)]
-    public async Task GetNewNotificationsAsync_WithSendingPolicy_ReturnsNotificationForMatchingPolicy(SendingTimePolicy sendingTimePolicy)
+    public async Task GetNewNotificationAsync_WithSendingPolicy_ReturnsNotificationForMatchingPolicy(SendingTimePolicy sendingTimePolicy)
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: sendingTimePolicy);
@@ -114,16 +118,21 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         EmailNotificationRepository repo = GetRepository();
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken, sendingTimePolicy);
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, sendingTimePolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
         // Assert
-        Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);
+        Assert.NotNull(emailToBeSent);
+        Assert.Equal(emailNotification.Id, emailToBeSent.NotificationId);
     }
 
     [Theory]
     [InlineData(SendingTimePolicy.Anytime, SendingTimePolicy.Daytime)]
     [InlineData(SendingTimePolicy.Daytime, SendingTimePolicy.Anytime)]
-    public async Task GetNewNotificationsAsync_WithSendingPolicy_DoesNotReturnNotificationForOtherPolicy(SendingTimePolicy orderPolicy, SendingTimePolicy claimedPolicy)
+    public async Task GetNewNotificationAsync_WithSendingPolicy_DoesNotReturnNotificationForOtherPolicy(SendingTimePolicy orderPolicy, SendingTimePolicy claimedPolicy)
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: orderPolicy);
@@ -132,14 +141,18 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         EmailNotificationRepository repo = GetRepository();
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken, claimedPolicy);
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, claimedPolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
         // Assert
-        Assert.DoesNotContain(emailToBeSent, s => s.NotificationId == emailNotification.Id);
+        Assert.Null(emailToBeSent);
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_OrderWithoutEmailSendingTimePolicy_IsOnlyReturnedForAnytime()
+    public async Task GetNewNotificationAsync_OrderWithoutEmailSendingTimePolicy_IsOnlyReturnedForAnytime()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -148,12 +161,22 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         EmailNotificationRepository repo = GetRepository();
 
         // Act
-        List<Email> daytimeBatch = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
-        List<Email> anytimeBatch = await repo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        Email? daytimeEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, SendingTimePolicy.Daytime),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Email? anytimeEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, SendingTimePolicy.Anytime),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
         // Assert
-        Assert.DoesNotContain(daytimeBatch, s => s.NotificationId == emailNotification.Id);
-        Assert.Contains(anytimeBatch, s => s.NotificationId == emailNotification.Id);
+        Assert.Null(daytimeEmail);
+        Assert.NotNull(anytimeEmail);
+        Assert.Equal(emailNotification.Id, anytimeEmail.NotificationId);
     }
 
     [Theory]
@@ -218,7 +241,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
+    public async Task GetNewNotificationAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
     {
         // Arrange
         EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
@@ -233,8 +256,10 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, TestContext.Current.CancellationToken);
-        Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        Email? interpolatedContent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(interpolatedContent);
@@ -245,7 +270,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData("", "Custom Body")] // Empty subject
     [InlineData("Custom Subject", "")] // Empty body
-    public async Task GetNewNotificationsAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
+    public async Task GetNewNotificationAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
     {
         // Arrange
         string defaultSubject = "email-subject";
@@ -260,13 +285,64 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
 
         // Act
-        List<Email> batch = await sut.GetNewNotificationsAsync(50, TestContext.Current.CancellationToken);
-        Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+        Email? result = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => sut.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(string.IsNullOrEmpty(customSubject) ? defaultSubject : customSubject, result.Subject);
         Assert.Equal(string.IsNullOrEmpty(customBody) ? defaultBody : customBody, result.Body);
+    }
+
+    [Fact]
+    public async Task GetNewNotificationAsync_ExpiredNotificationWithNewStatus_IsNotPickedUp()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        var nonExpiredNotification = new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                ToAddress = "test@email.com"
+            }
+        };
+
+        await repo.AddNotification(nonExpiredNotification, DateTime.UtcNow.AddDays(1));
+
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = '{EmailNotificationResultType.New}',
+                expirytime = NOW() - INTERVAL '10 minutes'
+            WHERE alternateid = '{emailNotification.Id}'");
+
+        // Act
+        Email? claimedNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Email? claimedNonExpiredNotification = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == nonExpiredNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.Null(claimedNotification);
+        Assert.NotNull(claimedNonExpiredNotification);
+        Assert.Equal(nonExpiredNotification.Id, claimedNonExpiredNotification.NotificationId);
     }
 
     [Fact]
@@ -792,7 +868,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotificationsAsync_ComposedOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewNotificationAsync_ComposedOrderNotification_IsNotClaimed()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -865,15 +941,27 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        List<Email> batch = await emailRepo.GetNewNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        // Try to claim this specific composed notification through the standard email claim path.
+        // The helper advances claims within the same transaction, so non-matching earlier rows do not
+        // cause a false positive.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — the Composed order's notification must not appear in the standard email batch
-        Assert.DoesNotContain(batch, e => e.NotificationId == notificationId);
+        // Assert — composed notification must never be claimable via standard email claim path.
+        Assert.Null(claimedAsStandardEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: the composed claim path should be able to claim the same notification.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsComposedEmail);
+        Assert.Equal(notificationId, claimedAsComposedEmail.NotificationId);
     }
 
     [Fact]
@@ -887,7 +975,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'
@@ -923,7 +1011,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         long expectedSize = 158304L;
         string deliveryReport = """{"messageId":"test-op","status":"Delivered","deliveryStatusDetails":{"statusMessage":"OK"}}""";
 
-        // Simulate pipeline: New → Sending (claimed by batch worker)
+        // Simulate pipeline: New → Sending (claimed by background service)
         await PostgreUtil.RunSql($@"
             UPDATE notifications.emailnotifications
             SET result = '{EmailNotificationResultType.Sending}'
@@ -990,7 +1078,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedNotificationsAsync_ReturnsComposedNotificationWithAttachments()
+    public async Task GetNewComposedNotificationAsync_ReturnsComposedNotificationWithAttachments()
     {
         // Arrange
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -1083,10 +1171,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        ComposedEmail? result = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            composedEmail => composedEmail.NotificationId == notificationId,
+            TestContext.Current.CancellationToken,
+            commitOnMatch: true);
 
-        // Assert — notification is in the batch
-        ComposedEmail? result = batch.FirstOrDefault(e => e.NotificationId == notificationId);
+        // Assert — notification is returned
         Assert.NotNull(result);
         Assert.Single(result.Attachments);
         Assert.Equal(expectedBody, result.Body);
@@ -1103,9 +1194,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewComposedNotificationsAsync_StandardOrderNotification_IsExcludedFromBatch()
+    public async Task GetNewComposedNotificationAsync_StandardOrderNotification_IsExcluded()
     {
-        // Arrange — a standard (non-Composed) order's email notification must not appear in the composed batch
+        // Arrange — a standard (non-Composed) order's email notification must not be returned by claim_composed_email
         EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
             .GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
@@ -1114,21 +1205,73 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        List<ComposedEmail> batch = await emailRepo.GetNewComposedNotificationsAsync(_publishBatchSize, TestContext.Current.CancellationToken);
+        // Try to claim this specific standard notification through the composed claim path.
+        // The helper advances claims within one transaction, avoiding false positives caused by
+        // unrelated earlier rows.
+        ComposedEmail? claimedAsComposedEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewComposedNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
 
-        // Assert — standard notification must not appear in the composed batch
-        Assert.DoesNotContain(batch, e => e.NotificationId == emailNotification.Id);
+        // Assert — standard notification must never be claimable through composed path.
+        Assert.Null(claimedAsComposedEmail);
 
-        // Confirm the notification is still in 'New' state (not claimed by the composed batch)
-        string sql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'";
-        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
-        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        // Control assertion: standard claim path should be able to claim this same notification.
+        Email? claimedAsStandardEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => emailRepo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Assert.NotNull(claimedAsStandardEmail);
+        Assert.Equal(emailNotification.Id, claimedAsStandardEmail.NotificationId);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
+    }
+
+    private static async Task<TResult?> ExecuteClaimUntilMatchInUnitOfWork<TResult>(
+        Func<UnitOfWork, CancellationToken, Task<TResult?>> claim,
+        Func<TResult, bool> isMatch,
+        CancellationToken cancellationToken,
+        bool commitOnMatch = false,
+        int maxAttempts = 50)
+        where TResult : class
+    {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            TResult? result = await claim(unitOfWork, cancellationToken);
+
+            if (result is not null && isMatch(result))
+            {
+                if (commitOnMatch)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                else
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                return result;
+            }
+        }
+
+        await transaction.RollbackAsync(cancellationToken);
+
+        return null;
     }
 
     [Fact]

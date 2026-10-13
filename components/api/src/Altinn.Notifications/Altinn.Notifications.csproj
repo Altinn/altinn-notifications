@@ -29,6 +29,7 @@
 		<ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
 		<ProjectReference Include="..\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
 		<ProjectReference Include="..\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+		<ProjectReference Include="..\..\..\shared\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -23,19 +23,19 @@ public interface IEmailNotificationService : INotificationService
     Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends pending email notifications that are eligible under the specified sending time policy.
+    /// Sends the next pending email notification that is eligible under the specified sending time policy, if any.
     /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when email notifications should be sent.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <param name="sendingTimePolicy">The policy that determines which email notifications are eligible for sending.</param>
-    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime);
+    /// <returns><see langword="true"/> if a pending notification was found; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Claims and publishes a batch of pending composed email notifications to the email service queue.
+    /// Sends the next pending composed email notification, if any.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendComposedNotifications(CancellationToken cancellationToken);
+    /// <returns><see langword="true"/> if a pending composed notification was found; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.

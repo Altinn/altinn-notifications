@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.IntegrationTestsASB.Infrastructure;
 using Altinn.Notifications.Shared.Commands;
-using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Shared.TestInfrastructure.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -30,39 +29,55 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
     private static readonly Uri _sasUrl = new("https://storage.example.com/container/file.pdf?sv=2021&sig=abc");
 
     /// <summary>
-    /// Verifies that publishing a valid batch returns an empty list (all succeeded).
+    /// Verifies that two sequential valid publishes both succeed.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_AllSucceed_ReturnsEmptyList()
+    public async Task PublishAsync_Multiple_SequentialSends_Succeed()
     {
         var factory = CreateFactory();
-        var emails = new List<ComposedEmail>
-        {
-            new(Guid.NewGuid(), "Plain Subject", "Plain Body", "sender@altinnxyz.no", "plain@altinnxyz.no", EmailContentType.Plain, []),
-            new(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, [])
-        };
+        var firstEmail = new ComposedEmail(Guid.NewGuid(), "Plain Subject", "Plain Body", "sender@altinnxyz.no", "plain@altinnxyz.no", EmailContentType.Plain, []);
+        var secondEmail = new ComposedEmail(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, []);
 
         await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
         var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
-        var result = await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(firstEmail, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(secondEmail, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _composedEmailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            _composedEmailSendQueueName,
+            TimeSpan.FromSeconds(10));
+
+        Assert.NotNull(firstMessage);
+        Assert.NotNull(secondMessage);
+
+        var firstCommand = JsonSerializer.Deserialize<SendComposedEmailCommand>(firstMessage.Body.ToString());
+        var secondCommand = JsonSerializer.Deserialize<SendComposedEmailCommand>(secondMessage.Body.ToString());
+
+        Assert.NotNull(firstCommand);
+        Assert.NotNull(secondCommand);
+
+        var receivedIds = new[] { firstCommand.NotificationId, secondCommand.NotificationId };
+        Assert.Contains(firstEmail.NotificationId, receivedIds);
+        Assert.Contains(secondEmail.NotificationId, receivedIds);
     }
 
     /// <summary>
     /// Verifies that a pre-cancelled token causes <see cref="OperationCanceledException"/>
-    /// to be thrown before any messages in the batch are sent to the queue.
+    /// to be thrown before the message is sent to the queue.
     /// </summary>
     [Fact]
-    public async Task PublishAsync_Batch_PreCancelledToken_ThrowsOperationCanceledException()
+    public async Task PublishAsync_PreCancelledToken_ThrowsOperationCanceledException()
     {
         var factory = CreateFactory();
-        var emails = new List<ComposedEmail>
-        {
-            new(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, [])
-        };
+        var email = new ComposedEmail(Guid.NewGuid(), "Subject", "Body", "sender@altinnxyz.no", "recipient@altinnxyz.no", EmailContentType.Plain, []);
 
         await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
 
@@ -71,30 +86,14 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(emails, cts.Token));
-    }
+        await Assert.ThrowsAsync<OperationCanceledException>(() => publisher.PublishAsync(email, cts.Token));
 
-    /// <summary>
-    /// Verifies that publishing an empty batch returns an empty list without delivering any messages to the queue.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_EmptyList_ReturnsEmptyListWithoutEnqueuingMessages()
-    {
-        var factory = CreateFactory();
-        await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
-
-        var result = await publisher.PublishAsync([], TestContext.Current.CancellationToken);
-
-        Assert.Empty(result);
-
-        var message = await ServiceBusTestUtils.WaitForMessageAsync(
+        var queuedMessage = await ServiceBusTestUtils.WaitForMessageAsync(
             _fixture.ServiceBusConnectionString,
             _composedEmailSendQueueName,
             TimeSpan.FromSeconds(5));
 
-        Assert.Null(message);
+        Assert.Null(queuedMessage);
     }
 
     /// <summary>
@@ -112,7 +111,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
 
         var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
-        await publisher.PublishAsync([email], TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
         var message = await ServiceBusTestUtils.WaitForMessageAsync(
             _fixture.ServiceBusConnectionString,
@@ -130,6 +129,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         Assert.Equal("sender@altinnxyz.no", command.FromAddress);
         Assert.Equal("recipient@altinnxyz.no", command.ToAddress);
         Assert.Equal(EmailContentType.Html.ToString(), command.ContentType);
+        Assert.Empty(command.Attachments);
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
 
         var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
 
-        await publisher.PublishAsync([email], TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(email, TestContext.Current.CancellationToken);
 
         var message = await ServiceBusTestUtils.WaitForMessageAsync(
             _fixture.ServiceBusConnectionString,
@@ -165,57 +165,6 @@ public class ComposedEmailCommandPublisherTests(IntegrationTestApiAsbContainersF
         Assert.Equal("report.pdf", dto.Filename);
         Assert.Equal("application/pdf", dto.MimeType);
         Assert.Equal(_sasUrl.ToString(), dto.SasUrl);
-    }
-
-    /// <summary>
-    /// Verifies that publishing a batch delivers one <see cref="SendComposedEmailCommand"/> per email to the queue,
-    /// with all fields correctly mapped for each.
-    /// </summary>
-    [Fact]
-    public async Task PublishAsync_Batch_ValidEmails_DeliversAllCommandsToQueue()
-    {
-        var factory = CreateFactory();
-        var plainEmail = new ComposedEmail(Guid.NewGuid(), "Plain Subject", "Plain Body", "sender@altinnxyz.no", "plain@altinnxyz.no", EmailContentType.Plain, []);
-        var htmlEmail = new ComposedEmail(Guid.NewGuid(), "Html Subject", "<p>Html Body</p>", "sender@altinnxyz.no", "html@altinnxyz.no", EmailContentType.Html, []);
-        var emails = new List<ComposedEmail> { plainEmail, htmlEmail };
-        await _fixture.DrainQueueAsync(_composedEmailSendQueueName);
-
-        var publisher = factory.Host.Services.GetRequiredService<IComposedEmailCommandPublisher>();
-
-        await publisher.PublishAsync(emails, TestContext.Current.CancellationToken);
-
-        var firstMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(10));
-
-        var secondMessage = await ServiceBusTestUtils.WaitForMessageAsync(
-            _fixture.ServiceBusConnectionString, _composedEmailSendQueueName, TimeSpan.FromSeconds(10));
-
-        Assert.NotNull(firstMessage);
-        Assert.NotNull(secondMessage);
-
-        var commands = new[]
-        {
-            JsonSerializer.Deserialize<SendComposedEmailCommand>(firstMessage.Body.ToString()),
-            JsonSerializer.Deserialize<SendComposedEmailCommand>(secondMessage.Body.ToString())
-        };
-
-        var plainCommand = commands.Single(c => c!.NotificationId == plainEmail.NotificationId);
-        var htmlCommand = commands.Single(c => c!.NotificationId == htmlEmail.NotificationId);
-
-        Assert.NotNull(plainCommand);
-        Assert.NotNull(htmlCommand);
-
-        Assert.Equal(plainEmail.Body, plainCommand!.Body);
-        Assert.Equal(plainEmail.Subject, plainCommand.Subject);
-        Assert.Equal(plainEmail.ToAddress, plainCommand.ToAddress);
-        Assert.Equal(plainEmail.FromAddress, plainCommand.FromAddress);
-        Assert.Equal(plainEmail.ContentType.ToString(), plainCommand.ContentType);
-
-        Assert.Equal(htmlEmail.Body, htmlCommand!.Body);
-        Assert.Equal(htmlEmail.Subject, htmlCommand.Subject);
-        Assert.Equal(htmlEmail.ToAddress, htmlCommand.ToAddress);
-        Assert.Equal(htmlEmail.FromAddress, htmlCommand.FromAddress);
-        Assert.Equal(htmlEmail.ContentType.ToString(), htmlCommand.ContentType);
     }
 
     private IntegrationTestWebApplicationFactory CreateFactory()

@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -106,12 +105,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IComposedEmailCommandPublisher>()));
 
             RegisterDelegatedService<IStatusFeedService>(services);
-            RegisterDelegatedService<ISmsPublishTaskQueue>(services);
-            RegisterDelegatedService<IEmailPublishTaskQueue>(services);
             RegisterDelegatedService<ISmsNotificationService>(services);
             RegisterDelegatedService<IOrderProcessingService>(services);
             RegisterDelegatedService<IEmailNotificationService>(services);
-            RegisterDelegatedService<IComposedEmailPublishSignal>(services);
             RegisterDelegatedService<INotificationScheduleService>(services);
             RegisterDelegatedService<IOrderRequestService>(services);
             RegisterDelegatedService<ISmsNotificationSummaryService>(services);
