@@ -61,41 +61,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
-
         // Act
-        IReadOnlyList<Guid> skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<Guid> skippedNotificationIds = await InsertNotificationLogAsync(orderId);
 
         // Assert — nothing was skipped
         Assert.Empty(skippedNotificationIds);
 
-        // Assert — persisted properties
-        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(orderId);
-        Assert.NotNull(entry);
-
-        Assert.Equal(orderId, entry.ShipmentId);
-        Assert.NotEqual(Guid.Empty, entry.NotificationId);
-        Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(creatorName, entry.CreatorName);
-        Assert.Equal(dialogId.ToString(), entry.DialogId);
-        Assert.Equal(transmissionId, entry.TransmissionId);
-        Assert.Equal(toAddress, entry.Destination);
-        Assert.Equal(resourceId, entry.Resource);
-        Assert.Equal("Notification", entry.Type);
-        Assert.Equal("Email", entry.Channel);
-        Assert.Equal("Delivered", entry.Status);
-        Assert.Equal(operationId, entry.DeliveryReference);  // set via updateemailnotification_v4
-        Assert.Null(entry.Recipient);
-
-        // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
-        Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
-
-        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
-        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
+        // operationId is set via updateemailnotification_v4
+        await AssertPersistedEntryAsync(orderId, orderChainId, creatorName, dialogId, transmissionId, resourceId, "Email", toAddress, operationId);
     }
 
     [Fact]
@@ -120,41 +93,13 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         _orderIdsToCleanup.Add(orderId);
         _orderChainIdsToCleanup.Add(orderChainId);
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
-
         // Act
-        IReadOnlyList<Guid> skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<Guid> skippedNotificationIds = await InsertNotificationLogAsync(orderId);
 
         // Assert — nothing was skipped
         Assert.Empty(skippedNotificationIds);
 
-        // Assert — persisted properties
-        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(orderId);
-        Assert.NotNull(entry);
-
-        Assert.Equal(orderId, entry.ShipmentId);
-        Assert.NotEqual(Guid.Empty, entry.NotificationId);
-        Assert.Equal(orderChainId, entry.OrderChainId);
-        Assert.Equal(creatorName, entry.CreatorName);
-        Assert.Equal(dialogId.ToString(), entry.DialogId);
-        Assert.Equal(transmissionId, entry.TransmissionId);
-        Assert.Equal(mobileNumber, entry.Destination);
-        Assert.Equal(resourceId, entry.Resource);
-        Assert.Equal("Notification", entry.Type);
-        Assert.Equal("Sms", entry.Channel);
-        Assert.Equal("Delivered", entry.Status);
-        Assert.Null(entry.Recipient);
-        Assert.Equal(gatewayReference, entry.DeliveryReference);  // SMS path — gateway reference is set
-
-        // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
-        Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
-
-        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
-        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
+        await AssertPersistedEntryAsync(orderId, orderChainId, creatorName, dialogId, transmissionId, resourceId, "Sms", mobileNumber, gatewayReference);
     }
 
     [Fact]
@@ -166,13 +111,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 
         _orderIdsToCleanup.Add(order.Id);
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
-
         // Act
-        IReadOnlyList<Guid> skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<Guid> skippedNotificationIds = await InsertNotificationLogAsync(order.Id);
 
         // Assert — one log row was created, nothing skipped
         Assert.Empty(skippedNotificationIds);
@@ -219,73 +159,17 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
     public async Task InsertNotificationLogEntry_ShipmentWithMultipleNotifications_InsertsOneRowPerNotification()
     {
         // Arrange — simulates an organization resolving to multiple recipients/channels on the same shipment.
-        OrderRepository orderRepo = (OrderRepository)ServiceUtil
-            .GetServices([typeof(IOrderRepository)])
-            .First(i => i.GetType() == typeof(OrderRepository));
-
-        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        NotificationOrder order = new()
-        {
-            Id = Guid.NewGuid(),
-            Created = DateTime.UtcNow,
-            Creator = new("ttd"),
-            SendersReference = "tx-test-multi-notification-log",
-            Type = OrderType.Notification,
-            Templates =
-            [
-                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
-                new SmsTemplate("Altinn", "sms-body")
-            ]
-        };
-
-        _orderIdsToCleanup.Add(order.Id);
-        await orderRepo.Create(order);
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-
-        var firstEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "first@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
-        var secondEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "second@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
-        var sms = new SmsNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4791111111" }, SendResult = new(SmsNotificationResultType.Delivered, DateTime.UtcNow) };
-
-        await emailRepo.AddNotification(firstEmail, DateTime.UtcNow.AddDays(1));
-        await emailRepo.AddNotification(secondEmail, DateTime.UtcNow.AddDays(1));
-        await smsRepo.AddNotification(sms, DateTime.UtcNow.AddDays(1));
-
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification firstEmail = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered, "first@example.com");
+        EmailNotification secondEmail = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered, "second@example.com");
+        SmsNotification sms = await AddSmsNotificationAsync(orderId, SmsNotificationResultType.Delivered);
 
         // Act
-        IReadOnlyList<Guid> skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<Guid> skippedNotificationIds = await InsertNotificationLogAsync(orderId);
 
-        // Assert — one row per notification, none skipped
+        // Assert — exactly one row per notification (own id, channel and destination), none skipped
         Assert.Empty(skippedNotificationIds);
-
-        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
-        Assert.Equal(3, notificationLogCount);
-
-        string emailChannelCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE shipmentid = '{order.Id}' AND channel = 'Email'";
-        int emailChannelCount = await PostgreUtil.RunSqlReturnOutput<int>(emailChannelCountSql);
-        Assert.Equal(2, emailChannelCount);
-
-        string smsChannelCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE shipmentid = '{order.Id}' AND channel = 'Sms'";
-        int smsChannelCount = await PostgreUtil.RunSqlReturnOutput<int>(smsChannelCountSql);
-        Assert.Equal(1, smsChannelCount);
-
-        // Each source notification's own alternateid must appear exactly once as notificationid
-        foreach (var notificationId in new[] { firstEmail.Id, secondEmail.Id, sms.Id })
-        {
-            string notificationIdCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE notificationid = '{notificationId}'";
-            int notificationIdCount = await PostgreUtil.RunSqlReturnOutput<int>(notificationIdCountSql);
-            Assert.Equal(1, notificationIdCount);
-        }
+        await AssertLoggedAsync(orderId, Expected(firstEmail, "Delivered"), Expected(secondEmail, "Delivered"), Expected(sms, "Delivered"));
     }
 
     [Fact]
@@ -294,68 +178,24 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Arrange — two notifications get logged first, then a third notification is added to the
         // same shipment afterwards (e.g. a late-arriving recipient), simulating a retried call that
         // should only skip the notifications it has already seen.
-        OrderRepository orderRepo = (OrderRepository)ServiceUtil
-            .GetServices([typeof(IOrderRepository)])
-            .First(i => i.GetType() == typeof(OrderRepository));
-
-        EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        NotificationOrder order = new()
-        {
-            Id = Guid.NewGuid(),
-            Created = DateTime.UtcNow,
-            Creator = new("ttd"),
-            SendersReference = "tx-test-partial-idempotency",
-            Type = OrderType.Notification,
-            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
-        };
-
-        _orderIdsToCleanup.Add(order.Id);
-        await orderRepo.Create(order);
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-
-        var firstEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "first@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
-        var secondEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "second@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
-
-        await emailRepo.AddNotification(firstEmail, DateTime.UtcNow.AddDays(1));
-        await emailRepo.AddNotification(secondEmail, DateTime.UtcNow.AddDays(1));
-
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        Guid orderId = await CreateEmailAndSmsOrderAsync();
+        EmailNotification firstEmail = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered, "first@example.com");
+        EmailNotification secondEmail = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered, "second@example.com");
 
         // First call: logs both existing notifications.
-        await using (var firstConnection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken))
-        await using (var firstTransaction = await firstConnection.BeginTransactionAsync(TestContext.Current.CancellationToken))
-        {
-            IReadOnlyList<Guid> firstCallSkippedIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, firstConnection, firstTransaction);
-            await firstTransaction.CommitAsync(TestContext.Current.CancellationToken);
-            Assert.Empty(firstCallSkippedIds);
-        }
+        Assert.Empty(await InsertNotificationLogAsync(orderId));
 
         // A third notification arrives on the same shipment after the first log call.
-        var thirdEmail = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = "third@example.com" }, SendResult = new(EmailNotificationResultType.Delivered, DateTime.UtcNow) };
-        await emailRepo.AddNotification(thirdEmail, DateTime.UtcNow.AddDays(1));
+        EmailNotification thirdEmail = await AddEmailNotificationAsync(orderId, EmailNotificationResultType.Delivered, "third@example.com");
 
         // Act — retry for the same shipment: the first two are now duplicates, the third is genuinely new.
-        await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        IReadOnlyList<Guid> secondCallSkippedIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<Guid> secondCallSkippedIds = await InsertNotificationLogAsync(orderId);
 
         // Assert — only the two already-logged notifications are reported as skipped, not the new third one.
-        Assert.Equal(2, secondCallSkippedIds.Count);
-        Assert.Contains(firstEmail.Id, secondCallSkippedIds);
-        Assert.Contains(secondEmail.Id, secondCallSkippedIds);
-        Assert.DoesNotContain(thirdEmail.Id, secondCallSkippedIds);
+        Assert.Equal(new HashSet<Guid> { firstEmail.Id, secondEmail.Id }, secondCallSkippedIds.ToHashSet());
 
         // Assert — the third notification was actually inserted, bringing the total to 3 rows.
-        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
-        Assert.Equal(3, notificationLogCount);
-
-        string thirdNotificationCountSql = $"SELECT COUNT(*) FROM notifications.notificationlog WHERE notificationid = '{thirdEmail.Id}'";
-        int thirdNotificationCount = await PostgreUtil.RunSqlReturnOutput<int>(thirdNotificationCountSql);
-        Assert.Equal(1, thirdNotificationCount);
+        await AssertLoggedAsync(orderId, Expected(firstEmail, "Delivered"), Expected(secondEmail, "Delivered"), Expected(thirdEmail, "Delivered"));
     }
 
     [Fact]
@@ -993,8 +833,10 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.Equal(transmissionId, entry.TransmissionId);
     }
 
-    [Fact]
-    public async Task GetByDialogId_WhenDialogIdIsEmpty_ThrowsArgumentException()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetByDialogId_WhenDialogIdIsEmptyOrWhitespace_ThrowsArgumentException(string dialogId)
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
@@ -1002,25 +844,14 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
             repository.GetByDialogId(
-                string.Empty,
+                dialogId,
                 TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task GetByDialogId_WhenDialogIdIsWhitespace_ThrowsArgumentException()
-    {
-        // Arrange
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogId(
-                "   ",
-                TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetByTransmissionId_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetByTransmissionId_WhenTransmissionIdIsEmptyOrWhitespace_ThrowsArgumentException(string transmissionId)
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
@@ -1028,25 +859,16 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
             repository.GetByTransmissionId(
-                string.Empty,
+                transmissionId,
                 TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task GetByTransmissionId_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
-    {
-        // Arrange
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByTransmissionId(
-                "   ",
-                TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetByDialogAndTransmissionIds_WhenDialogIdIsEmpty_ThrowsArgumentException()
+    [Theory]
+    [InlineData("", "valid-transmission-id")]
+    [InlineData("   ", "valid-transmission-id")]
+    [InlineData("valid-dialog-id", "")]
+    [InlineData("valid-dialog-id", "   ")]
+    public async Task GetByDialogAndTransmissionIds_WhenAnIdIsEmptyOrWhitespace_ThrowsArgumentException(string dialogId, string transmissionId)
     {
         // Arrange
         NotificationLogRepository repository = GetNotificationLogRepository();
@@ -1054,50 +876,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
             repository.GetByDialogAndTransmissionIds(
-                string.Empty,
-                Guid.NewGuid().ToString(),
-                TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetByDialogAndTransmissionIds_WhenTransmissionIdIsEmpty_ThrowsArgumentException()
-    {
-        // Arrange
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmissionIds(
-                Guid.NewGuid().ToString(),
-                string.Empty,
-                TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetByDialogAndTransmissionIds_WhenDialogIdIsWhitespace_ThrowsArgumentException()
-    {
-        // Arrange
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmissionIds(
-                "   ",
-                Guid.NewGuid().ToString(),
-                TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetByDialogAndTransmissionIds_WhenTransmissionIdIsWhitespace_ThrowsArgumentException()
-    {
-        // Arrange
-        NotificationLogRepository repository = GetNotificationLogRepository();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            repository.GetByDialogAndTransmissionIds(
-                Guid.NewGuid().ToString(),
-                "   ",
+                dialogId,
+                transmissionId,
                 TestContext.Current.CancellationToken));
     }
 
@@ -1169,7 +949,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         return order.Id;
     }
 
-    private static async Task<EmailNotification> AddEmailNotificationAsync(Guid orderId, EmailNotificationResultType result)
+    private static async Task<EmailNotification> AddEmailNotificationAsync(Guid orderId, EmailNotificationResultType result, string? toAddress = null)
     {
         EmailNotificationRepository emailRepo = (EmailNotificationRepository)ServiceUtil
             .GetServices([typeof(IEmailNotificationRepository)])
@@ -1180,7 +960,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             OrderId = orderId,
             RequestedSendTime = DateTime.UtcNow,
-            Recipient = new() { ToAddress = $"{Guid.NewGuid():N}@example.com" },
+            Recipient = new() { ToAddress = toAddress ?? $"{Guid.NewGuid():N}@example.com" },
             SendResult = new(result, DateTime.UtcNow)
         };
 
@@ -1188,7 +968,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         return notification;
     }
 
-    private static async Task<SmsNotification> AddSmsNotificationAsync(Guid orderId, SmsNotificationResultType result)
+    private static async Task<SmsNotification> AddSmsNotificationAsync(Guid orderId, SmsNotificationResultType result, string mobileNumber = "+4791111111")
     {
         SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
             .GetServices([typeof(ISmsNotificationRepository)])
@@ -1199,12 +979,48 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             OrderId = orderId,
             RequestedSendTime = DateTime.UtcNow,
-            Recipient = new() { MobileNumber = "+4791111111" },
+            Recipient = new() { MobileNumber = mobileNumber },
             SendResult = new(result, DateTime.UtcNow)
         };
 
         await smsRepo.AddNotification(notification, DateTime.UtcNow.AddDays(1));
         return notification;
+    }
+
+    private static async Task AssertPersistedEntryAsync(
+        Guid orderId,
+        Guid orderChainId,
+        string creatorName,
+        Guid dialogId,
+        string transmissionId,
+        string resourceId,
+        string channel,
+        string destination,
+        string deliveryReference)
+    {
+        NotificationLogEntry? entry = await PostgreUtil.GetNotificationLogEntry(orderId);
+        Assert.NotNull(entry);
+
+        Assert.Equal(orderId, entry.ShipmentId);
+        Assert.NotEqual(Guid.Empty, entry.NotificationId);
+        Assert.Equal(orderChainId, entry.OrderChainId);
+        Assert.Equal(creatorName, entry.CreatorName);
+        Assert.Equal(dialogId.ToString(), entry.DialogId);
+        Assert.Equal(transmissionId, entry.TransmissionId);
+        Assert.Equal(destination, entry.Destination);
+        Assert.Equal(resourceId, entry.Resource);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(channel, entry.Channel);
+        Assert.Equal("Delivered", entry.Status);
+        Assert.Equal(deliveryReference, entry.DeliveryReference);
+        Assert.Null(entry.Recipient);
+
+        // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
+        Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
+
+        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
+        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
+        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
     }
 
     private static NotificationLogRepository GetNotificationLogRepository()
