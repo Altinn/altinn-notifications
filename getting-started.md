@@ -121,6 +121,8 @@ Stopping Aspire stops the services, but the containers keep running in Podman.
 
 The `notifications-db` container must already exist with the database and roles from [Database Setup](#3-database-setup-postgresql).
 
+See [tools/aspire/README.md](tools/aspire/README.md) for the dashboard actions (running tests, restart alerts, switching a service to the cluster) and troubleshooting.
+
 ---
 
 ## ⚙️ Configuration (User Secrets)
