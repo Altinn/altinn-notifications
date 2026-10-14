@@ -54,4 +54,16 @@ public record DashboardNotificationExt
     /// </summary>
     [JsonPropertyName("deliveryAttempts")]
     public List<DashboardDeliveryAttemptExt> DeliveryAttempts { get; init; } = [];
+
+    /// <summary>
+    /// The Dialogporten dialog id the order is associated with, if any.
+    /// </summary>
+    [JsonPropertyName("dialogId")]
+    public string? DialogId { get; init; }
+
+    /// <summary>
+    /// The email address the order was sent from, or the SMS sender number if the order has no email.
+    /// </summary>
+    [JsonPropertyName("senderAddress")]
+    public string? SenderAddress { get; init; }
 }
