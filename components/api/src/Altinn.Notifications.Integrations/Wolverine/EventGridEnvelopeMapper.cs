@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Azure.Messaging.ServiceBus;
 
@@ -16,6 +17,10 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
 {
     private const string _attemptsKey = "wolverine-attempts";
     private const string _enqueuedAtKey = "wolverine-enqueued-at";
+    private const string _diagnosticIdKey = "Diagnostic-Id";
+    private const string _traceParentKey = "traceparent";
+    private const string _traceStateKey = "tracestate";
+    private const string _baggageKey = "baggage";
 
     /// <summary>
     /// Maps the specified incoming service bus message to the provided envelope by assigning an email delivery report
@@ -40,6 +45,16 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         else
         {
             envelope.SetEnqueuedAt(incoming.EnqueuedTime);
+        }
+
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _diagnosticIdKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceParentKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
+
+        if (TryGetValidParentId(incoming, out string? parentId))
+        {
+            envelope.ParentId = parentId;
         }
     }
 
@@ -75,5 +90,79 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         {
             outgoing.ApplicationProperties[_enqueuedAtKey] = envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey];
         }
+
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _diagnosticIdKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceParentKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceStateKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _baggageKey);
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_diagnosticIdKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_diagnosticIdKey] = envelope.ParentId;
+        }
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_traceParentKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_traceParentKey] = envelope.ParentId;
+        }
+    }
+
+    private static void CopyIncomingTraceHeaderIfPresent(ServiceBusReceivedMessage incoming, Envelope envelope, string key)
+    {
+        if (incoming.ApplicationProperties.TryGetValue(key, out var value) && value is string stringValue)
+        {
+            envelope.Headers[key] = stringValue;
+        }
+    }
+
+    private static void CopyOutgoingTraceHeaderIfPresent(Envelope envelope, ServiceBusMessage outgoing, string key)
+    {
+        if (envelope.Headers.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value))
+        {
+            outgoing.ApplicationProperties[key] = value;
+        }
+    }
+
+    private static bool TryGetValidParentId(ServiceBusReceivedMessage incoming, out string? parentId)
+    {
+        parentId = null;
+        incoming.ApplicationProperties.TryGetValue(_traceStateKey, out var traceStateRaw);
+        string? traceState = traceStateRaw as string;
+
+        if (TryParseTraceContext(incoming, _traceParentKey, traceState, out string? traceParent))
+        {
+            parentId = traceParent;
+            return true;
+        }
+
+        if (TryParseTraceContext(incoming, _diagnosticIdKey, traceState, out string? diagnosticId))
+        {
+            parentId = diagnosticId;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseTraceContext(ServiceBusReceivedMessage incoming, string key, string? traceState, out string? parentId)
+    {
+        parentId = null;
+
+        if (!incoming.ApplicationProperties.TryGetValue(key, out var value)
+            || value is not string candidate
+            || string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        if (!ActivityContext.TryParse(candidate, traceState, out _))
+        {
+            return false;
+        }
+
+        parentId = candidate;
+        return true;
     }
 }

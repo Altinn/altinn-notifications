@@ -122,6 +122,7 @@ public class EmailNotificationService(
         try
         {
             TNotification? claimedNotification = await getNewNotification(unitOfWork, cancellationToken);
+            activity?.SetTag("Count", claimedNotification == null ? 0 : 1);
             if (claimedNotification is null)
             {
                 await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
