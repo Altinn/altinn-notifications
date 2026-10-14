@@ -147,7 +147,7 @@ BEGIN
         INNER JOIN notifications.orders o ON o._id = email._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentId
-          AND email.result NOT IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
+          AND email.result NOT IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype, 'Failed_TransientError'::emailnotificationresulttype)
 
         UNION ALL
 
@@ -230,7 +230,7 @@ $$;
 COMMENT ON FUNCTION notifications.insert_notification_log_v2(uuid) IS
 'Inserts notification log entries derived from the final-result email and SMS notifications for a given shipment.
 Queries emailnotifications and smsnotifications joined with orders to derive all log fields.
-Only notifications with a final result are logged. Pending notifications (email: New, Sending, Succeeded; sms: New, Sending, Accepted) are ignored,
+Only notifications with a final result are logged. Pending notifications (email: New, Sending, Succeeded, Failed_TransientError; sms: New, Sending, Accepted) are ignored,
 so they can be logged by a later call once they reach a final result, independently of the other notifications in the shipment.
 Idempotent: rows are keyed by the source notification''s alternateid (notificationid). Notifications that are already logged are filtered out before the insert,
 so a retried call writes no row and consumes no identity value for them, and reports them as skipped.

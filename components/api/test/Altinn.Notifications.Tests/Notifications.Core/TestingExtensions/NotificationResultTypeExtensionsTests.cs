@@ -18,7 +18,8 @@ public class NotificationResultTypeExtensionsTests
     [
         EmailNotificationResultType.New,
         EmailNotificationResultType.Sending,
-        EmailNotificationResultType.Succeeded
+        EmailNotificationResultType.Succeeded,
+        EmailNotificationResultType.Failed_TransientError
     ];
 
     public static IEnumerable<object[]> PendingSmsResults() => _pendingSmsResults.Select(r => new object[] { r });
