@@ -631,7 +631,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetDashboardNotificationsByPhoneNumberAsync_SmsOrder_ReturnsSmsSenderAsSenderAddress()
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_SmsOrder_ReturnsNullSenderAddress()
     {
         // Arrange
         await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
@@ -648,7 +648,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Assert
         var notification = Assert.Single(result);
         Assert.Null(notification.DialogId);
-        Assert.Equal("Altinn local test", notification.SenderAddress);
+        Assert.Null(notification.SenderAddress);
     }
 
     [Fact]

@@ -62,7 +62,7 @@ public record DashboardNotificationExt
     public string? DialogId { get; init; }
 
     /// <summary>
-    /// The email address the order was sent from, or the SMS sender number if the order has no email.
+    /// The email address the order was sent from. Null for SMS-only orders.
     /// </summary>
     [JsonPropertyName("senderAddress")]
     public string? SenderAddress { get; init; }

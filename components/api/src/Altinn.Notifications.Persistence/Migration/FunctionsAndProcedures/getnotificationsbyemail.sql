@@ -108,12 +108,11 @@ AS $$
         e.result::text AS result,
         e.resulttime,
         c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
-        COALESCE(et.fromaddress, st.sendernumber) AS senderaddress
+        et.fromaddress AS senderaddress
     FROM notifications.emailnotifications e
     JOIN notifications.orders o ON o._id = e._orderid
     LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
     LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
-    LEFT JOIN notifications.smstexts st ON st._orderid = o._id
     WHERE lower(e.toaddress) = lower(_email)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
@@ -141,4 +140,4 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
-- senderaddress: The email address the order was sent from, or the SMS sender number if the order has no email text (may be null)';
+- senderaddress: The email address the order was sent from';

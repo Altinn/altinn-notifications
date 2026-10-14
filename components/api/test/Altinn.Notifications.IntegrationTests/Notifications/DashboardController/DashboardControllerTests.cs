@@ -979,7 +979,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
             Assert.Equal(orderId, item.ShipmentId);
             Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
             Assert.Null(item.DialogId);
-            Assert.Equal("Altinn local test", item.SenderAddress);
+            Assert.Null(item.SenderAddress);
         }
         finally
         {
@@ -1026,7 +1026,7 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
             "notification",
             deliveryAttempts,
             Guid.NewGuid().ToString(),
-            phoneNumber != null ? "Altinn" : "noreply@altinn.no");
+            phoneNumber != null ? null : "noreply@altinn.no");
     }
 
     private HttpClient GetTestClient(IDashboardService? service = null)

@@ -53,7 +53,7 @@ public record DashboardNotification
     public string? DialogId { get; init; }
 
     /// <summary>
-    /// The email address the order was sent from, or the SMS sender number if the order has no email.
+    /// The email address the order was sent from. Null for SMS-only orders.
     /// </summary>
     public string? SenderAddress { get; init; }
 
