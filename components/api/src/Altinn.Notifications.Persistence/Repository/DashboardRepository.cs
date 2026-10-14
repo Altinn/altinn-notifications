@@ -14,11 +14,11 @@ public class DashboardRepository : IDashboardRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNotificationsByOrgNo = "SELECT * from notifications.get_notifications_by_organization_number($1,$2,$3)"; // (_recipientorgno, _from_date,_to_date)
-    private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v2($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
-    private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email($1,$2,$3)"; // (_email, _from_date,_to_date)
-    private const string _getNotificationsByPhoneNumber = "SELECT * from notifications.get_notifications_by_phone_number($1,$2,$3)"; // (_phonenumber, _from_date,_to_date)
-    private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid($1)"; // (_shipmentid)
+    private const string _getNotificationsByOrgNo = "SELECT * from notifications.get_notifications_by_organization_number_v2($1,$2,$3)"; // (_recipientorgno, _from_date,_to_date)
+    private const string _getNotificationsByNin = "SELECT * from notifications.get_notifications_by_nin_v3($1,$2,$3)"; // (_recipientnin, _from_date,_to_date)
+    private const string _getNotificationsByEmail = "SELECT * from notifications.get_notifications_by_email_v2($1,$2,$3)"; // (_email, _from_date,_to_date)
+    private const string _getNotificationsByPhoneNumber = "SELECT * from notifications.get_notifications_by_phone_number_v2($1,$2,$3)"; // (_phonenumber, _from_date,_to_date)
+    private const string _getNotificationsByShipmentId = "SELECT * from notifications.get_notifications_by_shipmentid_v2($1)"; // (_shipmentid)
 
     private const int _defaultDateRangeDays = 7;
 
@@ -93,7 +93,7 @@ public class DashboardRepository : IDashboardRepository
     {
         // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
         var orderList = new List<Guid>();
-        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? SenderAddress)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
         pgcom.Parameters.AddWithValue(recipientValueType, recipientValue);
@@ -122,7 +122,7 @@ public class DashboardRepository : IDashboardRepository
         return [.. orderList.Select(id =>
         {
             var e = groups[id];
-            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts);
+            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts, e.DialogId, e.SenderAddress);
         })];
     }
 
@@ -134,7 +134,7 @@ public class DashboardRepository : IDashboardRepository
         NpgsqlDataReader reader,
         bool hasRecipientNin,
         bool hasRecipientOrgNo,
-        Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts)> groups,
+        Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? SenderAddress)> groups,
         List<Guid> orderList)
     {
         string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
@@ -167,7 +167,9 @@ public class DashboardRepository : IDashboardRepository
                 RequestedSendTime: reader.GetValue<DateTime>("requestedsendtime"),
                 NotificationChannel: Enum.TryParse<NotificationChannel>(channelString, out var notificationChannel) ? notificationChannel : (NotificationChannel?)null,
                 NotificationType: reader.GetValue<string>("notificationtype"),
-                DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt });
+                DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt },
+                DialogId: reader.GetValue<string?>("dialogid"),
+                SenderAddress: reader.GetValue<string?>("senderaddress"));
 
             groups[shipmentId] = newEntry;
             orderList.Add(shipmentId);
