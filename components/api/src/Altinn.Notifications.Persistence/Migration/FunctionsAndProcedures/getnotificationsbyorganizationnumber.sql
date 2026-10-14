@@ -132,7 +132,8 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE e.recipientorgno = _recipientorgno
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE e.recipientorgno = _recipientorgno
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
 
@@ -156,7 +157,8 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE s.recipientorgno = _recipientorgno
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE s.recipientorgno = _recipientorgno
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
     )

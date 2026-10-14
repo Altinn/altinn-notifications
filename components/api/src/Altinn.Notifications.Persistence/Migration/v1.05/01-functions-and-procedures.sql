@@ -1329,7 +1329,8 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE e.recipientnin = _recipientnin
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE e.recipientnin = _recipientnin
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
 
@@ -1353,7 +1354,8 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE s.recipientnin = _recipientnin
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE s.recipientnin = _recipientnin
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
     )
@@ -1519,7 +1521,8 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE e.recipientorgno = _recipientorgno
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE e.recipientorgno = _recipientorgno
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
 
@@ -1543,7 +1546,8 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE s.recipientorgno = _recipientorgno
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE s.recipientorgno = _recipientorgno
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
     )
@@ -1871,7 +1875,8 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE o.alternateid = _shipmentid
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE o.alternateid = _shipmentid
 
         UNION ALL
 
@@ -1894,7 +1899,8 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE o.alternateid = _shipmentid
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE o.alternateid = _shipmentid
     )
     SELECT * FROM combined
     ORDER BY requestedsendtime DESC;

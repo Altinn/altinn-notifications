@@ -128,7 +128,8 @@ AS $$
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE o.alternateid = _shipmentid
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE o.alternateid = _shipmentid
 
         UNION ALL
 
@@ -151,7 +152,8 @@ AS $$
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id        WHERE o.alternateid = _shipmentid
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
+        WHERE o.alternateid = _shipmentid
     )
     SELECT * FROM combined
     ORDER BY requestedsendtime DESC;
