@@ -58,7 +58,7 @@ public static class NotificationResultTypeExtensions
             EmailNotificationResultType.Failed_Quarantined => true,
             EmailNotificationResultType.Failed_FilteredSpam => true,
             EmailNotificationResultType.Failed_InvalidSasUrl => true,
-            EmailNotificationResultType.Failed_TransientError => true,
+            EmailNotificationResultType.Failed_TransientError => false,
             EmailNotificationResultType.Failed_PayloadTooLarge => true,
             EmailNotificationResultType.Failed_RecipientReserved => true,
             EmailNotificationResultType.Failed_InvalidEmailFormat => true,
