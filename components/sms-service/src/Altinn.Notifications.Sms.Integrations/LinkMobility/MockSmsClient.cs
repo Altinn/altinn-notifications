@@ -1,20 +1,20 @@
-﻿using System.Diagnostics;
-using Altinn.Notifications.Shared.Commands;
+﻿using System.Net.Http.Headers;
+using System.Text;
 using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Shared;
-
-using Wolverine;
+using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISmsClient"/> that sends text messages using LinkMobility's SMS gateway.
 /// </summary>
-public class MockSmsClient(HttpClient client /*, SmsDeliveryReportSettings smsDeliveryReportSettings */) : ISmsClient
+public class MockSmsClient(HttpClient client, IConfiguration configuration /*, SmsDeliveryReportSettings smsDeliveryReportSettings */) : ISmsClient
 {
     private const int SmsSendExecutionTimeMs = 70;
     private const int SmsDeliveryReportDelayTimeMs = 2000;
+    private readonly string _bodyTemplate = """<?xml version="1.0"?><!DOCTYPE MSGLST SYSTEM "pswincom_report_request.dtd"><MSGLST><MSG><ID>1</ID><REF>gwref</REF><RCV>recipient</RCV><STATE>DELIVRD</STATE><DELIVERYTIME>timestamp</DELIVERYTIME></MSG></MSGLST>""";
 
     /// <inheritdoc />
     public async Task<Result<string, SmsClientErrorResponse>> SendAsync(Core.Sending.Sms sms)
@@ -40,59 +40,39 @@ public class MockSmsClient(HttpClient client /*, SmsDeliveryReportSettings smsDe
     /// </returns>
     private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(Core.Sending.Sms sms)
     {
-        client.BaseAddress = new Uri("https://localhost/notifications/sms/api/v1/reports");
-        await Task.Delay(SmsSendExecutionTimeMs);
         string gatewayReference = Guid.NewGuid().ToString();
-        string? traceParent = Activity.Current?.Id;
-        string? traceState = Activity.Current?.TraceStateString;
+        string url = configuration["ASPNETCORE_URLS"]! + "/notifications/sms/api/v1/reports";
+        var bodyTemplate = _bodyTemplate
+            .Replace("gwref", gatewayReference)
+            .Replace("timestamp", DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss"))
+            .Replace("recipient", sms.Recipient);
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url)
+        {
+            Content = new StringContent(bodyTemplate, Encoding.UTF8, "application/xml")
+        };
+
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
+            "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{configuration["SmsGatewaySettings:Username"]}:{configuration["SmsGatewaySettings:Password"]}")));
+
+        await Task.Delay(SmsSendExecutionTimeMs);
+
         _ = Task.Run(async () =>
         {
             await Task.Delay(SmsDeliveryReportDelayTimeMs);
-            await client.PostAsync(client.BaseAddress, new StringContent($"{{\"gatewayReference\":\"{gatewayReference}\",\"notificationId\":\"{sms.NotificationId}\"}}"));
+            try
+            {
+                var result = await client.SendAsync(httpRequestMessage);
+                if (!result.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Failed to send delivery report. Status code: {result.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending delivery report: {ex.Message}");
+            }
         });
 
         return gatewayReference;
-    }
-}
-
-/// <summary>
-/// Mock of SMS delivery report publisher
-/// </summary>
-public class MockSmsDeliveryReportPublisher(IServiceProvider serviceProvider) : Shared.Publishers.WolverinePublisher(serviceProvider)
-{
-    /// <summary>
-    /// Dispatches a mock SMS delivery report event to the message bus.
-    /// </summary>
-    /// <returns></returns>
-    public async Task DispatchAsync(string gatewayReference, Guid notificationId, string? traceParent = null, string? traceState = null)
-    {
-        var command = new SmsDeliveryReportCommand
-        {
-            NotificationId = notificationId,
-            GatewayReference = gatewayReference,
-            SendResult = "Delivered",
-            DeliveryReport = "Mock delivery report"
-        };
-
-        if (string.IsNullOrWhiteSpace(traceParent) && string.IsNullOrWhiteSpace(traceState))
-        {
-            await PublishCommandAsync(command);
-            return;
-        }
-
-        var deliveryOptions = new DeliveryOptions();
-
-        if (!string.IsNullOrWhiteSpace(traceParent))
-        {
-            deliveryOptions.Headers["Diagnostic-Id"] = traceParent;
-            deliveryOptions.Headers["traceparent"] = traceParent;
-        }
-
-        if (!string.IsNullOrWhiteSpace(traceState))
-        {
-            deliveryOptions.Headers["tracestate"] = traceState;
-        }
-
-        await PublishCommandAsync(command, deliveryOptions);
     }
 }
