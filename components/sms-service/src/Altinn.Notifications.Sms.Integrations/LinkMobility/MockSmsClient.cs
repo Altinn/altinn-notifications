@@ -42,7 +42,6 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration, ILog
     /// </returns>
     private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(Core.Sending.Sms sms)
     {
-        using Activity? activity = Activity.Current?.Source.StartActivity("MockSendToLinkMobility");
         string gatewayReference = Guid.NewGuid().ToString();
         string url = configuration["SmsGatewaySettings:MockDeliveryEndpointBaseUrl"] + "/notifications/sms/api/v1/reports";
         var bodyTemplate = _bodyTemplate
@@ -56,8 +55,10 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration, ILog
 
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{configuration["SmsDeliveryReportSettings:UserSettings:Username"]}:{configuration["SmsDeliveryReportSettings:UserSettings:Password"]}")));
-
-        await Task.Delay(SmsSendExecutionTimeMs);
+        using (Activity? activity = Activity.Current?.Source.StartActivity("MockSendToLinkMobility"))
+        {
+            await Task.Delay(SmsSendExecutionTimeMs);
+        }
 
         _ = Task.Run(async () =>
         {
