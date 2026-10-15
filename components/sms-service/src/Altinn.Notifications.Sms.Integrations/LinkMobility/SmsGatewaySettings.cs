@@ -29,5 +29,10 @@
         /// Gets or sets a value indicating whether to use a mock SMS client for local development and performance testing.
         /// </summary>
         public bool MockSmsClient { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the base URL for the mock delivery endpoint used when MockSmsClient is enabled. This is typically used for local development and performance testing.
+        /// </summary>
+        public string MockDeliveryEndpointBaseUrl { get; set; } = "http://localhost:5090";
     }
 }

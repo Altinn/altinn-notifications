@@ -4,13 +4,14 @@ using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Shared;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISmsClient"/> that sends text messages using LinkMobility's SMS gateway.
 /// </summary>
-public class MockSmsClient(HttpClient client, IConfiguration configuration /*, SmsDeliveryReportSettings smsDeliveryReportSettings */) : ISmsClient
+public class MockSmsClient(HttpClient client, IConfiguration configuration, ILogger<MockSmsClient> logger) : ISmsClient
 {
     private const int SmsSendExecutionTimeMs = 70;
     private const int SmsDeliveryReportDelayTimeMs = 2000;
@@ -41,7 +42,7 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration /*, S
     private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(Core.Sending.Sms sms)
     {
         string gatewayReference = Guid.NewGuid().ToString();
-        string url = configuration["ASPNETCORE_URLS"]! + "/notifications/sms/api/v1/reports";
+        string url = configuration["SmsGatewaySettings:MockDeliveryEndpointBaseUrl"] + "/notifications/sms/api/v1/reports";
         var bodyTemplate = _bodyTemplate
             .Replace("gwref", gatewayReference)
             .Replace("timestamp", DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss"))
@@ -64,12 +65,12 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration /*, S
                 var result = await client.SendAsync(httpRequestMessage);
                 if (!result.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"Failed to send delivery report. Status code: {result.StatusCode}");
+                    logger.LogError("Failed to send delivery report. Status code: {StatusCode}, Url: {Url}", result.StatusCode, url);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error sending delivery report: {ex.Message}");
+                logger.LogError(ex, "Error sending delivery report to url: {Url}", url);
             }
         });
 
