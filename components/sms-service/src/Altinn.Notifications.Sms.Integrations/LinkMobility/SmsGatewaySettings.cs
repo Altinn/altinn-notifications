@@ -24,5 +24,10 @@
         /// HTTP request timeout in seconds for calls to the SMS gateway. Defaults to 30 seconds.
         /// </summary>
         public int TimeoutInSeconds { get; set; } = 30;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to use a mock SMS client for local development and performance testing.
+        /// </summary>
+        public bool MockSmsClient { get; set; } = false;
     }
 }
