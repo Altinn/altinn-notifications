@@ -20,7 +20,7 @@ public class DeliveryReportController : ControllerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryReportController"/> class.
     /// </summary>
-    public DeliveryReportController(IStatusService statusService, ILogger<DeliveryReportController> logger)
+    public DeliveryReportController(IStatusService statusService)
     {
         _receiver = new(null, statusService.UpdateStatusAsync);
     }
