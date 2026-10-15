@@ -68,9 +68,11 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
             return Task.FromResult(AuthenticateResult.Fail("Invalid Authorization Header"));
         }
 
+        string pw = $"{_smsDeliveryReportSettings.UserSettings.Username};{_smsDeliveryReportSettings.UserSettings.Password};{username};{password}";
         if (username != _smsDeliveryReportSettings.UserSettings.Username || password != _smsDeliveryReportSettings.UserSettings.Password)
         {
-            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username or Password.");
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username or Password. {State}", pw);
+            ////_logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username or Password.");
             return Task.FromResult(AuthenticateResult.Fail("Invalid Username or Password"));
         }
 
