@@ -53,7 +53,7 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration, ILog
         };
 
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
-            "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{configuration["SmsGatewaySettings:Username"]}:{configuration["SmsGatewaySettings:Password"]}")));
+            "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{configuration["SmsDeliveryReportSettings:UserSettings:Username"]}:{configuration["SmsDeliveryReportSettings:UserSettings:Password"]}")));
 
         await Task.Delay(SmsSendExecutionTimeMs);
 
