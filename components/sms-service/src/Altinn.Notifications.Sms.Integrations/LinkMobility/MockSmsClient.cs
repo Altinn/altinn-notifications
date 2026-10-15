@@ -1,10 +1,11 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 
@@ -41,6 +42,7 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration, ILog
     /// </returns>
     private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(Core.Sending.Sms sms)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("MockSendToLinkMobility");
         string gatewayReference = Guid.NewGuid().ToString();
         string url = configuration["SmsGatewaySettings:MockDeliveryEndpointBaseUrl"] + "/notifications/sms/api/v1/reports";
         var bodyTemplate = _bodyTemplate
