@@ -1,10 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Text.Json.Serialization;
-
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
-
 using Wolverine;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
@@ -32,6 +30,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Result<string, EmailClientErrorResponse>> SendEmail(Core.Sending.Email email, CancellationToken cancellationToken = default)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("MockSendEmail");
         string operationId = email.NotificationId.ToString();
         Result<string, EmailClientErrorResponse> result = operationId;
         await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
@@ -41,6 +40,7 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Result<ComposedEmailSendResult, EmailClientErrorResponse>> SendComposedEmail(ComposedEmail email, CancellationToken cancellationToken = default)
     {
+        using Activity? activity = Activity.Current?.Source.StartActivity("MockSendComposedEmail");
         string operationId = Guid.NewGuid().ToString() + "_" + email.NotificationId.ToString();
         await Task.Delay(AcsSendExecutionTimeMs, cancellationToken);
 
@@ -54,7 +54,10 @@ public class MockEmailServiceClient : IEmailServiceClient
     /// <inheritdoc/>
     public async Task<Core.Status.EmailSendResult> GetOperationUpdate(string operationId)
     {
-        await Task.Delay(AcsUpdateExecutionTimeMs);
+        using (Activity? activity = Activity.Current?.Source.StartActivity("MockGetOperationUpdate"))
+        {
+            await Task.Delay(AcsUpdateExecutionTimeMs);
+        }
 
         string? traceParent = Activity.Current?.Id;
         string? traceState = Activity.Current?.TraceStateString;
