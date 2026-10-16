@@ -14,6 +14,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
 using Microsoft.Extensions.FileProviders;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -171,6 +172,11 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
         {
             otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
         }));
+    }
+    else if (!string.IsNullOrEmpty(config["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    {
+        // UseOtlpExporter throws if combined with the signal-specific exporter above.
+        services.AddOpenTelemetry().UseOtlpExporter();
     }
 
     if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
