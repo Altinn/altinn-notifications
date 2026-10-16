@@ -137,6 +137,10 @@ The clients are used to retrieve recipient data and to authorize user access.
 - [AuthorizationService](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Authorization/AuthorizationService.cs)
   consumes Altinn Authorization's Decision API to verify that all users with registered contact points for an organization are authorized. The decision request will ask
   if a given user still has read access to the resource that the notification is about.
+- [DialogportenClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Dialogporten/DialogportenClient.cs)
+  consumes Dialogporten enduser API to verify that the user has access to a given dialog. The client obtains the token used in the call against Notifications from
+  Arbeidsflate, and use it in the call to Dialogporten. The response code is used to determine wheter the user has read access to the dialog. Notifications is using 
+  this as access control in front of the notification log. (This is a temporary solution while we wait for Authorization to have this capability.)
 
 **External APIs:**
 

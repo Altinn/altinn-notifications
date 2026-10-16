@@ -22,6 +22,90 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToCleanup = [];
 
+    private static async Task PersistSubstitutedSenderWithUnitOfWorkAsync(SmsNotificationRepository repo, Guid notificationId, string sender)
+    {
+        IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
+            .GetServices([typeof(IUnitOfWorkRepository)])
+            .First(i => i.GetType() == typeof(UnitOfWorkRepository));
+
+        UnitOfWork unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+
+        try
+        {
+            await repo.PersistSubstitutedSender(unitOfWork, notificationId, sender);
+            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+        }
+        catch
+        {
+            await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            throw;
+        }
+    }
+
+    private static async Task<Sms?> ExecuteClaimUntilMatchInUnitOfWorkAsync(
+        SmsNotificationRepository repo,
+        Func<Sms, bool> isMatch,
+        SendingTimePolicy sendingTimePolicy,
+        CancellationToken cancellationToken,
+        int maxAttempts = 200)
+    {
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        UnitOfWork unitOfWork = new()
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            Sms? result = await repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+
+            if (result is not null && isMatch(result))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return result;
+            }
+        }
+
+        await transaction.RollbackAsync(cancellationToken);
+        return null;
+    }
+
+    private static async Task<Sms?> ClaimSingleNotificationWithUnitOfWorkAsync(
+        SmsNotificationRepository repo,
+        SendingTimePolicy sendingTimePolicy,
+        bool commit)
+    {
+        IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
+            .GetServices([typeof(IUnitOfWorkRepository)])
+            .First(i => i.GetType() == typeof(UnitOfWorkRepository));
+
+        UnitOfWork unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+
+        try
+        {
+            Sms? sms = await repo.GetNewNotification(unitOfWork, TestContext.Current.CancellationToken, sendingTimePolicy);
+
+            if (commit)
+            {
+                await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            }
+            else
+            {
+                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            }
+
+            return sms;
+        }
+        catch
+        {
+            await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            throw;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_orderIdsToCleanup.Count == 0)
@@ -110,7 +194,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData("")] // Empty body
     [InlineData("Custom SMS Body")]
-    public async Task GetNewNotifications_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customBody)
+    public async Task GetNewNotification_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customBody)
     {
         // Arrange
         string defaultBody = "sms-body";
@@ -125,8 +209,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customBody);
 
         // Act
-        List<Sms> batch = await sut.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
-        Sms? result = batch.FirstOrDefault(x => x.NotificationId == smsNotification.Id);
+        Sms? result = await ClaimSingleNotificationWithUnitOfWorkAsync(sut, SendingTimePolicy.Daytime, commit: true);
 
         // Assert
         Assert.NotNull(result);
@@ -134,29 +217,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotifications_ShouldRespectBatchSize()
-    {
-        // Arrange
-        for (int i = 0; i < 15; i++)
-        {
-            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
-            _orderIdsToCleanup.Add(order.Id);
-        }
-
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
-
-        // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
-
-        // Assert
-        Assert.Equal(15, smsToBeSent.Count);
-    }
-
-    [Fact]
-    public async Task GetNewNotifications_ShouldReturnUnprocessedSmsNotifications()
+    public async Task GetNewNotification_ShouldReturnUnprocessedSmsNotification()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
@@ -169,16 +230,39 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        Sms? smsToBeSent = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, SendingTimePolicy.Anytime, commit: true);
 
         // Assert
-        Assert.Contains(smsToBeSent, e => e.NotificationId == smsNotification.Id);
+        Assert.NotNull(smsToBeSent);
+        Assert.Equal(smsNotification.Id, smsToBeSent.NotificationId);
     }
 
     [Theory]
     [InlineData(SendingTimePolicy.Anytime)]
     [InlineData(SendingTimePolicy.Daytime)]
-    public async Task GetNewNotifications_ShouldReturnCreatorNameMatchingOrderCreator(SendingTimePolicy sendingTimePolicy)
+    public async Task GetNewNotification_ShouldReturnCreatorNameMatchingOrderCreator(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        Sms? smsToBeSent = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, sendingTimePolicy, commit: true);
+
+        // Assert
+        Assert.NotNull(smsToBeSent);
+        Assert.Equal(order.Creator.ShortName, smsToBeSent.Creator);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotification_WithSendingPolicy_ShouldReturnEligibleSmsNotifications(SendingTimePolicy sendingTimePolicy)
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
@@ -190,33 +274,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, sendingTimePolicy);
+        Sms? smsToBeSent = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, sendingTimePolicy, commit: true);
 
         // Assert
-        Sms? result = smsToBeSent.Find(s => s.NotificationId == smsNotification.Id);
-        Assert.NotNull(result);
-        Assert.Equal(order.Creator.ShortName, result.Creator);
-    }
-
-    [Theory]
-    [InlineData(SendingTimePolicy.Anytime)]
-    [InlineData(SendingTimePolicy.Daytime)]
-    public async Task GetNewNotifications_WithSendingPolicy_ShouldReturnEligibleSmsNotifications(SendingTimePolicy sendingTimePolicy)
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
-        _orderIdsToCleanup.Add(order.Id);
-
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
-
-        // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, TestContext.Current.CancellationToken, sendingTimePolicy);
-
-        // Assert
-        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
+        Assert.NotNull(smsToBeSent);
+        Assert.Equal(smsNotification.Id, smsToBeSent.NotificationId);
     }
 
     [Theory]
@@ -254,15 +316,14 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotifications_ShouldTransitionStatusFromNewToSending()
+    public async Task GetNewNotification_ShouldTransitionStatusFromNewToSending_WhenUnitOfWorkCommits()
     {
         // Arrange
-        const int count = 3;
         List<Guid> claimedIds = [];
         SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .OfType<SmsNotificationRepository>().First();
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < 3; i++)
         {
             (NotificationOrder order, SmsNotification sms) =
                 await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
@@ -273,21 +334,17 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        var claimed = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        Sms? claimed = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, SendingTimePolicy.Anytime, commit: true);
 
         // Assert
-        Assert.Equal(count, claimed.Count);
-
-        foreach (var id in claimedIds)
-        {
-            Assert.Contains(claimed, c => c.NotificationId == id);
-            string status = await SelectSmsNotificationStatus(id);
-            Assert.Equal(SmsNotificationResultType.Sending.ToString(), status);
-        }
+        Assert.NotNull(claimed);
+        Assert.Contains(claimedIds, id => id == claimed.NotificationId);
+        string status = await SelectSmsNotificationStatus(claimed.NotificationId);
+        Assert.Equal(SmsNotificationResultType.Sending.ToString(), status);
     }
 
     [Fact]
-    public async Task GetNewNotifications_SecondCallShouldNotReturnAlreadyClaimed()
+    public async Task GetNewNotification_SecondCommittedClaimShouldNotReturnAlreadyClaimed()
     {
         // Arrange
         const int count = 5;
@@ -306,43 +363,23 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        var firstBatch = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
-        var secondBatch = await repo.GetNewNotifications(count, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        Sms? firstClaim = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, SendingTimePolicy.Anytime, commit: true);
+        Sms? secondClaim = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, SendingTimePolicy.Anytime, commit: true);
 
         // Assert
-        Assert.Equal(count, firstBatch.Count);
-        Assert.Empty(secondBatch);
-
-        foreach (var id in notificationIds)
-        {
-            string status = await SelectSmsNotificationStatus(id);
-            Assert.Equal(SmsNotificationResultType.Sending.ToString(), status);
-        }
+        Assert.NotNull(firstClaim);
+        Assert.NotNull(secondClaim);
+        Assert.NotEqual(firstClaim.NotificationId, secondClaim.NotificationId);
+        Assert.Contains(firstClaim.NotificationId, notificationIds);
+        Assert.Contains(secondClaim.NotificationId, notificationIds);
+        string firstStatus = await SelectSmsNotificationStatus(firstClaim.NotificationId);
+        string secondStatus = await SelectSmsNotificationStatus(secondClaim.NotificationId);
+        Assert.Equal(SmsNotificationResultType.Sending.ToString(), firstStatus);
+        Assert.Equal(SmsNotificationResultType.Sending.ToString(), secondStatus);
     }
 
     [Fact]
-    public async Task GetNewNotifications_BatchSizeZero_ShouldReturnEmpty_AndNotChangeState()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification sms) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
-
-        _orderIdsToCleanup.Add(order.Id);
-
-        SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>().First();
-
-        // Act
-        var result = await repo.GetNewNotifications(0, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
-
-        // Assert
-        Assert.Empty(result);
-        string status = await SelectSmsNotificationStatus(sms.Id);
-        Assert.Equal(SmsNotificationResultType.New.ToString(), status);
-    }
-
-    [Fact]
-    public async Task GetNewNotifications_BatchSizeNegative_ShouldReturnEmpty_AndNotChangeState()
+    public async Task GetNewNotification_WhenUnitOfWorkRollsBack_StatusRemainsNew()
     {
         // Arrange
         (NotificationOrder order, SmsNotification sms) =
@@ -353,16 +390,16 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             .OfType<SmsNotificationRepository>().First();
 
         // Act
-        var result = await repo.GetNewNotifications(-10, TestContext.Current.CancellationToken, SendingTimePolicy.Anytime);
+        Sms? claimed = await ClaimSingleNotificationWithUnitOfWorkAsync(repo, SendingTimePolicy.Anytime, commit: false);
 
         // Assert
-        Assert.Empty(result);
+        Assert.NotNull(claimed);
         string status = await SelectSmsNotificationStatus(sms.Id);
         Assert.Equal(SmsNotificationResultType.New.ToString(), status);
     }
 
     [Fact]
-    public async Task GetNewNotifications_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedBody()
+    public async Task GetNewNotification_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedBody()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
@@ -377,8 +414,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customizedBody);
 
         // Act
-        List<Sms> batch = await sut.GetNewNotifications(50, TestContext.Current.CancellationToken, SendingTimePolicy.Daytime);
-        Sms? itemWithCustomizedBody = batch.FirstOrDefault(b => b.NotificationId == smsNotification.Id);
+        Sms? itemWithCustomizedBody = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
+            sut,
+            sms => sms.NotificationId == smsNotification.Id,
+            SendingTimePolicy.Daytime,
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(itemWithCustomizedBody);
@@ -662,6 +702,24 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_WithNullNotificationIdAndWhitespaceGatewayReference_ThrowsInvalidNotificationIdentifierException()
+    {
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(async () =>
+        {
+            await repo.UpdateSendStatus(null, SmsNotificationResultType.Accepted, "   ");
+        });
+
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
     {
         // Arrange
@@ -915,6 +973,34 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_WithWhitespaceDeliveryReport_LeavesDeliveryReportColumnNull()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        await repo.UpdateSendStatus(
+            smsNotification.Id,
+            SmsNotificationResultType.Accepted,
+            gatewayReference: Guid.NewGuid().ToString(),
+            deliveryReport: "   ");
+
+        // Assert
+        string reportSql = $@"
+            SELECT deliveryreport::text FROM notifications.smsnotifications
+            WHERE alternateid = '{smsNotification.Id}'";
+
+        string? persistedReport = await PostgreUtil.RunSqlReturnOutput<string?>(reportSql);
+        Assert.Null(persistedReport);
+    }
+
+    [Fact]
     public async Task PersistSubstitutedSender_ValidNotificationId_PersistsSubstitutedSenderToDatabase()
     {
         // Arrange
@@ -929,7 +1015,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         const string substitutedSender = "+4775006000";
 
         // Act
-        await repo.PersistSubstitutedSender(smsNotification.Id, substitutedSender);
+        await PersistSubstitutedSenderWithUnitOfWorkAsync(repo, smsNotification.Id, substitutedSender);
 
         // Assert
         string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
@@ -951,8 +1037,8 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006000");
-        await repo.PersistSubstitutedSender(smsNotification.Id, "+4775006001");
+        await PersistSubstitutedSenderWithUnitOfWorkAsync(repo, smsNotification.Id, "+4775006000");
+        await PersistSubstitutedSenderWithUnitOfWorkAsync(repo, smsNotification.Id, "+4775006001");
 
         // Assert
         string sql = "SELECT substitutedsender FROM notifications.smsnotifications WHERE alternateid = @id";
@@ -972,7 +1058,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             Options.Create(new NotificationConfig()));
 
         // Act — no matching row, but this is a best-effort write, so no exception is expected.
-        await repo.PersistSubstitutedSender(Guid.NewGuid(), "+4775006000");
+        await PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.NewGuid(), "+4775006000");
 
         // Assert
         loggerMock.Verify(
@@ -986,7 +1072,27 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidOperationException()
+    public async Task PersistSubstitutedSender_InvalidUnitOfWork_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
+        var repo = new SmsNotificationRepository(
+            ServiceUtil.GetSharedDataSource(),
+            loggerMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        UnitOfWork invalidUnitOfWork = new();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.PersistSubstitutedSender(invalidUnitOfWork, Guid.NewGuid(), "+4775006000"));
+
+        // Assert
+        Assert.Equal("Connection property has not been initialized.", exception.Message);
+    }
+
+    [Fact]
+    public async Task PersistSubstitutedSender_EmptyNotificationId_ThrowsInvalidNotificationIdentifierExceptionBeforePersisting()
     {
         // Arrange
         var loggerMock = new Mock<ILogger<SmsNotificationRepository>>();
@@ -996,11 +1102,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             Options.Create(new NotificationConfig()));
 
         // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repo.PersistSubstitutedSender(Guid.Empty, "+4775006000"));
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
+            () => PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.Empty, "+4775006000"));
 
         // Assert
-        Assert.IsType<InvalidNotificationIdentifierException>(exception.InnerException);
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
     }
 
     [Fact]
@@ -1016,7 +1122,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act & Assert - validation happens before the try/catch, so the exception propagates
         // directly and is neither wrapped in InvalidOperationException nor logged.
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => repo.PersistSubstitutedSender(Guid.NewGuid(), null!));
+            () => PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.NewGuid(), null!));
     }
 
     [Theory]
@@ -1034,6 +1140,6 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act & Assert - validation happens before the try/catch, so the exception propagates
         // directly and is neither wrapped in InvalidOperationException nor logged.
         await Assert.ThrowsAsync<ArgumentException>(
-            () => repo.PersistSubstitutedSender(Guid.NewGuid(), sender));
+            () => PersistSubstitutedSenderWithUnitOfWorkAsync(repo, Guid.NewGuid(), sender));
     }
 }
