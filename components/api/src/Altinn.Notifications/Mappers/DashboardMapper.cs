@@ -39,6 +39,8 @@ public static class DashboardMapper
                 Result = r.Result,
                 ResultTime = r.ResultTime,
             })],
+            DialogId = notification.DialogId,
+            SenderAddress = notification.SenderAddress,
         };
     }
 }

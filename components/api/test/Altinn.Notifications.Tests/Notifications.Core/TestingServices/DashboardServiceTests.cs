@@ -35,7 +35,9 @@ public class DashboardServiceTests
                 DateTime.UtcNow,
                 NotificationChannel.EmailPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)],
+                null,
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();
@@ -135,7 +137,9 @@ public class DashboardServiceTests
                 DateTime.UtcNow,
                 NotificationChannel.EmailPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(null, _recipientOrgNo, "email", null, null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(null, _recipientOrgNo, "email", null, null, "Succeeded", null)],
+                null,
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();
@@ -235,7 +239,9 @@ public class DashboardServiceTests
                 DateTime.UtcNow,
                 NotificationChannel.EmailPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(null, null, "email", _recipientEmail, null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(null, null, "email", _recipientEmail, null, "Succeeded", null)],
+                null,
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();
@@ -335,7 +341,9 @@ public class DashboardServiceTests
                 DateTime.UtcNow,
                 NotificationChannel.SmsPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(null, null, "sms", null, _recipientPhoneNumber, "Accepted", null)]),
+                [new DashboardDeliveryAttempt(null, null, "sms", null, _recipientPhoneNumber, "Accepted", null)],
+                null,
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();
@@ -435,7 +443,9 @@ public class DashboardServiceTests
                 DateTime.UtcNow,
                 NotificationChannel.EmailPreferred,
                 "notification",
-                [new DashboardDeliveryAttempt(null, null, "email", "recipient@example.com", null, "Succeeded", null)]),
+                [new DashboardDeliveryAttempt(null, null, "email", "recipient@example.com", null, "Succeeded", null)],
+                null,
+                null),
         };
 
         Mock<IDashboardRepository> repository = new();

@@ -109,7 +109,7 @@ public class DashboardControllerTests
         var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByNinAsync("16069412345", from, null, It.IsAny<CancellationToken>()))
@@ -132,7 +132,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByNinAsync("16069412345", from, to, It.IsAny<CancellationToken>()))
@@ -331,7 +331,7 @@ public class DashboardControllerTests
         var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, null, It.IsAny<CancellationToken>()))
@@ -354,7 +354,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByOrgNumberAsync("123456789", from, to, It.IsAny<CancellationToken>()))
@@ -554,7 +554,7 @@ public class DashboardControllerTests
         var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByEmailAsync("recipient@example.com", from, null, It.IsAny<CancellationToken>()))
@@ -577,7 +577,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByEmailAsync("recipient@example.com", from, to, It.IsAny<CancellationToken>()))
@@ -777,7 +777,7 @@ public class DashboardControllerTests
         var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByPhoneNumberAsync("+4799999999", from, null, It.IsAny<CancellationToken>()))
@@ -800,7 +800,7 @@ public class DashboardControllerTests
         var to = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.SmsPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByPhoneNumberAsync("+4799999999", from, to, It.IsAny<CancellationToken>()))
@@ -863,7 +863,7 @@ public class DashboardControllerTests
         var shipmentId = Guid.NewGuid();
         Result<List<DashboardNotification>, ServiceError> serviceResult = new List<DashboardNotification>
         {
-            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [])
+            new(Guid.NewGuid(), "test", null, null, DateTime.UtcNow, NotificationChannel.EmailPreferred, "notification", [], null, null)
         };
         _dashboardServiceMock
             .Setup(x => x.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()))

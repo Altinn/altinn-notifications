@@ -12,6 +12,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public sealed class DashboardRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete = [];
+    private readonly List<Guid> _orderChainIdsToDelete = [];
     private readonly string _recipientNin = Random.Shared.NextInt64(10_000_000_000, 99_999_999_999).ToString();
     private readonly string _recipientOrgNumber = Random.Shared.NextInt64(100_000_000, 999_999_999).ToString();
     private readonly string _recipientEmail = $"dashboard-{Guid.NewGuid():N}@example.com";
@@ -25,6 +26,8 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         {
             await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
         }
+
+        await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
     }
 
     [Fact]
@@ -604,6 +607,110 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_OrderWithoutDialog_ReturnsEmailSenderAndNullDialogId()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.DialogId);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_SmsOrder_ReturnsNullSenderAddress()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.DialogId);
+        Assert.Null(notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        Guid orderId = await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_ChainedOrderWithDialog_ReturnsDialogId()
+    {
+        // Arrange
+        var dialogId = Guid.NewGuid();
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
+            dialogId: dialogId,
+            transmissionId: "dashboard-transmission",
+            toAddress: _recipientEmail);
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(_recipientEmail, null, null, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(dialogId.ToString(), notification.DialogId);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_ChainedOrderWithDialog_ReturnsDialogId()
+    {
+        // Arrange
+        var dialogId = Guid.NewGuid();
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
+            dialogId: dialogId,
+            transmissionId: "dashboard-transmission",
+            mobileNumber: _recipientPhoneNumber);
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(_recipientPhoneNumber, null, null, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(dialogId.ToString(), notification.DialogId);
     }
 
     private static DashboardRepository GetRepository() =>

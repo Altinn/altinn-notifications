@@ -76,6 +76,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.NotNull(result);
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
+        Assert.Equal(notification.DialogId, item.DialogId);
+        Assert.Equal(notification.SenderAddress, item.SenderAddress);
         Assert.Equal(notification.CreatorName, item.CreatorName);
         Assert.Equal(notification.SendersReference, item.SendersReference);
 
@@ -251,6 +253,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.NotNull(result);
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
+        Assert.Equal(notification.DialogId, item.DialogId);
+        Assert.Equal(notification.SenderAddress, item.SenderAddress);
 
         _serviceMock.Verify(s => s.GetNotificationsByOrgNumberAsync(_validOrgNumber, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -424,6 +428,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.NotNull(result);
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
+        Assert.Equal(notification.DialogId, item.DialogId);
+        Assert.Equal(notification.SenderAddress, item.SenderAddress);
 
         _serviceMock.Verify(s => s.GetNotificationsByEmailAsync(_validEmail, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -597,6 +603,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.NotNull(result);
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
+        Assert.Equal(notification.DialogId, item.DialogId);
+        Assert.Equal(notification.SenderAddress, item.SenderAddress);
 
         _serviceMock.Verify(s => s.GetNotificationsByPhoneNumberAsync(_validPhoneNumber, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -816,6 +824,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
         Assert.NotNull(result);
         var item = Assert.Single(result);
         Assert.Equal(notification.ShipmentId, item.ShipmentId);
+        Assert.Equal(notification.DialogId, item.DialogId);
+        Assert.Equal(notification.SenderAddress, item.SenderAddress);
 
         _serviceMock.Verify(s => s.GetNotificationsByShipmentIdAsync(shipmentId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -968,6 +978,8 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
             var item = Assert.Single(result);
             Assert.Equal(orderId, item.ShipmentId);
             Assert.Contains(item.DeliveryAttempts, attempt => attempt.MobileNumber == storedMobileNumber);
+            Assert.Null(item.DialogId);
+            Assert.Null(item.SenderAddress);
         }
         finally
         {
@@ -1012,7 +1024,9 @@ public class DashboardControllerTests : IClassFixture<IntegrationTestWebApplicat
             DateTime.UtcNow.AddDays(-1),
             phoneNumber != null ? NotificationChannel.Sms : NotificationChannel.Email,
             "notification",
-            deliveryAttempts);
+            deliveryAttempts,
+            Guid.NewGuid().ToString(),
+            phoneNumber != null ? null : "noreply@altinn.no");
     }
 
     private HttpClient GetTestClient(IDashboardService? service = null)
