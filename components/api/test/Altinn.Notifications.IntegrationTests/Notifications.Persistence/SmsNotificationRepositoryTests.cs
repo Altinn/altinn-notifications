@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -882,6 +883,99 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
         Assert.Equal(SmsNotificationResultType.New.ToString(), result);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_SmsFailedWhileEmailPending_LogsTheFailedSmsAndWritesNoStatusFeed()
+    {
+        // Arrange
+        (Guid orderId, _, SmsNotification sms) = await CreateOrderWithPendingEmailAndSmsAsync();
+        SmsNotificationRepository sut = GetSmsRepository();
+
+        // Act
+        await sut.UpdateSendStatus(sms.Id, SmsNotificationResultType.Failed_RecipientReserved);
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Sms", sms.Recipient.MobileNumber!, "Failed_RecipientReserved"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task TerminateExpiredNotifications_WhileEmailPending_LogsOnlyTheExpiredSms()
+    {
+        // Arrange
+        (Guid orderId, _, SmsNotification sms) = await CreateOrderWithPendingEmailAndSmsAsync();
+        SmsNotificationRepository sut = GetSmsRepository();
+
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.smsnotifications
+            SET result = 'Accepted',
+                expirytime = NOW() - INTERVAL '3 day'
+            WHERE alternateid = '{sms.Id}';");
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Sms", sms.Recipient.MobileNumber!, "Failed_TTL"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    private static SmsNotificationRepository GetSmsRepository()
+    {
+        return ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+    }
+
+    private async Task<(Guid OrderId, EmailNotification Email, SmsNotification Sms)> CreateOrderWithPendingEmailAndSmsAsync()
+    {
+        OrderRepository orderRepo = ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .OfType<OrderRepository>()
+            .First();
+
+        EmailNotificationRepository emailRepo = ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .OfType<EmailNotificationRepository>()
+            .First();
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = $"log-per-notification-{Guid.NewGuid():N}",
+            Type = OrderType.Notification,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                new SmsTemplate("Altinn", "sms-body")
+            ]
+        };
+
+        _orderIdsToCleanup.Add(order.Id);
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var email = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = $"{Guid.NewGuid():N}@example.com" }, SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow) };
+        var sms = new SmsNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4791111111" }, SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow) };
+
+        await emailRepo.AddNotification(email, DateTime.UtcNow.AddDays(1));
+        await GetSmsRepository().AddNotification(sms, DateTime.UtcNow.AddDays(1));
+
+        return (order.Id, email, sms);
+    }
+
+    private static async Task AssertLoggedAsync(Guid shipmentId, params (string Channel, string Destination, string Status)[] expected)
+    {
+        var logged = (await PostgreUtil.GetNotificationLogEntries(shipmentId))
+            .Select(e => (e.Channel, e.Destination, e.Status))
+            .Order()
+            .ToList();
+
+        Assert.Equal(expected.Order().ToList(), logged);
     }
 
     private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
