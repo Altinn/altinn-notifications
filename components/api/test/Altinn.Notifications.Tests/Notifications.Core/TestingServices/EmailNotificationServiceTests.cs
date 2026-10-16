@@ -311,6 +311,33 @@ public class EmailNotificationServiceTests
                 ItExpr.IsAny<SendStatusIdentifierType>());
     }
 
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task SendNotification_PassesSendingTimePolicyToRepository(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        UnitOfWork unitOfWork = new();
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+        unitOfWorkRepositoryMock.Setup(u => u.RollbackUnitOfWork(unitOfWork)).Returns(Task.CompletedTask);
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .Setup(r => r.GetNewNotificationAsync(unitOfWork, It.IsAny<CancellationToken>(), sendingTimePolicy))
+            .ReturnsAsync((Email?)null);
+
+        var service = GetTestService(repo: repoMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
+
+        // Act
+        bool wasSent = await service.SendNotification(sendingTimePolicy, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wasSent);
+        repoMock.Verify(r => r.GetNewNotificationAsync(unitOfWork, It.IsAny<CancellationToken>(), sendingTimePolicy), Times.Once);
+        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.Is<SendingTimePolicy>(p => p != sendingTimePolicy)), Times.Never);
+    }
+
     [Fact]
     public async Task SendNotification_WhenRepositoryThrowsOperationCanceledDuringFetch_RollsBackAndReturnsFalse()
     {
@@ -328,7 +355,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: emailNotificationRepositoryMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -354,7 +381,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -383,7 +410,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -409,7 +436,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -436,7 +463,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -467,7 +494,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -499,7 +526,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -530,7 +557,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -559,7 +586,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(cts.Token);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, cts.Token);
 
         // Assert
         Assert.False(wasSent);
@@ -592,7 +619,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -623,7 +650,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);
@@ -654,7 +681,7 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository: unitOfWorkRepositoryMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(wasSent);

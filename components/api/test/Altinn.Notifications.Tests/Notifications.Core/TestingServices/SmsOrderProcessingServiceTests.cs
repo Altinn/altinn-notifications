@@ -37,7 +37,7 @@ public class SmsOrderProcessingServiceTests
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
             RequestedSendTime = _requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             Templates = [new SmsTemplate("Altinn", "this is the body")],
             Recipients =
@@ -87,7 +87,7 @@ public class SmsOrderProcessingServiceTests
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
             RequestedSendTime = _requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
             Templates = [new SmsTemplate("Altinn", "this is the body")],
             Recipients =
@@ -139,7 +139,7 @@ public class SmsOrderProcessingServiceTests
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
             RequestedSendTime = _requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
             Templates = [new SmsTemplate("Altinn", "this is the body")],
             Recipients =

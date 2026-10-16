@@ -77,13 +77,14 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public Task<bool> SendNotification(CancellationToken cancellationToken)
+    public Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default)
     {
         return SendClaimedNotification(
-            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token),
+            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token, sendingTimePolicy),
             (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
             nameof(SendNotification),
-            cancellationToken);
+            cancellationToken,
+            sendingTimePolicy);
     }
 
     /// <inheritdoc/>
@@ -100,10 +101,11 @@ public class EmailNotificationService(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
         string operationName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        SendingTimePolicy? sendingTimePolicy = null)
         where TNotification : class
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName);
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {

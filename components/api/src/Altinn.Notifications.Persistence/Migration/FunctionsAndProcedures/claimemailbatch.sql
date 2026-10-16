@@ -47,6 +47,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND o.type <> 'Composed'::notificationordertype
+            AND (o.emailsendingtimepolicy IS NULL OR o.emailsendingtimepolicy = 1)
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
@@ -81,7 +82,8 @@ ALTER FUNCTION notifications.claim_email_batch_v2(integer)
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
-    IS 'Claims and returns batches of email notifications, excluding Composed orders (OrderType = 3).
+    IS 'Claims and returns batches of email notifications with sending time policy Anytime (emailsendingtimepolicy = 1 or NULL), excluding Composed orders (OrderType = 3).
 Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
+Daytime orders (emailsendingtimepolicy = 2) are not claimed by this function; they are claimed one at a time by claim_daytime_email.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 

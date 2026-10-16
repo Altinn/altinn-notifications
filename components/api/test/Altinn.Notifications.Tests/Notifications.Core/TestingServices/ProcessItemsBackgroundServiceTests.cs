@@ -23,7 +23,7 @@ public class ProcessItemsBackgroundServiceTests
         var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
 
         var config = CreateConfig();
-        config.EmailNotificationsProcessLoopConfig.TaskCount = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 0;
 
         var service = new TestableProcessItemsBackgroundService(
             emailService.Object,
@@ -35,7 +35,7 @@ public class ProcessItemsBackgroundServiceTests
 
         await service.ExecuteForTest(CancellationToken.None);
 
-        emailService.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Never);
+        emailService.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         emailService.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
         smsService.Verify(s => s.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         orderService.Verify(o => o.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -84,18 +84,139 @@ public class ProcessItemsBackgroundServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenDaytimeScheduleAllowsEmail_CallsDaytimeEmailPolicy()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+
+        var emailService = new Mock<IEmailNotificationService>();
+        emailService
+            .Setup(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService.Setup(s => s.CanSendEmailNow()).Returns(true);
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            scheduleService.Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        emailService.Verify(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        emailService.Verify(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendEmailNow(), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenScheduleDisallowsEmail_DoesNotCallDaytimeEmailPolicy()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var emailService = new Mock<IEmailNotificationService>();
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService
+            .Setup(s => s.CanSendEmailNow())
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return false;
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            scheduleService.Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        emailService.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendEmailNow(), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EmailAnytimeLoop_CallsAnytimeEmailPolicyWithoutScheduleCheck()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
+
+        var emailService = new Mock<IEmailNotificationService>();
+        emailService
+            .Setup(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            scheduleService.Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        emailService.Verify(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        emailService.Verify(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendEmailNow(), Times.Never);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenProcessLoopThrows_LogsError()
     {
         // Arrange
         var config = CreateConfig();
-        config.EmailNotificationsProcessLoopConfig.TaskCount = 1;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
         SetZeroIdleDelays(config);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var emailService = new Mock<IEmailNotificationService>();
         emailService
-            .Setup(e => e.SendNotification(It.IsAny<CancellationToken>()))
+            .Setup(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()))
             .Returns(() =>
             {
                 cts.Cancel();
@@ -130,7 +251,7 @@ public class ProcessItemsBackgroundServiceTests
     public async Task ExecuteAsync_WhenScheduleDisallowsSms_DoesNotCallDaytimePolicy()
     {
         var emailService = new Mock<IEmailNotificationService>();
-        emailService.Setup(e => e.SendNotification(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        emailService.Setup(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         emailService.Setup(e => e.SendComposedNotification(It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         var orderService = new Mock<IOrderProcessingService>();
@@ -189,7 +310,7 @@ public class ProcessItemsBackgroundServiceTests
 
         await service.ExecuteForTest(cts.Token);
 
-        emailService.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.Never);
+        emailService.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         emailService.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
         smsService.Verify(s => s.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         orderService.Verify(o => o.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -200,7 +321,11 @@ public class ProcessItemsBackgroundServiceTests
     {
         return new NotificationConfig
         {
-            EmailNotificationsProcessLoopConfig = new ProcessLoopConfig
+            EmailAnytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            EmailDaytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
                 TaskCount = 0
             },
@@ -229,9 +354,13 @@ public class ProcessItemsBackgroundServiceTests
 
     private static void SetZeroIdleDelays(NotificationConfig config)
     {
-        config.EmailNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
-        config.EmailNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
-        config.EmailNotificationsProcessLoopConfig.RampUpLimit = 1;
+        config.EmailAnytimeNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.RampUpLimit = 1;
+
+        config.EmailDaytimeNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.EmailDaytimeNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.EmailDaytimeNotificationsProcessLoopConfig.RampUpLimit = 1;
 
         config.ComposedEmailNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
         config.ComposedEmailNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
@@ -22,11 +23,12 @@ public interface IEmailNotificationService : INotificationService
     Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends the next pending email notification, if any.
+    /// Sends the next pending email notification that is eligible under the specified sending time policy, if any.
     /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when email notifications should be sent.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <returns><see langword="true"/> if a pending notification was found; otherwise <see langword="false"/>.</returns>
-    Task<bool> SendNotification(CancellationToken cancellationToken);
+    Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends the next pending composed email notification, if any.

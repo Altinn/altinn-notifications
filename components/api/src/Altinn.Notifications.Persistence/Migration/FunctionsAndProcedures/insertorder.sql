@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.insertorder_v2(
+CREATE OR REPLACE FUNCTION notifications.insertorder_v3(
     _alternateid uuid,
     _creatorname text,
     _sendersreference text,
@@ -8,7 +8,8 @@ CREATE OR REPLACE FUNCTION notifications.insertorder_v2(
     _sendingtimepolicy integer,
     _type text,
     _processingstatus text,
-    _orderchainid bigint
+    _orderchainid bigint,
+    _emailsendingtimepolicy integer
 )
 RETURNS bigint
 LANGUAGE 'plpgsql'
@@ -17,10 +18,10 @@ DECLARE
     _orderid BIGINT;
 BEGIN
     INSERT INTO notifications.orders(
-        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, sendingtimepolicy, type, processedstatus, _orderchainid
+        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, sendingtimepolicy, type, processedstatus, _orderchainid, emailsendingtimepolicy
     )
     VALUES (
-        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _sendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid
+        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _sendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid, _emailsendingtimepolicy
     )
     RETURNING _id INTO _orderid;
 

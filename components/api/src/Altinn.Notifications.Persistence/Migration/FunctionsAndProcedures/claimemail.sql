@@ -44,6 +44,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND o.type <> 'Composed'::notificationordertype
+            AND (o.emailsendingtimepolicy IS NULL OR o.emailsendingtimepolicy = 1)
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -78,5 +79,7 @@ ALTER FUNCTION notifications.claim_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_email()
-    IS 'Claims and returns a single email notification, excluding Composed orders (OrderType = 3).
-Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.';
+    IS 'Legacy: superseded by claim_anytime_email. Kept so instances still calling claim_email during a rolling deploy do not claim Daytime orders.
+Claims and returns a single email notification with sending time policy Anytime (emailsendingtimepolicy = 1 or NULL), excluding Composed orders (OrderType = 3).
+Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
+Daytime orders (emailsendingtimepolicy = 2) are claimed by claim_daytime_email.';

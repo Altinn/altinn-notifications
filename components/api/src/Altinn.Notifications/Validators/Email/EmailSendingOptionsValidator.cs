@@ -14,7 +14,11 @@ namespace Altinn.Notifications.Validators.Email
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailSendingOptionsValidator"/> class.
         /// </summary>
-        public EmailSendingOptionsValidator()
+        /// <param name="allowDaytime">
+        /// Whether the <see cref="SendingTimePolicyExt.Daytime"/> sending time policy is accepted.
+        /// Set to <c>false</c> for email flows that do not support it, such as composed emails.
+        /// </param>
+        public EmailSendingOptionsValidator(bool allowDaytime = true)
         {
             RuleFor(options => options)
                 .NotNull()
@@ -37,14 +41,28 @@ namespace Altinn.Notifications.Validators.Email
                     .NotEmpty()
                     .WithMessage("The email body must not be empty.");
 
-                RuleFor(option => option!.SendingTimePolicy)
-                    .Must(HaveValueAnytime)
-                    .WithMessage("Email only supports send time anytime");
+                if (allowDaytime)
+                {
+                    RuleFor(option => option!.SendingTimePolicy)
+                        .Must(HaveValueDaytimeOrAnytime)
+                        .WithMessage("Email only supports send time daytime and anytime");
+                }
+                else
+                {
+                    RuleFor(option => option!.SendingTimePolicy)
+                        .Must(HaveValueAnytime)
+                        .WithMessage("Email only supports send time anytime");
+                }
 
                 RuleFor(option => option!.ContentType)
                     .IsInEnum()
                     .WithMessage("Email content type must be either Plain or HTML.");
             });
+        }
+
+        private static bool HaveValueDaytimeOrAnytime(SendingTimePolicyExt sendingTime)
+        {
+            return sendingTime is SendingTimePolicyExt.Daytime or SendingTimePolicyExt.Anytime;
         }
 
         private static bool HaveValueAnytime(SendingTimePolicyExt sendingTime)
