@@ -33,7 +33,7 @@
         /// <summary>
         /// Gets or sets the base URL for the mock delivery endpoint used when MockSmsClient is enabled. This is typically used for local development and performance testing.
         /// </summary>
-        public string MockDeliveryEndpointBaseUrl { get; set; } = "http://localhost:5090";
+        public string MockDeliveryEndpointBaseUrl { get; set; } = "http://localhost:5092";
 
         /// <summary>
         /// Gets or sets the simulated execution time in milliseconds for sending an SMS when using the mock SMS client.
