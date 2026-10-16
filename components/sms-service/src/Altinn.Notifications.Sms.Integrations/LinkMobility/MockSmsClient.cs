@@ -57,12 +57,12 @@ public class MockSmsClient(HttpClient client, IConfiguration configuration, ILog
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{configuration["SmsDeliveryReportSettings:UserSettings:Username"]}:{configuration["SmsDeliveryReportSettings:UserSettings:Password"]}")));
         using (Activity? activity = Activity.Current?.Source.StartActivity("MockSendToLinkMobility"))
         {
-            await Task.Delay(SmsSendExecutionTimeMs);
+            await Task.Delay(configuration.GetValue<int>("SmsGatewaySettings:MockSendExecutionTimeMs"));
         }
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(SmsDeliveryReportDelayTimeMs);
+            await Task.Delay(configuration.GetValue<int>("SmsGatewaySettings:MockDeliveryReportDelayTimeMs"));
             try
             {
                 var result = await client.SendAsync(httpRequestMessage);
