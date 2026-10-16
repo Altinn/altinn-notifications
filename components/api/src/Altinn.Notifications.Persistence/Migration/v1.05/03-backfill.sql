@@ -12,6 +12,18 @@ update notifications.smsnotifications s
 	where s._orderid = o._id and s.expirytime >= now();
 
 ALTER TABLE notifications.emailnotifications
+    ADD CONSTRAINT emailnotifications_sendingtimepolicy_fkey
+    FOREIGN KEY (sendingtimepolicy)
+    REFERENCES notifications.sendingtimepolicy (id)
+    NOT VALID;
+
+ALTER TABLE notifications.smsnotifications
+    ADD CONSTRAINT smsnotifications_sendingtimepolicy_fkey
+    FOREIGN KEY (sendingtimepolicy)
+    REFERENCES notifications.sendingtimepolicy (id)
+    NOT VALID;
+
+ALTER TABLE notifications.emailnotifications
     VALIDATE CONSTRAINT emailnotifications_sendingtimepolicy_fkey;
 
 ALTER TABLE notifications.smsnotifications

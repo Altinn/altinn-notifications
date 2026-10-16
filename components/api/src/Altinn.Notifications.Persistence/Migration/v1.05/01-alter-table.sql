@@ -20,15 +20,3 @@ ALTER TABLE notifications.smsnotifications   SET (autovacuum_vacuum_scale_factor
 ALTER TABLE notifications.emailnotifications ADD COLUMN IF NOT EXISTS sendingtimepolicy SMALLINT NULL DEFAULT 1;
 ALTER TABLE notifications.smsnotifications ADD COLUMN IF NOT EXISTS sendingtimepolicy SMALLINT NULL DEFAULT 2;
 ALTER TABLE notifications.emailnotifications ADD COLUMN IF NOT EXISTS iscomposed BOOLEAN NULL DEFAULT false;
-
-ALTER TABLE notifications.emailnotifications
-    ADD CONSTRAINT emailnotifications_sendingtimepolicy_fkey
-    FOREIGN KEY (sendingtimepolicy)
-    REFERENCES notifications.sendingtimepolicy (id)
-    NOT VALID;
-
-ALTER TABLE notifications.smsnotifications
-    ADD CONSTRAINT smsnotifications_sendingtimepolicy_fkey
-    FOREIGN KEY (sendingtimepolicy)
-    REFERENCES notifications.sendingtimepolicy (id)
-    NOT VALID;
