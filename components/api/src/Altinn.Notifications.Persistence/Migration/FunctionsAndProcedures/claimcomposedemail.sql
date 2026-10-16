@@ -40,11 +40,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type = 'Composed'::notificationordertype
-        ORDER BY email._id
+            AND email.iscomposed = true
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),
@@ -79,5 +78,5 @@ ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_composed_email()
-    IS 'Claims and returns a single email notification for Composed orders (OrderType = 3).
+    IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
