@@ -21,7 +21,7 @@ BEGIN
     SELECT
         _id,
         CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        CASE WHEN sendingtimepolicy = 1 OR sendingtimepolicy IS NULL THEN 1 ELSE 2 END
         INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
