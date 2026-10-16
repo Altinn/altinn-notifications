@@ -260,7 +260,7 @@ ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_composed_email()
-    IS 'Claims and returns a single email notification for Composed orders (OrderType = 3).
+    IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
 
 
@@ -401,7 +401,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
-'Claims and returns an SMS notification (sendingtimepolicy = 2 or NULL).
+'Claims and returns an SMS notification (sendingtimepolicy = 2).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimdaytimesmsbatch.sql:
@@ -2055,7 +2055,7 @@ BEGIN
     SELECT
         _id,
         CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        CASE WHEN sendingtimepolicy = 1 OR sendingtimepolicy IS NULL THEN 1 ELSE 2 END
         INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
