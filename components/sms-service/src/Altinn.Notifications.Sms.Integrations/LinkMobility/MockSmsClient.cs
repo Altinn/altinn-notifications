@@ -1,11 +1,11 @@
-﻿using Altinn.Notifications.Sms.Core.Dependencies;
+﻿using System.Diagnostics;
+using System.Net.Http.Headers;
+using System.Text;
+using Altinn.Notifications.Sms.Core.Dependencies;
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.Net.Http.Headers;
-using System.Text;
 
 namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 
@@ -14,8 +14,6 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility;
 /// </summary>
 public class MockSmsClient(HttpClient client, IConfiguration configuration, ILogger<MockSmsClient> logger) : ISmsClient
 {
-    private const int SmsSendExecutionTimeMs = 70;
-    private const int SmsDeliveryReportDelayTimeMs = 2000;
     private readonly string _bodyTemplate = """<?xml version="1.0"?><!DOCTYPE MSGLST SYSTEM "pswincom_report_request.dtd"><MSGLST><MSG><ID>1</ID><REF>gwref</REF><RCV>recipient</RCV><STATE>DELIVRD</STATE><DELIVERYTIME>timestamp</DELIVERYTIME></MSG></MSGLST>""";
 
     /// <inheritdoc />
