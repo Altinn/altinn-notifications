@@ -788,7 +788,7 @@ CREATE OR REPLACE FUNCTION notifications.get_email_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(email_id bigint, email_shipmentid uuid, order_shipmentid uuid, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
+    RETURNS TABLE(email_id bigint, email_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -1861,7 +1861,7 @@ CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(sms_id bigint, sms_shipmentid uuid, order_shipmentid uuid, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
+    RETURNS TABLE(sms_id bigint, sms_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE

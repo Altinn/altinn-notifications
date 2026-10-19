@@ -7,12 +7,13 @@ DROP FUNCTION IF EXISTS notifications.get_sms_metrics(integer, integer, integer)
 DROP MATERIALIZED VIEW IF EXISTS notifications.email_metrics_recent;
 DROP MATERIALIZED VIEW IF EXISTS notifications.sms_metrics_recent;
 
+-- Shipment ids are exposed as text (not uuid), so they are written as UTF8 strings in the exported parquet files.
 -- The views are populated on creation, so the scheduled REFRESH ... CONCURRENTLY keeps working after they are recreated.
 CREATE MATERIALIZED VIEW notifications.email_metrics_recent AS
 SELECT
     email._id AS email_id,
-    email.alternateid AS email_shipmentid,
-    orders.alternateid AS order_shipmentid,
+    email.alternateid::text AS email_shipmentid,
+    orders.alternateid::text AS order_shipmentid,
     orders.sendersreference AS senders_reference,
     orders.requestedsendtime,
     email.resulttime,
@@ -35,8 +36,8 @@ CREATE INDEX IF NOT EXISTS email_metrics_recent_resulttime_idx
 CREATE MATERIALIZED VIEW notifications.sms_metrics_recent AS
 SELECT
     sms._id AS sms_id,
-    sms.alternateid AS sms_shipmentid,
-    orders.alternateid AS order_shipmentid,
+    sms.alternateid::text AS sms_shipmentid,
+    orders.alternateid::text AS order_shipmentid,
     orders.sendersreference AS senders_reference,
     orders.requestedsendtime,
     sms.resulttime,

@@ -85,8 +85,8 @@ namespace Altinn.Notifications.Persistence.Repository
                     DailySmsMetricsRecord smsRow = new()
                     {
                         SmsId = reader.GetValue<long>("sms_id"),
-                        SmsShipmentId = reader.GetValue<Guid>("sms_shipmentid").ToString(),
-                        OrderShipmentId = reader.GetValue<Guid>("order_shipmentid").ToString(),
+                        SmsShipmentId = reader.GetValue<string>("sms_shipmentid"),
+                        OrderShipmentId = reader.GetValue<string>("order_shipmentid"),
                         SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
                         RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
                         ResultTime = reader.GetValue<DateTime>("resulttime"),
@@ -131,8 +131,8 @@ namespace Altinn.Notifications.Persistence.Repository
                     DailyEmailMetricsRecord emailRow = new()
                     {
                         EmailId = reader.GetValue<long>("email_id"),
-                        EmailShipmentId = reader.GetValue<Guid>("email_shipmentid").ToString(),
-                        OrderShipmentId = reader.GetValue<Guid>("order_shipmentid").ToString(),
+                        EmailShipmentId = reader.GetValue<string>("email_shipmentid"),
+                        OrderShipmentId = reader.GetValue<string>("order_shipmentid"),
                         SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
                         RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
                         ResultTime = reader.GetValue<DateTime>("resulttime"),

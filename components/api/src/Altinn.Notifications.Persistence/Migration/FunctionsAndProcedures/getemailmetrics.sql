@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION notifications.get_email_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(email_id bigint, email_shipmentid uuid, order_shipmentid uuid, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
+    RETURNS TABLE(email_id bigint, email_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
