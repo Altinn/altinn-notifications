@@ -229,6 +229,68 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task GetParquetFile_ForSms_WritesShipmentIdsAsUtf8AndTimestampsAsMillis()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2026, 1, 15, 10, 30, 45, 123, DateTimeKind.Utc);
+            var resultTime = new DateTime(2026, 1, 15, 10, 31, 0, 456, DateTimeKind.Utc);
+            var smsShipmentId = Guid.NewGuid().ToString();
+            var orderShipmentId = Guid.NewGuid().ToString();
+
+            var metrics = new DailyMetrics<DailySmsMetricsRecord>
+            {
+                Year = 2026,
+                Month = 1,
+                Day = 15,
+                Metrics = new List<DailySmsMetricsRecord>
+                {
+                    new()
+                    {
+                        SmsId = 1,
+                        SmsShipmentId = smsShipmentId,
+                        OrderShipmentId = orderShipmentId,
+                        RequestedSendTime = requestedSendTime,
+                        ResultTime = resultTime,
+                        CreatorName = "ttd",
+                        Result = "Delivered"
+                    }
+                }
+            };
+
+            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+
+            // Act
+            MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
+
+            // Assert - physical/converted types are the ones the data warehouse (ADF) accepts
+            await using (summary.FileStream)
+            {
+                await using ParquetReader reader = await ParquetReader.CreateAsync(summary.FileStream, cancellationToken: TestContext.Current.CancellationToken);
+                Dictionary<string, SchemaElement> columns = reader.Metadata!.Schema.ToDictionary(e => e.Name);
+
+                foreach (string name in new[] { nameof(DailySmsMetricsRecord.SmsShipmentId), nameof(DailySmsMetricsRecord.OrderShipmentId) })
+                {
+                    Assert.Equal(Parquet.Meta.Type.BYTE_ARRAY, columns[name].Type);
+                    Assert.Equal(ConvertedType.UTF8, columns[name].ConvertedType);
+                }
+
+                foreach (string name in new[] { nameof(DailySmsMetricsRecord.RequestedSendTime), nameof(DailySmsMetricsRecord.ResultTime) })
+                {
+                    Assert.Equal(Parquet.Meta.Type.INT64, columns[name].Type);
+                    Assert.Equal(ConvertedType.TIMESTAMP_MILLIS, columns[name].ConvertedType);
+                }
+
+                summary.FileStream.Position = 0;
+                IList<DailySmsMetricsRecord> rows = (await ParquetSerializer.DeserializeAsync<DailySmsMetricsRecord>(summary.FileStream, cancellationToken: TestContext.Current.CancellationToken)).Data;
+                DailySmsMetricsRecord row = Assert.Single(rows);
+                Assert.Equal(smsShipmentId, row.SmsShipmentId);
+                Assert.Equal(orderShipmentId, row.OrderShipmentId);
+                Assert.Equal(requestedSendTime, row.RequestedSendTime);
+                Assert.Equal(resultTime, row.ResultTime);
+            }
+        }
+
+        [Fact]
         public async Task GetParquetFile_ReturnsMetricsSummaryWhenNoEnv_WithEnvironmentUnknown()
         {
             // Arrange

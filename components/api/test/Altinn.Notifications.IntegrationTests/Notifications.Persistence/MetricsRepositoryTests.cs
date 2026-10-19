@@ -80,6 +80,10 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         Assert.Equal("innland", metrics.Rate);
         Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
+        Assert.True(Guid.TryParse(metrics.SmsShipmentId, out _));
+        Assert.Equal(order.Id.ToString(), metrics.OrderShipmentId);
+        Assert.NotEqual(default, metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.ResultTime);
     }
 
     [Fact]
