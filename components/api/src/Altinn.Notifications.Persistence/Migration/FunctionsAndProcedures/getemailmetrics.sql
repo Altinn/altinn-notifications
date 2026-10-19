@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION notifications.get_email_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(email_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, operationid text) 
+    RETURNS TABLE(email_id bigint, email_shipmentid uuid, order_shipmentid uuid, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -16,7 +16,7 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
- SELECT e.email_id, e.shipmentid, e.senders_reference, e.requestedsendtime, e.creatorname, e.resourceid, e.result, e.operationid
+ SELECT e.email_id, e.email_shipmentid, e.order_shipmentid, e.senders_reference, e.requestedsendtime, e.resulttime, e.creatorname, e.resourceid, e.result, e.operationid
     FROM notifications.email_metrics_recent e
     WHERE e.resulttime >= start_date
       AND e.resulttime < start_date + INTERVAL '1 day';

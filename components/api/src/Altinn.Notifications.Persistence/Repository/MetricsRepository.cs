@@ -129,9 +129,11 @@ namespace Altinn.Notifications.Persistence.Repository
                     DailyEmailMetricsRecord emailRow = new()
                     {
                         EmailId = reader.GetValue<long>("email_id"),
-                        ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
+                        EmailShipmentId = reader.GetValue<Guid>("email_shipmentid").ToString(),
+                        OrderShipmentId = reader.GetValue<Guid>("order_shipmentid").ToString(),
                         SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
-                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
+                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
+                        ResultTime = reader.GetValue<DateTime>("resulttime"),
                         CreatorName = reader.GetValue<string>("creatorname"),
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),

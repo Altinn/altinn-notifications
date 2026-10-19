@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -105,11 +105,13 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
         Assert.Equal(orgName, metrics.CreatorName);
-        Assert.NotEmpty(metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.ResultTime);
         Assert.Equal("Delivered", metrics.Result);
         Assert.Equal("local-testing", metrics.SendersReference);
         Assert.Null(metrics.ResourceId);
         Assert.Empty(metrics.OperationId);
-        Assert.NotEmpty(metrics.ShipmentId);
+        Assert.True(Guid.TryParse(metrics.EmailShipmentId, out _));
+        Assert.Equal(order.Id.ToString(), metrics.OrderShipmentId);
     }
 }
