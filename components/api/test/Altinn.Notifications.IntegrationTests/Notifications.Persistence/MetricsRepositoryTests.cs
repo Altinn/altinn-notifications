@@ -76,8 +76,6 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
 
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
-        Assert.NotNull(metrics.Rate);
-        Assert.Equal("innland", metrics.Rate);
         Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
         Assert.True(Guid.TryParse(metrics.SmsShipmentId, out _));

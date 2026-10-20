@@ -60,28 +60,8 @@ namespace Altinn.Notifications.Core.Models.Metrics
         public string GatewayReference { get; init; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the rate category or tariff used for the SMS.
-        /// </summary>
-        public string Rate { get; init; } = string.Empty;
-
-        /// <summary>
         /// Gets or sets the mobile number prefix (country code) used for the SMS recipient.
         /// </summary>
         public string MobileNumberPrefix { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Gets or sets the number of Altinn SMS messages used to send the message (segments).
-        /// </summary>
-        public int AltinnSmsCount { get; init; }
-
-        /// <summary>
-        /// Gets or sets the length of the Altinn SMS body in characters, if available.
-        /// </summary>
-        public int AltinnSmsBodyLength { get; init; }
-
-        /// <summary>
-        /// Gets or sets the length of any customized SMS body in characters.
-        /// </summary>
-        public int AltinnSmsCustomBodyLength { get; init; }
     }
 }
