@@ -670,6 +670,68 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_OrderWithEmailAndSms_ReturnsNullSenderAddress()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.SenderAddress);
+    }
+
+    [Fact]
     public async Task GetDashboardNotificationsByEmailAsync_ChainedOrderWithDialog_ReturnsDialogAndTransmissionId()
     {
         // Arrange
@@ -776,7 +838,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         return order.Id;
     }
 
-    private async Task<Guid> SeedOrderWithEmailAndSmsNotifications(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null)
+    private async Task<Guid> SeedOrderWithEmailAndSmsNotifications(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, string mobileNumber = "+4799999999")
     {
         var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
         var emailRepo = ServiceUtil.GetServices([typeof(IEmailNotificationRepository)]).OfType<EmailNotificationRepository>().First();
@@ -805,7 +867,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     RequestedSendTime = requestedSendTime,
-                    Recipient = new() { MobileNumber = "+4799999999", NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    Recipient = new() { MobileNumber = mobileNumber, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
                     SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
                 },
                 requestedSendTime.AddDays(1));
