@@ -24,5 +24,25 @@
         /// HTTP request timeout in seconds for calls to the SMS gateway. Defaults to 30 seconds.
         /// </summary>
         public int TimeoutInSeconds { get; set; } = 30;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to use a mock SMS client for local development and performance testing.
+        /// </summary>
+        public bool MockSmsClient { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the base URL for the mock delivery endpoint used when MockSmsClient is enabled. This is typically used for local development and performance testing.
+        /// </summary>
+        public string MockDeliveryEndpointBaseUrl { get; set; } = "http://localhost:5092";
+
+        /// <summary>
+        /// Gets or sets the simulated execution time in milliseconds for sending an SMS when using the mock SMS client.
+        /// </summary>
+        public int MockSendExecutionTimeMs { get; set; } = 70;
+
+        /// <summary>
+        /// Gets or sets the simulated delay time in milliseconds for receiving a delivery report when using the mock SMS client.
+        /// </summary>
+        public int MockDeliveryReportDelayTimeMs { get; set; } = 2000;
     }
 }

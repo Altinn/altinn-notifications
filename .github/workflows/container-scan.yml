@@ -22,7 +22,7 @@ on:
       - '.github/scripts/**'
       - 'Directory.Packages.props'
   schedule:
-    - cron: '0 8 * * 1,4'
+    - cron: '0 7 * * 1-5'
 
 concurrency:
   group: container-scan-${{ github.ref }}
