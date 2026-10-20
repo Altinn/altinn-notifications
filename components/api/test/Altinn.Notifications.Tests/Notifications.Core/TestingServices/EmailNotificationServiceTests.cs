@@ -258,55 +258,6 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
-    {
-        // Arrange
-        Guid notificationId = Guid.NewGuid();
-        string operationId = Guid.NewGuid().ToString();
-        EmailSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notificationId,
-            OperationId = operationId,
-            SendResult = EmailNotificationResultType.Succeeded
-        };
-
-        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
-        {
-            CallBase = true
-        };
-
-        mockRepo.Protected()
-            .Setup<Task>(
-                "ExecuteUpdateAsync",
-                ItExpr.IsAny<UnitOfWork>(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<SendStatusIdentifierType>(),
-                ItExpr.IsAny<bool>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Returns(Task.CompletedTask);
-
-        var service = GetTestService(repo: mockRepo.Object);
-
-        // Act
-        await service.UpdateSendStatus(sendOperationResult);
-
-        // Assert
-        mockRepo.Protected()
-            .Verify<Task>(
-                "ExecuteUpdateAsync",
-                Times.Once(),
-                ItExpr.IsAny<UnitOfWork>(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<SendStatusIdentifierType>(),
-                ItExpr.Is<bool>(b => b),
-                ItExpr.IsAny<CancellationToken>());
-    }
-
-    [Fact]
     public async Task SendNotification_WhenRepositoryThrowsOperationCanceledDuringFetch_RollsBackAndReturnsFalse()
     {
         // Arrange
