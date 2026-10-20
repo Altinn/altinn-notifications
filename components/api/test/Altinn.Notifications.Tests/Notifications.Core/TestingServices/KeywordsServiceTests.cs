@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services;
+using Altinn.Register.Contracts;
 
 using Moq;
 
@@ -15,6 +13,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class KeywordsServiceTests
 {
+    private const string _personNumber = "25871999336";
+    private const string _organizationNumber = "123456785";
+
     private readonly KeywordsService _keywordsService;
     private readonly Mock<IRegisterClient> _registerClientMock;
 
@@ -84,19 +85,13 @@ public class KeywordsServiceTests
         {
             new()
             {
-                NationalIdentityNumber = "07837399275",
+                NationalIdentityNumber = _personNumber,
                 CustomizedBody = "Hello $recipientName$",
                 CustomizedSubject = "Subject $recipientNumber$",
             }
         };
 
-        var personDetails = new List<PartyDetails>
-        {
-            new() { NationalIdentityNumber = "07837399275", Name = "Person name" }
-        };
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync(personDetails);
+        SetupParties(CreateParty("person", "personIdentifier", _personNumber, "Person name"));
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -115,26 +110,20 @@ public class KeywordsServiceTests
         {
             new()
             {
-                OrganizationNumber = "313997901",
+                OrganizationNumber = _organizationNumber,
                 CustomizedBody = "Hello $recipientName$",
                 CustomizedSubject = "Subject $recipientNumber$",
             }
         };
 
-        var organizationDetails = new List<PartyDetails>
-        {
-            new() { OrganizationNumber = "313997901", Name = "Organization name" }
-        };
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync(organizationDetails);
+        SetupParties(CreateParty("organization", "organizationIdentifier", _organizationNumber, "Organization name"));
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
 
         // Assert
         var recipient = result.First();
-        Assert.Equal("Subject 313997901", recipient.CustomizedSubject);
+        Assert.Equal($"Subject {_organizationNumber}", recipient.CustomizedSubject);
         Assert.Equal("Hello Organization name", recipient.CustomizedBody);
     }
 
@@ -146,18 +135,12 @@ public class KeywordsServiceTests
         {
             new()
             {
-                NationalIdentityNumber = "07837399275",
+                NationalIdentityNumber = _personNumber,
                 CustomizedBody = "Hello $recipientName$ your national identity number is $recipientNumber$"
             }
         };
 
-        var personDetails = new List<PartyDetails>
-        {
-            new() { NationalIdentityNumber = "07837399275", Name = "Person name" }
-        };
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync(personDetails);
+        SetupParties(CreateParty("person", "personIdentifier", _personNumber, "Person name"));
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
@@ -175,25 +158,58 @@ public class KeywordsServiceTests
         {
             new()
             {
-                OrganizationNumber = "313418154",
+                OrganizationNumber = _organizationNumber,
                 CustomizedBody = "Hello $recipientName$ your organization number is $recipientNumber$"
             }
         };
 
-        var organizationDetails = new List<PartyDetails>
-        {
-            new() { OrganizationNumber = "313418154", Name = "Organization name" }
-        };
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync(organizationDetails);
+        SetupParties(CreateParty("organization", "organizationIdentifier", _organizationNumber, "Organization name"));
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
 
         // Assert
         var recipient = result.First();
-        Assert.Equal("Hello Organization name your organization number is 313418154", recipient.CustomizedBody);
+        Assert.Equal($"Hello Organization name your organization number is {_organizationNumber}", recipient.CustomizedBody);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldQueryDistinctIdentifiersOnce()
+    {
+        // Arrange
+        var smsRecipients = Enumerable.Range(0, 3)
+            .Select(_ => new SmsRecipient { OrganizationNumber = _organizationNumber, CustomizedBody = "Hello $recipientName$" })
+            .ToList();
+
+        var batchSizes = new List<int>();
+        _registerClientMock.Setup(client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<PartyUrn>, CancellationToken>((urns, _) => batchSizes.Add(urns.Count))
+            .ReturnsAsync([]);
+
+        // Act
+        await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+
+        // Assert
+        Assert.Equal([1], batchSizes);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldSkipInvalidIdentifiers()
+    {
+        // Arrange
+        var smsRecipients = new List<SmsRecipient>
+        {
+            new() { OrganizationNumber = "123", NationalIdentityNumber = "456", CustomizedBody = "Hello $recipientName$" }
+        };
+
+        // Act
+        var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+
+        // Assert
+        Assert.Equal("Hello $recipientName$", result.First().CustomizedBody);
+        _registerClientMock.Verify(
+            client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -201,9 +217,6 @@ public class KeywordsServiceTests
     {
         // Arrange
         var emailRecipients = new List<EmailRecipient>();
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.Is<List<string>>(x => x != null && x.Count == 0), It.Is<List<string>>(x => x != null && x.Count == 0)))
-            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -217,9 +230,6 @@ public class KeywordsServiceTests
     {
         // Arrange
         var smsRecipients = new List<SmsRecipient>();
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.Is<List<string>>(x => x != null && x.Count == 0), It.Is<List<string>>(x => x != null && x.Count == 0)))
-            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
@@ -242,9 +252,6 @@ public class KeywordsServiceTests
                 CustomizedSubject = "Subject $recipientNumber$",
             }
         };
-
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -269,14 +276,32 @@ public class KeywordsServiceTests
             }
         };
 
-        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
-            .ReturnsAsync([]);
-
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
 
         // Assert
         var recipient = result.First();
         Assert.Equal("Hello $recipientName$ your number is $recipientNumber$", recipient.CustomizedBody);
+    }
+
+    private void SetupParties(params Party[] parties)
+    {
+        _registerClientMock.Setup(client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([.. parties]);
+    }
+
+    private static Party CreateParty(string partyType, string identifierProperty, string identifier, string displayName)
+    {
+        var json = $$"""
+            {
+                "partyType": "{{partyType}}",
+                "{{identifierProperty}}": "{{identifier}}",
+                "partyUuid": "{{Guid.NewGuid()}}",
+                "versionId": 1,
+                "displayName": "{{displayName}}"
+            }
+            """;
+
+        return JsonSerializer.Deserialize<Party>(json)!;
     }
 }

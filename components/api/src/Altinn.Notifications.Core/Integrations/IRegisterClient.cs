@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models.Parties;
+using Altinn.Register.Contracts;
 
 namespace Altinn.Notifications.Core.Integrations;
 
@@ -7,6 +8,15 @@ namespace Altinn.Notifications.Core.Integrations;
 /// </summary>
 public interface IRegisterClient
 {
+    /// <summary>
+    /// Retrieves parties using the notifications query endpoint.
+    /// </summary>
+    /// <param name="parties">Up to 100 party identifiers to look up.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The matching parties, including identifiers and display names. Missing parties are omitted.</returns>
+    /// <exception cref="Shared.PlatformDependencyException">Thrown when the register service is unavailable or returns an invalid response.</exception>
+    Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Asynchronously retrieves party details for the specified persons and/or organizations.
     /// </summary>
