@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -47,17 +48,25 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task<List<SmsRecipient>> GetRecipients(Guid orderId);
 
     /// <summary>
-    /// Updates the send status of an SMS notification and sets the operation identifier.
+    /// Updates the send status of an SMS notification within <paramref name="unitOfWork"/> and optionally persists
+    /// the gateway reference and delivery report.
+    /// At least one of <paramref name="notificationId"/> or <paramref name="gatewayReference"/> must be provided.
     /// </summary>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
     /// <param name="notificationId">The unique identifier of the SMS notification (optional if <paramref name="gatewayReference"/> is provided).</param>
     /// <param name="result">The result status of the SMS notification.</param>
     /// <param name="gatewayReference">The gateway reference from the SMS provider (optional if <paramref name="notificationId"/> is provided).</param>
     /// <param name="deliveryReport">The raw delivery report payload received from the SMS gateway (optional).</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="Exceptions.InvalidNotificationIdentifierException">
-    /// Thrown when both <paramref name="notificationId"/> and <paramref name="gatewayReference"/> are null or empty.
-    /// </exception>
-    Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null);
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both <paramref name="notificationId"/> and <paramref name="gatewayReference"/> are null or empty.</exception>
+    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the provided identifier.</exception>
+    /// <exception cref="NotificationExpiredException">Thrown when the notification has expired.</exception>
+    /// <remarks>
+    /// Completes the order and writes the status feed when a final status is set on the last pending notification.
+    /// The caller is responsible for committing or rolling back the unit of work.
+    /// </remarks>
+    Task UpdateSendStatusAsync(UnitOfWork unitOfWork, Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Writes the substituted sender for an SMS notification to the database.

@@ -73,5 +73,10 @@ public enum SmsNotificationResultType
     /// <summary>
     /// Time to Live (TTL) for the SMS notification has expired.
     /// </summary>
-    Failed_TTL
+    Failed_TTL,
+
+    /// <summary>
+    /// Indicates that the SMS send operation failed because the message is too large to be queued for sending.
+    /// </summary>
+    Failed_ContentTooLarge
 }

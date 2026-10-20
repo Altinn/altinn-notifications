@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -302,6 +300,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.SMS_Failed_Rejected, ProcessingLifecycleExt.SMS_Failed_Rejected)]
     [InlineData(ProcessingLifecycle.SMS_Failed_Undelivered, ProcessingLifecycleExt.SMS_Failed_Undelivered)]
     [InlineData(ProcessingLifecycle.SMS_Failed_BarredReceiver, ProcessingLifecycleExt.SMS_Failed_BarredReceiver)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_ContentTooLarge, ProcessingLifecycleExt.SMS_Failed_ContentTooLarge)]
     [InlineData(ProcessingLifecycle.SMS_Failed_InvalidRecipient, ProcessingLifecycleExt.SMS_Failed_InvalidRecipient)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientReserved, ProcessingLifecycleExt.SMS_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientNotIdentified, ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified)]
@@ -350,6 +349,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.Email_Failed_InvalidFormat, ProcessingLifecycleExt.Email_Failed_InvalidFormat)]
     [InlineData(ProcessingLifecycle.Email_Failed_TransientError, ProcessingLifecycleExt.Email_Failed_TransientError)]
     [InlineData(ProcessingLifecycle.Email_Failed_PayloadTooLarge, ProcessingLifecycleExt.Email_Failed_PayloadTooLarge)]
+    [InlineData(ProcessingLifecycle.Email_Failed_ContentTooLarge, ProcessingLifecycleExt.Email_Failed_ContentTooLarge)]
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientReserved, ProcessingLifecycleExt.Email_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.Email_Failed_SuppressedRecipient, ProcessingLifecycleExt.Email_Failed_SuppressedRecipient)]
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientNotIdentified, ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified)]

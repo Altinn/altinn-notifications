@@ -27,7 +27,8 @@ namespace Altinn.Notifications.Core.Services
             { SmsNotificationResultType.Failed_Undelivered, "The SMS was not delivered due to invalid number or no available route to destination." },
             { SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not delivered because the recipient's mobile number was not found." },
             { SmsNotificationResultType.Failed_Rejected, "The SMS was not delivered because it was rejected." },
-            { SmsNotificationResultType.Failed_TTL, "The SMS was in indefinite state Accepted for too long (TTL), and was subsequently set to failed." }
+            { SmsNotificationResultType.Failed_TTL, "The SMS was in indefinite state Accepted for too long (TTL), and was subsequently set to failed." },
+            { SmsNotificationResultType.Failed_ContentTooLarge, "The SMS was not sent because the SMS message is too large to be queued for sending." }
         };
 
         private readonly static List<SmsNotificationResultType> _successResults = new()

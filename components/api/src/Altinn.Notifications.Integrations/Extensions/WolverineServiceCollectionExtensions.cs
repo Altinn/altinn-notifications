@@ -13,6 +13,7 @@ using Altinn.Notifications.Shared.Publishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
 using Wolverine;
 using Wolverine.AzureServiceBus;
 
@@ -44,6 +45,7 @@ public static class WolverineServiceCollectionExtensions
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);
+            opts.UseOversizedMessageSignal();
 
             opts.Policies.AllSenders(x => x.SendInline());
             opts.Policies.AllListeners(x => x.ProcessInline());
@@ -59,7 +61,7 @@ public static class WolverineServiceCollectionExtensions
             AddSendSmsPublisher(services, wolverineSettings, opts);
             AddSendEmailPublisher(services, wolverineSettings, opts);
             AddSendComposedEmailPublisher(services, wolverineSettings, opts);
-            services.AddSingleton<IMessageBusPublisher, WolverinePublisher>();
+            services.AddSingleton<IWolverinePublisher, WolverinePublisher>();
         });
     }
 
@@ -207,7 +209,7 @@ public static class WolverineServiceCollectionExtensions
     /// <summary>
     /// Configures Wolverine to publish <see cref="SendSmsCommand"/> messages
     /// to the Azure Service Bus SMS send queue and registers
-    /// <see cref="SendSmsCommandPublisher"/> as the <see cref="ISendSmsPublisher"/> implementation.
+    /// <see cref="SmsCommandPublisher"/> as the <see cref="ISmsCommandPublisher"/> implementation.
     /// </summary>
     private static void AddSendSmsPublisher(IServiceCollection services, WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
@@ -217,7 +219,7 @@ public static class WolverineServiceCollectionExtensions
                 $"{nameof(WolverineSettings.SendSmsQueueName)} must be configured.");
         }
 
-        services.AddSingleton<ISendSmsPublisher, SendSmsCommandPublisher>();
+        services.AddSingleton<ISmsCommandPublisher, SmsCommandPublisher>();
 
         wolverineOptions.PublishMessage<SendSmsCommand>()
                         .ToAzureServiceBusQueue(wolverineSettings.SendSmsQueueName);

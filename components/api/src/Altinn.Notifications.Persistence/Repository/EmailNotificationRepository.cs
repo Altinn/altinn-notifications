@@ -37,6 +37,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
 
+    /// <inheritdoc/>
+    protected override NotificationChannel Channel => NotificationChannel.Email;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
@@ -93,8 +96,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null)
+    public async Task UpdateSendStatusAsync(UnitOfWork unitOfWork, Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null, CancellationToken cancellationToken = default)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
@@ -103,21 +105,25 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             throw new InvalidNotificationIdentifierException("The provided Email identifier is invalid.");
         }
 
-        await ExecuteUpdateWithTransactionAsync(
+        var (identifier, identifierType) = hasNotificationId
+            ? (notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId)
+            : (operationId!, SendStatusIdentifierType.OperationId);
+
+        await ExecuteUpdateAsync(
+            unitOfWork,
             _updateEmailNotificationSql,
             pgcom =>
             {
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, hasNotificationId ? notificationId!.Value : DBNull.Value);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)totalAttachmentSizeBytes ?? DBNull.Value);
             },
-            NotificationChannel.Email,
-            notificationId,
-            operationId,
-            statusIsAcceptedOrSucceeded: status == EmailNotificationResultType.Succeeded,
-            SendStatusIdentifierType.OperationId);
+            identifier,
+            identifierType,
+            isIntermediateStatus: status == EmailNotificationResultType.Succeeded,
+            cancellationToken);
     }
 
     /// <inheritdoc/>
