@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(sms_id bigint, sms_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, mobilenumber_prefix text) 
+    RETURNS TABLE(sms_id bigint, sms_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -16,7 +16,7 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
-   SELECT s.sms_id, s.sms_shipmentid, s.order_shipmentid, s.senders_reference, s.requestedsendtime, s.resulttime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.mobilenumber_prefix
+   SELECT s.sms_id, s.sms_shipmentid, s.order_shipmentid, s.senders_reference, s.requestedsendtime, s.resulttime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.rate, s.mobilenumber_prefix
      FROM notifications.sms_metrics_recent s
      WHERE s.resulttime >= start_date
        AND s.resulttime < start_date + INTERVAL '1 day';

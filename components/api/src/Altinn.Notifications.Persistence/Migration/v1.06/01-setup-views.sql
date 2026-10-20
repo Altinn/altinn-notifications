@@ -1,6 +1,6 @@
 -- https://github.com/Altinn/altinn-notifications/issues/1880
 -- Adds the order shipment id (orders.alternateid) and result time to the email and sms metrics export.
--- The sms export no longer includes rate, sms count or body lengths, so the join to smstexts is removed.
+-- The sms export no longer includes sms count or body lengths, so the join to smstexts is removed.
 -- get_email_metrics and get_sms_metrics change return type, so they must be dropped before they are recreated in 02-functions-and-procedures.sql.
 DROP FUNCTION IF EXISTS notifications.get_email_metrics(integer, integer, integer);
 DROP FUNCTION IF EXISTS notifications.get_sms_metrics(integer, integer, integer);
@@ -46,6 +46,11 @@ SELECT
     orders.notificationorder ->> 'ResourceId' AS resourceid,
     sms.result::text AS result,
     sms.gatewayreference,
+    CASE 
+        WHEN sms.mobilenumber IS NULL OR sms.mobilenumber = '' THEN 'n/a'
+        WHEN sms.mobilenumber ~ '^(\+|00) *47' THEN 'innland'
+        ELSE 'utland'
+    END AS rate,
     left(sms.mobilenumber, 4) AS mobilenumber_prefix
 FROM notifications.smsnotifications AS sms
 INNER JOIN notifications.orders orders ON orders._id = sms._orderid

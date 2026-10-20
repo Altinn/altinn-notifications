@@ -60,6 +60,11 @@ namespace Altinn.Notifications.Core.Models.Metrics
         public string GatewayReference { get; init; } = string.Empty;
 
         /// <summary>
+        /// Gets or sets the rate category for the SMS: 'innland' (+47/0047), 'utland' or 'n/a' (no mobile number).
+        /// </summary>
+        public string Rate { get; init; } = string.Empty;
+
+        /// <summary>
         /// Gets or sets the mobile number prefix (country code) used for the SMS recipient.
         /// </summary>
         public string MobileNumberPrefix { get; init; } = string.Empty;

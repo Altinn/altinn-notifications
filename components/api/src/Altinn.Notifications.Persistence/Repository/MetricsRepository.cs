@@ -94,6 +94,7 @@ namespace Altinn.Notifications.Persistence.Repository
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),
                         GatewayReference = reader.GetValue<string?>("gatewayreference") ?? string.Empty,
+                        Rate = reader.GetValue<string>("rate"),
                         MobileNumberPrefix = reader.GetValue<string>("mobilenumber_prefix")
                     };
 
