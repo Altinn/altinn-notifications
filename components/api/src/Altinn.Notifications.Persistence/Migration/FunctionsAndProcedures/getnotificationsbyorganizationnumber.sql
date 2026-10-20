@@ -67,11 +67,10 @@ AS $$
             s.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
             c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
-            et.fromaddress AS senderaddress
+            NULL::text AS senderaddress
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
-        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
         WHERE s.recipientorgno = _recipientorgno
           AND o.requestedsendtime >= _from_date
           AND o.requestedsendtime <  _to_date
@@ -101,4 +100,4 @@ Returns a table with the following columns:
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
 - transmissionid: The Dialogporten transmission id the order is associated with (may be null)
-- senderaddress: The email address the order was sent from (null for SMS-only orders)';
+- senderaddress: The email address the notification was sent from (null for SMS notifications)';
