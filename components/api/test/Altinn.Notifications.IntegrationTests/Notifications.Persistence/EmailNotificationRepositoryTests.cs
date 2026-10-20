@@ -1076,13 +1076,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert — notification is returned
         Assert.NotNull(result);
-        Assert.Single(result.Attachments);
+        var attachment = Assert.Single(result.Attachments);
         Assert.Equal(expectedBody, result.Body);
         Assert.Equal(expectedTo, result.ToAddress);
         Assert.Equal(expectedSubject, result.Subject);
-        Assert.Equal(expectedSasUrl, result.Attachments[0].SasUrl);
-        Assert.Equal(expectedFilename, result.Attachments[0].Filename);
-        Assert.Equal(expectedMimeType, result.Attachments[0].MimeType);
+        Assert.Equal(expectedSasUrl, attachment.SasUrl);
+        Assert.Equal(expectedFilename, attachment.Filename);
+        Assert.Equal(expectedMimeType, attachment.MimeType);
 
         // Assert — notification is now claimed (status = Sending)
         string statusSql = $"SELECT result FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'";

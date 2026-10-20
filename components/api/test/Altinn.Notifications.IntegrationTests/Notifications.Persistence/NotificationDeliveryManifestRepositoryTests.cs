@@ -228,15 +228,13 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Verify SMS recipient
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(recipientPhone, smsDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
 
         // Verify email recipient
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
         Assert.Equal(recipientEmail, emailDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.Email_Failed_RecipientReserved, emailDelivery.Status);
     }
@@ -395,9 +393,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(deliveryManifest.Recipients);
 
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(phoneNumber, smsDelivery.Destination);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(ProcessingLifecycle.SMS_New, smsDelivery.Status);
@@ -490,9 +486,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(deliveryManifest.Recipients);
 
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
 
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
@@ -569,9 +563,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Recipients);
 
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(phoneNumber, smsDelivery.Destination);
     }
 
@@ -695,18 +687,14 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Check Email notification
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.Email_Delivered, emailDelivery.Status);
 
         // Check SMS notification
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);

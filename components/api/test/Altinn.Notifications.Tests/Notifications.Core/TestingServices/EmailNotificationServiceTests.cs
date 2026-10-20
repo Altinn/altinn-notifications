@@ -60,9 +60,8 @@ public class EmailNotificationServiceTests
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
 
         // Assert
-        Assert.NotNull(result[0]);
-        Assert.Single(result);
-        Assert.Equivalent(expected, result[0]);
+        var singleResult = Assert.Single(result);
+        Assert.Equivalent(expected, singleResult);
     }
 
     [Fact]
@@ -95,11 +94,9 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
-        var singleResult = result[0];
 
         // Assert
-        Assert.NotNull(singleResult);
-        Assert.Single(result);
+        var singleResult = Assert.Single(result);
         Assert.Equivalent(expected, singleResult);
     }
 
@@ -133,11 +130,9 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient, true);
-        var singleResult = result[0];
 
         // Assert
-        Assert.Single(result);
-        Assert.NotNull(singleResult);
+        var singleResult = Assert.Single(result);
         Assert.Equivalent(expected, singleResult);
     }
 
@@ -170,11 +165,9 @@ public class EmailNotificationServiceTests
 
         // Act
         var result = await service.CreateNotification(orderId, requestedSendTime, emailAddressPoints, emailRecipient);
-        var singleResult = result[0];
 
         // Assert
-        Assert.Single(result);
-        Assert.NotNull(singleResult);
+        var singleResult = Assert.Single(result);
         Assert.Equivalent(expected, singleResult);
     }
 
