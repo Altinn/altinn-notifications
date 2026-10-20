@@ -37,6 +37,7 @@ public class DashboardServiceTests
                 "notification",
                 [new DashboardDeliveryAttempt(_recipientNin, null, "email", null, null, "Succeeded", null)],
                 null,
+                null,
                 null),
         };
 
@@ -138,6 +139,7 @@ public class DashboardServiceTests
                 NotificationChannel.EmailPreferred,
                 "notification",
                 [new DashboardDeliveryAttempt(null, _recipientOrgNo, "email", null, null, "Succeeded", null)],
+                null,
                 null,
                 null),
         };
@@ -241,6 +243,7 @@ public class DashboardServiceTests
                 "notification",
                 [new DashboardDeliveryAttempt(null, null, "email", _recipientEmail, null, "Succeeded", null)],
                 null,
+                null,
                 null),
         };
 
@@ -343,6 +346,7 @@ public class DashboardServiceTests
                 "notification",
                 [new DashboardDeliveryAttempt(null, null, "sms", null, _recipientPhoneNumber, "Accepted", null)],
                 null,
+                null,
                 null),
         };
 
@@ -444,6 +448,7 @@ public class DashboardServiceTests
                 NotificationChannel.EmailPreferred,
                 "notification",
                 [new DashboardDeliveryAttempt(null, null, "email", "recipient@example.com", null, "Succeeded", null)],
+                null,
                 null,
                 null),
         };

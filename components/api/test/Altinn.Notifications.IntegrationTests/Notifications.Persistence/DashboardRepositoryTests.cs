@@ -627,6 +627,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Assert
         var notification = Assert.Single(result);
         Assert.Null(notification.DialogId);
+        Assert.Null(notification.TransmissionId);
         Assert.Equal("sender@domain.com", notification.SenderAddress);
     }
 
@@ -648,6 +649,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         // Assert
         var notification = Assert.Single(result);
         Assert.Null(notification.DialogId);
+        Assert.Null(notification.TransmissionId);
         Assert.Null(notification.SenderAddress);
     }
 
@@ -668,7 +670,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetDashboardNotificationsByEmailAsync_ChainedOrderWithDialog_ReturnsDialogId()
+    public async Task GetDashboardNotificationsByEmailAsync_ChainedOrderWithDialog_ReturnsDialogAndTransmissionId()
     {
         // Arrange
         var dialogId = Guid.NewGuid();
@@ -688,10 +690,11 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         var notification = Assert.Single(result);
         Assert.Equal(orderId, notification.ShipmentId);
         Assert.Equal(dialogId.ToString(), notification.DialogId);
+        Assert.Equal("dashboard-transmission", notification.TransmissionId);
     }
 
     [Fact]
-    public async Task GetDashboardNotificationsByPhoneNumberAsync_ChainedOrderWithDialog_ReturnsDialogId()
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_ChainedOrderWithDialog_ReturnsDialogAndTransmissionId()
     {
         // Arrange
         var dialogId = Guid.NewGuid();
@@ -711,6 +714,7 @@ public sealed class DashboardRepositoryTests : IAsyncLifetime
         var notification = Assert.Single(result);
         Assert.Equal(orderId, notification.ShipmentId);
         Assert.Equal(dialogId.ToString(), notification.DialogId);
+        Assert.Equal("dashboard-transmission", notification.TransmissionId);
     }
 
     private static DashboardRepository GetRepository() =>

@@ -53,6 +53,11 @@ public record DashboardNotification
     public string? DialogId { get; init; }
 
     /// <summary>
+    /// The Dialogporten transmission id the order is associated with, if any.
+    /// </summary>
+    public string? TransmissionId { get; init; }
+
+    /// <summary>
     /// The email address the order was sent from. Null for SMS-only orders.
     /// </summary>
     public string? SenderAddress { get; init; }
@@ -70,6 +75,7 @@ public record DashboardNotification
         string notificationType,
         List<DashboardDeliveryAttempt> deliveryAttempts,
         string? dialogId,
+        string? transmissionId,
         string? senderAddress)
     {
         ShipmentId = shipmentId;
@@ -81,6 +87,7 @@ public record DashboardNotification
         NotificationType = notificationType;
         DeliveryAttempts = deliveryAttempts;
         DialogId = dialogId;
+        TransmissionId = transmissionId;
         SenderAddress = senderAddress;
     }
 }

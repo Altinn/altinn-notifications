@@ -93,7 +93,7 @@ public class DashboardRepository : IDashboardRepository
     {
         // Preserves the first-seen order from the SQL result (ordered by requestedsendtime DESC).
         var orderList = new List<Guid>();
-        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? SenderAddress)>();
+        var groups = new Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? TransmissionId, string? SenderAddress)>();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
         pgcom.Parameters.AddWithValue(recipientValueType, recipientValue);
@@ -122,7 +122,7 @@ public class DashboardRepository : IDashboardRepository
         return [.. orderList.Select(id =>
         {
             var e = groups[id];
-            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts, e.DialogId, e.SenderAddress);
+            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts, e.DialogId, e.TransmissionId, e.SenderAddress);
         })];
     }
 
@@ -134,7 +134,7 @@ public class DashboardRepository : IDashboardRepository
         NpgsqlDataReader reader,
         bool hasRecipientNin,
         bool hasRecipientOrgNo,
-        Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? SenderAddress)> groups,
+        Dictionary<Guid, (string CreatorName, string? ResourceId, string? SendersReference, DateTime RequestedSendTime, NotificationChannel? NotificationChannel, string NotificationType, List<DashboardDeliveryAttempt> DeliveryAttempts, string? DialogId, string? TransmissionId, string? SenderAddress)> groups,
         List<Guid> orderList)
     {
         string? recipientNin = hasRecipientNin ? reader.GetValue<string?>("recipientnin") : null;
@@ -169,6 +169,7 @@ public class DashboardRepository : IDashboardRepository
                 NotificationType: reader.GetValue<string>("notificationtype"),
                 DeliveryAttempts: new List<DashboardDeliveryAttempt> { deliveryAttempt },
                 DialogId: reader.GetValue<string?>("dialogid"),
+                TransmissionId: reader.GetValue<string?>("transmissionid"),
                 SenderAddress: reader.GetValue<string?>("senderaddress"));
 
             groups[shipmentId] = newEntry;

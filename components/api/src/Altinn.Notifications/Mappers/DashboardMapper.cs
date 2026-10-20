@@ -40,6 +40,7 @@ public static class DashboardMapper
                 ResultTime = r.ResultTime,
             })],
             DialogId = notification.DialogId,
+            TransmissionId = notification.TransmissionId,
             SenderAddress = notification.SenderAddress,
         };
     }

@@ -1049,74 +1049,6 @@ Parameters:
 - _transmissionid: The Dialogporten transmission identifier used to locate notification log entries.';
 
 -- getnotificationsbyemail.sql:
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_email
-(
-    _email text,
-    _from_date timestamptz,
-    _to_date timestamptz
-)
-RETURNS TABLE (
-    shipmentid uuid,
-    sendersreference text,
-    creatorname text,
-    notificationtype text,
-    resourceid text,
-    notificationchannel text,
-    requestedsendtime timestamptz,
-    recipientnin text,
-    recipientorgno text,
-    address text,
-    channel text,
-    result text,
-    resulttime timestamptz
-)
-LANGUAGE sql
-STABLE
-PARALLEL SAFE
-AS $$
-    SELECT
-        o.alternateid AS shipmentid,
-        o.sendersreference,
-        o.creatorname,
-        o.type::text AS notificationtype,
-        o.notificationorder->>'ResourceId' AS resourceid,
-        o.notificationorder->>'NotificationChannel' AS notificationchannel,
-        o.requestedsendtime,
-        e.recipientnin,
-        e.recipientorgno,
-        e.toaddress AS address,
-        'email'::text AS channel,
-        e.result::text AS result,
-        e.resulttime
-    FROM notifications.emailnotifications e
-    JOIN notifications.orders o ON o._id = e._orderid
-    WHERE lower(e.toaddress) = lower(_email)
-      AND o.requestedsendtime >= _from_date
-      AND o.requestedsendtime <  _to_date
-    ORDER BY o.requestedsendtime DESC;
-$$;
-
-COMMENT ON FUNCTION notifications.get_notifications_by_email IS
-'Retrieves all email notifications sent to a recipient identified by their email address within a given date range.
-Parameters:
-- _email: The email address of the recipient (matched case-insensitively)
-- _from_date: Start of the date range (inclusive) based on requestedsendtime
-- _to_date: End of the date range (exclusive) based on requestedsendtime
-Returns a table with the following columns:
-- shipmentid: The unique identifier for the shipment order
-- sendersreference: The sender''s reference for the order
-- creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
-- resourceid: The Altinn resource the notification is related to (may be null)
-- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
-- requestedsendtime: When the notification was requested to be sent
-- recipientnin: The recipient''s national identity number, if the recipient was identified by NIN (may be null)
-- recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
-- address: The address the notification was sent to (the recipient''s email address)
-- channel: The delivery channel (always ''email'' for this function)
-- result: The delivery result status
-- resulttime: When the result was recorded';
-
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_email_v2
 (
     _email text,
@@ -1138,6 +1070,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -1159,6 +1092,7 @@ AS $$
         e.result::text AS result,
         e.resulttime,
         c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
         et.fromaddress AS senderaddress
     FROM notifications.emailnotifications e
     JOIN notifications.orders o ON o._id = e._orderid
@@ -1191,99 +1125,11 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from';
 
 
 -- getnotificationsbynin.sql:
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin_v2
-(
-    _recipientnin text,
-    _from_date timestamptz,
-    _to_date timestamptz
-)
-RETURNS TABLE (
-    shipmentid uuid,
-    sendersreference text,
-    creatorname text,
-    notificationtype text,
-    resourceid text,
-    notificationchannel text,
-    requestedsendtime timestamptz,
-    recipientnin text,
-    address text,
-    channel text,
-    result text,
-    resulttime timestamptz
-)
-LANGUAGE sql
-STABLE
-PARALLEL SAFE
-AS $$
-    WITH combined AS (
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            e.recipientnin,
-            e.toaddress AS address,
-            'email'::text AS channel,
-            e.result::text AS result,
-            e.resulttime
-        FROM notifications.emailnotifications e
-        JOIN notifications.orders o ON o._id = e._orderid
-        WHERE e.recipientnin = _recipientnin
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
-
-        UNION ALL
-
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            s.recipientnin,
-            s.mobilenumber AS address,
-            'sms'::text AS channel,
-            s.result::text AS result,
-            s.resulttime
-        FROM notifications.smsnotifications s
-        JOIN notifications.orders o ON o._id = s._orderid
-        WHERE s.recipientnin = _recipientnin
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
-    )
-    SELECT * FROM combined
-    ORDER BY requestedsendtime DESC;
-$$;
-
-COMMENT ON FUNCTION notifications.get_notifications_by_nin_v2 IS
-'Retrieves all email and SMS notifications sent to a recipient identified by their national identity number (NIN) within a given date range.
-Parameters:
-- _recipientnin: The national identity number of the recipient
-- _from_date: Start of the date range (inclusive) based on requestedsendtime
-- _to_date: End of the date range (exclusive) based on requestedsendtime
-Returns a table with the following columns:
-- shipmentid: The unique identifier for the shipment order
-- sendersreference: The sender''s reference for the order
-- creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
-- resourceid: The Altinn resource the notification is related to (may be null)
-- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
-- requestedsendtime: When the notification was requested to be sent
-- recipientnin: The recipient''s national identity number
-- address: The address the notification was sent to (email address or mobile number)
-- channel: The delivery channel (''email'' or ''sms'')
-- result: The delivery result status
-- resulttime: When the result was recorded';
-
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_nin_v3
 (
     _recipientnin text,
@@ -1304,6 +1150,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -1325,6 +1172,7 @@ AS $$
             e.result::text AS result,
             e.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
@@ -1350,6 +1198,7 @@ AS $$
             s.result::text AS result,
             s.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
@@ -1383,99 +1232,11 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from (null for SMS-only orders)';
 
 
 -- getnotificationsbyorganizationnumber.sql:
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_organization_number
-(
-    _recipientorgno text,
-    _from_date timestamptz,
-    _to_date timestamptz
-)
-RETURNS TABLE (
-    shipmentid uuid,
-    sendersreference text,
-    creatorname text,
-    notificationtype text,
-    resourceid text,
-    notificationchannel text,
-    requestedsendtime timestamptz,
-    recipientorgno text,
-    address text,
-    channel text,
-    result text,
-    resulttime timestamptz
-)
-LANGUAGE sql
-STABLE
-PARALLEL SAFE
-AS $$
-    WITH combined AS (
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            e.recipientorgno,
-            e.toaddress AS address,
-            'email'::text AS channel,
-            e.result::text AS result,
-            e.resulttime
-        FROM notifications.emailnotifications e
-        JOIN notifications.orders o ON o._id = e._orderid
-        WHERE e.recipientorgno = _recipientorgno
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
-
-        UNION ALL
-
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            s.recipientorgno,
-            s.mobilenumber AS address,
-            'sms'::text AS channel,
-            s.result::text AS result,
-            s.resulttime
-        FROM notifications.smsnotifications s
-        JOIN notifications.orders o ON o._id = s._orderid
-        WHERE s.recipientorgno = _recipientorgno
-          AND o.requestedsendtime >= _from_date
-          AND o.requestedsendtime <  _to_date
-    )
-    SELECT * FROM combined
-    ORDER BY requestedsendtime DESC;
-$$;
-
-COMMENT ON FUNCTION notifications.get_notifications_by_organization_number IS
-'Retrieves all email and SMS notifications sent to a recipient identified by their organization number within a given date range.
-Parameters:
-- _recipientorgno: The organization number of the recipient
-- _from_date: Start of the date range (inclusive) based on requestedsendtime
-- _to_date: End of the date range (exclusive) based on requestedsendtime
-Returns a table with the following columns:
-- shipmentid: The unique identifier for the shipment order
-- sendersreference: The sender''s reference for the order
-- creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
-- resourceid: The Altinn resource the notification is related to (may be null)
-- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
-- requestedsendtime: When the notification was requested to be sent
-- recipientorgno: The recipient''s organization number
-- address: The address the notification was sent to (email address or mobile number)
-- channel: The delivery channel (''email'' or ''sms'')
-- result: The delivery result status
-- resulttime: When the result was recorded';
-
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_organization_number_v2
 (
     _recipientorgno text,
@@ -1496,6 +1257,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -1517,6 +1279,7 @@ AS $$
             e.result::text AS result,
             e.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
@@ -1542,6 +1305,7 @@ AS $$
             s.result::text AS result,
             s.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
@@ -1575,88 +1339,11 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from (null for SMS-only orders)';
 
 
 -- getnotificationsbyphonenumber.sql:
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_phone_number
-(
-    _phonenumber text,
-    _from_date timestamptz,
-    _to_date timestamptz
-)
-RETURNS TABLE (
-    shipmentid uuid,
-    sendersreference text,
-    creatorname text,
-    notificationtype text,
-    resourceid text,
-    notificationchannel text,
-    requestedsendtime timestamptz,
-    recipientnin text,
-    recipientorgno text,
-    address text,
-    channel text,
-    result text,
-    resulttime timestamptz
-)
-LANGUAGE sql
-STABLE
-PARALLEL SAFE
-AS $$
-    WITH normalized AS (
-        SELECT
-            CASE
-                WHEN _phonenumber LIKE '+47%' THEN substring(_phonenumber FROM 4)
-                WHEN _phonenumber LIKE '0047%' THEN substring(_phonenumber FROM 5)
-                ELSE _phonenumber
-            END AS bare_number
-    )
-    SELECT
-        o.alternateid AS shipmentid,
-        o.sendersreference,
-        o.creatorname,
-        o.type::text AS notificationtype,
-        o.notificationorder->>'ResourceId' AS resourceid,
-        o.notificationorder->>'NotificationChannel' AS notificationchannel,
-        o.requestedsendtime,
-        s.recipientnin,
-        s.recipientorgno,
-        s.mobilenumber AS address,
-        'sms'::text AS channel,
-        s.result::text AS result,
-        s.resulttime
-    FROM notifications.smsnotifications s
-    JOIN notifications.orders o ON o._id = s._orderid
-    CROSS JOIN normalized n
-    WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
-      AND o.requestedsendtime >= _from_date
-      AND o.requestedsendtime <  _to_date
-    ORDER BY o.requestedsendtime DESC
-$$;
-
-COMMENT ON FUNCTION notifications.get_notifications_by_phone_number IS
-'Retrieves all SMS notifications sent to a recipient identified by their phone number within a given date range.
-Matches the recipient regardless of whether the stored mobile number uses the "+47" or "0047" country code prefix.
-Parameters:
-- _phonenumber: The phone number of the recipient, with or without a "+47"/"0047" prefix (e.g. +4799999999, 004799999999, or 99999999)
-- _from_date: Start of the date range (inclusive) based on requestedsendtime
-- _to_date: End of the date range (exclusive) based on requestedsendtime
-Returns a table with the following columns:
-- shipmentid: The unique identifier for the shipment order
-- sendersreference: The sender''s reference for the order
-- creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
-- resourceid: The Altinn resource the notification is related to (may be null)
-- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
-- requestedsendtime: When the notification was requested to be sent
-- recipientnin: The recipient''s national identity number, if the recipient was identified by NIN (may be null)
-- recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
-- address: The address the notification was sent to (the recipient''s phone number)
-- channel: The delivery channel (always ''sms'' for this function)
-- result: The delivery result status
-- resulttime: When the result was recorded';
-
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_phone_number_v2
 (
     _phonenumber text,
@@ -1678,6 +1365,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -1707,6 +1395,7 @@ AS $$
         s.result::text AS result,
         s.resulttime,
         c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
         et.fromaddress AS senderaddress
     FROM notifications.smsnotifications s
     JOIN notifications.orders o ON o._id = s._orderid
@@ -1741,95 +1430,11 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from (null for SMS-only orders)';
 
 
 -- getnotificationsbyshipmentid.sql:
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid
-(
-    _shipmentid uuid
-)
-RETURNS TABLE (
-    shipmentid uuid,
-    sendersreference text,
-    creatorname text,
-    notificationtype text,
-    resourceid text,
-    notificationchannel text,
-    requestedsendtime timestamptz,
-    recipientnin text,
-    recipientorgno text,
-    address text,
-    channel text,
-    result text,
-    resulttime timestamptz
-)
-LANGUAGE sql
-STABLE
-PARALLEL SAFE
-AS $$
-    WITH combined AS (
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type::text AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            e.recipientnin,
-            e.recipientorgno,
-            e.toaddress AS address,
-            'email'::text AS channel,
-            e.result::text AS result,
-            e.resulttime
-        FROM notifications.emailnotifications e
-        JOIN notifications.orders o ON o._id = e._orderid
-        WHERE o.alternateid = _shipmentid
-
-        UNION ALL
-
-        SELECT
-            o.alternateid AS shipmentid,
-            o.sendersreference,
-            o.creatorname,
-            o.type::text AS notificationtype,
-            o.notificationorder->>'ResourceId' AS resourceid,
-            o.notificationorder->>'NotificationChannel' AS notificationchannel,
-            o.requestedsendtime,
-            s.recipientnin,
-            s.recipientorgno,
-            s.mobilenumber AS address,
-            'sms'::text AS channel,
-            s.result::text AS result,
-            s.resulttime
-        FROM notifications.smsnotifications s
-        JOIN notifications.orders o ON o._id = s._orderid
-        WHERE o.alternateid = _shipmentid
-    )
-    SELECT * FROM combined
-    ORDER BY requestedsendtime DESC;
-$$;
-
-COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid IS
-'Retrieves all email and SMS notifications belonging to a shipment identified by its shipment id (orders.alternateid).
-Parameters:
-- _shipmentid: The shipment id (orders.alternateid) to look up
-Returns a table with the following columns:
-- shipmentid: The unique identifier for the shipment order
-- sendersreference: The sender''s reference for the order
-- creatorname: The short name of the organisation that created the order
-- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
-- resourceid: The Altinn resource the notification is related to (may be null)
-- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
-- requestedsendtime: When the notification was requested to be sent
-- recipientnin: The recipient''s national identity number, if the recipient was identified by NIN (may be null)
-- recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
-- address: The address the notification was sent to (email address or mobile number)
-- channel: The delivery channel (''email'' or ''sms'')
-- result: The delivery result status
-- resulttime: When the result was recorded';
-
 CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid_v2
 (
     _shipmentid uuid
@@ -1849,6 +1454,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -1871,6 +1477,7 @@ AS $$
             e.result::text AS result,
             e.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
@@ -1895,6 +1502,7 @@ AS $$
             s.result::text AS result,
             s.resulttime,
             c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
             et.fromaddress AS senderaddress
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
@@ -1925,6 +1533,7 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from (null for SMS-only orders)';
 
 

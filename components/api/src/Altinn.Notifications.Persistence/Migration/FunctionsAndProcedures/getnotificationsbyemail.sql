@@ -19,6 +19,7 @@ RETURNS TABLE (
     result text,
     resulttime timestamptz,
     dialogid text,
+    transmissionid text,
     senderaddress text
 )
 LANGUAGE sql
@@ -40,6 +41,7 @@ AS $$
         e.result::text AS result,
         e.resulttime,
         c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
         et.fromaddress AS senderaddress
     FROM notifications.emailnotifications e
     JOIN notifications.orders o ON o._id = e._orderid
@@ -72,4 +74,5 @@ Returns a table with the following columns:
 - result: The delivery result status
 - resulttime: When the result was recorded
 - dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
 - senderaddress: The email address the order was sent from';

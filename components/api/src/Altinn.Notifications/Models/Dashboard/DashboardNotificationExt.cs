@@ -62,6 +62,12 @@ public record DashboardNotificationExt
     public string? DialogId { get; init; }
 
     /// <summary>
+    /// The Dialogporten transmission id the order is associated with, if any.
+    /// </summary>
+    [JsonPropertyName("transmissionId")]
+    public string? TransmissionId { get; init; }
+
+    /// <summary>
     /// The email address the order was sent from. Null for SMS-only orders.
     /// </summary>
     [JsonPropertyName("senderAddress")]

@@ -89,6 +89,7 @@ public class DashboardMapperTests
                 "notification",
                 [new DashboardDeliveryAttempt(_nin, null, "email", "a@b.com", null, "Succeeded", resultTime)],
                 "0198f1a2-5c3b-7d4e-8f90-123456789abc",
+                "0198f1a2-6d4c-7e5f-9a01-23456789abcd",
                 "noreply@altinn.no"),
         };
 
@@ -103,6 +104,7 @@ public class DashboardMapperTests
         Assert.Equal("EmailPreferred", ext.NotificationChannel);
         Assert.Equal("notification", ext.NotificationType);
         Assert.Equal("0198f1a2-5c3b-7d4e-8f90-123456789abc", ext.DialogId);
+        Assert.Equal("0198f1a2-6d4c-7e5f-9a01-23456789abcd", ext.TransmissionId);
         Assert.Equal("noreply@altinn.no", ext.SenderAddress);
     }
 
@@ -148,6 +150,7 @@ public class DashboardMapperTests
                 null,
                 "notification",
                 recipients,
+                null,
                 null,
                 null),
         ];
