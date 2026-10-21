@@ -35,10 +35,14 @@ var email = AddService("email", projects[1], 5091, "swagger", "altinn-notificati
 var sms = AddService("sms", projects[2], 5092, string.Empty, "altinn-notifications-sms");
 
 // The containers live in Podman, not in Aspire, so they keep running when Aspire stops.
-// The start commands are no-ops when the containers are already running; the log tail
-// keeps the resource running so the container output shows up in the dashboard.
-var postgres = builder.AddExecutable("postgres", "sh", ".", "-c", "podman start notifications-db && exec podman logs -f notifications-db");
-var serviceBus = builder.AddExecutable("servicebus", "sh", "../asb-emulator", "-c", "podman compose up -d && exec podman logs -f servicebus-emulator")
+// They are started here rather than through a shell so this works on Windows too; both
+// commands are no-ops when the containers are already running. The resources only tail
+// the container logs so they show up in the dashboard.
+StartContainer(".", "start", "notifications-db");
+StartContainer("../asb-emulator", "compose", "up", "-d");
+
+var postgres = builder.AddExecutable("postgres", "podman", ".", "logs", "-f", "notifications-db");
+var serviceBus = builder.AddExecutable("servicebus", "podman", ".", "logs", "-f", "servicebus-emulator")
     .WithHttpEndpoint(port: 5300, targetPort: 5300, name: "management", isProxied: false)
     .WithHttpHealthCheck("/health", endpointName: "management");
 
@@ -66,6 +70,17 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+void StartContainer(string workingDirectory, params string[] podmanArgs)
+{
+    var startInfo = new ProcessStartInfo("podman", podmanArgs) { WorkingDirectory = Path.Combine(builder.AppHostDirectory, workingDirectory) };
+    using var podman = Process.Start(startInfo)!;
+    podman.WaitForExit();
+    if (podman.ExitCode != 0)
+    {
+        throw new InvalidOperationException($"podman {string.Join(' ', podmanArgs)} failed");
+    }
 }
 
 // The launch profiles are skipped on purpose: email and sms hardcode ASPNETCORE_URLS
