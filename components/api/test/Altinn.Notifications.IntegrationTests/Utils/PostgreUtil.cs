@@ -100,9 +100,9 @@ public static class PostgreUtil
         return (o, e);
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SendingTimePolicy? emailSendingTimePolicy = null)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SendingTimePolicy? emailSendingTimePolicy = null, SendingTimePolicy? smsSendingTimePolicy = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy);
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy, smsSendingTimePolicy);
 
         if (sendersReference != null)
         {
