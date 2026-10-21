@@ -156,11 +156,6 @@ public class DashboardRepository : IDashboardRepository
         if (groups.TryGetValue(shipmentId, out var entry))
         {
             entry.DeliveryAttempts.Add(deliveryAttempt);
-
-            if (entry.SenderAddress is null && reader.GetValue<string?>("senderaddress") is string senderAddress)
-            {
-                groups[shipmentId] = entry with { SenderAddress = senderAddress };
-            }
         }
         else
         {

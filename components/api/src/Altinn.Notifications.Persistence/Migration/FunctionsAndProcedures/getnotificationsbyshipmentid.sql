@@ -73,7 +73,7 @@ AS $$
         WHERE o.alternateid = _shipmentid
     )
     SELECT * FROM combined
-    ORDER BY requestedsendtime DESC;
+    ORDER BY requestedsendtime DESC, channel;
 $$;
 
 COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid_v2 IS
