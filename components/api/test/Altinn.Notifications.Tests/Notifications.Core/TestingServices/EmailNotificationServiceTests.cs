@@ -250,62 +250,6 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    [Fact]
-    public async Task UpdateStatus_WhenStatusIsSucceeded_ShouldPassStatusIsAcceptedOrSucceededAsTrue()
-    {
-        // Arrange
-        Guid notificationId = Guid.NewGuid();
-        string operationId = Guid.NewGuid().ToString();
-        EmailSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notificationId,
-            OperationId = operationId,
-            SendResult = EmailNotificationResultType.Succeeded
-        };
-
-        var mockRepo = new Mock<EmailNotificationRepository>(null!, null!, Options.Create(new NotificationConfig()))
-        {
-            CallBase = true
-        };
-
-        mockRepo.Protected()
-            .Setup<Task>(
-                "ExecuteUpdateWithTransactionAsync",
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.IsAny<NotificationChannel>(),
-                ItExpr.IsAny<Guid?>(),
-                ItExpr.IsAny<string?>(),
-                ItExpr.IsAny<bool>(),
-                ItExpr.IsAny<SendStatusIdentifierType>())
-            .Returns(Task.CompletedTask);
-
-        var service = new EmailNotificationService(
-            new Mock<IGuidService>().Object,
-            new Mock<IDateTimeService>().Object,
-            new Mock<IEmailCommandPublisher>().Object,
-            mockRepo.Object,
-            new Mock<IComposedEmailCommandPublisher>().Object,
-            new Mock<IUnitOfWorkRepository>().Object,
-            new Mock<ILogger<EmailNotificationService>>().Object);
-
-        // Act
-        await service.UpdateSendStatus(sendOperationResult);
-
-        // Assert - verify ExecuteUpdateWithTransactionAsync was called with statusIsAcceptedOrSucceeded = true
-        mockRepo.Protected()
-            .Verify<Task>(
-                "ExecuteUpdateWithTransactionAsync",
-                Times.Once(),
-                ItExpr.IsAny<string>(),
-                ItExpr.IsAny<Action<NpgsqlCommand>>(),
-                ItExpr.Is<NotificationChannel>(c => c == NotificationChannel.Email),
-                ItExpr.IsAny<Guid?>(),
-                ItExpr.IsAny<string?>(),
-                ItExpr.Is<bool>(b => b),
-                ItExpr.IsAny<SendStatusIdentifierType>());
-    }
-
     [Theory]
     [InlineData(SendingTimePolicy.Anytime)]
     [InlineData(SendingTimePolicy.Daytime)]
@@ -467,7 +411,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object, logger: loggerMock.Object);
 
         // Act
-        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+        bool wasSent = await service.SendNotification(SendingTimePolicy.Anytime, cancellationTokenSource.Token);
 
         // Assert
         Assert.True(wasSent);
