@@ -40,12 +40,11 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type <> 'Composed'::notificationordertype
-            AND (o.emailsendingtimepolicy IS NULL OR o.emailsendingtimepolicy = 1)
-        ORDER BY email._id
+            AND email.iscomposed = false
+            AND email.sendingtimepolicy = 1
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),
@@ -79,6 +78,6 @@ ALTER FUNCTION notifications.claim_anytime_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_anytime_email()
-    IS 'Claims and returns a single email notification with sending time policy Anytime (emailsendingtimepolicy = 1 or NULL), excluding Composed orders (OrderType = 3).
+    IS 'Claims and returns a single email notification with sending time policy Anytime (sendingtimepolicy = 1), excluding Composed orders (iscomposed = true).
 Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
-Daytime orders (emailsendingtimepolicy = 2) are claimed by claim_daytime_email.';
+Daytime notifications (sendingtimepolicy = 2) are claimed by claim_daytime_email.';
