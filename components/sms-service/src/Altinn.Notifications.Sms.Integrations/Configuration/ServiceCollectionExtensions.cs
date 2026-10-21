@@ -34,8 +34,17 @@ public static class ServiceCollectionExtensions
         }
 
         services
-            .AddSingleton<ISmsClient, SmsClient>()
             .AddSingleton(smsGatewaySettings);
+
+        if (smsGatewaySettings.MockSmsClient)
+        {
+            // Should only be used for local development and testing, not in production.
+            services.AddSingleton<ISmsClient, MockSmsClient>();
+        }
+        else
+        {
+            services.AddSingleton<ISmsClient, SmsClient>();
+        }
 
         services.AddHttpClient<IAltinnGatewayClient, AltinnGatewayClient>(client =>
         {
