@@ -659,7 +659,7 @@ public static class PostgreUtil
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
             @orderchainid,
@@ -730,7 +730,7 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
@@ -827,7 +827,7 @@ public static class PostgreUtil
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
             @orderchainid,
@@ -895,7 +895,7 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);

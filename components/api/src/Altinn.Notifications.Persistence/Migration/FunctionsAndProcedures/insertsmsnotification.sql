@@ -17,7 +17,7 @@ DECLARE
 BEGIN
     SELECT
         _id,
-        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        CASE WHEN smssendingtimepolicy = 2 OR smssendingtimepolicy IS NULL THEN 2 ELSE 1 END
         INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;

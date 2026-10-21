@@ -231,7 +231,7 @@ BEGIN
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND ord.sendingtimepolicy = 1
+      AND ord.smssendingtimepolicy = 1
     ORDER BY sms._id
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT v_batchsize
@@ -261,7 +261,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_anytime_sms_batch_v2(INTEGER) IS
-'Claims and returns batches of SMS notifications (sendingtimepolicy = 1).
+'Claims and returns batches of SMS notifications (smssendingtimepolicy = 1).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
@@ -600,7 +600,7 @@ BEGIN
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL)
+      AND (ord.smssendingtimepolicy = 2 OR ord.smssendingtimepolicy IS NULL)
     ORDER BY sms._id
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT v_batchsize
@@ -630,7 +630,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_daytime_sms_batch_v2(INTEGER) IS
-'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).
+'Claims and returns batches of SMS notifications (smssendingtimepolicy = 2 or NULL).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
@@ -2471,7 +2471,7 @@ Returns: NULL if every candidate notification was logged successfully, otherwise
 
 
 -- insertorder.sql:
-CREATE OR REPLACE FUNCTION notifications.insertorder_v3(
+CREATE OR REPLACE FUNCTION notifications.insertorder_v2(
     _alternateid uuid,
     _creatorname text,
     _sendersreference text,
@@ -2479,6 +2479,37 @@ CREATE OR REPLACE FUNCTION notifications.insertorder_v3(
     _requestedsendtime timestamp with time zone,
     _notificationorder jsonb,
     _sendingtimepolicy integer,
+    _type text,
+    _processingstatus text,
+    _orderchainid bigint
+)
+RETURNS bigint
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    _orderid BIGINT;
+BEGIN
+    INSERT INTO notifications.orders(
+        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, smssendingtimepolicy, type, processedstatus, _orderchainid
+    )
+    VALUES (
+        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _sendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid
+    )
+    RETURNING _id INTO _orderid;
+
+    RETURN _orderid;
+END;
+$BODY$;
+
+
+CREATE OR REPLACE FUNCTION notifications.insertorder_v3(
+    _alternateid uuid,
+    _creatorname text,
+    _sendersreference text,
+    _created timestamp with time zone,
+    _requestedsendtime timestamp with time zone,
+    _notificationorder jsonb,
+    _smssendingtimepolicy integer,
     _type text,
     _processingstatus text,
     _orderchainid bigint,
@@ -2491,16 +2522,17 @@ DECLARE
     _orderid BIGINT;
 BEGIN
     INSERT INTO notifications.orders(
-        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, sendingtimepolicy, type, processedstatus, _orderchainid, emailsendingtimepolicy
+        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, smssendingtimepolicy, type, processedstatus, _orderchainid, emailsendingtimepolicy
     )
     VALUES (
-        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _sendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid, _emailsendingtimepolicy
+        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _smssendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid, _emailsendingtimepolicy
     )
     RETURNING _id INTO _orderid;
 
     RETURN _orderid;
 END;
 $BODY$;
+
 
 -- insertorderchain.sql:
 CREATE OR REPLACE FUNCTION notifications.insertorderchain_v2(
@@ -2655,7 +2687,7 @@ DECLARE
 BEGIN
     SELECT
         _id,
-        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        CASE WHEN smssendingtimepolicy = 2 OR smssendingtimepolicy IS NULL THEN 2 ELSE 1 END
         INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
