@@ -23,8 +23,8 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <param name="sendingTimePolicy">
     /// Policy that determines which notifications are eligible for retrieval.
-    /// <see cref="SendingTimePolicy.Daytime"/> retrieves notifications for orders with the Daytime policy;
-    /// any other value retrieves notifications for orders with the Anytime policy (or no email policy).
+    /// <see cref="SendingTimePolicy.Daytime"/> retrieves notifications with the Daytime sending time policy;
+    /// any other value retrieves notifications with the Anytime sending time policy.
     /// </param>
     /// <returns>
     /// A task that completes when retrieval finishes. The result is the next pending email notification,
