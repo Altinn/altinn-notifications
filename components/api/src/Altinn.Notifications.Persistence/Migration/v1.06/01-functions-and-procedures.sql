@@ -83,13 +83,12 @@ AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
+    SELECT sms._id, sms._orderid
     FROM notifications.smsnotifications sms
-    JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND ord.sendingtimepolicy = 1
-    ORDER BY sms._id
+      AND sms.sendingtimepolicy = 1
+    ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
   ),
@@ -103,17 +102,17 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
+    ord.creatorname
   FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
+  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
+  JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
@@ -223,11 +222,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type = 'Composed'::notificationordertype
-        ORDER BY email._id
+            AND email.iscomposed = true
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),
@@ -262,7 +260,7 @@ ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_composed_email()
-    IS 'Claims and returns a single email notification for Composed orders (OrderType = 3).
+    IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
 
 
@@ -369,13 +367,12 @@ AS $$
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
-    SELECT sms._id, sms._orderid, ord.creatorname
+    SELECT sms._id, sms._orderid
     FROM notifications.smsnotifications sms
-    JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL)
-    ORDER BY sms._id
+      AND sms.sendingtimepolicy = 2
+    ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
   ),
@@ -389,22 +386,22 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      claimed.creatorname
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    upd.creatorname
+    ord.creatorname
   FROM updated_rows upd
-  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
+  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
+  JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
-'Claims and returns an SMS notification (sendingtimepolicy = 2 or NULL).
+'Claims and returns an SMS notification (sendingtimepolicy = 2).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimdaytimesmsbatch.sql:
@@ -468,8 +465,8 @@ Includes the order creatorname to support per-service-owner SMS sender substitut
 
 -- claimemail.sql:
 CREATE OR REPLACE FUNCTION notifications.claim_email()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
-    LANGUAGE 'plpgsql'
+ RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
+ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     latest_email_timeout timestamp;
@@ -509,11 +506,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type <> 'Composed'::notificationordertype
-        ORDER BY email._id
+            AND email.iscomposed = false
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),
@@ -2053,8 +2049,14 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
+	__iscomposed BOOLEAN;
+    __sendingtimepolicy SMALLINT;
 BEGIN
-    SELECT _id INTO __orderid
+    SELECT
+        _id,
+        CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
+        CASE WHEN sendingtimepolicy = 1 OR sendingtimepolicy IS NULL THEN 1 ELSE 2 END
+        INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -2069,7 +2071,9 @@ BEGIN
         result,
         resulttime,
         expirytime,
-        total_attachment_size_bytes
+        total_attachment_size_bytes,
+		iscomposed,
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -2082,7 +2086,9 @@ BEGIN
         _result::emailnotificationresulttype,
         _resulttime,
         _expirytime,
-        _total_attachment_size_bytes
+        _total_attachment_size_bytes,
+		__iscomposed,
+        __sendingtimepolicy
     );
 END;
 $BODY$;
@@ -2406,8 +2412,12 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
+    __sendingtimepolicy SMALLINT;
 BEGIN
-    SELECT _id INTO __orderid
+    SELECT
+        _id,
+        CASE WHEN sendingtimepolicy = 2 OR sendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -2420,7 +2430,8 @@ BEGIN
         customizedbody,
         result,
         resulttime,
-        expirytime
+        expirytime,
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -2431,7 +2442,8 @@ BEGIN
         _customizedbody,
         _result::smsnotificationresulttype,
         _resulttime,
-        _expirytime
+        _expirytime,
+        __sendingtimepolicy
     );
 END;
 $BODY$;
