@@ -779,7 +779,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.Equal(1, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'"));
         Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'"));
 
-        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND sendingtimepolicy IS NULL"));
+        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND smssendingtimepolicy IS NULL"));
     }
 
     [Fact]
