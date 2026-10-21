@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_phone_number
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_phone_number_v2
 (
     _phonenumber text,
     _from_date timestamptz,
@@ -17,7 +17,10 @@ RETURNS TABLE (
     address text,
     channel text,
     result text,
-    resulttime timestamptz
+    resulttime timestamptz,
+    dialogid text,
+    transmissionid text,
+    senderaddress text
 )
 LANGUAGE sql
 STABLE
@@ -44,9 +47,13 @@ AS $$
         s.mobilenumber AS address,
         'sms'::text AS channel,
         s.result::text AS result,
-        s.resulttime
+        s.resulttime,
+        c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
+        NULL::text AS senderaddress
     FROM notifications.smsnotifications s
     JOIN notifications.orders o ON o._id = s._orderid
+    LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
     CROSS JOIN normalized n
     WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
       AND o.requestedsendtime >= _from_date
@@ -54,7 +61,7 @@ AS $$
     ORDER BY o.requestedsendtime DESC
 $$;
 
-COMMENT ON FUNCTION notifications.get_notifications_by_phone_number IS
+COMMENT ON FUNCTION notifications.get_notifications_by_phone_number_v2 IS
 'Retrieves all SMS notifications sent to a recipient identified by their phone number within a given date range.
 Matches the recipient regardless of whether the stored mobile number uses the "+47" or "0047" country code prefix.
 Parameters:
@@ -74,4 +81,7 @@ Returns a table with the following columns:
 - address: The address the notification was sent to (the recipient''s phone number)
 - channel: The delivery channel (always ''sms'' for this function)
 - result: The delivery result status
-- resulttime: When the result was recorded';
+- resulttime: When the result was recorded
+- dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
+- senderaddress: The email address the notification was sent from (always null for this function)';
