@@ -1,6 +1,4 @@
-﻿using System;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Xunit;
@@ -10,9 +8,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class ProcessingLifecycleMapperTests
 {
     [Theory]
-    [InlineData("delivered", ProcessingLifecycle.SMS_Delivered)]
-    [InlineData("accepted", ProcessingLifecycle.SMS_Accepted)]
     [InlineData("failed", ProcessingLifecycle.SMS_Failed)]
+    [InlineData("accepted", ProcessingLifecycle.SMS_Accepted)]
+    [InlineData("delivered", ProcessingLifecycle.SMS_Delivered)]
+    [InlineData("failed_contenttoolarge", ProcessingLifecycle.SMS_Failed_ContentTooLarge)]
     public void GetSmsLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
     {
         // Act
@@ -64,6 +63,7 @@ public class ProcessingLifecycleMapperTests
     [InlineData("failed_filteredspam", ProcessingLifecycle.Email_Failed_FilteredSpam)]
     [InlineData("failed_invalidsasurl", ProcessingLifecycle.Email_Failed_InvalidSasUrl)]
     [InlineData("failed_transienterror", ProcessingLifecycle.Email_Failed_TransientError)]
+    [InlineData("failed_contenttoolarge", ProcessingLifecycle.Email_Failed_ContentTooLarge)]
     [InlineData("failed_payloadtoolarge", ProcessingLifecycle.Email_Failed_PayloadTooLarge)]
     [InlineData("failed_invalidemailformat", ProcessingLifecycle.Email_Failed_InvalidFormat)]
     [InlineData("failed_recipientreserved", ProcessingLifecycle.Email_Failed_RecipientReserved)]

@@ -191,6 +191,11 @@ public enum ProcessingLifecycle
     SMS_Failed_Rejected,
 
     /// <summary>
+    /// The SMS notification was not sent because the message was too large to be queued for sending.
+    /// </summary>
+    SMS_Failed_ContentTooLarge,
+
+    /// <summary>
     /// The email notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
@@ -307,5 +312,10 @@ public enum ProcessingLifecycle
     /// <summary>
     /// The email notification was not sent because the total size of the attachments exceeded the allowed limit.
     /// </summary>
-    Email_Failed_PayloadTooLarge
+    Email_Failed_PayloadTooLarge,
+
+    /// <summary>
+    /// The email notification was not sent because the message was too large to be queued for sending.
+    /// </summary>
+    Email_Failed_ContentTooLarge
 }

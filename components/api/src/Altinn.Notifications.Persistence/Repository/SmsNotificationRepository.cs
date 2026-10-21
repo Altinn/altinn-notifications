@@ -36,6 +36,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <inheritdoc/>
     protected override string SourceIdentifier => _smsSourceIdentifier;
 
+    /// <inheritdoc/>
+    protected override NotificationChannel Channel => NotificationChannel.Sms;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
@@ -118,8 +121,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and gateway reference are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null)
+    public async Task UpdateSendStatusAsync(UnitOfWork unitOfWork, Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null, string? deliveryReport = null, CancellationToken cancellationToken = default)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasGatewayReference = !string.IsNullOrWhiteSpace(gatewayReference);
@@ -128,22 +130,26 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             throw new InvalidNotificationIdentifierException("The provided SMS identifier is invalid.");
         }
 
-        await ExecuteUpdateWithTransactionAsync(
+        var (identifier, identifierType) = hasNotificationId
+            ? (notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId)
+            : (gatewayReference!, SendStatusIdentifierType.GatewayReference);
+
+        await ExecuteUpdateAsync(
+            unitOfWork,
             _updateSmsNotificationSql,
             pgcom =>
             {
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, hasNotificationId ? notificationId!.Value : DBNull.Value);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
             },
-            NotificationChannel.Sms,
-            notificationId,
-            gatewayReference,
-            statusIsAcceptedOrSucceeded: result == SmsNotificationResultType.Accepted,
-            SendStatusIdentifierType.GatewayReference);
+            identifier,
+            identifierType,
+            isIntermediateStatus: result == SmsNotificationResultType.Accepted,
+            cancellationToken);
     }
-    
+
     /// <inheritdoc/>
     public async Task PersistSubstitutedSender(UnitOfWork unitOfWork, Guid notificationId, string sender)
     {

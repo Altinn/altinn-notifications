@@ -1,22 +1,29 @@
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Exceptions;
 using Altinn.Notifications.Shared.Publishers;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IComposedEmailCommandPublisher"/> that publishes
-/// composed email notifications to a dedicated Azure Service Bus queue via <see cref="IMessageBusPublisher"/>.
+/// composed email notifications to a dedicated Azure Service Bus queue via <see cref="IWolverinePublisher"/>.
 /// </summary>
-public class ComposedEmailCommandPublisher(IMessageBusPublisher messageBusPublisher) : IComposedEmailCommandPublisher
+public class ComposedEmailCommandPublisher(IWolverinePublisher wolverinePublisher) : IComposedEmailCommandPublisher
 {
-    private readonly IMessageBusPublisher _messageBusPublisher = messageBusPublisher;
-
     /// <inheritdoc/>
-    public Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
+    public async Task PublishAsync(ComposedEmail email, CancellationToken cancellationToken)
     {
-        return _messageBusPublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+        try
+        {
+            await wolverinePublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
+        }
+        catch (ContentTooLargeException ex)
+        {
+            throw new NotificationSizeLimitExceededException($"Composed email {email.NotificationId} exceeds the message queue size limit.", ex);
+        }
     }
 
     /// <summary>

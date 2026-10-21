@@ -86,5 +86,10 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Failed because the total attachment size exceeded the email service limit.
     /// </summary>
-    Failed_PayloadTooLarge
+    Failed_PayloadTooLarge,
+
+    /// <summary>
+    /// Indicates that the email send operation failed because the message is too large to be queued for sending.
+    /// </summary>
+    Failed_ContentTooLarge
 }
