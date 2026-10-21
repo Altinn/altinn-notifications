@@ -142,6 +142,7 @@ public class EmailNotificationService(
     /// <param name="publishNotification">Publishes the claimed notification.</param>
     /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
     /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
     private async Task<bool> SendClaimedNotification<TNotification>(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
@@ -149,7 +150,7 @@ public class EmailNotificationService(
         string operationName,
         CancellationToken cancellationToken,
         SendingTimePolicy? sendingTimePolicy = null)
-        where TNotification : class
+        where TNotification : Email
     {
         using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;

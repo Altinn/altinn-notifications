@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS notifications.sendingtimepolicy (
+﻿CREATE TABLE IF NOT EXISTS notifications.sendingtimepolicy (
     id SMALLINT NOT NULL,
     name text NOT NULL,
     CONSTRAINT sendingtimepolicy_pkey PRIMARY KEY (id),
