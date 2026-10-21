@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION notifications.claim_email()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
-    LANGUAGE 'plpgsql'
+ RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
+ LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     latest_email_timeout timestamp;
@@ -40,11 +40,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
-        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
-            AND o.type <> 'Composed'::notificationordertype
-        ORDER BY email._id
+            AND email.iscomposed = false
+        ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
     ),
