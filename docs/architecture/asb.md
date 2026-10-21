@@ -122,7 +122,7 @@ The composed email send queue additionally treats `AttachmentDownloadException` 
 
 **Description:** SMS send commands published by the API and consumed by the SMS service.
 
-**Publisher:** Altinn Notifications API, [SendSmsCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/SendSmsCommandPublisher.cs)
+**Publisher:** Altinn Notifications API, [SmsCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/SmsCommandPublisher.cs)
 
 **Handler:** Altinn Notifications SMS, [SendSmsCommandHandler](https://github.com/Altinn/altinn-notifications/blob/main/components/sms-service/src/Altinn.Notifications.Sms.Integrations/Wolverine/Handlers/SendSmsCommandHandler.cs)
 

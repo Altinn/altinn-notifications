@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
-using Altinn.Notifications.Core.Configuration;
+
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -9,8 +10,8 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -23,7 +24,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
-    private readonly ISendSmsPublisher _smsPublisher;
+    private readonly ISmsCommandPublisher _smsPublisher;
     private readonly IUnitOfWorkRepository _unitOfWorkRepository;
     private readonly ILogger<SmsNotificationService> _logger;
     private readonly ISmsSenderSubstitutionService _senderSubstitutionService;
@@ -35,7 +36,7 @@ public class SmsNotificationService : ISmsNotificationService
         IGuidService guidService,
         IDateTimeService dateTimeService,
         ISmsNotificationRepository repository,
-        ISendSmsPublisher smsPublisher,
+        ISmsCommandPublisher smsPublisher,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
         ISmsSenderSubstitutionService senderSubstitutionService)
@@ -112,6 +113,7 @@ public class SmsNotificationService : ISmsNotificationService
         try
         {
             Sms? newSmsNotification = await _repository.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+            activity?.SetTag("Count", newSmsNotification == null ? 0 : 1);
             if (newSmsNotification is null)
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
@@ -120,8 +122,11 @@ public class SmsNotificationService : ISmsNotificationService
 
             cancellationToken.ThrowIfCancellationRequested();
             await ApplySenderSubstitution(unitOfWork, newSmsNotification);
-            await _smsPublisher.PublishAsync(newSmsNotification, cancellationToken);
+
+            await PublishClaimedNotification(unitOfWork, newSmsNotification, cancellationToken);
+
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
             return true;
         }
         catch (Exception e)
@@ -135,10 +140,9 @@ public class SmsNotificationService : ISmsNotificationService
             {
                 await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
             }
-            catch (Exception ex)
+            catch (Exception rollbackException)
             {
-                // If rollback fails, we can't do much about it. The unit of work will be disposed and the transaction rolled back automatically.
-                _logger.LogError(ex, "An error occurred while processing {OperationName}.", nameof(SendNotification));
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", nameof(SendNotification));
             }
 
             return false;
@@ -146,19 +150,39 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task TerminateExpiredNotifications()
+    public Task TerminateExpiredNotifications()
     {
-        await _repository.TerminateExpiredNotifications();
+        return _repository.TerminateExpiredNotifications();
     }
 
     /// <inheritdoc/>
     public async Task UpdateSendStatus(SmsSendOperationResult sendOperationResult)
     {
-        await _repository.UpdateSendStatus(
-            sendOperationResult.NotificationId,
-            sendOperationResult.SendResult,
-            sendOperationResult.GatewayReference,
-            sendOperationResult.DeliveryReport);
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        try
+        {
+            await _repository.UpdateSendStatusAsync(
+                unitOfWork,
+                sendOperationResult.NotificationId,
+                sendOperationResult.SendResult,
+                sendOperationResult.GatewayReference,
+                sendOperationResult.DeliveryReport);
+        }
+        catch (Exception)
+        {
+            try
+            {
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            }
+            catch (Exception rollbackException)
+            {
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", nameof(UpdateSendStatus));
+            }
+
+            throw;
+        }
+
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>
@@ -184,6 +208,26 @@ public class SmsNotificationService : ISmsNotificationService
         {
             sms.Sender = smsSenderResolutionResult.Sender;
             await _repository.PersistSubstitutedSender(unitOfWork, sms.NotificationId, sms.Sender);
+        }
+    }
+
+    /// <summary>
+    /// Publishes a claimed SMS notification. If it exceeds the size limit, records <see cref="SmsNotificationResultType.Failed_ContentTooLarge"/> on the claiming unit of work.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that holds the claim.</param>
+    /// <param name="claimedNotification">The claimed SMS notification to publish.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    private async Task PublishClaimedNotification(UnitOfWork unitOfWork, Sms claimedNotification, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _smsPublisher.PublishAsync(claimedNotification, cancellationToken);
+        }
+        catch (NotificationSizeLimitExceededException sizeLimitExceeded)
+        {
+            _logger.LogWarning(sizeLimitExceeded, "Notification {NotificationId} is too large to publish for {OperationName}.", claimedNotification.NotificationId, nameof(SendNotification));
+
+            await _repository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
         }
     }
 

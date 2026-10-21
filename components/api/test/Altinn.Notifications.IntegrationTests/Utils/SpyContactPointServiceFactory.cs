@@ -62,7 +62,7 @@ public class SpyContactPointServiceFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
-            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISendSmsPublisher>()));
+            services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISmsCommandPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
 
             // Remove the existing IContactPointService registration

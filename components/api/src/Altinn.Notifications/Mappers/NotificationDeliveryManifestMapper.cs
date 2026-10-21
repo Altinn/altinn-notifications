@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Models.Delivery;
@@ -45,14 +46,14 @@ public static class NotificationDeliveryManifestMapper
         return status switch
         {
             // Order statuses
+            ProcessingLifecycle.Order_Failed => ProcessingLifecycleExt.Order_Failed,
+            ProcessingLifecycle.Order_Retrying => ProcessingLifecycleExt.Order_Retrying,
             ProcessingLifecycle.Order_Completed => ProcessingLifecycleExt.Order_Completed,
             ProcessingLifecycle.Order_Cancelled => ProcessingLifecycleExt.Order_Cancelled,
             ProcessingLifecycle.Order_Processed => ProcessingLifecycleExt.Order_Processed,
             ProcessingLifecycle.Order_Registered => ProcessingLifecycleExt.Order_Registered,
             ProcessingLifecycle.Order_Processing => ProcessingLifecycleExt.Order_Processing,
             ProcessingLifecycle.Order_SendConditionNotMet => ProcessingLifecycleExt.Order_SendConditionNotMet,
-            ProcessingLifecycle.Order_Retrying => ProcessingLifecycleExt.Order_Retrying,
-            ProcessingLifecycle.Order_Failed => ProcessingLifecycleExt.Order_Failed,
 
             // SMS statuses
             ProcessingLifecycle.SMS_New => ProcessingLifecycleExt.SMS_New,
@@ -60,15 +61,16 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.SMS_Sending => ProcessingLifecycleExt.SMS_Sending,
             ProcessingLifecycle.SMS_Accepted => ProcessingLifecycleExt.SMS_Accepted,
             ProcessingLifecycle.SMS_Delivered => ProcessingLifecycleExt.SMS_Delivered,
+            ProcessingLifecycle.SMS_Failed_TTL => ProcessingLifecycleExt.SMS_Failed_TTL,
             ProcessingLifecycle.SMS_Failed_Deleted => ProcessingLifecycleExt.SMS_Failed_Deleted,
             ProcessingLifecycle.SMS_Failed_Expired => ProcessingLifecycleExt.SMS_Failed_Expired,
             ProcessingLifecycle.SMS_Failed_Rejected => ProcessingLifecycleExt.SMS_Failed_Rejected,
             ProcessingLifecycle.SMS_Failed_Undelivered => ProcessingLifecycleExt.SMS_Failed_Undelivered,
             ProcessingLifecycle.SMS_Failed_BarredReceiver => ProcessingLifecycleExt.SMS_Failed_BarredReceiver,
+            ProcessingLifecycle.SMS_Failed_ContentTooLarge => ProcessingLifecycleExt.SMS_Failed_ContentTooLarge,
             ProcessingLifecycle.SMS_Failed_InvalidRecipient => ProcessingLifecycleExt.SMS_Failed_InvalidRecipient,
             ProcessingLifecycle.SMS_Failed_RecipientReserved => ProcessingLifecycleExt.SMS_Failed_RecipientReserved,
             ProcessingLifecycle.SMS_Failed_RecipientNotIdentified => ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified,
-            ProcessingLifecycle.SMS_Failed_TTL => ProcessingLifecycleExt.SMS_Failed_TTL,
 
             // Email statuses
             ProcessingLifecycle.Email_New => ProcessingLifecycleExt.Email_New,
@@ -84,6 +86,7 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.Email_Failed_InvalidSasUrl => ProcessingLifecycleExt.Email_Failed_InvalidSasUrl,
             ProcessingLifecycle.Email_Failed_TransientError => ProcessingLifecycleExt.Email_Failed_TransientError,
             ProcessingLifecycle.Email_Failed_PayloadTooLarge => ProcessingLifecycleExt.Email_Failed_PayloadTooLarge,
+            ProcessingLifecycle.Email_Failed_ContentTooLarge => ProcessingLifecycleExt.Email_Failed_ContentTooLarge,
             ProcessingLifecycle.Email_Failed_RecipientReserved => ProcessingLifecycleExt.Email_Failed_RecipientReserved,
             ProcessingLifecycle.Email_Failed_SuppressedRecipient => ProcessingLifecycleExt.Email_Failed_SuppressedRecipient,
             ProcessingLifecycle.Email_Failed_RecipientNotIdentified => ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified,

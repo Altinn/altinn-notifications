@@ -1,22 +1,29 @@
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Exceptions;
 using Altinn.Notifications.Shared.Publishers;
 
 using Moq;
 
+using Xunit;
+
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
 
+/// <summary>
+/// Unit tests for <see cref="ComposedEmailCommandPublisher"/>.
+/// </summary>
 public class ComposedEmailCommandPublisherTests
 {
-    private static readonly Uri _sasUrl = new("https://storage.example.com/container/file.pdf?sv=2021&sig=abc");
+    private const string _sasUrl = "https://storage.example.com/container/file.pdf?sv=2021&sig=abc";
 
     private readonly ComposedEmail _composedEmail = new(
         Guid.NewGuid(),
         "Test Subject",
-        "Test Body",
+        "<p>Test Body</p>",
         "sender@altinnxyz.no",
         "recipient@altinnxyz.no",
         EmailContentType.Html,
@@ -25,96 +32,122 @@ public class ComposedEmailCommandPublisherTests
             {
                 Filename = "file.pdf",
                 MimeType = "application/pdf",
-                SasUrl = _sasUrl
+                SasUrl = new Uri(_sasUrl)
             }
         ]);
 
-    [Xunit.Fact]
-    public async Task PublishAsync_SuccessfulPublish_PublishesCommand()
+    [Fact]
+    public async Task PublishAsync_ValidComposedEmail_MapsAllFieldsAndAttachmentsAndPublishesOnce()
     {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        // Arrange
+        SendComposedEmailCommand? capturedCommand = null;
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<SendComposedEmailCommand, CancellationToken>((command, _) => capturedCommand = command)
+            .Returns(Task.CompletedTask);
 
-        await publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken);
+        var publisher = new ComposedEmailCommandPublisher(wolverinePublisherMock.Object);
 
-        messageBusPublisherMock.Verify(
+        // Act
+        await publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(_composedEmail.NotificationId, capturedCommand.NotificationId);
+        Assert.Equal("Test Subject", capturedCommand.Subject);
+        Assert.Equal("<p>Test Body</p>", capturedCommand.Body);
+        Assert.Equal("sender@altinnxyz.no", capturedCommand.FromAddress);
+        Assert.Equal("recipient@altinnxyz.no", capturedCommand.ToAddress);
+        Assert.Equal(EmailContentType.Html.ToString(), capturedCommand.ContentType);
+
+        var attachment = Assert.Single(capturedCommand.Attachments);
+        Assert.Equal(_sasUrl, attachment.SasUrl);
+        Assert.Equal("file.pdf", attachment.Filename);
+        Assert.Equal("application/pdf", attachment.MimeType);
+
+        wolverinePublisherMock.Verify(
             m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsInvalidOperationException()
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsOtherException_PropagatesSameException()
     {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Service Bus unavailable"));
+        // Arrange
+        var thrown = new TimeoutException("Service Bus unavailable");
+        var publisher = new ComposedEmailCommandPublisher(CreateThrowingWolverinePublisherMock(thrown).Object);
 
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<TimeoutException>(
+            () => publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken));
 
-        await Xunit.Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken));
+        Assert.Same(thrown, exception);
     }
 
-    [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsException()
+    [Fact]
+    public async Task PublishAsync_WithCancellationToken_ForwardsSameTokenToWolverinePublisher()
     {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException("Service Bus unavailable"));
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var wolverinePublisherMock = CreateWolverinePublisherMock();
+        var publisher = new ComposedEmailCommandPublisher(wolverinePublisherMock.Object);
 
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        // Act
+        await publisher.PublishAsync(_composedEmail, cancellationTokenSource.Token);
 
-        await Xunit.Assert.ThrowsAsync<TimeoutException>(() => publisher.PublishAsync(_composedEmail, Xunit.TestContext.Current.CancellationToken));
+        // Assert
+        wolverinePublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), cancellationTokenSource.Token),
+            Times.Once);
     }
 
-    [Xunit.Fact]
-    public async Task PublishAsync_MapsAllFieldsAndAttachmentsCorrectly()
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_PropagatesSameException()
     {
-        var notificationId = Guid.NewGuid();
-        var composedEmail = new ComposedEmail(
-            notificationId,
-            "Hello",
-            "<p>Body</p>",
-            "from@test.no",
-            "to@test.no",
-            EmailContentType.Html,
-            [
-                new SasFileReference
-                {
-                    Filename = "report.pdf",
-                    MimeType = "application/pdf",
-                    SasUrl = new Uri("https://blob.example.com/container/report.pdf?sv=2021&sig=abc")
-                }
-            ]);
+        // Arrange
+        var thrown = new OperationCanceledException();
+        var publisher = new ComposedEmailCommandPublisher(CreateThrowingWolverinePublisherMock(thrown).Object);
 
-        SendComposedEmailCommand? capturedCommand = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken));
+
+        Assert.Same(thrown, exception);
+    }
+
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsContentTooLarge_ThrowsNotificationSizeLimitExceededWithInnerException()
+    {
+        // Arrange
+        var tooLarge = new ContentTooLargeException("too large", new InvalidOperationException("inner"));
+        var publisher = new ComposedEmailCommandPublisher(CreateThrowingWolverinePublisherMock(tooLarge).Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotificationSizeLimitExceededException>(
+            () => publisher.PublishAsync(_composedEmail, TestContext.Current.CancellationToken));
+
+        Assert.Same(tooLarge, exception.InnerException);
+        Assert.Contains(_composedEmail.NotificationId.ToString(), exception.Message);
+    }
+
+    private static Mock<IWolverinePublisher> CreateWolverinePublisherMock()
+    {
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
-            .Callback<SendComposedEmailCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
             .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        await publisher.PublishAsync(composedEmail, Xunit.TestContext.Current.CancellationToken);
-
-        Xunit.Assert.NotNull(capturedCommand);
-        Xunit.Assert.Equal("Hello", capturedCommand!.Subject);
-        Xunit.Assert.Equal("<p>Body</p>", capturedCommand.Body);
-        Xunit.Assert.Equal("to@test.no", capturedCommand.ToAddress);
-        Xunit.Assert.Equal("from@test.no", capturedCommand.FromAddress);
-        Xunit.Assert.Equal(notificationId, capturedCommand.NotificationId);
-        Xunit.Assert.Equal(EmailContentType.Html.ToString(), capturedCommand.ContentType);
-        var attachment = Xunit.Assert.Single(capturedCommand.Attachments);
-        Xunit.Assert.Equal("report.pdf", attachment.Filename);
-        Xunit.Assert.Equal("application/pdf", attachment.MimeType);
-        Xunit.Assert.Equal("https://blob.example.com/container/report.pdf?sv=2021&sig=abc", attachment.SasUrl);
+        return wolverinePublisherMock;
     }
 
-    private static ComposedEmailCommandPublisher CreatePublisher(
-        Mock<IMessageBusPublisher> messageBusPublisherMock)
+    private static Mock<IWolverinePublisher> CreateThrowingWolverinePublisherMock(Exception exception)
     {
-        return new ComposedEmailCommandPublisher(messageBusPublisherMock.Object);
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendComposedEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        return wolverinePublisherMock;
     }
 }

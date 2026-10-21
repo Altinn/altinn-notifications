@@ -88,7 +88,7 @@ The Notifications API has an integration towards Azure Service Bus, managed thro
   Publishes email send commands to the email service
 - [ComposedEmailCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/ComposedEmailCommandPublisher.cs):
   Publishes composed email send commands to the email service
-- [SendSmsCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/SendSmsCommandPublisher.cs):
+- [SmsCommandPublisher](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/Wolverine/Publishers/SmsCommandPublisher.cs):
   Publishes SMS send commands to the SMS service
 
 [Please reference the Azure Service Bus architecture section for a closer description of the ASB queue setup.](asb.md)

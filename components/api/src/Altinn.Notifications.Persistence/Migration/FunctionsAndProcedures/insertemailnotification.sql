@@ -17,6 +17,8 @@ DECLARE
     __orderid BIGINT;
 	__iscomposed BOOLEAN;
     __sendingtimepolicy SMALLINT;
+	__iscomposed BOOLEAN;
+    __sendingtimepolicy SMALLINT;
 BEGIN
     SELECT
         _id,
