@@ -7,6 +7,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" />
+		<PackageReference Include="Altinn.Register.Contracts" />
 		<PackageReference Include="Parquet.Net" />
 		<PackageReference Include="libphonenumber-csharp" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />

@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Register.Models;
+using Altinn.Register.Contracts;
 
 using Microsoft.Extensions.Options;
 
@@ -37,6 +38,49 @@ public class RegisterClient : IRegisterClient
         _accessTokenGenerator = accessTokenGenerator;
 
         _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(parties);
+
+        if (parties.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            using HttpRequestMessage requestMessage = new(HttpMethod.Post, "notifications/parties/query")
+            {
+                Content = JsonContent.Create(new PartyQueryList<PartyUrn> { Data = [.. parties] }, options: _jsonSerializerOptions)
+            };
+
+            var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notifications");
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                requestMessage.Headers.Add("PlatformAccessToken", accessToken);
+            }
+
+            using var response = await _client.SendAsync(requestMessage, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw await PlatformHttpException.CreateAsync(response);
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return [];
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<PartyQueryList<Party>>(_jsonSerializerOptions, cancellationToken);
+            return result?.Data ?? throw new JsonException("The register party query response must contain a data list.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            throw new PlatformDependencyException("RegisterClient", "GetParties", ex);
+        }
     }
 
     /// <inheritdoc/>

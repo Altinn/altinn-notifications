@@ -9,6 +9,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.Register.Models;
+using Altinn.Register.Contracts;
 
 using Microsoft.Extensions.Options;
 
@@ -30,6 +31,158 @@ public class RegisterClientTests
     public RegisterClientTests()
     {
         _registerClient = CreateRegisterClient();
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.OK)]
+    [InlineData(HttpStatusCode.PartialContent)]
+    public async Task GetParties_WithMatchingParties_ReturnsRegisterContracts(HttpStatusCode statusCode)
+    {
+        var identifiers = new List<PartyUrn>
+        {
+            PartyUrn.Parse("urn:altinn:person:identifier-no:25871999336"),
+            PartyUrn.Parse("urn:altinn:organization:identifier-no:123456785")
+        };
+        if (statusCode == HttpStatusCode.PartialContent)
+        {
+            identifiers.Add(PartyUrn.PartyUuid.Create(Guid.NewGuid()));
+        }
+
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
+        {
+            Assert.Equal(HttpMethod.Post, request!.Method);
+            Assert.Equal("/register/api/v1/notifications/parties/query", request.RequestUri!.AbsolutePath);
+            Assert.Equal("valid-token", Assert.Single(request.Headers.GetValues("PlatformAccessToken")));
+
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
+            var data = body.RootElement.GetProperty("data");
+            Assert.Equal(identifiers.Count, data.GetArrayLength());
+            for (var i = 0; i < identifiers.Count; i++)
+            {
+                Assert.Equal(identifiers[i].ToString(), data[i].GetString());
+            }
+
+            return new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                        "data": [
+                            {
+                                "partyType": "person",
+                                "personIdentifier": "25871999336",
+                                "partyUuid": "00000000-0000-0000-0000-000000000001",
+                                "versionId": 1,
+                                "displayName": "Test Person"
+                            },
+                            {
+                                "partyType": "organization",
+                                "organizationIdentifier": "123456785",
+                                "partyUuid": "00000000-0000-0000-0000-000000000002",
+                                "versionId": 2,
+                                "displayName": "Test Organization"
+                            }
+                        ]
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }));
+
+        var actual = await registerClient.GetParties(identifiers, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, actual.Count);
+        var person = Assert.IsType<Person>(actual[0]);
+        Assert.Equal("25871999336", person.PersonIdentifier.ToString());
+        Assert.Equal("Test Person", person.DisplayName.Value);
+        var organization = Assert.IsType<Organization>(actual[1]);
+        Assert.Equal("123456785", organization.OrganizationIdentifier.ToString());
+        Assert.Equal("Test Organization", organization.DisplayName.Value);
+    }
+
+    [Fact]
+    public async Task GetParties_WithEmptyIdentifiers_DoesNotSendRequest()
+    {
+        var requestSent = false;
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            requestSent = true;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        }));
+
+        var actual = await registerClient.GetParties([], TestContext.Current.CancellationToken);
+
+        Assert.Empty(actual);
+        Assert.False(requestSent);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.OK)]
+    [InlineData(HttpStatusCode.PartialContent)]
+    [InlineData(HttpStatusCode.NoContent)]
+    public async Task GetParties_WithNoMatches_ReturnsEmpty(HttpStatusCode statusCode)
+    {
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+            Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = statusCode == HttpStatusCode.NoContent
+                    ? null
+                    : new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
+            })));
+
+        var actual = await registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken);
+
+        Assert.Empty(actual);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task GetParties_WithUnsuccessfulResponse_ThrowsPlatformDependencyException(HttpStatusCode statusCode)
+    {
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+            Task.FromResult(new HttpResponseMessage(statusCode))));
+
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(() =>
+            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken));
+
+        var innerException = Assert.IsType<PlatformHttpException>(exception.InnerException);
+        Assert.Equal(statusCode, innerException.Response?.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("""{"data":null}""")]
+    [InlineData("""{"data":{}}""")]
+    public async Task GetParties_WithInvalidResponse_ThrowsPlatformDependencyException(string responseBody)
+    {
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+            })));
+
+        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(() =>
+            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken));
+
+        Assert.IsType<JsonException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task GetParties_WithCanceledToken_PropagatesCancellation()
+    {
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            cancellationTokenSource.Cancel();
+            token.ThrowIfCancellationRequested();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], cancellationTokenSource.Token));
     }
 
     [Fact]
