@@ -7,7 +7,7 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 * [Aspire CLI](https://aspire.dev/get-started/install-cli/)
 * [Podman](https://podman.io/)
-* A Podman container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql). For example:
+* A Podman container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example:
 
   ```bash
   podman run -d --name notifications-db -p 5432:5432 \
@@ -28,6 +28,10 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 cd tools/aspire
 aspire run
 ```
+
+## Settings
+
+Override `appsettings.json` in a git-ignored `appsettings.Local.json`. Set `Postgres:UsePodman` to `false` to use a local PostgreSQL on port 5432 instead of the `notifications-db` container.
 
 Before the dashboard starts, the app host builds the API, Email and SMS projects one by one. Starting them all at once makes their builds of the shared project collide.
 

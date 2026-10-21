@@ -2,6 +2,7 @@
 #:property AspireUseCliBundle=true
 
 using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,7 @@ string[] projects =
     $"{Components}/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj",
 ];
 
-// Aspire starts all services with dotnet run at once, and their parallel restores and
-// builds of the shared project collide. Building them one by one first avoids that.
+// Parallel dotnet run builds of the shared project collide, so build one by one first.
 foreach (var project in projects)
 {
     using var build = Process.Start("dotnet", ["build", Path.Combine(builder.AppHostDirectory, project)]);
@@ -29,24 +29,29 @@ foreach (var project in projects)
     }
 }
 
-// The dashboard lists resources in the order they are added, so the containers are added last.
+// The dashboard lists resources in the order they are added.
 var api = AddService("api", projects[0], 5090, "swagger", "altinn-notifications");
 var email = AddService("email", projects[1], 5091, "swagger", "altinn-notifications-email");
 var sms = AddService("sms", projects[2], 5092, string.Empty, "altinn-notifications-sms");
 
-// The containers live in Podman, not in Aspire, so they keep running when Aspire stops.
-// They are started here rather than through a shell so this works on Windows too; both
-// commands are no-ops when the containers are already running. The resources only tail
-// the container logs so they show up in the dashboard.
-StartContainer(".", "start", "notifications-db");
-StartContainer("../asb-emulator", "compose", "up", "-d");
+// The containers are started outside Aspire so they keep running when it stops; the resources only tail their logs.
+builder.Configuration
+    .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.json"), optional: true)
+    .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.Local.json"), optional: true);
 
-var postgres = builder.AddExecutable("postgres", "podman", ".", "logs", "-f", "notifications-db");
+if (builder.Configuration.GetValue("Postgres:UsePodman", true))
+{
+    StartContainer(".", "start", "notifications-db");
+    var postgres = builder.AddExecutable("postgres", "podman", ".", "logs", "-f", "notifications-db");
+    api.WaitFor(postgres);
+}
+
+StartContainer("../asb-emulator", "compose", "up", "-d");
 var serviceBus = builder.AddExecutable("servicebus", "podman", ".", "logs", "-f", "servicebus-emulator")
     .WithHttpEndpoint(port: 5300, targetPort: 5300, name: "management", isProxied: false)
     .WithHttpHealthCheck("/health", endpointName: "management");
 
-api.WaitFor(postgres).WaitFor(serviceBus);
+api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
@@ -83,11 +88,8 @@ void StartContainer(string workingDirectory, params string[] podmanArgs)
     }
 }
 
-// The launch profiles are skipped on purpose: email and sms hardcode ASPNETCORE_URLS
-// to localhost:509x, which collides with the 127.0.0.1:509x Aspire injects.
-//
-// The ports stay fixed and unproxied because the services address each other by
-// hardcoded localhost URLs (see PlatformSettings in the API's appsettings.json).
+// No launch profiles: email and sms hardcode ASPNETCORE_URLS, which collides with Aspire's.
+// Fixed, unproxied ports because the services call each other on hardcoded localhost URLs.
 IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
 {
     string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
@@ -101,8 +103,6 @@ IResourceBuilder<ProjectResource> AddService(string name, string projectPath, in
     return service;
 }
 
-// "Use cluster" stops the local service and port-forwards the same port to the service in the
-// current kube context instead; "Use local" switches back. kubectl output goes to the service's log.
 void AddClusterSwitch(IResourceBuilder<ProjectResource> service, string clusterService, int port)
 {
     Process? forward = null;
@@ -170,8 +170,6 @@ static Process StartPortForward(string clusterService, int port, ILogger logger)
     return process;
 }
 
-// The tests stay hidden until they are first run from the service's "Run tests" command,
-// so they don't clutter the resource list and log filters.
 void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
 {
     var tests = builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
@@ -198,9 +196,7 @@ void AddTests(string name, IResourceBuilder<ProjectResource> service, string sol
         new CommandOptions { IconName = "Beaker", IsHighlighted = false });
 }
 
-// Shows a dashboard notification with a Restart button when a service's source changes.
-// Only .cs, .csproj and .json files count: the API build regenerates a .sql file under
-// src on every run, which would otherwise raise a new alert after each restart.
+// .sql is left out because the API build regenerates a .sql file under src on every run.
 FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<ProjectResource>[] affected)
 {
     string[] extensions = [".cs", ".csproj", ".json"];
@@ -230,7 +226,6 @@ FileSystemWatcher WatchSource(IServiceProvider services, string folder, params I
 
 async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service)
 {
-    // One notification per service at a time; the short delay lets a save of several files settle first.
     lock (pendingRestarts)
     {
         if (!pendingRestarts.Add(service.Name))
@@ -257,7 +252,6 @@ async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service
     }
 }
 
-// Replaces the generic "Finished" state with Passed or Failed based on the dotnet test exit code.
 async Task ShowTestResultAsync(ResourceNotificationService notifications, IResource tests, CancellationToken cancellationToken)
 {
     await foreach (var update in notifications.WatchAsync(cancellationToken))
