@@ -1,4 +1,4 @@
-﻿-- NOTE: This script has been applied manually in all environments including production
+-- NOTE: This script has been applied manually in all environments including production
 
 CREATE INDEX IF NOT EXISTS notifications_orders_retrying_idx
     ON notifications.orders
