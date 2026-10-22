@@ -50,6 +50,57 @@ public class TriggerControllerTests
     }
 
     [Fact]
+    public async Task Trigger_SendEmailNotifications_CallsEmailNotificationServiceWithAnytimePolicyAndComposed()
+    {
+        // Act
+        var result = await _controller.Trigger_SendEmailNotifications(TestContext.Current.CancellationToken);
+
+        // Assert
+        _emailNotificationServiceMock.Verify(x => x.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.Never);
+        _emailNotificationServiceMock.Verify(x => x.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenAllowed_CallsEmailNotificationServiceAndReturnsOk()
+    {
+        // Arrange
+        _notificationScheduleMock
+            .Setup(x => x.CanSendEmailNow())
+            .Returns(true);
+        _emailNotificationServiceMock
+            .Setup(x => x.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.Trigger_SendEmailNotificationsDaytime(TestContext.Current.CancellationToken);
+
+        // Assert
+        _notificationScheduleMock.Verify(x => x.CanSendEmailNow(), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenNotAllowed_DoesNotCallEmailNotificationServiceAndReturnsOk()
+    {
+        // Arrange
+        _notificationScheduleMock
+            .Setup(x => x.CanSendEmailNow())
+            .Returns(false);
+
+        // Act
+        var result = await _controller.Trigger_SendEmailNotificationsDaytime(TestContext.Current.CancellationToken);
+
+        // Assert
+        _notificationScheduleMock.Verify(x => x.CanSendEmailNow(), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsType<OkResult>(result);
+    }
+
+    [Fact]
     public async Task Trigger_SendSmsNotificationsAnytime_CallsSmsNotificationServiceAndReturnsOk()
     {
         // Arrange

@@ -105,9 +105,9 @@ public static class PostgreUtil
         return (o, e);
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SendingTimePolicy? emailSendingTimePolicy = null, SendingTimePolicy? smsSendingTimePolicy = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy, smsSendingTimePolicy);
 
         if (sendersReference != null)
         {
@@ -652,17 +652,18 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -729,10 +730,11 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -818,17 +820,18 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -892,10 +895,11 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 

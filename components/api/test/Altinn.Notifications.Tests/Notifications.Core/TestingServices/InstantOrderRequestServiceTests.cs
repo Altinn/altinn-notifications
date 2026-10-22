@@ -428,7 +428,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(creatorShortName, initiatedNotificationOrder.Creator.ShortName);
         Assert.Equal(orderCreationDateTime, initiatedNotificationOrder.RequestedSendTime);
         Assert.Equal(NotificationChannel.Sms, initiatedNotificationOrder.NotificationChannel);
-        Assert.Equal(SendingTimePolicy.Anytime, initiatedNotificationOrder.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, initiatedNotificationOrder.SmsSendingTimePolicy);
 
         Assert.NotNull(initiatedNotificationOrder.Templates);
         Assert.Single(initiatedNotificationOrder.Templates);
@@ -527,7 +527,9 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantEmailNotificationOrder>(order =>
                     order.OrderId == emailOrderId &&
                     order.IdempotencyId == "email-idempotency-id"),
-                It.IsAny<NotificationOrder>(),
+                It.Is<NotificationOrder>(order =>
+                    order.NotificationChannel == NotificationChannel.Email &&
+                    order.EmailSendingTimePolicy == SendingTimePolicy.Anytime),
                 It.IsAny<EmailNotification>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()),

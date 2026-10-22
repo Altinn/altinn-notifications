@@ -88,7 +88,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Email,
             Templates =
             [
@@ -152,7 +152,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Created = DateTime.UtcNow,
             Type = OrderType.Notification,
             SendersReference = senderReference,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             NotificationChannel = NotificationChannel.SmsPreferred,
             Templates =
@@ -267,7 +267,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.EmailPreferred,
             Templates =
@@ -337,7 +337,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             ConditionEndpoint = new Uri(conditionEndpoint),
             Templates =
@@ -430,7 +430,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.Email,
             Templates =
@@ -515,7 +515,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Creator = new(creator),
             Created = DateTime.UtcNow,
             SendersReference = senderReference,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             Templates =
@@ -602,7 +602,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.EmailPreferred,
             Templates =
