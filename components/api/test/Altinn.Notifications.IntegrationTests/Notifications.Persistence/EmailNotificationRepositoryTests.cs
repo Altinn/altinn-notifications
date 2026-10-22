@@ -108,6 +108,174 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(emailNotification.Id, emailToBeSent.NotificationId);
     }
 
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotificationAsync_WithSendingPolicy_ReturnsNotificationForMatchingPolicy(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: sendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        // Act
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, sendingTimePolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.NotNull(emailToBeSent);
+        Assert.Equal(emailNotification.Id, emailToBeSent.NotificationId);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime, SendingTimePolicy.Daytime)]
+    [InlineData(SendingTimePolicy.Daytime, SendingTimePolicy.Anytime)]
+    public async Task GetNewNotificationAsync_WithSendingPolicy_DoesNotReturnNotificationForOtherPolicy(SendingTimePolicy orderPolicy, SendingTimePolicy claimedPolicy)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: orderPolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        // Act
+        Email? emailToBeSent = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, claimedPolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.Null(emailToBeSent);
+    }
+
+    [Fact]
+    public async Task GetNewNotificationAsync_OrderWithoutEmailSendingTimePolicy_IsOnlyReturnedForAnytime()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        // Act
+        Email? daytimeEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, SendingTimePolicy.Daytime),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        Email? anytimeEmail = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, SendingTimePolicy.Anytime),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.Null(daytimeEmail);
+        Assert.NotNull(anytimeEmail);
+        Assert.Equal(emailNotification.Id, anytimeEmail.NotificationId);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime, 1)]
+    [InlineData(SendingTimePolicy.Daytime, 2)]
+    public async Task CreateOrder_PersistsEmailSendingTimePolicyInOrdersTable(SendingTimePolicy emailSendingTimePolicy, int expectedValue)
+    {
+        // Arrange
+        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: emailSendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        int actual = await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{order.Id}'");
+
+        // Assert
+        Assert.Equal(expectedValue, actual);
+    }
+
+    [Fact]
+    public async Task CreateOrder_WithoutEmailSendingTimePolicy_PersistsNullInOrdersTable()
+    {
+        // Arrange
+        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        long count = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT count(*) FROM notifications.orders WHERE alternateid = '{order.Id}' AND emailsendingtimepolicy IS NULL");
+
+        // Assert
+        Assert.Equal(1, count);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime, 1)]
+    [InlineData(SendingTimePolicy.Daytime, 2)]
+    [InlineData(null, 1)]
+    public async Task AddNotification_StoresEmailSendingTimePolicyOfOrderOnNotification(SendingTimePolicy? emailSendingTimePolicy, int expectedValue)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: emailSendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        int actual = await PostgreUtil.RunSqlReturnOutput<int>($"SELECT sendingtimepolicy FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+
+        // Assert
+        Assert.Equal(expectedValue, actual);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Daytime, SendingTimePolicy.Anytime, 1)]
+    [InlineData(SendingTimePolicy.Anytime, SendingTimePolicy.Daytime, 2)]
+    public async Task AddNotification_IgnoresSmsSendingTimePolicyOfOrder(SendingTimePolicy smsSendingTimePolicy, SendingTimePolicy emailSendingTimePolicy, int expectedValue)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(
+            emailSendingTimePolicy: emailSendingTimePolicy,
+            smsSendingTimePolicy: smsSendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act
+        int actual = await PostgreUtil.RunSqlReturnOutput<int>($"SELECT sendingtimepolicy FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+
+        // Assert
+        Assert.Equal(expectedValue, actual);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime, SendingTimePolicy.Daytime)]
+    [InlineData(SendingTimePolicy.Daytime, SendingTimePolicy.Anytime)]
+    public async Task GetNewNotificationAsync_EmailAndSmsOrder_ClaimsEmailByEmailPolicyRegardlessOfSmsPolicy(SendingTimePolicy emailSendingTimePolicy, SendingTimePolicy smsSendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(
+            emailSendingTimePolicy: emailSendingTimePolicy,
+            smsSendingTimePolicy: smsSendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        // Act
+        Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, emailSendingTimePolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(claimed);
+    }
+
+    private static EmailNotificationRepository GetRepository()
+    {
+        return (EmailNotificationRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+    }
+
     [Fact]
     public async Task GetRecipients_ValidOrderId_ReturnsEmailRecipient()
     {

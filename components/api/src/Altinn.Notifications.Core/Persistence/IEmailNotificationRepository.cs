@@ -21,11 +21,16 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// </summary>
     /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <param name="sendingTimePolicy">
+    /// Policy that determines which notifications are eligible for retrieval.
+    /// <see cref="SendingTimePolicy.Daytime"/> retrieves notifications with the Daytime sending time policy;
+    /// any other value retrieves notifications with the Anytime sending time policy.
+    /// </param>
     /// <returns>
     /// A task that completes when retrieval finishes. The result is the next pending email notification,
     /// or <see langword="null"/> if none are available.
     /// </returns>
-    public Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
+    public Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime);
 
     /// <summary>
     /// Retrieves the next pending composed email notification within the provided unit of work.

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Files;
@@ -45,7 +46,17 @@ public class NotificationOrder : IBaseNotificationOrder
     public DateTime Created { get; internal set; }
 
     /// <inheritdoc/>
-    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+    /// <remarks>
+    /// Legacy JSON name: this property was originally called <c>SendingTimePolicy</c> (SMS was the only channel with a policy),
+    /// and was renamed to <c>SmsSendingTimePolicy</c> when email got its own policy. Orders are persisted as JSON, so the
+    /// original <c>sendingTimePolicy</c> name is kept to keep reading orders stored under it. It can only be changed together
+    /// with a migration of the stored orders.
+    /// </remarks>
+    [JsonPropertyName("sendingTimePolicy")]
+    public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
+
+    /// <inheritdoc/>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
 
     /// <inheritdoc/>
     public OrderType Type { get; internal set; }
@@ -85,11 +96,12 @@ public class NotificationOrder : IBaseNotificationOrder
         string? sendersReference,
         DateTime requestedSendTime,
         List<Recipient> recipients,
-        SendingTimePolicy? sendingTimePolicy,
+        SendingTimePolicy? smsSendingTimePolicy,
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
         string? resourceAction,
-        List<SasFileReference>? emailAttachments)
+        List<SasFileReference>? emailAttachments,
+        SendingTimePolicy? emailSendingTimePolicy = null)
     {
         Id = id;
         Type = type;
@@ -104,7 +116,8 @@ public class NotificationOrder : IBaseNotificationOrder
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;
         ConditionEndpoint = conditionEndpoint;
-        SendingTimePolicy = sendingTimePolicy;
+        SmsSendingTimePolicy = smsSendingTimePolicy;
+        EmailSendingTimePolicy = emailSendingTimePolicy;
         NotificationChannel = notificationChannel;
         UseStaleContactInformation = useStaleContactInformation;
     }

@@ -21,7 +21,7 @@ BEGIN
     SELECT
         _id,
         CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE WHEN sendingtimepolicy = 1 OR sendingtimepolicy IS NULL THEN 1 ELSE 2 END
+        CASE WHEN emailsendingtimepolicy = 1 OR emailsendingtimepolicy IS NULL THEN 1 ELSE 2 END
         INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
@@ -65,4 +65,5 @@ ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text,
 COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
     IS 'Inserts a new email notification linked to the given order.
 Raises an exception if no order with the specified alternateid exists.
+The notification inherits iscomposed and the email sending time policy (emailsendingtimepolicy, NULL = Anytime) from the order.
 _total_attachment_size_bytes: total raw attachment size in bytes (0 for standard emails with no attachments).';

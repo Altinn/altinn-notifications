@@ -1,5 +1,6 @@
 using System;
 
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
@@ -70,6 +71,35 @@ public class RecipientComposedEmailValidatorTests
 
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_SendingTimePolicyAnytime_NoErrors()
+    {
+        // Arrange
+        var recipient = ValidRecipientWithoutFileReferences();
+        recipient.Settings.SendingTimePolicy = SendingTimePolicyExt.Anytime;
+
+        // Act
+        var result = _validator.TestValidate(recipient);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_SendingTimePolicyDaytime_ReturnsError()
+    {
+        // Arrange
+        var recipient = ValidRecipientWithoutFileReferences();
+        recipient.Settings.SendingTimePolicy = SendingTimePolicyExt.Daytime;
+
+        // Act
+        var result = _validator.TestValidate(recipient);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(r => r!.Settings.SendingTimePolicy)
+            .WithErrorMessage("Email only supports send time anytime");
     }
 
     [Theory]

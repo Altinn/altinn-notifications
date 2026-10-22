@@ -59,10 +59,49 @@ public class EmailSendingOptionsValidatorTests
         }
     }
 
-    [Fact]
-    public void Should_Not_Accept_SendingTimePolicy_When_Not_Anytime()
+    [Theory]
+    [InlineData(SendingTimePolicyExt.Anytime)]
+    [InlineData(SendingTimePolicyExt.Daytime)]
+    public void Should_Accept_SendingTimePolicy_Anytime_And_Daytime(SendingTimePolicyExt sendingTimePolicy)
     {
         // Arrange
+        var emailSendingOptions = new EmailSendingOptionsExt
+        {
+            Subject = "Test subject",
+            Body = "Test body",
+            SendingTimePolicy = sendingTimePolicy
+        };
+
+        // Act
+        var actual = _validator.TestValidate(emailSendingOptions);
+
+        // Assert
+        actual.ShouldNotHaveValidationErrorFor(options => options.SendingTimePolicy);
+    }
+
+    [Fact]
+    public void Should_Not_Accept_SendingTimePolicy_With_Undefined_Value()
+    {
+        // Arrange
+        var emailSendingOptions = new EmailSendingOptionsExt
+        {
+            Subject = "Test subject",
+            Body = "Test body",
+            SendingTimePolicy = (SendingTimePolicyExt)99
+        };
+
+        // Act
+        var actual = _validator.TestValidate(emailSendingOptions);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("Email only supports send time daytime and anytime");
+    }
+
+    [Fact]
+    public void Should_Not_Accept_Daytime_When_Daytime_Is_Not_Allowed()
+    {
+        // Arrange
+        var validator = new EmailSendingOptionsValidator(allowDaytime: false);
         var emailSendingOptions = new EmailSendingOptionsExt
         {
             Subject = "Test subject",
@@ -71,7 +110,7 @@ public class EmailSendingOptionsValidatorTests
         };
 
         // Act
-        var actual = _validator.TestValidate(emailSendingOptions);
+        var actual = validator.TestValidate(emailSendingOptions);
 
         // Assert
         actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("Email only supports send time anytime");

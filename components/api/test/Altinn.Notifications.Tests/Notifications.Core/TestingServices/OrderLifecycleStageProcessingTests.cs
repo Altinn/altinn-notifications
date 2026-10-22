@@ -243,7 +243,8 @@ public class OrderLifecycleStageProcessingTests
         return new EmailOrderProcessingService(
             emailNotificationServiceMock.Object,
             contactPointService,
-            keywordsServiceMock.Object);
+            keywordsServiceMock.Object,
+            new Mock<INotificationScheduleService>().Object);
     }
 
     private static SmsOrderProcessingService CreateSmsProcessingService(IContactPointService contactPointService)

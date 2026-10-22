@@ -78,13 +78,14 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
-    public Task<bool> SendNotification(CancellationToken cancellationToken)
+    public Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default)
     {
         return SendClaimedNotification(
-            _emailNotificationRepository.GetNewNotificationAsync,
-            _emailCommandPublisher.PublishAsync,
+            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token, sendingTimePolicy),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
             nameof(SendNotification),
-            cancellationToken);
+            cancellationToken,
+            sendingTimePolicy);
     }
 
     /// <inheritdoc/>
@@ -141,15 +142,17 @@ public class EmailNotificationService(
     /// <param name="publishNotification">Publishes the claimed notification.</param>
     /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
     /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
     private async Task<bool> SendClaimedNotification<TNotification>(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
         string operationName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        SendingTimePolicy? sendingTimePolicy = null)
         where TNotification : Email
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName);
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {

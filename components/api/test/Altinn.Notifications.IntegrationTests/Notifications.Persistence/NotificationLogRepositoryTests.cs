@@ -998,7 +998,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             Recipients = [new Altinn.Notifications.Core.Models.Recipient([new SmsAddressPoint("+4799999999")])],
             Templates =
@@ -1110,7 +1110,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Email,
             Recipients = [new Altinn.Notifications.Core.Models.Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
             Templates =
