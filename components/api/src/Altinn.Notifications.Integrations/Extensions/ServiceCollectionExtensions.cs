@@ -61,14 +61,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
         services.AddTransient<ISigningCredentialsResolver, SigningCredentialsResolver>();
 
-        // A local stack has no Maskinporten client, and its condition endpoints are mocks that need no token.
-        if (config.GetValue("SendConditionClient:UseMaskinporten", true))
-        {
-            services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"));
-        }
-        else
-        {
-            services.AddHttpClient<IConditionClient, SendConditionClient>();
-        }
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(config.GetSection("SendConditionClient:MaskinportenSettings"));
     }
 }

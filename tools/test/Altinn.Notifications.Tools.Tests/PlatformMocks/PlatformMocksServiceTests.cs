@@ -4,12 +4,14 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Tools.PlatformMocks;
 using Altinn.Notifications.Tools.PlatformMocks.Configuration;
 using Altinn.Notifications.Tools.PlatformMocks.Mocks;
@@ -136,7 +138,7 @@ public class PlatformMocksServiceTests
     {
         await using var mocks = await StartAsync();
 
-        var result = await mocks.Get<IConditionClient>().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
+        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(expected, result.Match(sendNotification => sendNotification, _ => !expected));
@@ -149,7 +151,7 @@ public class PlatformMocksServiceTests
     {
         await using var mocks = await StartAsync();
 
-        var result = await mocks.Get<IConditionClient>().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
+        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
 
         Assert.True(result.IsError);
         Assert.Equal(expectedStatusCode, result.Match(_ => -1, error => error.StatusCode));
@@ -214,6 +216,47 @@ public class PlatformMocksServiceTests
         Assert.Empty(simulator.LogEntries);
     }
 
+    [Fact]
+    public async Task Maskinporten_TokenRequest_GetsATokenWithTheScopeFromTheGrant()
+    {
+        await using var mocks = await StartAsync();
+        using var http = new HttpClient();
+
+        // The shape Altinn.ApiClients.Maskinporten sends: a JWT bearer grant with the scope in the signed assertion.
+        string claims = Convert.ToBase64String(Encoding.UTF8.GetBytes("""{"scope":"altinn:system/notifications.condition.check","iss":"client"}""")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        using var form = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            ["assertion"] = $"eyJhbGciOiJSUzI1NiJ9.{claims}.signature",
+        });
+
+        using var response = await http.PostAsync(mocks.Urls["maskinporten"] + "/token", form, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var token = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.StartsWith("mock-maskinporten-token-", token.RootElement.GetProperty("access_token").GetString());
+        Assert.Equal("Bearer", token.RootElement.GetProperty("token_type").GetString());
+        Assert.Equal(MaskinportenMock.ExpiresInSeconds, token.RootElement.GetProperty("expires_in").GetInt32());
+        Assert.Equal("altinn:system/notifications.condition.check", token.RootElement.GetProperty("scope").GetString());
+    }
+
+    [Fact]
+    public async Task Maskinporten_GrantThatIsNotAJwt_StillGetsAToken()
+    {
+        await using var mocks = await StartAsync();
+        using var http = new HttpClient();
+        using var form = new FormUrlEncodedContent(new Dictionary<string, string> { ["assertion"] = "not-a-jwt" });
+
+        using var response = await http.PostAsync(mocks.Urls["maskinporten"] + "/token", form, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var token = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(string.Empty, token.RootElement.GetProperty("scope").GetString());
+    }
+
+    // The API's condition client without the Maskinporten handler in front. The token endpoint is tested on its own above.
+    private static SendConditionClient ConditionClient() => new(new HttpClient());
+
     private static async Task<RunningMocks> StartAsync(Action<PlatformMocksSettings>? configure = null)
     {
         var settings = new PlatformMocksSettings();
@@ -221,6 +264,7 @@ public class PlatformMocksServiceTests
         settings.Register.Port = FreePort();
         settings.Authorization.Port = FreePort();
         settings.Conditions.Port = FreePort();
+        settings.Maskinporten.Port = FreePort();
         settings.Profile.ReservedPersons = ["99999999901"];
         settings.Profile.PersonsWithoutContactPoints = ["88888888801"];
         settings.Profile.OrganizationsWithoutContactPoints = ["999999999"];
@@ -256,7 +300,6 @@ public class PlatformMocksServiceTests
                     ["PlatformSettings:ApiRegisterEndpoint"] = Url("register") + "/register/api/v1/",
                     ["PlatformSettings:ApiAuthorizationEndpoint"] = Url("authorization") + "/authorization/api/v1/",
                     ["NotificationConfig:AuthorizationBatchSize"] = "500",
-                    ["SendConditionClient:UseMaskinporten"] = "false",
                 })
                 .Build();
 

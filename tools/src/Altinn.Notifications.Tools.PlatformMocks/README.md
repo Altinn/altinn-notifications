@@ -8,6 +8,7 @@ Local stand-ins for the Altinn platform APIs the notifications API calls, built 
 | `register` | 5121 | The name lookup in Altinn Register |
 | `authorization` | 5151 | The decision endpoint in Altinn Authorization |
 | `conditions` | 5199 | Condition endpoints that orders point to |
+| `maskinporten` | 5197 | The token endpoint the API's condition client gets its token from |
 
 The answers are built from the request, so every person and organisation has contact points and a name. Use any 11-digit national identity number and 9-digit organisation number, including random ones from k6.
 
@@ -53,7 +54,13 @@ These identifiers are exceptions, set in `appsettings.json`:
 | `http://localhost:5199/condition/corrupt` | 200 with a body that is not JSON | Retries the order once, then sends anyway |
 | `http://localhost:5199/condition/error` | 500 | Retries the order once, then sends anyway |
 
-The real condition client authenticates with Maskinporten, which needs a registered client. Set `SendConditionClient:UseMaskinporten` to `false` on the API to call the endpoints without a token. The Aspire app host does this when the conditions mock is on.
+The API calls condition endpoints with a Maskinporten token, which it gets from the Maskinporten mock. The condition mock does not check the token.
+
+### Maskinporten
+
+`POST /token` takes the JWT bearer grant `Altinn.ApiClients.Maskinporten` sends and answers with a token for the scope in the grant, valid for 120 seconds. It does not check the signature or the client, so any key and client id work.
+
+The client library has the Maskinporten URLs built in. Pointing it here needs the `TokenEndpoint` and `AssertionAudience` settings from [Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92), and the grant has to be signed, so the API also needs a `ClientId` and an `EncodedJwk`. The Aspire app host sets all four, with a new key for each run.
 
 ### Anything else
 
@@ -79,7 +86,10 @@ Then start the API with its endpoints pointing at the mocks:
 PlatformSettings__ApiProfileEndpoint=http://localhost:5131/profile/api/v1/ \
 PlatformSettings__ApiRegisterEndpoint=http://localhost:5121/register/api/v1/ \
 PlatformSettings__ApiAuthorizationEndpoint=http://localhost:5151/authorization/api/v1/ \
-SendConditionClient__UseMaskinporten=false \
+SendConditionClient__MaskinportenSettings__TokenEndpoint=http://localhost:5197/token \
+SendConditionClient__MaskinportenSettings__AssertionAudience=http://localhost:5197/ \
+SendConditionClient__MaskinportenSettings__ClientId=altinn-notifications-local \
+SendConditionClient__MaskinportenSettings__EncodedJwk=<a base64-encoded RSA JWK with its private key> \
 dotnet run --project components/api/src/Altinn.Notifications
 ```
 
@@ -88,8 +98,8 @@ dotnet run --project components/api/src/Altinn.Notifications
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `PlatformMocksSettings:FallbackUrl` | empty | Where unmatched requests go, as `{FallbackUrl}{system}/{path}`. Empty means a 404. |
-| `PlatformMocksSettings:<System>:Enabled` | `true` | Starts the `Profile`, `Register`, `Authorization` or `Conditions` server |
-| `PlatformMocksSettings:<System>:Port` | `5131`, `5121`, `5151`, `5199` | Port the server listens on, on localhost only |
+| `PlatformMocksSettings:<System>:Enabled` | `true` | Starts the `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` server |
+| `PlatformMocksSettings:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port the server listens on, on localhost only |
 | `PlatformMocksSettings:Profile:MobileNumber` | `+4799999999` | The mobile number everyone gets |
 | `PlatformMocksSettings:Profile:ReservedPersons` | `["99999999901"]` | National identity numbers that are reserved |
 | `PlatformMocksSettings:Profile:PersonsWithoutContactPoints` | `["88888888801"]` | National identity numbers with no email and no mobile number |

@@ -18,6 +18,8 @@ public class PlatformMocksSettings
     public AuthorizationMockSettings Authorization { get; set; } = new() { Port = 5151 };
 
     public MockServerSettings Conditions { get; set; } = new() { Port = 5199 };
+
+    public MockServerSettings Maskinporten { get; set; } = new() { Port = 5197 };
 }
 
 /// <summary>
