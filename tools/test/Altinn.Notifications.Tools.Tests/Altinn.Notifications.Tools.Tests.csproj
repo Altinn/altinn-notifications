@@ -22,6 +22,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Azure.Communication.Email" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -31,7 +32,9 @@
 		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications\Altinn.Notifications.csproj" />
 		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
 		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+		<ProjectReference Include="..\..\..\components\email-service\src\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj" />
 		<ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
+		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.AcsMock\Altinn.Notifications.Tools.AcsMock.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.MockAuth\Altinn.Notifications.Tools.MockAuth.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />

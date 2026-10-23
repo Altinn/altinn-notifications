@@ -88,6 +88,31 @@ api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
+// With Simulator:Enabled the mocks hand requests they do not recognise to the simulator, where an operator answers them.
+string simulatorFallbackUrl = builder.Configuration.GetValue("Simulator:Enabled", false) ? "http://localhost:5096/intercept/" : string.Empty;
+
+// mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
+// delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
+var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
+if (acsMode == "mock")
+{
+    // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
+    const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
+    var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
+    var acs = builder.AddProject("acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
+        .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
+        .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
+        .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)
+        .WaitFor(serviceBus);
+
+    email.WithEnvironment("CommunicationServicesSettings__ConnectionString", "endpoint=http://localhost:" + acsPort + "/;accesskey=" + acsAccessKey)
+        .WaitFor(acs);
+}
+else if (acsMode != "real")
+{
+    throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
+}
+
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
