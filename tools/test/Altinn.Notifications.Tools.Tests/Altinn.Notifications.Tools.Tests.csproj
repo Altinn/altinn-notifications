@@ -22,6 +22,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
 	</ItemGroup>
@@ -32,6 +33,7 @@
 		<ProjectReference Include="..\..\..\components\api\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
 		<ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
+		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.MockAuth\Altinn.Notifications.Tools.MockAuth.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
 	</ItemGroup>
 

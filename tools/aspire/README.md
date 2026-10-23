@@ -40,6 +40,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Postgres:ContainerName` | `notifications-db` | The Postgres container to start |
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
+| `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
+| `Auth:Port` | `5094` | Port of the `auth` resource |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -65,6 +67,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
+| `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -72,6 +75,16 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 * Each service has a **Swagger** link in the URLs column.
 * The services wait until `postgres` is running and the emulator reports healthy.
 * The containers live in Podman or Docker, not in Aspire. Stopping Aspire stops the services, but `notifications-db` and the emulator keep running.
+
+## Authentication
+
+By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
+
+```bash
+curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
+```
+
+Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the Altinn test token generator, e.g. with the `v2 local` environment in Bruno.
 
 ## Dashboard actions
 

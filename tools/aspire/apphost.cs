@@ -59,6 +59,24 @@ if (postgresPort != 5432)
         .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
 }
 
+// mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
+var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
+if (authMode == "mock")
+{
+    var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
+    string authUrl = "http://localhost:" + authPort;
+    var auth = builder.AddProject("auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
+        .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
+        .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
+
+    api.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", authUrl + "/authentication/api/v1/openid/")
+        .WaitFor(auth);
+}
+else if (authMode != "at23")
+{
+    throw new InvalidOperationException($"Auth:Mode must be 'mock' or 'at23', not '{authMode}'.");
+}
+
 // The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
 var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
 StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });

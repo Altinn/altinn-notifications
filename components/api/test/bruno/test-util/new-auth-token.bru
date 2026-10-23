@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{process.env.TOKEN_GENERATOR_URL}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd
+  url: {{token_generator_url}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd
   body: none
   auth: basic
 }
@@ -17,8 +17,16 @@ params:query {
 }
 
 auth:basic {
-  username: {{process.env.TOKEN_BASIC_AUTH_USER}}
-  password: {{process.env.TOKEN_BASIC_AUTH_PW}}
+  username: {{token_generator_user}}
+  password: {{token_generator_password}}
+}
+
+script:pre-request {
+  // An environment can point to its own token generator, e.g. the mock issuer in "v2 aspire".
+  // Otherwise the Altinn test token generator from .env is used.
+  bru.setVar("token_generator_url", bru.getEnvVar("token_generator_url") || bru.getProcessEnv("TOKEN_GENERATOR_URL"));
+  bru.setVar("token_generator_user", bru.getEnvVar("token_generator_user") || bru.getProcessEnv("TOKEN_BASIC_AUTH_USER"));
+  bru.setVar("token_generator_password", bru.getEnvVar("token_generator_password") || bru.getProcessEnv("TOKEN_BASIC_AUTH_PW"));
 }
 
 script:post-response {
