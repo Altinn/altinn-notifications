@@ -49,10 +49,12 @@ These identifiers are exceptions, set in `appsettings.json`:
 
 | URL | Answer | The API |
 | :--- | :--- | :--- |
-| `http://localhost:5199/condition/true` | `{"sendNotification":true}` | Sends |
-| `http://localhost:5199/condition/false` | `{"sendNotification":false}` | Does not send |
-| `http://localhost:5199/condition/corrupt` | 200 with a body that is not JSON | Retries the order once, then sends anyway |
-| `http://localhost:5199/condition/error` | 500 | Retries the order once, then sends anyway |
+| `http://local.altinn.cloud:5199/condition/true` | `{"sendNotification":true}` | Sends |
+| `http://local.altinn.cloud:5199/condition/false` | `{"sendNotification":false}` | Does not send |
+| `http://local.altinn.cloud:5199/condition/corrupt` | 200 with a body that is not JSON | Retries the order once, then sends anyway |
+| `http://local.altinn.cloud:5199/condition/error` | 500 | Retries the order once, then sends anyway |
+
+The API only accepts condition URLs with a top-level domain, so use `local.altinn.cloud`, which resolves to 127.0.0.1, not `localhost`.
 
 The API calls condition endpoints with a Maskinporten token, which it gets from the Maskinporten mock. The condition mock does not check the token.
 
