@@ -31,7 +31,7 @@ aspire run
 
 ## Settings
 
-Override `appsettings.json` in a git-ignored `appsettings.Local.json`. Set `Postgres:UsePodman` to `false` to use a local PostgreSQL on port 5432 instead of the `notifications-db` container.
+Override `appsettings.json` in a git-ignored `appsettings.Local.json`. Set `Postgres:UsePodman` to `false` to use a local PostgreSQL on port 5432 instead of the `notifications-db` container. Set `LinkMobility:Target` to send SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy).
 
 Before the dashboard starts, the app host builds the API, Email and SMS projects one by one. Starting them all at once makes their builds of the shared project collide.
 
@@ -42,6 +42,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
+| `linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -49,6 +50,22 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 * Each service has a **Swagger** link in the URLs column.
 * The services wait until `postgres` is running and the emulator reports healthy.
 * The containers live in Podman, not in Aspire. Stopping Aspire stops the services, but `notifications-db` and the emulator keep running.
+
+## SMS through the LinkMobility proxy
+
+`sms` sends to the `linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
+
+By default it is a stub that answers OK, so nothing leaves the machine and no credentials are needed. To send real SMS through LinkMobility's test gateway, set the target in `appsettings.Local.json` and add the gateway credentials to the SMS service's user secrets, as described in the [proxy README](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#settings):
+
+```json
+{
+  "LinkMobility": {
+    "Target": "https://xml-test.pswin.com"
+  }
+}
+```
+
+**Use cluster** on `sms` bypasses the proxy, since the cluster's SMS service uses its own gateway settings.
 
 ## Dashboard actions
 
