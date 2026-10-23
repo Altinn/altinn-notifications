@@ -135,6 +135,16 @@ else if (acsMode != "real")
     throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
 }
 
+// SMS goes through a local LinkMobility proxy that logs the payloads with credentials and personal data masked.
+// Without LinkMobility:Target it is a stub, so nothing leaves the machine and no credentials are needed.
+var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
+var linkMobility = builder.AddProject("linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+    .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
+    .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty);
+
+sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + linkMobilityPort)
+    .WaitFor(linkMobility);
+
 // The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
 // turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
 (string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =

@@ -50,6 +50,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Simulator:Enabled` | `false` | `true` starts the [simulator](#simulator) and sends what the mocks do not recognise to it |
 | `Simulator:Port` | `5096` | Port of the `simulator` resource |
 | `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
+| `LinkMobility:Port` | `5093` | Port of the `linkmobility` resource |
+| `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -75,6 +77,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
+| `linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
 | `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
 | `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
@@ -156,6 +159,22 @@ With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
 * LinkMobility does not go through the simulator yet.
+
+## SMS through the LinkMobility proxy
+
+`sms` sends to the `linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
+
+By default it is a stub that answers OK, so nothing leaves the machine and no credentials are needed. To send real SMS through LinkMobility's test gateway, set the target in `appsettings.Local.json` and add the gateway credentials to the SMS service's user secrets, as described in the [proxy README](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#settings):
+
+```json
+{
+  "LinkMobility": {
+    "Target": "https://xml-test.pswin.com"
+  }
+}
+```
+
+**Use cluster** on `sms` bypasses the proxy, since the cluster's SMS service uses its own gateway settings.
 
 ## Dashboard actions
 
