@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1600;
+			SA1649
+		</NoWarn>
+		<UserSecretsId>simulator-tool-3c9d4e71</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+	</ItemGroup>
+
+	<!-- The GUI and the templates are read from the output folder, so they are found whichever folder the simulator is started from. -->
+	<ItemGroup>
+		<Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+		<Content Update="templates\**" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>

@@ -5,6 +5,7 @@
     <Project Path="src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj" />
     <Project Path="src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj" />
     <Project Path="src/Altinn.Notifications.Tools.RetryDeadDeliveryReports/Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
+    <Project Path="src/Altinn.Notifications.Tools.Simulator/Altinn.Notifications.Tools.Simulator.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Altinn.Notifications.Tools.Tests/Altinn.Notifications.Tools.Tests.csproj" />

@@ -47,6 +47,9 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
 | `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
 | `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
+| `Simulator:Enabled` | `false` | `true` starts the [simulator](#simulator) and sends what the mocks do not recognise to it |
+| `Simulator:Port` | `5096` | Port of the `simulator` resource |
+| `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -75,6 +78,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
 | `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `simulator` | The [simulator](#simulator) where an operator answers what the mocks do not recognise. Only started when `Simulator:Enabled` is `true`. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -110,7 +114,7 @@ The `acs` log shows each request and response with recipient addresses, subjects
 
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
-With `Simulator:Enabled`, requests the mock does not recognise go to the simulator on port 5096 instead of getting a 404.
+With `Simulator:Enabled`, requests the mock does not recognise go to the [simulator](#simulator) on port 5096 instead of getting a 404.
 
 ## Platform mocks
 
@@ -127,7 +131,7 @@ The API looks up contact points in Profile, names in Register and access in Auth
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
 * The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
-* With `Simulator:Enabled`, requests a mock does not recognise go to the simulator on 5096 instead of a 404.
+* With `Simulator:Enabled`, requests a mock does not recognise go to the [simulator](#simulator) on 5096 instead of a 404.
 
 For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
 
@@ -136,6 +140,22 @@ docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<rep
 ```
 
 The services do not send by themselves locally, since cron jobs call the trigger endpoints in the cluster. Call `POST /notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` on the API to send what is waiting.
+
+## Simulator
+
+With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `acs` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
+
+```json
+{
+  "Simulator": { "Enabled": true }
+}
+```
+
+* The **Simulator** link in the URLs column opens the GUI.
+* Each held request links to its trace in the dashboard when it has a `traceparent`.
+* The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
+* Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
+* LinkMobility does not go through the simulator yet.
 
 ## Dashboard actions
 

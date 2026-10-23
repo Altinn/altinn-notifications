@@ -1,0 +1,10 @@
+{
+  "name": "200 Permit (one decision, no attributes)",
+  "status": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": {
+    "Response": [
+      { "Decision": "Permit", "Status": { "StatusCode": { "Value": "urn:oasis:names:tc:xacml:1.0:status:ok" } } }
+    ]
+  }
+}

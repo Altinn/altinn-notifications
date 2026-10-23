@@ -91,7 +91,22 @@ email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
 // With Simulator:Enabled the mocks hand requests they do not recognise to the simulator, where an operator answers them.
-string simulatorFallbackUrl = builder.Configuration.GetValue("Simulator:Enabled", false) ? "http://localhost:5096/intercept/" : string.Empty;
+string simulatorFallbackUrl = string.Empty;
+IResourceBuilder<ProjectResource>? simulator = null;
+if (builder.Configuration.GetValue("Simulator:Enabled", false))
+{
+    var simulatorPort = builder.Configuration.GetValue("Simulator:Port", 5096);
+    string simulatorUrl = "http://localhost:" + simulatorPort;
+    simulatorFallbackUrl = simulatorUrl + "/intercept/";
+
+    // The dashboard's own URL, so each held request can link to its trace.
+    string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
+    simulator = builder.AddProject("simulator", "../src/Altinn.Notifications.Tools.Simulator/Altinn.Notifications.Tools.Simulator.csproj", launchProfileName: null)
+        .WithEnvironment("SimulatorSettings__Port", simulatorPort.ToString())
+        .WithEnvironment("SimulatorSettings__TimeoutSeconds", builder.Configuration.GetValue("Simulator:TimeoutSeconds", 120).ToString())
+        .WithEnvironment("SimulatorSettings__DashboardUrl", dashboardUrl)
+        .WithUrl(simulatorUrl + "/", "Simulator");
+}
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
 // delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
@@ -106,6 +121,11 @@ if (acsMode == "mock")
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)
         .WaitFor(serviceBus);
+
+    if (simulator is not null)
+    {
+        acs.WaitFor(simulator);
+    }
 
     email.WithEnvironment("CommunicationServicesSettings__ConnectionString", "endpoint=http://localhost:" + acsPort + "/;accesskey=" + acsAccessKey)
         .WaitFor(acs);
@@ -130,6 +150,11 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
 {
     var mocks = builder.AddProject("platform-mocks", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
         .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
+
+    if (simulator is not null)
+    {
+        mocks.WaitFor(simulator);
+    }
 
     foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
     {
