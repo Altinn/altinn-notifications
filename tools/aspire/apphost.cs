@@ -113,6 +113,48 @@ else if (acsMode != "real")
     throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
 }
 
+// The API's calls to Profile, Register, Authorization and condition endpoints go to local mocks. A system that is turned off keeps
+// the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+(string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
+[
+    ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
+    ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
+    ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves, see below.
+];
+
+if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
+{
+    var mocks = builder.AddProject("platform-mocks", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+        .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
+
+    foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
+    {
+        bool enabled = builder.Configuration.GetValue($"Mocks:{name}:Enabled", true);
+        int port = builder.Configuration.GetValue($"Mocks:{name}:Port", defaultPort);
+        mocks.WithEnvironment($"PlatformMocksSettings__{name}__Enabled", enabled.ToString())
+            .WithEnvironment($"PlatformMocksSettings__{name}__Port", port.ToString());
+
+        if (enabled && apiSetting.Length > 0)
+        {
+            api.WithEnvironment(apiSetting, "http://localhost:" + port + apiPath);
+        }
+    }
+
+    // Orders point to the condition endpoints themselves. Maskinporten needs a registered client, and the mocked endpoints need no token.
+    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
+    {
+        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+        api.WithEnvironment("SendConditionClient__UseMaskinporten", "false");
+        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
+        {
+            mocks.WithUrl("http://localhost:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
+        }
+    }
+
+    api.WaitFor(mocks);
+}
+
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
