@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 const string Components = "../../components";
+const string LinkMobilityProxyPort = "5093";
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -45,6 +46,15 @@ if (builder.Configuration.GetValue("Postgres:UsePodman", true))
     var postgres = builder.AddExecutable("postgres", "podman", ".", "logs", "-f", "notifications-db");
     api.WaitFor(postgres);
 }
+
+// SMS goes through a local LinkMobility proxy that logs the payloads with credentials and personal data masked.
+// Without LinkMobility:Target it is a stub, so nothing leaves the machine and no credentials are needed.
+var linkMobility = builder.AddProject("linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+    .WithEnvironment("LinkMobilityProxySettings__Port", LinkMobilityProxyPort)
+    .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty);
+
+sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + LinkMobilityProxyPort)
+    .WaitFor(linkMobility);
 
 StartContainer("../asb-emulator", "compose", "up", "-d");
 var serviceBus = builder.AddExecutable("servicebus", "podman", ".", "logs", "-f", "servicebus-emulator")
