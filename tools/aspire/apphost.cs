@@ -39,16 +39,31 @@ builder.Configuration
     .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.json"), optional: true)
     .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.Local.json"), optional: true);
 
-if (builder.Configuration.GetValue("Postgres:UsePodman", true))
+// podman or docker. Both take the same start, logs and compose commands.
+var containerRuntime = builder.Configuration["ContainerRuntime"] ?? "podman";
+
+if (builder.Configuration.GetValue("Postgres:UseContainer", true))
 {
-    StartContainer(".", "start", "notifications-db");
-    var postgres = builder.AddExecutable("postgres", "podman", ".", "logs", "-f", "notifications-db");
+    var postgresContainer = builder.Configuration["Postgres:ContainerName"] ?? "notifications-db";
+    StartContainer(".", ["start", postgresContainer]);
+    var postgres = builder.AddExecutable("postgres", containerRuntime, ".", "logs", "-f", postgresContainer);
     api.WaitFor(postgres);
 }
 
-StartContainer("../asb-emulator", "compose", "up", "-d");
-var serviceBus = builder.AddExecutable("servicebus", "podman", ".", "logs", "-f", "servicebus-emulator")
-    .WithHttpEndpoint(port: 5300, targetPort: 5300, name: "management", isProxied: false)
+// The API's connection strings point to 5432. Another port lets the app host use its own database next to an existing one.
+var postgresPort = builder.Configuration.GetValue("Postgres:Port", 5432);
+if (postgresPort != 5432)
+{
+    string connectionString = "Host=localhost;Port=" + postgresPort + ";Username={0};Password={{0}};Database=notificationsdb";
+    api.WithEnvironment("PostgreSQLSettings__AdminConnectionString", string.Format(connectionString, "platform_notifications_admin"))
+        .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
+}
+
+// The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
+var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
+StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
+var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
+    .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
     .WithHttpHealthCheck("/health", endpointName: "management");
 
 api.WaitFor(serviceBus);
@@ -77,14 +92,19 @@ foreach (var watcher in watchers)
     watcher.Dispose();
 }
 
-void StartContainer(string workingDirectory, params string[] podmanArgs)
+void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
 {
-    var startInfo = new ProcessStartInfo("podman", podmanArgs) { WorkingDirectory = Path.Combine(builder.AppHostDirectory, workingDirectory) };
-    using var podman = Process.Start(startInfo)!;
-    podman.WaitForExit();
-    if (podman.ExitCode != 0)
+    var startInfo = new ProcessStartInfo(containerRuntime, runtimeArgs) { WorkingDirectory = Path.Combine(builder.AppHostDirectory, workingDirectory) };
+    foreach (var (key, value) in environment ?? [])
     {
-        throw new InvalidOperationException($"podman {string.Join(' ', podmanArgs)} failed");
+        startInfo.Environment[key] = value;
+    }
+
+    using var runtime = Process.Start(startInfo)!;
+    runtime.WaitForExit();
+    if (runtime.ExitCode != 0)
+    {
+        throw new InvalidOperationException($"{containerRuntime} {string.Join(' ', runtimeArgs)} failed");
     }
 }
 
