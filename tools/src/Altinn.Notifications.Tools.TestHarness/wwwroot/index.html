@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Notifications simulator</title>
+  <title>Test harness control panel</title>
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <header>
-    <h1>Notifications simulator</h1>
+    <h1>Test harness control panel</h1>
     <nav class="tabs" role="tablist">
       <a href="#requests" role="tab" data-tab="requests">Requests <span id="tab-pending-count" class="count">0</span></a>
       <a href="#triggers" role="tab" data-tab="triggers">Triggers <span id="tab-triggers-count" class="count">0</span></a>
@@ -19,7 +19,7 @@
 
   <div id="tab-requests" class="tab">
   <p id="intercept-off" class="notice" hidden>Intercept is off: the mocks answer everything themselves and send nothing here.
-    Set <code>Simulator:Enabled</code> in <code>tools/aspire/appsettings.json</code> to hold requests.</p>
+    Set <code>TestHarness:Intercept</code> in <code>tools/aspire/appsettings.json</code> to hold requests.</p>
 
   <section id="auto-replies" class="auto-replies" aria-label="Auto-reply per system"></section>
 

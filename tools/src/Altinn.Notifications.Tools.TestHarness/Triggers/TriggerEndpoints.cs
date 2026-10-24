@@ -1,8 +1,8 @@
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Tools.Simulator.Triggers;
+namespace Altinn.Notifications.Tools.TestHarness.Triggers;
 
 /// <summary>
 /// <c>/api/triggers</c>, the API the GUI's Triggers tab uses to pause, resume and run the jobs.

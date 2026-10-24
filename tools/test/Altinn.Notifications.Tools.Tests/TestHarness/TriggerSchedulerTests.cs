@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Tools.Simulator.Triggers;
+using Altinn.Notifications.Tools.TestHarness.Triggers;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,7 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tools.Tests.Simulator;
+namespace Altinn.Notifications.Tools.Tests.TestHarness;
 
 public class TriggerSchedulerTests
 {
@@ -223,8 +223,8 @@ public class TriggerSchedulerTests
         Assert.False(HourRange.TryParse(text, out _));
     }
 
-    private static WebApplicationFactory<Tools.Simulator.Configuration.SimulatorSettings> CreateFactory(FakeApi api, params (string Key, string Value)[] settings) =>
-        new SimulatorFactory().WithWebHostBuilder(builder =>
+    private static WebApplicationFactory<Tools.TestHarness.Configuration.TestHarnessSettings> CreateFactory(FakeApi api, params (string Key, string Value)[] settings) =>
+        new TestHarnessFactory().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("TriggerSettings:ApiBaseUrl", "http://api.test");
             builder.UseSetting("TriggerSettings:Enabled", "true");

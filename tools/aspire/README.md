@@ -41,15 +41,15 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
 | `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
-| `Auth:Port` | `5094` | Port of the `auth` resource |
+| `Auth:Port` | `5094` | Port of the `mock-auth` resource |
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
-| `Acs:Port` | `5095` | Port of the `acs` resource |
+| `Acs:Port` | `5095` | Port of the `mock-acs` resource |
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
 | `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
 | `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
-| `Simulator:Enabled` | `false` | `true` starts the [simulator](#simulator) and sends what the mocks do not recognise to it |
-| `Simulator:Port` | `5096` | Port of the `simulator` resource |
-| `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
+| `TestHarness:Intercept` | `false` | `true` sends what the mocks do not recognise to the [control panel](#test-harness-control-panel) |
+| `TestHarness:Port` | `5096` | Port of the `testharness-controlpanel` resource |
+| `TestHarness:TimeoutSeconds` | `120` | How long the control panel holds an intercepted request before it answers 504 |
 | `Triggers:Enabled` | `true` | Calls the API's trigger endpoints on an interval, like the cron jobs in the cluster. `false` starts every job paused. See [Triggers](#triggers). |
 | `Triggers:Jobs:<name>:Enabled` | see [Triggers](#triggers) | Whether one trigger runs on its own, e.g. `Triggers:Jobs:sendemail:Enabled` |
 | `Triggers:Jobs:<name>:IntervalSeconds` | see [Triggers](#triggers) | Seconds between runs of one trigger |
@@ -79,10 +79,10 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
-| `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
-| `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
-| `simulator` | Calls the [trigger endpoints](#triggers) on a schedule, and with `Simulator:Enabled` is the [simulator](#simulator) where an operator answers what the mocks do not recognise. Started when `Triggers:Enabled` or `Simulator:Enabled` is `true`. | 5096 |
+| `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
+| `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
+| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `testharness-controlpanel` | The [test harness control panel](#test-harness-control-panel). Always started. Calls the [trigger endpoints](#triggers) on a schedule, and the mocks are grouped under it in the dashboard. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -93,7 +93,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 
 ## Authentication
 
-By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
+By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
 
 ```bash
 curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
@@ -103,7 +103,7 @@ Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the
 
 ## Email through the ACS mock
 
-By default (`Acs:Mode` = `mock`) `email` sends to the local `acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
+By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
 
 The mock answers the send and the status polls, and then puts a delivery report on the emulator's `altinn.notifications.email.deliveryreports` queue, so an email ends as `Email_Delivered` like in Azure. The recipient address picks other outcomes, e.g. `bounce@example.com` ends as `Email_Failed_Bounced`. See the [scenarios](../src/Altinn.Notifications.Tools.AcsMock/README.md#scenarios).
 
@@ -114,15 +114,15 @@ TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=t
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders/instant/email   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"   -d '{"idempotencyId":"acs-1","sendersReference":"acs-test","recipientEmail":{"emailAddress":"ola.nordmann@example.com","emailSettings":{"subject":"Test","body":"Test","contentType":"Plain","senderEmailAddress":"noreply@altinn.no"}}}'
 ```
 
-The `acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
+The `mock-acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
 
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
-With `Simulator:Enabled`, requests the mock does not recognise go to the [simulator](#simulator) on port 5096 instead of getting a 404.
+With `TestHarness:Intercept`, requests the mock does not recognise go to the [control panel](#test-harness-control-panel) on port 5096 instead of getting a 404.
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |
@@ -135,7 +135,7 @@ The API looks up contact points in Profile, names in Register and access in Auth
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
 * The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
-* With `Simulator:Enabled`, requests a mock does not recognise go to the [simulator](#simulator) on 5096 instead of a 404.
+* With `TestHarness:Intercept`, requests a mock does not recognise go to the [control panel](#test-harness-control-panel) on 5096 instead of a 404.
 
 For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
 
@@ -143,27 +143,37 @@ For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the
 docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env" usebruno/cli:latest run "test-util/new-auth-token.bru" "v2 (future)/create-notifications" --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
 ```
 
-The `simulator` resource calls the trigger endpoints, so a future order is sent within about 15 seconds of its send time. See [Triggers](#triggers).
+The `testharness-controlpanel` resource calls the trigger endpoints, so a future order is sent within about 15 seconds of its send time. See [Triggers](#triggers).
 
-## Simulator
+## Test harness control panel
 
-With `Simulator:Enabled` set to `true`, the `simulator` resource on 5096 also takes what the mocks do not recognise: the `acs` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
+The `testharness-controlpanel` resource on 5096 always starts, and the mocks (`mock-auth`, `mock-acs` and `wiremock-platform`) are its children in the dashboard, so they fold together under it. See the [tool's README](../src/Altinn.Notifications.Tools.TestHarness/README.md).
+
+With `TestHarness:Intercept` set to `true`, the `mock-acs` and `wiremock-platform` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The control panel holds each request until you answer it in its GUI, or until `TestHarness:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`.
 
 ```json
 {
-  "Simulator": { "Enabled": true }
+  "TestHarness": { "Intercept": true }
 }
 ```
 
-* The **Simulator** link in the URLs column opens the GUI.
+* The **Control panel** link in the URLs column opens the GUI.
 * Each held request links to its trace in the dashboard when it has a `traceparent`.
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
-* LinkMobility does not go through the simulator yet.
+* LinkMobility does not go through the control panel yet.
+
+The control panel used to be called the simulator. Its settings moved, and the app host stops with an error if it finds the old `Simulator` section:
+
+| Before | Now |
+| :--- | :--- |
+| `Simulator:Enabled` | `TestHarness:Intercept`. The control panel itself always starts now. |
+| `Simulator:Port` | `TestHarness:Port` |
+| `Simulator:TimeoutSeconds` | `TestHarness:TimeoutSeconds` |
 
 ## Triggers
 
-In the cluster, cron jobs call the API's `/notifications/api/v1/trigger/...` endpoints to send waiting notifications, expire old ones and clean up. Locally the `simulator` resource does the same, so an order that is not `instant` goes out without anyone calling a trigger by hand. Past-due orders and retries need no trigger: the API's own background service picks them up.
+In the cluster, cron jobs call the API's `/notifications/api/v1/trigger/...` endpoints to send waiting notifications, expire old ones and clean up. Locally the `testharness-controlpanel` resource does the same, so an order that is not `instant` goes out without anyone calling a trigger by hand. Past-due orders and retries need no trigger: the API's own background service picks them up.
 
 | Trigger | Locally | In the cluster |
 | :--- | :--- | :--- |
@@ -180,7 +190,7 @@ The cluster schedules are from [docs/architecture/notifications.md](../../docs/a
 * The daytime triggers run as in the cluster: the scheduler calls them within their cron hours, and the API itself skips the work outside its send window (09-17 Norwegian time, `NotificationConfig:SmsSendWindowStartHour` and the like). A daytime order made in the evening waits until the next morning, as in production.
 * The trigger endpoints have no authentication: in the cluster only the cron jobs inside it reach them. The scheduler sends an empty `POST` with `Content-Type: application/json`, which the endpoints require.
 * A job never overlaps itself, like `concurrencyPolicy: Forbid` in the cluster. A run that is due while the previous one is still going is skipped.
-* The **Triggers** link in the URLs column opens the simulator's **Triggers** tab. Each trigger can be paused or resumed, have its interval and hours changed, or be run now. It shows the last run (time, status, duration, response) and the last 20 runs. Changes last until the simulator restarts. For lasting ones, set `Triggers:Jobs` in `appsettings.Local.json`:
+* The **Triggers** link in the URLs column opens the control panel's **Triggers** tab. Each trigger can be paused or resumed, have its interval and hours changed, or be run now. It shows the last run (time, status, duration, response) and the last 20 runs. Changes last until the control panel restarts. For lasting ones, set `Triggers:Jobs` in `appsettings.Local.json`:
 
 ```json
 {
@@ -193,8 +203,8 @@ The cluster schedules are from [docs/architecture/notifications.md](../../docs/a
 }
 ```
 
-* The first trigger calls can fail while the API starts. With `Simulator:Enabled` off, the `simulator` resource waits for the API's process, but not until the API listens. With it on, it cannot wait at all, since the mocks wait for the simulator and the API for the mocks. The Triggers tab shows those calls as `no response`, and the log says once when a trigger fails and once when it works again.
-* With both `Triggers:Enabled` and `Simulator:Enabled` set to `false` there is no `simulator` resource. Then call `POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` yourself to send what is waiting.
+* The first trigger calls can fail while the API starts. With `TestHarness:Intercept` off, the `testharness-controlpanel` resource waits for the API's process, but not until the API listens. With it on, it cannot wait at all, since the mocks wait for the control panel and the API for the mocks. The Triggers tab shows those calls as `no response`, and the log says once when a trigger fails and once when it works again.
+* With `Triggers:Enabled` set to `false` the control panel still starts, with every trigger paused. Run them from the **Triggers** tab, or call `POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` yourself to send what is waiting.
 
 ## Dashboard actions
 

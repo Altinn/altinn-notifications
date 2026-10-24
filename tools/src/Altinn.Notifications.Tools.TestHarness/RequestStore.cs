@@ -1,15 +1,15 @@
 using System.Collections.Concurrent;
 
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Tools.Simulator;
+namespace Altinn.Notifications.Tools.TestHarness;
 
 /// <summary>
 /// The requests waiting for an answer, the ones already handled, and the auto-reply template of each system.
 /// </summary>
-internal sealed class RequestStore(IOptions<SimulatorSettings> options)
+internal sealed class RequestStore(IOptions<TestHarnessSettings> options)
 {
     private readonly ConcurrentDictionary<string, HeldRequest> _pending = new();
     private readonly ConcurrentDictionary<string, string> _autoReplies = new(StringComparer.OrdinalIgnoreCase);

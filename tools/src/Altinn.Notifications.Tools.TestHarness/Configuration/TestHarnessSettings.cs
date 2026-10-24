@@ -1,12 +1,12 @@
-namespace Altinn.Notifications.Tools.Simulator.Configuration;
+namespace Altinn.Notifications.Tools.TestHarness.Configuration;
 
 /// <summary>
-/// Settings for the simulator that holds requests the mocks do not recognise until an operator answers them.
+/// Settings for the test harness control panel, which holds requests the mocks do not recognise until an operator answers them.
 /// </summary>
-public class SimulatorSettings
+public class TestHarnessSettings
 {
     /// <summary>
-    /// The localhost port the simulator listens on. The mocks' <c>FallbackUrl</c> must point here.
+    /// The localhost port the control panel listens on. The mocks' <c>FallbackUrl</c> must point here.
     /// </summary>
     public int Port { get; set; } = 5096;
 

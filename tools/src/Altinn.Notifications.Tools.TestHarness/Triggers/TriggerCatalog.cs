@@ -1,4 +1,4 @@
-namespace Altinn.Notifications.Tools.Simulator.Triggers;
+namespace Altinn.Notifications.Tools.TestHarness.Triggers;
 
 /// <summary>
 /// One endpoint in the API's <c>TriggerController</c>, with the defaults the local scheduler uses for it.

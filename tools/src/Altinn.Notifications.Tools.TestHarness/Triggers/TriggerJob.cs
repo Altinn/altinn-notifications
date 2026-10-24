@@ -1,4 +1,4 @@
-namespace Altinn.Notifications.Tools.Simulator.Triggers;
+namespace Altinn.Notifications.Tools.TestHarness.Triggers;
 
 /// <summary>
 /// One call to a trigger endpoint.

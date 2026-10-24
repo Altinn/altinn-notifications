@@ -1,4 +1,4 @@
-namespace Altinn.Notifications.Tools.Simulator.Configuration;
+namespace Altinn.Notifications.Tools.TestHarness.Configuration;
 
 /// <summary>
 /// Settings for the scheduler that calls the API's trigger endpoints, the way the cluster's cron jobs do.

@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
 
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Tools.Simulator.Triggers;
+namespace Altinn.Notifications.Tools.TestHarness.Triggers;
 
 /// <summary>
 /// Calls the API's trigger endpoints on an interval, the way the cron jobs do in the cluster. Each job runs on its own loop.

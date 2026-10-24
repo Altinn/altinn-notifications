@@ -1,4 +1,4 @@
-// The simulator GUI. /api/events says when something changed, and the page then fetches /api/state again.
+// The test harness control panel. /api/events says when something changed, and the page then fetches /api/state again.
 "use strict";
 
 const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutSeconds: 0, intercept: true };

@@ -64,7 +64,7 @@ The client library has the Maskinporten URLs built in. Pointing it here needs th
 
 ### Anything else
 
-Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{FallbackUrl}{system}/{path}` instead, e.g. `http://localhost:5096/intercept/profile/profile/api/v1/...`, so an operator can answer them in the simulator. The mapped endpoints are still answered by the mocks.
+Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{FallbackUrl}{system}/{path}` instead, e.g. `http://localhost:5096/intercept/profile/profile/api/v1/...`, so an operator can answer them in the test harness control panel. The mapped endpoints are still answered by the mocks.
 
 ## Prerequisites
 
@@ -72,7 +72,7 @@ Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{F
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#platform-mocks) starts the mocks as the `platform-mocks` resource and points the API at them. Turn them off with `Mocks:Enabled` or one by one with `Mocks:<System>:Enabled`.
+The [Aspire app host](../../aspire/README.md#platform-mocks) starts the mocks as the `wiremock-platform` resource and points the API at them. Turn them off with `Mocks:Enabled` or one by one with `Mocks:<System>:Enabled`.
 
 ## Run on its own
 
