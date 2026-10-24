@@ -65,7 +65,7 @@ if (authMode == "mock")
 {
     var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
     string authUrl = "http://localhost:" + authPort;
-    var auth = builder.AddProject("auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
+    var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
         .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
 
