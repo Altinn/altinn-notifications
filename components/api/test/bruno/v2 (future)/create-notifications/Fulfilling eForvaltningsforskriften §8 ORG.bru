@@ -35,7 +35,7 @@ body:json {
       {
         "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_TRUE}}",
         "sendersReference": "{{random_idempotency_id}}",
-        "requestedSendTime": "2025-08-06T11:00:00Z",
+        "delayDays": 7,
         "recipient": {
           "recipientOrganization": {
             "orgNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}",
