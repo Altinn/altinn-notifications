@@ -90,22 +90,50 @@ api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
-// With Simulator:Enabled the mocks hand requests they do not recognise to the simulator, where an operator answers them.
+// The simulator does two things. With Simulator:Enabled the mocks hand requests they do not recognise to it, where an operator
+// answers them. With Triggers:Enabled it calls the API's trigger endpoints on an interval, like the cron jobs in the cluster, so
+// orders are sent without anyone calling /trigger/send* by hand. It starts when either is on.
+bool interceptEnabled = builder.Configuration.GetValue("Simulator:Enabled", false);
+bool triggersEnabled = builder.Configuration.GetValue("Triggers:Enabled", true);
 string simulatorFallbackUrl = string.Empty;
 IResourceBuilder<ProjectResource>? simulator = null;
-if (builder.Configuration.GetValue("Simulator:Enabled", false))
+if (interceptEnabled || triggersEnabled)
 {
     var simulatorPort = builder.Configuration.GetValue("Simulator:Port", 5096);
     string simulatorUrl = "http://localhost:" + simulatorPort;
-    simulatorFallbackUrl = simulatorUrl + "/intercept/";
 
     // The dashboard's own URL, so each held request can link to its trace.
     string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
-    simulator = builder.AddProject("simulator", "../src/Altinn.Notifications.Tools.Simulator/Altinn.Notifications.Tools.Simulator.csproj", launchProfileName: null)
+    var simulatorResource = builder.AddProject("simulator", "../src/Altinn.Notifications.Tools.Simulator/Altinn.Notifications.Tools.Simulator.csproj", launchProfileName: null)
         .WithEnvironment("SimulatorSettings__Port", simulatorPort.ToString())
+        .WithEnvironment("SimulatorSettings__Intercept", interceptEnabled.ToString())
         .WithEnvironment("SimulatorSettings__TimeoutSeconds", builder.Configuration.GetValue("Simulator:TimeoutSeconds", 120).ToString())
         .WithEnvironment("SimulatorSettings__DashboardUrl", dashboardUrl)
-        .WithUrl(simulatorUrl + "/", "Simulator");
+        .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
+        .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
+        .WithUrl(simulatorUrl + "/", "Simulator")
+        .WithUrl(simulatorUrl + "/#triggers", "Triggers");
+
+    // Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the simulator's defaults for that trigger.
+    foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
+    {
+        foreach (var setting in job.GetChildren())
+        {
+            simulatorResource.WithEnvironment($"TriggerSettings__Jobs__{job.Key}__{setting.Key}", setting.Value ?? string.Empty);
+        }
+    }
+
+    if (interceptEnabled)
+    {
+        // The mocks wait for the simulator and the API for the mocks, so the simulator cannot wait for the API. Its first trigger
+        // calls fail until the API is up.
+        simulatorFallbackUrl = simulatorUrl + "/intercept/";
+        simulator = simulatorResource;
+    }
+    else
+    {
+        simulatorResource.WaitFor(api);
+    }
 }
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts

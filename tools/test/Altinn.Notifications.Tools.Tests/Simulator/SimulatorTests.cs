@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.Simulator;
 
-public class SimulatorTests(WebApplicationFactory<SimulatorSettings> factory) : IClassFixture<WebApplicationFactory<SimulatorSettings>>
+public class SimulatorTests(SimulatorFactory factory) : IClassFixture<SimulatorFactory>
 {
     [Fact]
     public async Task HeldRequest_AnsweredThroughApi_ReachesCaller()

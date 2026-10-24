@@ -11,6 +11,11 @@ public class SimulatorSettings
     public int Port { get; set; } = 5096;
 
     /// <summary>
+    /// Whether the mocks forward what they do not recognise here. Only tells the GUI, since the mocks' <c>FallbackUrl</c> decides it.
+    /// </summary>
+    public bool Intercept { get; set; } = true;
+
+    /// <summary>
     /// How long a request is held before it gets a 504 with <c>X-Simulator: timeout</c>.
     /// </summary>
     public int TimeoutSeconds { get; set; } = 120;

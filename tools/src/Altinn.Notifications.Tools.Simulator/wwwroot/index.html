@@ -9,9 +9,17 @@
 <body>
   <header>
     <h1>Notifications simulator</h1>
+    <nav class="tabs" role="tablist">
+      <a href="#requests" role="tab" data-tab="requests">Requests <span id="tab-pending-count" class="count">0</span></a>
+      <a href="#triggers" role="tab" data-tab="triggers">Triggers <span id="tab-triggers-count" class="count">0</span></a>
+    </nav>
     <span id="connection" class="connection" title="Live updates">connecting…</span>
     <span id="timeout" class="muted"></span>
   </header>
+
+  <div id="tab-requests" class="tab">
+  <p id="intercept-off" class="notice" hidden>Intercept is off: the mocks answer everything themselves and send nothing here.
+    Set <code>Simulator:Enabled</code> in <code>tools/aspire/appsettings.json</code> to hold requests.</p>
 
   <section id="auto-replies" class="auto-replies" aria-label="Auto-reply per system"></section>
 
@@ -29,6 +37,17 @@
       <p class="muted">Select a request.</p>
     </section>
   </main>
+  </div>
+
+  <div id="tab-triggers" class="tab triggers" hidden>
+    <div class="triggers-bar">
+      <p class="muted">Calls the API's trigger endpoints on an interval, like the cron jobs in the cluster. Hours are UTC, like a cron
+        hour field (<code>7-16</code>); empty is all day. <span id="triggers-api"></span></p>
+      <button type="button" id="pause-all" class="secondary">Pause all</button>
+      <button type="button" id="resume-all" class="secondary">Resume all</button>
+    </div>
+    <div id="trigger-list" class="trigger-list"></div>
+  </div>
 
   <template id="detail-template">
     <div class="detail-head">
@@ -67,6 +86,32 @@
       <table class="headers response-headers"><tbody></tbody></table>
       <pre class="body response-body"></pre>
     </section>
+  </template>
+
+  <template id="trigger-template">
+    <article class="trigger">
+      <div class="trigger-head">
+        <code class="name"></code>
+        <span class="trigger-state"></span>
+        <button type="button" class="run">Run now</button>
+      </div>
+      <p class="description muted"></p>
+      <div class="trigger-settings">
+        <label class="switch"><input type="checkbox" name="enabled"> Runs on its own</label>
+        <label>Every <input name="interval" type="number" min="1" max="86400" required> s</label>
+        <label>Hours <input name="hours" placeholder="all day" size="8"></label>
+        <span class="cluster muted"></span>
+        <span class="error"></span>
+      </div>
+      <dl class="meta last-run"></dl>
+      <details class="runs">
+        <summary>History <span class="count run-count">0</span></summary>
+        <table class="run-table">
+          <thead><tr><th>Started</th><th>By</th><th>Status</th><th>Duration</th><th>Response</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </details>
+    </article>
   </template>
 
   <script src="app.js"></script>
