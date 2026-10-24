@@ -135,7 +135,7 @@ The services do not send by themselves locally, since cron jobs call the trigger
 
 ## Bruno and k6
 
-Both run against the stack with the default `Auth:Mode` = `mock` and the platform mocks on. No at23 account, token generator credentials or secrets are needed.
+Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth` resource) and the platform mocks (`wiremock-platform`) on. No at23 account, token generator credentials or secrets are needed.
 
 ### Bruno
 

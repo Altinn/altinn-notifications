@@ -97,12 +97,12 @@ docker compose run k6 run /src/tests/orders-email.js \
 
 ## Running against the local Aspire stack
 
-With `altinn_env=local` the tests run against the [Aspire app host](../../../../tools/aspire/README.md) on your machine instead of an Altinn environment. Start it with `aspire run` in `tools/aspire`, with the default `Auth:Mode` = `mock` and the platform mocks on.
+With `altinn_env=local` the tests run against the [Aspire app host](../../../../tools/aspire/README.md) on your machine instead of an Altinn environment. Start it with `aspire run` in `tools/aspire`, with the default `Auth:Mode` = `mock` and the platform mocks on. The dashboard calls them `mock-auth` and `wiremock-platform`.
 
 | | Altinn environments | `local` |
 | :--- | :--- | :--- |
 | API | `https://platform.<env>` | `http://localhost:5090`, or `-e base_url=...` |
-| Tokens | Altinn test token generator or Maskinporten | The mock token issuer on `http://localhost:5094`, or `-e token_generator_url=...` |
+| Tokens | Altinn test token generator or Maskinporten | The mock token issuer, the `mock-auth` resource, on `http://localhost:5094`, or `-e token_generator_url=...` |
 | Secrets | From `--secret-source` | Not needed. The token issuer takes `mock` / `mock`, and nothing checks `subscriptionKey`. A secret source still wins when you give one. |
 | `emailRecipient`, `smsRecipient` | Required | Default to `aspire@example.com` and `+4799999999` |
 | Condition endpoints | `/notifications/api/v1/tests/sendcondition` | The condition mock on `http://local.altinn.cloud:5199/condition/{true,false}`. The API only accepts condition URLs with a top-level domain, and `local.altinn.cloud` resolves to 127.0.0.1. |
