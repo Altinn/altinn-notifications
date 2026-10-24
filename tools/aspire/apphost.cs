@@ -67,7 +67,7 @@ if (authMode == "mock")
 {
     var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
     string authUrl = "http://localhost:" + authPort;
-    var auth = builder.AddProject("auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
+    var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
         .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
 
@@ -101,7 +101,7 @@ if (acsMode == "mock")
     // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
     const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
     var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
-    var acs = builder.AddProject("acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
+    var acs = builder.AddProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)

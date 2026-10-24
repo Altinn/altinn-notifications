@@ -56,7 +56,7 @@ Every request is logged with the response. Recipient addresses keep only their f
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#email-through-the-acs-mock) starts it as the `acs` resource and points the email service at it, unless `Acs:Mode` is `real`.
+The [Aspire app host](../../aspire/README.md#email-through-the-acs-mock) starts it as the `mock-acs` resource and points the email service at it, unless `Acs:Mode` is `real`.
 
 ## Run on its own
 
