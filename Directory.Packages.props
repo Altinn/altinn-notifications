@@ -63,6 +63,8 @@
 		<!-- Other -->
 		<PackageVersion Include="JWTCookieAuthentication" Version="4.0.4" />
 		<PackageVersion Include="libphonenumber-csharp" Version="9.0.41" />
+		<!-- Transitive pin for the Aspire app host: 2.5.302 has GHSA-qhrr-8q5h-9q3h -->
+		<PackageVersion Include="MessagePack" Version="2.5.307" />
 		<PackageVersion Include="Parquet.Net" Version="6.1.0" />
 		<PackageVersion Include="RandomString4Net" Version="1.10.0" />
 		<PackageVersion Include="System.Memory.Data" Version="10.0.13" />
