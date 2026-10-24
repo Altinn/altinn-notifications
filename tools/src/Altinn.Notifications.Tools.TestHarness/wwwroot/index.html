@@ -9,10 +9,15 @@
 <body>
   <header>
     <h1>Test harness control panel</h1>
+    <nav class="tabs" role="tablist">
+      <a href="#requests" role="tab" data-tab="requests">Requests <span id="tab-pending-count" class="count">0</span></a>
+      <a href="#phone" role="tab" data-tab="phone">Phone <span id="tab-phone-count" class="count">0</span></a>
+    </nav>
     <span id="connection" class="connection" title="Live updates">connecting…</span>
     <span id="timeout" class="muted"></span>
   </header>
 
+  <div id="tab-requests" class="tab">
   <p id="intercept-off" class="notice" hidden>Intercept is off: the mocks answer everything themselves and send nothing here.
     Set <code>TestHarness:Intercept</code> in <code>tools/aspire/appsettings.json</code> to hold requests.</p>
 
@@ -32,6 +37,28 @@
       <p class="muted">Select a request.</p>
     </section>
   </main>
+  </div>
+
+  <div id="tab-phone" class="tab phone-tab" hidden>
+    <div class="mirror-bar">
+      <p class="muted">What <code>wiremock-linkmobility</code> received, as the recipient's phone would show it. Read-only and unmasked:
+        local test data only.</p>
+      <label>Show
+        <select id="phone-filter">
+          <option value="Delivered">delivered</option>
+          <option value="">all</option>
+        </select>
+      </label>
+    </div>
+    <div class="phone-layout">
+      <ul id="conversations" class="list conversations"></ul>
+      <section class="phone" aria-label="Conversation">
+        <div class="phone-head"><span id="phone-number">No conversation</span></div>
+        <div id="phone-messages" class="phone-messages"></div>
+      </section>
+    </div>
+    <p id="phone-empty" class="muted empty">No SMS yet. Order one, and the copy <code>wiremock-linkmobility</code> sends here shows up.</p>
+  </div>
 
   <template id="detail-template">
     <div class="detail-head">

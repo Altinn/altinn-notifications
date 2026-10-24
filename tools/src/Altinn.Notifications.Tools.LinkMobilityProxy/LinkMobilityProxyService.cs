@@ -26,6 +26,7 @@ namespace Altinn.Notifications.Tools.LinkMobilityProxy;
 internal sealed class LinkMobilityProxyService(
     IOptions<LinkMobilityProxySettings> options,
     DeliveryReportService deliveryReports,
+    SmsMirror mirror,
     ILogger<LinkMobilityProxyService> logger) : IHostedService
 {
     internal static readonly ActivitySource ActivitySource = new("Altinn.Notifications.Tools.LinkMobilityProxy");
@@ -127,14 +128,18 @@ internal sealed class LinkMobilityProxyService(
 
         IResponseMessage response;
         List<SmsResult> accepted;
+        List<SmsResult> results;
         if (_settings.Interactive)
         {
             response = await ForwardAsync(request);
             accepted = GatewayXml.ReadAccepted(BodyText(response.BodyData));
+            results = messages
+                .Select(m => accepted.FirstOrDefault(r => r.Id == m.Id) ?? new SmsResult(m.Id, null, $"Not accepted: {response.StatusCode}"))
+                .ToList();
         }
         else
         {
-            var results = messages
+            results = messages
                 .Select(m => SmsScenarios.Pick(m.Recipient) == SmsScenario.InvalidRecipient
                     ? new SmsResult(m.Id, null, "Invalid RCV")
                     : new SmsResult(m.Id, Guid.NewGuid().ToString()))
@@ -142,6 +147,11 @@ internal sealed class LinkMobilityProxyService(
 
             response = Xml(200, GatewayXml.SendResponse(results));
             accepted = results.Where(r => r.Reference is not null).ToList();
+        }
+
+        foreach (var (message, result) in messages.Zip(results))
+        {
+            mirror.Sent(message, result, SmsScenarios.Pick(message.Recipient));
         }
 
         foreach (var result in accepted)

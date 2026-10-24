@@ -5,6 +5,8 @@ const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutS
 const templateCache = {};
 let selectedId = null;
 let selectedFrom = null; // "pending" or "history"
+const mirror = { sms: [] };
+let selectedPhone = null;
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -22,9 +24,11 @@ function el(tag, attributes = {}, ...children) {
 }
 
 async function refresh() {
-  const response = await fetch("api/state");
-  Object.assign(state, await response.json());
+  const [requests, sms] = await Promise.all([fetch("api/state"), fetch("api/mirror/sms")]);
+  Object.assign(state, await requests.json());
+  mirror.sms = await sms.json();
   render();
+  renderPhone();
 }
 
 async function templatesFor(system) {
@@ -41,6 +45,7 @@ async function allTemplates() {
 }
 
 function render() {
+  $("#tab-pending-count").textContent = state.pending.length;
   $("#timeout").textContent = state.intercept ? `Requests time out after ${state.timeoutSeconds} s with 504.` : "";
   $("#intercept-off").hidden = state.intercept;
   renderAutoReplies();
@@ -298,5 +303,73 @@ function connect() {
   events.onerror = () => { connection.textContent = "reconnecting…"; connection.className = "connection down"; };
 }
 
+// The Phone tab: one conversation per recipient number, newest message last, like a phone's messages app.
+function renderPhone() {
+  const filter = $("#phone-filter").value;
+  const shown = mirror.sms.filter(m => !filter || m.status === filter);
+  $("#tab-phone-count").textContent = mirror.sms.length;
+
+  const conversations = new Map();
+  for (const message of shown) {
+    const recipient = message.content.recipient;
+    if (!conversations.has(recipient)) conversations.set(recipient, []);
+    conversations.get(recipient).push(message);
+  }
+
+  $("#phone-empty").hidden = conversations.size > 0;
+  $("#phone-empty").textContent = mirror.sms.length === 0
+    ? "No SMS yet. Order one, and the copy wiremock-linkmobility sends here shows up."
+    : "No delivered SMS yet. Show all to see the ones still on their way or failed.";
+  if (!conversations.has(selectedPhone)) selectedPhone = conversations.keys().next().value ?? null;
+
+  // The store is newest first, so the first message of each conversation is its latest.
+  $("#conversations").replaceChildren(...[...conversations].map(([recipient, messages]) => el("li",
+    { class: recipient === selectedPhone ? "selected" : "", onclick: () => { selectedPhone = recipient; renderPhone(); } },
+    el("strong", { class: "number" }, recipient),
+    el("span", { class: "count" }, String(messages.length)),
+    el("span", { class: "preview muted" }, messages[0].content.text ?? ""),
+    el("span", { class: "time" }, time(messages[0].receivedAt)))));
+
+  $("#phone-number").textContent = selectedPhone ?? "No conversation";
+  const list = $("#phone-messages");
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  const messages = (conversations.get(selectedPhone) ?? []).slice().reverse();
+  list.replaceChildren(...messages.map(message => el("div", { class: "sms" },
+    el("div", { class: "sender" }, message.content.sender || "unknown sender"),
+    el("div", { class: "bubble" }, message.content.text ?? ""),
+    el("div", { class: "sms-meta" },
+      el("span", { class: "time" }, time(message.receivedAt)),
+      mirrorStatusBadge(message),
+      el("span", { class: "muted", title: smsDetails(message) }, "ⓘ")))));
+  if (atBottom) list.scrollTop = list.scrollHeight;
+}
+
+function mirrorStatusBadge(message) {
+  const title = message.detail ? `${message.detail} at ${time(message.statusAt)}` : time(message.statusAt);
+  return el("span", { class: `badge mirror-${message.status.toLowerCase()}`, title }, message.status);
+}
+
+function smsDetails(message) {
+  const sms = message.content;
+  return [
+    `Reference: ${sms.reference || "none"}`,
+    `Scenario: ${sms.scenario ?? "-"}`,
+    `TTL: ${sms.ttl ?? "-"} min`,
+    message.detail ? `Gateway state: ${message.detail}` : null,
+  ].filter(Boolean).join("\n");
+}
+
+function showTab() {
+  const tab = location.hash === "#phone" ? "phone" : "requests";
+  for (const link of document.querySelectorAll(".tabs a")) {
+    link.setAttribute("aria-selected", String(link.dataset.tab === tab));
+  }
+  $("#tab-requests").hidden = tab !== "requests";
+  $("#tab-phone").hidden = tab !== "phone";
+}
+
+$("#phone-filter").addEventListener("change", renderPhone);
+window.addEventListener("hashchange", showTab);
+showTab();
 setInterval(tick, 1000);
 connect();

@@ -80,7 +80,8 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
     .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
-    .WithUrl(controlPanelUrl + "/", "Control panel");
+    .WithUrl(controlPanelUrl + "/", "Control panel")
+    .WithUrl(controlPanelUrl + "/#phone", "Phone");
 
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
@@ -143,6 +144,7 @@ else if (acsMode != "real")
 // SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
 // Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
 // machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+// It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
 var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
 bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
 if (linkMobilityInteractive && !interceptEnabled)
@@ -158,6 +160,7 @@ var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.No
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
     .WithEnvironment("LinkMobilityProxySettings__FallbackUrl", interceptUrl)
+    .WithEnvironment("LinkMobilityProxySettings__MirrorUrl", controlPanelUrl + "/mirror/")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)
