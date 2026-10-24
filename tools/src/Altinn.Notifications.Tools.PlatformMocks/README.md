@@ -64,7 +64,7 @@ The client library has the Maskinporten URLs built in. Pointing it here needs th
 
 ### Anything else
 
-Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{FallbackUrl}{system}/{path}` instead, e.g. `http://localhost:5096/intercept/profile/profile/api/v1/...`, so an operator can answer them in the simulator. The mapped endpoints are still answered by the mocks.
+Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{FallbackUrl}{system}/{path}` instead, e.g. `http://localhost:5096/intercept/profile/profile/api/v1/...`, so an operator can answer them in the test harness control panel. The mapped endpoints are still answered by the mocks.
 
 ## Prerequisites
 

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test harness control panel</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header>
+    <h1>Test harness control panel</h1>
+    <span id="connection" class="connection" title="Live updates">connecting…</span>
+    <span id="timeout" class="muted"></span>
+  </header>
+
+  <p id="intercept-off" class="notice" hidden>Intercept is off: the mocks answer everything themselves and send nothing here.
+    Set <code>TestHarness:Intercept</code> in <code>tools/aspire/appsettings.json</code> to hold requests.</p>
+
+  <section id="auto-replies" class="auto-replies" aria-label="Auto-reply per system"></section>
+
+  <main>
+    <aside>
+      <h2>Waiting <span id="pending-count" class="count">0</span></h2>
+      <ul id="pending" class="list"></ul>
+      <p id="pending-empty" class="muted">Nothing waiting. Requests the mocks do not recognise show up here.</p>
+
+      <h2>History <span id="history-count" class="count">0</span></h2>
+      <ul id="history" class="list"></ul>
+    </aside>
+
+    <section id="detail" class="detail">
+      <p class="muted">Select a request.</p>
+    </section>
+  </main>
+
+  <template id="detail-template">
+    <div class="detail-head">
+      <span class="badge system"></span>
+      <code class="target"></code>
+      <span class="state"></span>
+    </div>
+    <dl class="meta"></dl>
+
+    <h3>Request headers</h3>
+    <table class="headers"><tbody></tbody></table>
+    <h3>Request body</h3>
+    <pre class="body"></pre>
+
+    <form class="answer">
+      <h3>Answer</h3>
+      <label>Template
+        <select name="template"><option value="">Choose a template…</option></select>
+      </label>
+      <label>Status <input name="status" type="number" min="100" max="599" value="200" required></label>
+      <label>Headers <span class="muted">one <code>Name: value</code> per line</span>
+        <textarea name="headers" rows="4" spellcheck="false"></textarea>
+      </label>
+      <label>Body
+        <textarea name="body" rows="14" spellcheck="false"></textarea>
+      </label>
+      <div class="actions">
+        <button type="submit">Send answer</button>
+        <span class="error"></span>
+      </div>
+    </form>
+
+    <section class="sent" hidden>
+      <h3>Answer <span class="badge outcome"></span></h3>
+      <dl class="meta response-meta"></dl>
+      <table class="headers response-headers"><tbody></tbody></table>
+      <pre class="body response-body"></pre>
+    </section>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

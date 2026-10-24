@@ -61,6 +61,27 @@ if (postgresPort != 5432)
         .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
 }
 
+// The test harness control panel always starts, and the mocks are its children in the dashboard so they fold together under it.
+// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them.
+if (builder.Configuration.GetSection("Simulator").Exists())
+{
+    throw new InvalidOperationException("The Simulator settings are now TestHarness: Simulator:Enabled is TestHarness:Intercept, and Port and TimeoutSeconds moved as they are. See tools/aspire/README.md.");
+}
+
+bool interceptEnabled = builder.Configuration.GetValue("TestHarness:Intercept", false);
+var controlPanelPort = builder.Configuration.GetValue("TestHarness:Port", 5096);
+string controlPanelUrl = "http://localhost:" + controlPanelPort;
+string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : string.Empty;
+
+// The dashboard's own URL, so each held request can link to its trace.
+string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
+var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", launchProfileName: null)
+    .WithEnvironment("TestHarnessSettings__Port", controlPanelPort.ToString())
+    .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
+    .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
+    .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
+    .WithUrl(controlPanelUrl + "/", "Control panel");
+
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
 if (authMode == "mock")
@@ -69,7 +90,8 @@ if (authMode == "mock")
     string authUrl = "http://localhost:" + authPort;
     var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
-        .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
+        .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration")
+        .WithParentRelationship(controlPanel.Resource);
 
     api.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", authUrl + "/authentication/api/v1/openid/")
         .WaitFor(auth);
@@ -90,9 +112,6 @@ api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
-// With Simulator:Enabled the mocks hand requests they do not recognise to the simulator, where an operator answers them.
-string simulatorFallbackUrl = builder.Configuration.GetValue("Simulator:Enabled", false) ? "http://localhost:5096/intercept/" : string.Empty;
-
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
 // delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
@@ -104,8 +123,14 @@ if (acsMode == "mock")
     var acs = builder.AddProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
-        .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)
+        .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
+        .WithParentRelationship(controlPanel.Resource)
         .WaitFor(serviceBus);
+
+    if (interceptEnabled)
+    {
+        acs.WaitFor(controlPanel);
+    }
 
     email.WithEnvironment("CommunicationServicesSettings__ConnectionString", "endpoint=http://localhost:" + acsPort + "/;accesskey=" + acsAccessKey)
         .WaitFor(acs);
@@ -129,7 +154,13 @@ else if (acsMode != "real")
 if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
 {
     var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
-        .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
+        .WithEnvironment("PlatformMocksSettings__FallbackUrl", interceptUrl)
+        .WithParentRelationship(controlPanel.Resource);
+
+    if (interceptEnabled)
+    {
+        mocks.WaitFor(controlPanel);
+    }
 
     foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
     {

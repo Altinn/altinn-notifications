@@ -1,0 +1,6 @@
+{
+  "name": "200 Message FAIL: Invalid RCV",
+  "status": 200,
+  "headers": { "Content-Type": "text/xml; charset=iso-8859-1" },
+  "body": "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<SESSION>\n  <LOGON>OK</LOGON>\n  <REASON></REASON>\n  <MSGLST>\n    <MSG>\n      <ID>1</ID>\n      <STATUS>FAIL</STATUS>\n      <INFO>Invalid RCV</INFO>\n    </MSG>\n  </MSGLST>\n</SESSION>"
+}

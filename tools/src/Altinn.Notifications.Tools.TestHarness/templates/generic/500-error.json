@@ -1,0 +1,6 @@
+{
+  "name": "500 Internal server error",
+  "status": 500,
+  "headers": { "Content-Type": "text/plain" },
+  "body": "Simulated server error"
+}
