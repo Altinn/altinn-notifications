@@ -41,9 +41,9 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
 | `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
-| `Auth:Port` | `5094` | Port of the `auth` resource |
+| `Auth:Port` | `5094` | Port of the `mock-auth` resource |
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
-| `Acs:Port` | `5095` | Port of the `acs` resource |
+| `Acs:Port` | `5095` | Port of the `mock-acs` resource |
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
 | `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
 | `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
@@ -75,9 +75,9 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
-| `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
-| `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
+| `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
+| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
 | `simulator` | The [simulator](#simulator) where an operator answers what the mocks do not recognise. Only started when `Simulator:Enabled` is `true`. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
@@ -89,7 +89,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 
 ## Authentication
 
-By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
+By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
 
 ```bash
 curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
@@ -99,7 +99,7 @@ Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the
 
 ## Email through the ACS mock
 
-By default (`Acs:Mode` = `mock`) `email` sends to the local `acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
+By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
 
 The mock answers the send and the status polls, and then puts a delivery report on the emulator's `altinn.notifications.email.deliveryreports` queue, so an email ends as `Email_Delivered` like in Azure. The recipient address picks other outcomes, e.g. `bounce@example.com` ends as `Email_Failed_Bounced`. See the [scenarios](../src/Altinn.Notifications.Tools.AcsMock/README.md#scenarios).
 
@@ -110,7 +110,7 @@ TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=t
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders/instant/email   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"   -d '{"idempotencyId":"acs-1","sendersReference":"acs-test","recipientEmail":{"emailAddress":"ola.nordmann@example.com","emailSettings":{"subject":"Test","body":"Test","contentType":"Plain","senderEmailAddress":"noreply@altinn.no"}}}'
 ```
 
-The `acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
+The `mock-acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
 
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
@@ -118,7 +118,7 @@ With `Simulator:Enabled`, requests the mock does not recognise go to the [simula
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |
@@ -143,7 +143,7 @@ The services do not send by themselves locally, since cron jobs call the trigger
 
 ## Simulator
 
-With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `acs` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
+With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `mock-acs` and `wiremock-platform` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
 
 ```json
 {
