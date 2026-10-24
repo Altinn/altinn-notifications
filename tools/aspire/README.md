@@ -43,7 +43,7 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
 | `Auth:Port` | `5094` | Port of the `mock-auth` resource |
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
-| `Acs:Port` | `5095` | Port of the `acs` resource |
+| `Acs:Port` | `5095` | Port of the `mock-acs` resource |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -70,7 +70,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
 | `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
-| `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
+| `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -91,7 +91,7 @@ Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the
 
 ## Email through the ACS mock
 
-By default (`Acs:Mode` = `mock`) `email` sends to the local `acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
+By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
 
 The mock answers the send and the status polls, and then puts a delivery report on the emulator's `altinn.notifications.email.deliveryreports` queue, so an email ends as `Email_Delivered` like in Azure. The recipient address picks other outcomes, e.g. `bounce@example.com` ends as `Email_Failed_Bounced`. See the [scenarios](../src/Altinn.Notifications.Tools.AcsMock/README.md#scenarios).
 
@@ -102,7 +102,7 @@ TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=t
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders/instant/email   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"   -d '{"idempotencyId":"acs-1","sendersReference":"acs-test","recipientEmail":{"emailAddress":"ola.nordmann@example.com","emailSettings":{"subject":"Test","body":"Test","contentType":"Plain","senderEmailAddress":"noreply@altinn.no"}}}'
 ```
 
-The `acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
+The `mock-acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
 
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
