@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 using Altinn.Notifications.Tools.Tests.AcsMock;
 
 using Microsoft.AspNetCore.Hosting;
@@ -18,9 +18,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tools.Tests.Simulator;
+namespace Altinn.Notifications.Tools.Tests.TestHarness;
 
-public class SimulatorTests(WebApplicationFactory<SimulatorSettings> factory) : IClassFixture<WebApplicationFactory<SimulatorSettings>>
+public class InterceptTests(WebApplicationFactory<TestHarnessSettings> factory) : IClassFixture<WebApplicationFactory<TestHarnessSettings>>
 {
     [Fact]
     public async Task HeldRequest_AnsweredThroughApi_ReachesCaller()
@@ -62,7 +62,7 @@ public class SimulatorTests(WebApplicationFactory<SimulatorSettings> factory) : 
     [Fact]
     public async Task HeldRequest_WithoutAnswer_TimesOutWith504()
     {
-        using var shortTimeout = factory.WithWebHostBuilder(builder => builder.UseSetting("SimulatorSettings:TimeoutSeconds", "1"));
+        using var shortTimeout = factory.WithWebHostBuilder(builder => builder.UseSetting("TestHarnessSettings:TimeoutSeconds", "1"));
         var client = shortTimeout.CreateClient();
 
         var response = await client.GetAsync("/intercept/register/register/api/v1/unknown", TestContext.Current.CancellationToken);
