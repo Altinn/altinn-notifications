@@ -147,6 +147,7 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
     if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
     {
         int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+
         // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
         foreach (string condition in new[] { "true", "false", "corrupt", "error" })
         {
