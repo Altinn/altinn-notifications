@@ -135,13 +135,14 @@ else if (acsMode != "real")
     throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
 }
 
-// The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
-// turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+// The API's calls to Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints go to local mocks.
+// A system that is turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
 (string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
 [
     ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
     ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
     ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Dialogporten", 5171, "DialogportenSettings__BaseUrl", "/dialogporten/api/v1/"),
     ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
     ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
 ];

@@ -45,8 +45,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
 | `Acs:Port` | `5095` | Port of the `acs` resource |
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
-| `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
-| `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
+| `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Dialogporten`, `Conditions` or `Maskinporten` |
+| `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5171`, `5199`, `5197` | Port of each mock |
 | `Simulator:Enabled` | `false` | `true` starts the [simulator](#simulator) and sends what the mocks do not recognise to it |
 | `Simulator:Port` | `5096` | Port of the `simulator` resource |
 | `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
@@ -77,7 +77,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
 | `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5171, 5199, 5197 |
 | `simulator` | The [simulator](#simulator) where an operator answers what the mocks do not recognise. Only started when `Simulator:Enabled` is `true`. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
@@ -94,6 +94,8 @@ By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `auth` re
 ```bash
 curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
 ```
+
+The issuer also makes the tokens for composed email, the support dashboard and the end user notification log, and the `dashboard` and `enduser` folders in Bruno fetch theirs from it. See [tokens the API accepts](../src/Altinn.Notifications.Tools.MockAuth/README.md#tokens-the-api-accepts).
 
 Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the Altinn test token generator, e.g. with the `v2 local` environment in Bruno.
 
@@ -118,13 +120,14 @@ With `Simulator:Enabled`, requests the mock does not recognise go to the [simula
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, asks Dialogporten whether an end user may see a dialog's notification log, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |
 | Profile | 5131 | `PlatformSettings:ApiProfileEndpoint` |
 | Register | 5121 | `PlatformSettings:ApiRegisterEndpoint` |
 | Authorization | 5151 | `PlatformSettings:ApiAuthorizationEndpoint` |
+| Dialogporten | 5171 | `DialogportenSettings:BaseUrl` |
 | Conditions | 5199 | Nothing. Orders point to the condition URLs themselves, which are listed in the URLs column. |
 | Maskinporten | 5197 | `SendConditionClient:MaskinportenSettings:TokenEndpoint`, `AssertionAudience`, `ClientId`, and an `EncodedJwk` made for each run |
 
