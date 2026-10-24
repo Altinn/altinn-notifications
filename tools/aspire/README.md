@@ -6,8 +6,8 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 * [Aspire CLI](https://aspire.dev/get-started/install-cli/)
-* [Podman](https://podman.io/)
-* A Podman container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example:
+* [Podman](https://podman.io/) or Docker (see [Settings](#settings))
+* A container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example (replace `podman` with `docker` if you use Docker):
 
   ```bash
   podman run -d --name notifications-db -p 5432:5432 \
@@ -39,7 +39,30 @@ The dashboard is then on `http://localhost:15193` with no login token. The servi
 
 ## Settings
 
-Override `appsettings.json` in a git-ignored `appsettings.Local.json`. Set `Postgres:UsePodman` to `false` to use a local PostgreSQL on port 5432 instead of the `notifications-db` container.
+Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `ContainerRuntime` | `podman` | `podman` or `docker`, used to start the containers and tail their logs |
+| `Postgres:UseContainer` | `true` | `false` uses a local PostgreSQL instead of starting a container |
+| `Postgres:ContainerName` | `notifications-db` | The Postgres container to start |
+| `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
+| `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
+
+For example, with Docker, a separate database on 5442 and localtest running:
+
+```json
+{
+  "ContainerRuntime": "docker",
+  "Postgres": {
+    "ContainerName": "notifications-aspire-db",
+    "Port": 5442
+  },
+  "ServiceBus": {
+    "HealthPort": 5301
+  }
+}
+```
 
 Before the dashboard starts, the app host builds the API, Email and SMS projects one by one. Starting them all at once makes their builds of the shared project collide.
 
@@ -56,7 +79,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 * The services run with `ASPNETCORE_ENVIRONMENT=Development` on fixed ports, so the URLs in `appsettings*.json` keep working.
 * Each service has a **Swagger** link in the URLs column.
 * The services wait until `postgres` is running and the emulator reports healthy.
-* The containers live in Podman, not in Aspire. Stopping Aspire stops the services, but `notifications-db` and the emulator keep running.
+* The containers live in Podman or Docker, not in Aspire. Stopping Aspire stops the services, but `notifications-db` and the emulator keep running.
 
 ## Dashboard actions
 
