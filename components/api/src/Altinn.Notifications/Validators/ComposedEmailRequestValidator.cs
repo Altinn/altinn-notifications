@@ -32,7 +32,8 @@ internal sealed class ComposedEmailRequestValidator : AbstractValidator<Composed
             RuleForEach(order => order.Recipient.Settings.Attachments)
                 .Must((order, attachment) =>
                 {
-                    if (attachment == null || attachment.SasUrl == null)
+                    // Relative or empty URLs are rejected by RecipientComposedEmailValidator
+                    if (attachment == null || attachment.SasUrl == null || !attachment.SasUrl.IsAbsoluteUri)
                     {
                         return true;
                     }

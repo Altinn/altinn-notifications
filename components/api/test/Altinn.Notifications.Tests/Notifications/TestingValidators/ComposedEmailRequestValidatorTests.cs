@@ -259,4 +259,38 @@ public class ComposedEmailRequestValidatorTests
         // Assert — the order-level expiry check must not have fired; other sasUrl errors are expected
         Assert.DoesNotContain(result.Errors, e => e.ErrorMessage.Contains("at least 15 minutes"));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("container/file.pdf?se=2099-01-01T00%3A00%3A00Z&sp=r&sr=b&sig=fakesig")]
+    public void Validate_AttachmentWithRelativeSasUrl_HasError(string sasUrl)
+    {
+        // Arrange
+        var recipient = new RecipientComposedEmailExt
+        {
+            EmailAddress = "recipient@altinnxyz.no",
+            Settings = new ComposedEmailSendingOptionsExt
+            {
+                Subject = "Decision from Altinn",
+                Body = "Please see the attached document.",
+                Attachments =
+                [
+                    new SasFileReferenceExt
+                    {
+                        Filename = "contract.pdf",
+                        MimeType = "application/pdf",
+                        SasUrl = new Uri(sasUrl, UriKind.RelativeOrAbsolute)
+                    }
+                ]
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(ValidComposedEmailRequest(recipient: recipient));
+
+        // Assert
+        result.ShouldHaveValidationErrors()
+            .WithErrorMessage("Attachment 'contract.pdf': sasUrl must be an absolute HTTPS URI.");
+        Assert.Single(result.Errors);
+    }
 }
