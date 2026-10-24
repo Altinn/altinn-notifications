@@ -67,6 +67,7 @@ internal sealed class HttpDeliveryReportSender(IOptions<LinkMobilityProxySetting
 /// </summary>
 internal sealed class DeliveryReportService(
     IDeliveryReportSender sender,
+    SmsMirror mirror,
     IOptions<LinkMobilityProxySettings> options,
     TimeProvider timeProvider,
     ILogger<DeliveryReportService> logger) : BackgroundService
@@ -111,6 +112,7 @@ internal sealed class DeliveryReportService(
         {
             await Task.Delay(TimeSpan.FromSeconds(_settings.DeliveryReportDelaySeconds), timeProvider, cancellationToken);
             string report = GatewayXml.DeliveryReport(pending.Reference, pending.Recipient, state, timeProvider.GetLocalNow());
+            mirror.Delivered(pending.Reference, state);
 
             for (int attempt = 1; attempt <= Attempts; attempt++)
             {

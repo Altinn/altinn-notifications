@@ -4,9 +4,9 @@ using System.Xml.Linq;
 namespace Altinn.Notifications.Tools.LinkMobilityProxy;
 
 /// <summary>
-/// A message in a send request.
+/// A message in a send request. <c>Ttl</c> is LinkMobility's time to live in minutes.
 /// </summary>
-internal sealed record SmsMessage(string Id, string Recipient);
+internal sealed record SmsMessage(string Id, string Recipient, string? Sender = null, string? Text = null, int? Ttl = null);
 
 /// <summary>
 /// The outcome of one message in a send response: a gateway reference when it was accepted, or the reason it was not.
@@ -20,7 +20,7 @@ internal sealed record SmsResult(string Id, string? Reference, string? Error = n
 internal static class GatewayXml
 {
     /// <summary>
-    /// Reads the messages of a send, <c>SESSION/MSGLST/MSG</c> with <c>ID</c> and <c>RCV</c>.
+    /// Reads the messages of a send, <c>SESSION/MSGLST/MSG</c> with <c>ID</c>, <c>RCV</c>, <c>SND</c>, <c>TEXT</c> and <c>TTL</c>.
     /// </summary>
     public static bool TryReadSend(string? xml, out List<SmsMessage> messages)
     {
@@ -32,7 +32,12 @@ internal static class GatewayXml
         }
 
         messages = session.Elements("MSGLST").Elements("MSG")
-            .Select(m => new SmsMessage((string?)m.Element("ID") ?? string.Empty, (string?)m.Element("RCV") ?? string.Empty))
+            .Select(m => new SmsMessage(
+                (string?)m.Element("ID") ?? string.Empty,
+                (string?)m.Element("RCV") ?? string.Empty,
+                (string?)m.Element("SND"),
+                (string?)m.Element("TEXT"),
+                int.TryParse((string?)m.Element("TTL"), out int ttl) ? ttl : null))
             .ToList();
 
         return messages.Count > 0;

@@ -1,5 +1,8 @@
 using Altinn.Notifications.Tools.TestHarness;
 using Altinn.Notifications.Tools.TestHarness.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Mirror;
+
+using Microsoft.Extensions.Options;
 
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -15,6 +18,11 @@ builder.Services.Configure<TestHarnessSettings>(builder.Configuration.GetSection
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RequestStore>();
 builder.Services.AddSingleton<TemplateStore>();
+
+// What the mocks send to /mirror, for the Phone tab.
+builder.Services.AddSingleton(services => new MirrorStores(
+    services.GetRequiredService<IOptions<TestHarnessSettings>>().Value.MirrorSize,
+    services.GetRequiredService<TimeProvider>()));
 
 // Aspire sets OTEL_EXPORTER_OTLP_ENDPOINT. The mocks forward traceparent, so the held request shows up in the caller's trace.
 if (!string.IsNullOrEmpty(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
@@ -37,4 +45,5 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapInterceptEndpoints();
+app.MapMirrorEndpoints();
 app.Run();
