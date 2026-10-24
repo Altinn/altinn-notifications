@@ -56,7 +56,7 @@ Every request is logged with the response. Recipient addresses keep only their f
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#email-through-the-acs-mock) starts it as the `acs` resource and points the email service at it, unless `Acs:Mode` is `real`.
+The [Aspire app host](../../aspire/README.md#email-through-the-acs-mock) starts it as the `mock-acs` resource and points the email service at it, unless `Acs:Mode` is `real`.
 
 ## Run on its own
 
@@ -82,7 +82,7 @@ CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/
 | `AcsMockSettings:DeliveryReportDelaySeconds` | `2` | Delay between the first `Succeeded` poll and the delivery report |
 | `AcsMockSettings:ServiceBusConnectionString` | the local emulator | Where delivery reports go. Empty turns them off. |
 | `AcsMockSettings:DeliveryReportQueueName` | `altinn.notifications.email.deliveryreports` | The queue the API reads delivery reports from |
-| `AcsMockSettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}acs/{path}`, e.g. `http://localhost:5096/intercept/` for the simulator |
+| `AcsMockSettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}acs/{path}`, e.g. `http://localhost:5096/intercept/` for the test harness control panel |
 
 There are no secrets.
 

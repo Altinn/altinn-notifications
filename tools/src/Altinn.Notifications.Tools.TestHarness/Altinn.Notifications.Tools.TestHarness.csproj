@@ -8,7 +8,7 @@
 			SA1600;
 			SA1649
 		</NoWarn>
-		<UserSecretsId>simulator-tool-3c9d4e71</UserSecretsId>
+		<UserSecretsId>testharness-tool-3c9d4e71</UserSecretsId>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -17,7 +17,7 @@
 		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 	</ItemGroup>
 
-	<!-- The GUI and the templates are read from the output folder, so they are found whichever folder the simulator is started from. -->
+	<!-- The GUI and the templates are read from the output folder, so they are found whichever folder the control panel is started from. -->
 	<ItemGroup>
 		<Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
 		<Content Update="templates\**" CopyToOutputDirectory="PreserveNewest" />

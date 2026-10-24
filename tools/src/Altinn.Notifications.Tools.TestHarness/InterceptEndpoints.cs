@@ -1,25 +1,25 @@
 using System.Text;
 using System.Threading.Channels;
 
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 
 using MediaTypeHeaderValue = System.Net.Http.Headers.MediaTypeHeaderValue;
 
-namespace Altinn.Notifications.Tools.Simulator;
+namespace Altinn.Notifications.Tools.TestHarness;
 
 /// <summary>
 /// <c>/intercept/{system}/{path}</c>, where the mocks send what they do not recognise, and the API the GUI uses to answer it.
 /// </summary>
-internal static class SimulatorEndpoints
+internal static class InterceptEndpoints
 {
     internal const string InterceptPrefix = "/intercept/";
 
     private static readonly string[] _skippedResponseHeaders = ["Content-Length", "Transfer-Encoding", "Connection"];
 
-    public static void MapSimulatorEndpoints(this WebApplication app)
+    public static void MapInterceptEndpoints(this WebApplication app)
     {
         app.Map(InterceptPrefix + "{system}/{**path}", InterceptAsync);
 
@@ -34,7 +34,7 @@ internal static class SimulatorEndpoints
     /// <summary>
     /// Holds the request until the operator answers it, an auto-reply does, or the timeout runs out.
     /// </summary>
-    private static async Task InterceptAsync(HttpContext context, string system, RequestStore store, TemplateStore templates, IOptions<SimulatorSettings> options, TimeProvider timeProvider, ILogger<SimulatorLog> logger)
+    private static async Task InterceptAsync(HttpContext context, string system, RequestStore store, TemplateStore templates, IOptions<TestHarnessSettings> options, TimeProvider timeProvider, ILogger<InterceptLog> logger)
     {
         int timeoutSeconds = options.Value.TimeoutSeconds;
         var request = await ReadRequestAsync(context, system.ToLowerInvariant(), timeProvider.GetUtcNow(), timeoutSeconds);
@@ -43,12 +43,12 @@ internal static class SimulatorEndpoints
         {
             var reply = template.Render(timeProvider.GetUtcNow());
             store.AddHistory(new HistoryEntry(request, reply, Outcome.AutoReplied, timeProvider.GetUtcNow()));
-            logger.LogInformation("Simulator {System} {Method} {Path} -> {Status} (auto-reply {Template})", request.System, request.Method, request.Path, reply.Status, key);
+            logger.LogInformation("Intercept {System} {Method} {Path} -> {Status} (auto-reply {Template})", request.System, request.Method, request.Path, reply.Status, key);
             await WriteResponseAsync(context, reply, "auto");
             return;
         }
 
-        logger.LogInformation("Simulator {System} {Method} {Path} held for {Seconds} s", request.System, request.Method, request.Path, timeoutSeconds);
+        logger.LogInformation("Intercept {System} {Method} {Path} held for {Seconds} s", request.System, request.Method, request.Path, timeoutSeconds);
         var answer = store.Hold(request);
         try
         {
@@ -61,17 +61,17 @@ internal static class SimulatorEndpoints
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
             store.TryResolve(request.Id, null, Outcome.Cancelled, timeProvider.GetUtcNow());
-            logger.LogInformation("Simulator {System} {Method} {Path} cancelled by the caller", request.System, request.Method, request.Path);
+            logger.LogInformation("Intercept {System} {Method} {Path} cancelled by the caller", request.System, request.Method, request.Path);
             return;
         }
 
         // Set by whichever came first, the operator or the timeout.
         var response = await answer;
-        logger.LogInformation("Simulator {System} {Method} {Path} -> {Status}", request.System, request.Method, request.Path, response.Status);
+        logger.LogInformation("Intercept {System} {Method} {Path} -> {Status}", request.System, request.Method, request.Path, response.Status);
         await WriteResponseAsync(context, response, "operator");
     }
 
-    private static IResult GetState(RequestStore store, TemplateStore templates, IOptions<SimulatorSettings> options)
+    private static IResult GetState(RequestStore store, TemplateStore templates, IOptions<TestHarnessSettings> options)
     {
         var settings = options.Value;
         var pending = store.Pending;
@@ -85,6 +85,7 @@ internal static class SimulatorEndpoints
 
         return Results.Ok(new
         {
+            settings.Intercept,
             settings.TimeoutSeconds,
             Systems = systems,
             store.AutoReplies,
@@ -263,7 +264,7 @@ internal static class SimulatorEndpoints
         return Encoding.UTF8;
     }
 
-    private static object View(SimulatedRequest request, SimulatorSettings settings) => new
+    private static object View(SimulatedRequest request, TestHarnessSettings settings) => new
     {
         request.Id,
         request.System,
@@ -283,6 +284,6 @@ internal static class SimulatorEndpoints
 }
 
 /// <summary>
-/// The log category of the simulator.
+/// The log category of intercepted requests.
 /// </summary>
-internal sealed class SimulatorLog;
+internal sealed class InterceptLog;

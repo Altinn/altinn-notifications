@@ -182,3 +182,4 @@ button {
   main { grid-template-columns: 1fr; height: auto; }
   aside { border-right: 0; border-bottom: 1px solid var(--border); }
 }
+.notice { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--panel); color: var(--warn); }

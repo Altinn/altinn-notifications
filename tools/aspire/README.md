@@ -41,18 +41,18 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
 | `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
-| `Auth:Port` | `5094` | Port of the `auth` resource |
+| `Auth:Port` | `5094` | Port of the `mock-auth` resource |
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
-| `Acs:Port` | `5095` | Port of the `acs` resource |
+| `Acs:Port` | `5095` | Port of the `mock-acs` resource |
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
 | `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
 | `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
-| `Simulator:Enabled` | `false` | `true` starts the [simulator](#simulator) and sends what the mocks do not recognise to it |
-| `Simulator:Port` | `5096` | Port of the `simulator` resource |
-| `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
+| `TestHarness:Intercept` | `false` | `true` sends what the mocks do not recognise to the [control panel](#test-harness-control-panel) |
+| `TestHarness:Port` | `5096` | Port of the `testharness-controlpanel` resource |
+| `TestHarness:TimeoutSeconds` | `120` | How long the control panel holds an intercepted request before it answers 504 |
 | `LinkMobility:Port` | `5093` | Port of the `linkmobility` resource |
 | `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
-| `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [simulator](#simulator). Needs `Simulator:Enabled`. |
+| `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [control panel](#test-harness-control-panel). Needs `TestHarness:Intercept`. |
 | `LinkMobility:DeliveryReportDelaySeconds` | `2` | Delay between an accepted SMS and its delivery report |
 
 For example, with Docker, a separate database on 5442 and localtest running:
@@ -80,10 +80,10 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
 | `linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
-| `auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
-| `acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
-| `simulator` | The [simulator](#simulator) where an operator answers what the mocks do not recognise. Only started when `Simulator:Enabled` is `true`. | 5096 |
+| `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
+| `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
+| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `testharness-controlpanel` | The [test harness control panel](#test-harness-control-panel). Always started. The mocks are grouped under it in the dashboard. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -94,7 +94,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 
 ## Authentication
 
-By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
+By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
 
 ```bash
 curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
@@ -104,7 +104,7 @@ Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the
 
 ## Email through the ACS mock
 
-By default (`Acs:Mode` = `mock`) `email` sends to the local `acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
+By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
 
 The mock answers the send and the status polls, and then puts a delivery report on the emulator's `altinn.notifications.email.deliveryreports` queue, so an email ends as `Email_Delivered` like in Azure. The recipient address picks other outcomes, e.g. `bounce@example.com` ends as `Email_Failed_Bounced`. See the [scenarios](../src/Altinn.Notifications.Tools.AcsMock/README.md#scenarios).
 
@@ -115,15 +115,15 @@ TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=t
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders/instant/email   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"   -d '{"idempotencyId":"acs-1","sendersReference":"acs-test","recipientEmail":{"emailAddress":"ola.nordmann@example.com","emailSettings":{"subject":"Test","body":"Test","contentType":"Plain","senderEmailAddress":"noreply@altinn.no"}}}'
 ```
 
-The `acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
+The `mock-acs` log shows each request and response with recipient addresses, subjects and bodies masked, and each delivery report it sends.
 
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
-With `Simulator:Enabled`, requests the mock does not recognise go to the [simulator](#simulator) on port 5096 instead of getting a 404.
+With `TestHarness:Intercept`, requests the mock does not recognise go to the [control panel](#test-harness-control-panel) on port 5096 instead of getting a 404.
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |
@@ -136,7 +136,7 @@ The API looks up contact points in Profile, names in Register and access in Auth
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
 * The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
-* With `Simulator:Enabled`, requests a mock does not recognise go to the [simulator](#simulator) on 5096 instead of a 404.
+* With `TestHarness:Intercept`, requests a mock does not recognise go to the [control panel](#test-harness-control-panel) on 5096 instead of a 404.
 
 For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
 
@@ -146,21 +146,31 @@ docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<rep
 
 The services do not send by themselves locally, since cron jobs call the trigger endpoints in the cluster. Call `POST /notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` on the API to send what is waiting.
 
-## Simulator
+## Test harness control panel
 
-With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `acs`, `linkmobility` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
+The `testharness-controlpanel` resource on 5096 always starts, and the mocks (`mock-auth`, `mock-acs` and `wiremock-platform`) are its children in the dashboard, so they fold together under it. See the [tool's README](../src/Altinn.Notifications.Tools.TestHarness/README.md).
+
+With `TestHarness:Intercept` set to `true`, the `mock-acs`, `linkmobility` and `wiremock-platform` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The control panel holds each request until you answer it in its GUI, or until `TestHarness:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`.
 
 ```json
 {
-  "Simulator": { "Enabled": true }
+  "TestHarness": { "Intercept": true }
 }
 ```
 
-* The **Simulator** link in the URLs column opens the GUI.
+* The **Control panel** link in the URLs column opens the GUI.
 * Each held request links to its trace in the dashboard when it has a `traceparent`.
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
-* With `LinkMobility:Interactive` also `true`, every SMS send is held in the simulator, not only unknown requests. See [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy).
+* With `LinkMobility:Interactive` also `true`, every SMS send is held in the control panel, not only unknown requests. See [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy).
+
+The control panel used to be called the simulator. Its settings moved, and the app host stops with an error if it finds the old `Simulator` section:
+
+| Before | Now |
+| :--- | :--- |
+| `Simulator:Enabled` | `TestHarness:Intercept`. The control panel itself always starts now. |
+| `Simulator:Port` | `TestHarness:Port` |
+| `Simulator:TimeoutSeconds` | `TestHarness:TimeoutSeconds` |
 
 ## SMS through the LinkMobility proxy
 
@@ -178,11 +188,11 @@ curl -X POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime
 
 A few seconds later the order's status is `SMS_Failed_Undelivered`. With `"sendingTimePolicy":"Daytime"`, call `trigger/sendsms` instead, which only sends during the day.
 
-With `Simulator:Enabled`, requests the stub does not recognise go to the [simulator](#simulator). Set `LinkMobility:Interactive` too to answer every send there yourself, e.g. with `LOGON FAIL` or `Invalid RCV`. `sms` then waits for the gateway until `Simulator:TimeoutSeconds` has passed instead of 30 seconds. An answer with `STATUS OK` and a `REF` still gets a delivery report, with the state from the recipient's scenario.
+With `TestHarness:Intercept`, requests the stub does not recognise go to the [control panel](#test-harness-control-panel). Set `LinkMobility:Interactive` too to answer every send there yourself, e.g. with `LOGON FAIL` or `Invalid RCV`. `sms` then waits for the gateway until `TestHarness:TimeoutSeconds` has passed instead of 30 seconds. An answer with `STATUS OK` and a `REF` still gets a delivery report, with the state from the recipient's scenario.
 
 ```json
 {
-  "Simulator": { "Enabled": true },
+  "TestHarness": { "Intercept": true },
   "LinkMobility": { "Interactive": true }
 }
 ```

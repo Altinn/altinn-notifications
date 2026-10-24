@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Tools.Simulator;
+namespace Altinn.Notifications.Tools.TestHarness;
 
 /// <summary>
 /// A predefined answer from <c>templates/&lt;system&gt;/&lt;id&gt;.json</c>. <see cref="Key"/> is <c>&lt;system&gt;/&lt;id&gt;</c>.
@@ -26,7 +26,7 @@ internal sealed record ResponseTemplate(string Key, string System, string Name, 
 /// <summary>
 /// Reads the templates from disk on every call, so a template can be added or changed while the simulator runs.
 /// </summary>
-internal sealed class TemplateStore(IOptions<SimulatorSettings> options, ILogger<TemplateStore> logger)
+internal sealed class TemplateStore(IOptions<TestHarnessSettings> options, ILogger<TemplateStore> logger)
 {
     /// <summary>
     /// The folder with templates every system can use.
