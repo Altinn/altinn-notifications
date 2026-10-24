@@ -49,6 +49,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
+        DateTime beforeSetup = await PostgreUtil.GetDatabaseUtcNow();
+
         (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
             dialogId: dialogId,
             transmissionId: transmissionId,
@@ -93,8 +95,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
 
         // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
-        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
+        // so it can't be asserted against an exact expected value — only that it's populated and not before the setup ran.
+        // The reference is read from the database clock, since the test process clock can be slightly ahead of it.
+        Assert.True(entry.LastUpdateTime >= beforeSetup);
     }
 
     [Fact]
@@ -107,6 +110,8 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         const string mobileNumber = "+4799999999";
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
+
+        DateTime beforeSetup = await PostgreUtil.GetDatabaseUtcNow();
 
         (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
             dialogId: dialogId,
@@ -152,8 +157,9 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
 
         // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
-        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
+        // so it can't be asserted against an exact expected value — only that it's populated and not before the setup ran.
+        // The reference is read from the database clock, since the test process clock can be slightly ahead of it.
+        Assert.True(entry.LastUpdateTime >= beforeSetup);
     }
 
     [Fact]
