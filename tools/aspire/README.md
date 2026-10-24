@@ -29,6 +29,14 @@ cd tools/aspire
 aspire run
 ```
 
+The dashboard opens on `https://localhost:17193` and needs a trusted .NET development certificate (`aspire certs trust`). To skip the certificate, run it over plain HTTP with the `http` profile from `apphost.run.json`:
+
+```bash
+aspire run -lp http
+```
+
+The dashboard is then on `http://localhost:15193` with no login token. The services already use plain HTTP, so only the dashboard changes. It shows an "Endpoint is unsecured" banner, which is expected: anything on the machine can send telemetry to it or read it, so use the profile on your own machine only.
+
 ## Settings
 
 Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
