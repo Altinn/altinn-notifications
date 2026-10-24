@@ -74,7 +74,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
 | `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `platform-mocks` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
+| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -114,7 +114,7 @@ With `Simulator:Enabled`, requests the mock does not recognise go to the simulat
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `platform-mocks` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |

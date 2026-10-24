@@ -128,7 +128,7 @@ else if (acsMode != "real")
 
 if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
 {
-    var mocks = builder.AddProject("platform-mocks", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
         .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
 
     foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)

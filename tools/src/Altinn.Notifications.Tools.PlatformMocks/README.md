@@ -72,7 +72,7 @@ Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{F
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#platform-mocks) starts the mocks as the `platform-mocks` resource and points the API at them. Turn them off with `Mocks:Enabled` or one by one with `Mocks:<System>:Enabled`.
+The [Aspire app host](../../aspire/README.md#platform-mocks) starts the mocks as the `wiremock-platform` resource and points the API at them. Turn them off with `Mocks:Enabled` or one by one with `Mocks:<System>:Enabled`.
 
 ## Run on its own
 
