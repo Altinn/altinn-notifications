@@ -8,6 +8,7 @@ namespace Altinn.Notifications.Tools.AcsMock;
 internal sealed class EmailOperation
 {
     private int _reportQueued;
+    private int _failureMirrored;
 
     public required string Id { get; init; }
 
@@ -40,6 +41,11 @@ internal sealed class EmailOperation
     /// <c>true</c> the first time it is called, so the delivery report is only queued once.
     /// </summary>
     public bool MarkReportQueued() => Interlocked.Exchange(ref _reportQueued, 1) == 0;
+
+    /// <summary>
+    /// <c>true</c> the first time it is called, so a failed operation is only copied to the control panel once.
+    /// </summary>
+    public bool MarkFailureMirrored() => Interlocked.Exchange(ref _failureMirrored, 1) == 0;
 }
 
 /// <summary>

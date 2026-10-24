@@ -81,7 +81,8 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
     .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
     .WithUrl(controlPanelUrl + "/", "Control panel")
-    .WithUrl(controlPanelUrl + "/#phone", "Phone");
+    .WithUrl(controlPanelUrl + "/#phone", "Phone")
+    .WithUrl(controlPanelUrl + "/#inbox", "Inbox");
 
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
@@ -114,7 +115,7 @@ email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
-// delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
+// delivery reports on the emulator's queue. It sends a copy of each email and its outcome to the control panel's Inbox tab. real: the email service uses the connection string from its own settings.
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
 if (acsMode == "mock")
 {
@@ -125,6 +126,7 @@ if (acsMode == "mock")
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
+        .WithEnvironment("AcsMockSettings__MirrorUrl", controlPanelUrl + "/mirror/")
         .WithParentRelationship(controlPanel.Resource)
         .WaitFor(serviceBus);
 

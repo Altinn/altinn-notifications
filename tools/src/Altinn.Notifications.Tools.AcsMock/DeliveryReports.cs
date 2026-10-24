@@ -62,6 +62,7 @@ internal sealed class ServiceBusDeliveryReportSender(IOptions<AcsMockSettings> o
 /// </summary>
 internal sealed class DeliveryReportService(
     IDeliveryReportSender sender,
+    EmailMirror mirror,
     IOptions<AcsMockSettings> options,
     TimeProvider timeProvider,
     ILogger<DeliveryReportService> logger) : BackgroundService
@@ -145,6 +146,8 @@ internal sealed class DeliveryReportService(
                     _settings.DeliveryReportQueueName,
                     PayloadMasker.Mask(eventGridEvent));
             }
+
+            mirror.Completed(operation.Id, status);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

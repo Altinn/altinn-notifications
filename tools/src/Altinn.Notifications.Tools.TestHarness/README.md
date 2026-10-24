@@ -43,6 +43,14 @@ The **Phone** tab (`http://localhost:5096/#phone`) shows the SMS the LinkMobilit
 * The texts and numbers are shown **unmasked**. They are local test data, and the control panel only listens on localhost. The mocks' logs stay masked.
 * The last `MirrorSize` messages are kept in memory. They are gone when the control panel restarts.
 
+## Inbox
+
+The **Inbox** tab (`http://localhost:5096/#inbox`) shows the emails the ACS mock received, newest first, with sender, recipients, subject, time and a status that updates live: `Sent` when the mock accepted it, then `Delivered` or `Failed` (e.g. `Bounced`, `EmailSendFailed`) from the operation's outcome and the delivery report. It is read-only like the Phone tab.
+
+* Click an email to see its headers and body. The HTML body is shown in an `<iframe sandbox>` with no permissions, so its scripts, forms and links do nothing and it cannot reach the control panel. **Text** shows the plain text body, which is also the fallback when there is no HTML.
+* The mock sends a copy of each send to `POST /mirror/email` and its outcome to `POST /mirror/email/{operationId}/status`, when its `MirrorUrl` is set. As for SMS, a copy that cannot be posted is dropped and never holds up the send.
+* Addresses, subjects and bodies are shown **unmasked**, for the same reasons as on the Phone tab.
+
 ## Templates
 
 Templates are JSON files in `templates/<system>/<id>.json`. The ones in `templates/generic` are offered for every system.
@@ -83,7 +91,8 @@ The GUI uses these, and they work from scripts too:
 | `GET /api/events` | Server-sent events, one `changed` each time something changes |
 | `POST /mirror/sms` | A copy of an SMS for the Phone tab: `{"sender":"Altinn","recipient":"+4799999999","text":"Hei","ttl":2880,"reference":"<gateway ref>","scenario":"Delivered"}`. 201. `id` defaults to `reference`. |
 | `POST /mirror/{channel}/{id}/status` | `{"status":"Delivered","detail":"DELIVRD"}`, with `Sent`, `Delivered`, `Failed` or `Expired`. 204, or 404 for an unknown message. |
-| `GET /api/mirror/{channel}` | The kept messages of `sms`, newest first |
+| `POST /mirror/email` | A copy of an email for the Inbox tab: `{"sender":"noreply@altinn.no","to":["ola@example.com"],"cc":[],"bcc":[],"subject":"Hei","plainText":"Hei","html":"<p>Hei</p>","operationId":"<id>","scenario":"Delivered"}`. 201. `id` defaults to `operationId`. |
+| `GET /api/mirror/{channel}` | The kept messages of `sms` or `email`, newest first |
 | `DELETE /api/mirror/{channel}` | Forgets the kept messages |
 
 ## Prerequisites
@@ -115,13 +124,13 @@ curl -i http://localhost:5096/intercept/profile/profile/api/v1/anything
 | `TestHarnessSettings:TimeoutSeconds` | `120` | How long a request is held before it gets 504 with `X-Simulator: timeout` |
 | `TestHarnessSettings:TemplatesPath` | `templates` | The template folder, relative to the output folder |
 | `TestHarnessSettings:HistorySize` | `200` | How many handled requests the history keeps |
-| `TestHarnessSettings:MirrorSize` | `200` | How many messages the Phone tab keeps. The oldest are dropped. |
+| `TestHarnessSettings:MirrorSize` | `200` | How many messages the Phone and Inbox tabs keep each. The oldest are dropped. |
 | `TestHarnessSettings:DashboardUrl` | empty | The Aspire dashboard, for trace links. The app host sets it. |
 
 There are no secrets.
 
 ## Limits
 
-* Held requests, history, auto-replies and the Phone tab's messages live in memory.
+* Held requests, history, auto-replies and the Phone and Inbox tabs' messages live in memory.
 * Bodies are shown as text. A binary body is shown as broken text, and answers are always text.
-* Anyone who can reach the port can answer requests and read the Phone tab's messages unmasked. It only listens on localhost.
+* Anyone who can reach the port can answer requests and read the Phone and Inbox tabs' messages unmasked. It only listens on localhost.

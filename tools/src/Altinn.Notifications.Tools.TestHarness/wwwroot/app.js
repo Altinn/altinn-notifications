@@ -5,8 +5,10 @@ const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutS
 const templateCache = {};
 let selectedId = null;
 let selectedFrom = null; // "pending" or "history"
-const mirror = { sms: [] };
+const mirror = { sms: [], email: [] };
 let selectedPhone = null;
+let selectedEmail = null;
+let emailView = "html";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -24,11 +26,13 @@ function el(tag, attributes = {}, ...children) {
 }
 
 async function refresh() {
-  const [requests, sms] = await Promise.all([fetch("api/state"), fetch("api/mirror/sms")]);
+  const [requests, sms, email] = await Promise.all([fetch("api/state"), fetch("api/mirror/sms"), fetch("api/mirror/email")]);
   Object.assign(state, await requests.json());
   mirror.sms = await sms.json();
+  mirror.email = await email.json();
   render();
   renderPhone();
+  renderInbox();
 }
 
 async function templatesFor(system) {
@@ -359,13 +363,96 @@ function smsDetails(message) {
   ].filter(Boolean).join("\n");
 }
 
+// The Inbox tab: newest first, and the selected email with its HTML body in an empty sandbox, so it can neither run scripts nor
+// reach this page.
+function renderInbox() {
+  $("#tab-inbox-count").textContent = mirror.email.length;
+  if (!mirror.email.some(m => m.id === selectedEmail)) selectedEmail = mirror.email[0]?.id ?? null;
+
+  $("#emails").replaceChildren(...mirror.email.map(message => {
+    const email = message.content;
+    return el("li", { class: message.id === selectedEmail ? "selected" : "", onclick: () => selectEmail(message.id) },
+      el("strong", { class: "subject" }, email.subject || "(no subject)"),
+      mirrorStatusBadge(message),
+      el("span", { class: "muted address" }, `${email.sender ?? "unknown sender"} → ${recipients(email)}`),
+      el("span", { class: "time" }, time(message.receivedAt)));
+  }));
+
+  const selected = mirror.email.find(m => m.id === selectedEmail);
+  const detail = $("#email-detail");
+  if (!selected) {
+    if (detail.dataset.id !== "") {
+      detail.dataset.id = "";
+      detail.replaceChildren(el("p", { class: "muted" }, mirror.email.length
+        ? "Select an email."
+        : "No email yet. Order one, and the copy mock-acs sends here shows up."));
+    }
+    return;
+  }
+
+  // Only rebuilt when the selection changes, so the body does not reload on every update. The status is updated in place.
+  if (detail.dataset.id !== selected.id) {
+    detail.dataset.id = selected.id;
+    detail.replaceChildren(buildEmail(selected));
+  }
+  $(".status-slot", detail)?.replaceChildren(mirrorStatusBadge(selected));
+}
+
+function buildEmail(message) {
+  const email = message.content;
+  const view = $("#email-template").content.cloneNode(true);
+  $(".subject", view).textContent = email.subject || "(no subject)";
+  fillMeta($(".email-meta", view), [
+    ["From", email.sender],
+    ["To", email.to.join(", ")],
+    ["Cc", email.cc.join(", ")],
+    ["Bcc", email.bcc.join(", ")],
+    ["Received", time(message.receivedAt)],
+    ["Status", el("span", { class: "status-slot" })],
+    ["Operation", email.operationId],
+    ["Scenario", email.scenario],
+  ]);
+
+  const hasHtml = Boolean(email.html);
+  const hasText = Boolean(email.plainText);
+  const show = hasHtml && (emailView === "html" || !hasText) ? "html" : "text";
+  const frame = $(".email-html", view);
+  const text = $(".email-text", view);
+  frame.hidden = show !== "html";
+  text.hidden = show !== "text";
+  if (hasHtml) frame.srcdoc = email.html;
+  text.textContent = email.plainText || (hasHtml ? "" : "(no body)");
+
+  for (const button of view.querySelectorAll(".body-switch button")) {
+    const available = button.dataset.view === "html" ? hasHtml : hasText;
+    button.disabled = !available;
+    button.setAttribute("aria-pressed", String(button.dataset.view === show));
+    button.addEventListener("click", () => {
+      emailView = button.dataset.view;
+      $("#email-detail").dataset.id = "";
+      renderInbox();
+    });
+  }
+  return view;
+}
+
+function selectEmail(id) {
+  selectedEmail = id;
+  renderInbox();
+}
+
+function recipients(email) {
+  return [...email.to, ...email.cc, ...email.bcc].join(", ");
+}
+
 function showTab() {
-  const tab = location.hash === "#phone" ? "phone" : "requests";
+  const tab = ["#phone", "#inbox"].includes(location.hash) ? location.hash.slice(1) : "requests";
   for (const link of document.querySelectorAll(".tabs a")) {
     link.setAttribute("aria-selected", String(link.dataset.tab === tab));
   }
   $("#tab-requests").hidden = tab !== "requests";
   $("#tab-phone").hidden = tab !== "phone";
+  $("#tab-inbox").hidden = tab !== "inbox";
 }
 
 $("#phone-filter").addEventListener("change", renderPhone);
