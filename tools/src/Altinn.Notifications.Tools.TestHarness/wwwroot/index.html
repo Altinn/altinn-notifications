@@ -12,6 +12,7 @@
     <nav class="tabs" role="tablist">
       <a href="#requests" role="tab" data-tab="requests">Requests <span id="tab-pending-count" class="count">0</span></a>
       <a href="#phone" role="tab" data-tab="phone">Phone <span id="tab-phone-count" class="count">0</span></a>
+      <a href="#inbox" role="tab" data-tab="inbox">Inbox <span id="tab-inbox-count" class="count">0</span></a>
     </nav>
     <span id="connection" class="connection" title="Live updates">connecting…</span>
     <span id="timeout" class="muted"></span>
@@ -59,6 +60,31 @@
     </div>
     <p id="phone-empty" class="muted empty">No SMS yet. Order one, and the copy <code>wiremock-linkmobility</code> sends here shows up.</p>
   </div>
+
+  <div id="tab-inbox" class="tab" hidden>
+    <div class="mirror-bar">
+      <p class="muted">What <code>mock-acs</code> received, as the recipients' inbox would show it. Read-only and unmasked: local test
+        data only. HTML bodies are shown in a sandbox without scripts.</p>
+    </div>
+    <div class="inbox-layout">
+      <ul id="emails" class="list emails"></ul>
+      <section id="email-detail" class="detail email-detail">
+        <p class="muted">No email yet. Order one, and the copy <code>mock-acs</code> sends here shows up.</p>
+      </section>
+    </div>
+  </div>
+
+  <template id="email-template">
+    <h2 class="subject"></h2>
+    <dl class="meta email-meta"></dl>
+    <div class="body-switch" role="group" aria-label="Body">
+      <button type="button" class="secondary" data-view="html">HTML</button>
+      <button type="button" class="secondary" data-view="text">Text</button>
+    </div>
+    <!-- An empty sandbox: no scripts, forms, popups or same-origin access. -->
+    <iframe class="email-html" sandbox="" referrerpolicy="no-referrer" title="HTML body"></iframe>
+    <pre class="body email-text"></pre>
+  </template>
 
   <template id="detail-template">
     <div class="detail-head">
