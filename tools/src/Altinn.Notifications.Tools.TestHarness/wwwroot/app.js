@@ -367,7 +367,7 @@ function smsDetails(message) {
 // reach this page.
 function renderInbox() {
   $("#tab-inbox-count").textContent = mirror.email.length;
-  if (!mirror.email.some(m => m.id === selectedEmail)) selectedEmail = null;
+  if (!mirror.email.some(m => m.id === selectedEmail)) selectedEmail = mirror.email[0]?.id ?? null;
 
   $("#emails").replaceChildren(...mirror.email.map(message => {
     const email = message.content;
