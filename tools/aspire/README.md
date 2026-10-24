@@ -193,7 +193,7 @@ The cluster schedules are from [docs/architecture/notifications.md](../../docs/a
 }
 ```
 
-* With `Simulator:Enabled` off, the `simulator` resource waits for the API, so the first trigger calls succeed. With it on, the mocks wait for the simulator and the API for the mocks, so the simulator starts first and its first calls fail until the API is up. The Triggers tab shows those as `no response`.
+* The first trigger calls can fail while the API starts. With `Simulator:Enabled` off, the `simulator` resource waits for the API's process, but not until the API listens. With it on, it cannot wait at all, since the mocks wait for the simulator and the API for the mocks. The Triggers tab shows those calls as `no response`, and the log says once when a trigger fails and once when it works again.
 * With both `Triggers:Enabled` and `Simulator:Enabled` set to `false` there is no `simulator` resource. Then call `POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` yourself to send what is waiting.
 
 ## Dashboard actions
