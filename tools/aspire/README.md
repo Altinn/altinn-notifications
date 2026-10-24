@@ -52,6 +52,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Simulator:TimeoutSeconds` | `120` | How long the simulator holds a request before it answers 504 |
 | `LinkMobility:Port` | `5093` | Port of the `linkmobility` resource |
 | `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
+| `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [simulator](#simulator). Needs `Simulator:Enabled`. |
+| `LinkMobility:DeliveryReportDelaySeconds` | `2` | Delay between an accepted SMS and its delivery report |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -146,7 +148,7 @@ The services do not send by themselves locally, since cron jobs call the trigger
 
 ## Simulator
 
-With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `acs` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
+With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 and the `acs`, `linkmobility` and `platform-mocks` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The simulator holds each request until you answer it in its GUI, or until `Simulator:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`. See the [tool's README](../src/Altinn.Notifications.Tools.Simulator/README.md).
 
 ```json
 {
@@ -158,13 +160,34 @@ With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 
 * Each held request links to its trace in the dashboard when it has a `traceparent`.
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
-* LinkMobility does not go through the simulator yet.
+* With `LinkMobility:Interactive` also `true`, every SMS send is held in the simulator, not only unknown requests. See [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy).
 
 ## SMS through the LinkMobility proxy
 
 `sms` sends to the `linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
 
-By default it is a stub that answers OK, so nothing leaves the machine and no credentials are needed. To send real SMS through LinkMobility's test gateway, set the target in `appsettings.Local.json` and add the gateway credentials to the SMS service's user secrets, as described in the [proxy README](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#settings):
+By default it is a stub, so nothing leaves the machine and no credentials are needed. It answers the send and then posts a delivery report to `sms`, so an SMS ends as `SMS_Delivered` like with LinkMobility. The app host gives `linkmobility` and `sms` the same test credentials for the report endpoint. The last two digits of the recipient number pick other outcomes, e.g. `+4799999901` ends as `SMS_Failed_Undelivered`, `02` as `SMS_Failed_Expired`, `03` gets no report and `04` is rejected as an invalid recipient. See the [scenarios](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#scenarios).
+
+To try it, fetch a token, order an SMS and send what is waiting:
+
+```bash
+TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
+curl -X POST http://localhost:5090/notifications/api/v1/future/orders -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"idempotencyId":"sms-1","sendersReference":"sms-test","recipient":{"recipientSms":{"phoneNumber":"+4799999901","smsSettings":{"body":"Test","sendingTimePolicy":"Anytime"}}}}'
+curl -X POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime
+```
+
+A few seconds later the order's status is `SMS_Failed_Undelivered`. With `"sendingTimePolicy":"Daytime"`, call `trigger/sendsms` instead, which only sends during the day.
+
+With `Simulator:Enabled`, requests the stub does not recognise go to the [simulator](#simulator). Set `LinkMobility:Interactive` too to answer every send there yourself, e.g. with `LOGON FAIL` or `Invalid RCV`. `sms` then waits for the gateway until `Simulator:TimeoutSeconds` has passed instead of 30 seconds. An answer with `STATUS OK` and a `REF` still gets a delivery report, with the state from the recipient's scenario.
+
+```json
+{
+  "Simulator": { "Enabled": true },
+  "LinkMobility": { "Interactive": true }
+}
+```
+
+To send real SMS through LinkMobility's test gateway, set the target in `appsettings.Local.json` and add the gateway credentials to the SMS service's user secrets, as described in the [proxy README](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#settings). LinkMobility then sends the delivery reports to the endpoint registered for the account, not to your machine.
 
 ```json
 {

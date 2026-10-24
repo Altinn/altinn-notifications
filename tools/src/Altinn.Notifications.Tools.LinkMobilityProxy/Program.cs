@@ -18,6 +18,10 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 builder.Services.Configure<LinkMobilityProxySettings>(builder.Configuration.GetSection(nameof(LinkMobilityProxySettings)));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IDeliveryReportSender, HttpDeliveryReportSender>();
+builder.Services.AddSingleton<DeliveryReportService>();
+builder.Services.AddHostedService(services => services.GetRequiredService<DeliveryReportService>());
 builder.Services.AddHostedService<LinkMobilityProxyService>();
 
 // Aspire sets OTEL_EXPORTER_OTLP_ENDPOINT. Without it the masked payloads only go to the console.
