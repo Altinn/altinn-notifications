@@ -82,10 +82,15 @@ internal static class SasFileReferenceRules
 
     /// <summary>
     /// Returns <see langword="true"/> if the <c>sp</c> (signed permissions) parameter of <paramref name="uri"/>
-    /// contains the read (<c>r</c>) permission.
+    /// contains the read (<c>r</c>) permission. Relative URIs have no query and return <see langword="false"/>.
     /// </summary>
     internal static bool HasReadPermission(Uri uri)
     {
+        if (!uri.IsAbsoluteUri)
+        {
+            return false;
+        }
+
         var sp = HttpUtility.ParseQueryString(uri.Query)["sp"];
         return sp != null && sp.Contains('r', StringComparison.Ordinal);
     }
@@ -101,7 +106,7 @@ internal static class SasFileReferenceRules
     /// the Azure Blob Storage domain (<c>*.blob.core.windows.net</c>).
     /// </summary>
     internal static bool IsAzureBlobStorageHost(Uri uri) =>
-        uri.Host.EndsWith(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
+        uri.IsAbsoluteUri && uri.Host.EndsWith(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Parses the <c>se</c> (signed expiry) query parameter from a SAS URI.
@@ -109,10 +114,15 @@ internal static class SasFileReferenceRules
     /// <param name="uri">The SAS URI to parse.</param>
     /// <returns>
     /// The parsed <see cref="DateTime"/> expiry value, or <see langword="null"/> if the
-    /// <c>se</c> parameter is absent or its value cannot be parsed.
+    /// <c>se</c> parameter is absent, its value cannot be parsed, or <paramref name="uri"/> is relative.
     /// </returns>
     internal static DateTime? ParseSasExpiry(Uri uri)
     {
+        if (!uri.IsAbsoluteUri)
+        {
+            return null;
+        }
+
         var seValue = HttpUtility.ParseQueryString(uri.Query)["se"];
 
         if (string.IsNullOrWhiteSpace(seValue))
@@ -140,6 +150,11 @@ internal static class SasFileReferenceRules
     /// </summary>
     internal static bool HasRequiredSasParameters(Uri uri)
     {
+        if (!uri.IsAbsoluteUri)
+        {
+            return false;
+        }
+
         var query = HttpUtility.ParseQueryString(uri.Query);
 
         return !string.IsNullOrWhiteSpace(query["se"])
