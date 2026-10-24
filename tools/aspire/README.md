@@ -168,7 +168,7 @@ With `Simulator:Enabled` set to `true`, the `simulator` resource starts on 5096 
 
 By default it is a stub, so nothing leaves the machine and no credentials are needed. It answers the send and then posts a delivery report to `sms`, so an SMS ends as `SMS_Delivered` like with LinkMobility. The app host gives `linkmobility` and `sms` the same test credentials for the report endpoint. The last two digits of the recipient number pick other outcomes, e.g. `+4799999901` ends as `SMS_Failed_Undelivered`, `02` as `SMS_Failed_Expired`, `03` gets no report and `04` is rejected as an invalid recipient. See the [scenarios](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#scenarios).
 
-To try it, fetch a token, order an SMS and send what is waiting:
+To try it, fetch a token, order an SMS and, once the API has processed the order and the SMS shows as `SMS_New` under `GET /notifications/api/v1/future/shipment/{shipmentId}`, send what is waiting:
 
 ```bash
 TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
