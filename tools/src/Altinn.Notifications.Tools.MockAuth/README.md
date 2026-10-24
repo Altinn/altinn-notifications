@@ -36,7 +36,7 @@ Platform access tokens (`PrincipalUtil.GetAccessToken`), which other Altinn apps
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#authentication) starts it as the `auth` resource and points the API at it, unless `Auth:Mode` is `at23`.
+The [Aspire app host](../../aspire/README.md#authentication) starts it as the `mock-auth` resource and points the API at it, unless `Auth:Mode` is `at23`.
 
 ## Run on its own
 

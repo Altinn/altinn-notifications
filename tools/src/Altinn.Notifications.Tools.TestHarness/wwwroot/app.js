@@ -1,7 +1,7 @@
-// The simulator GUI. /api/events says when something changed, and the page then fetches /api/state again.
+// The test harness control panel. /api/events says when something changed, and the page then fetches /api/state again.
 "use strict";
 
-const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutSeconds: 0 };
+const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutSeconds: 0, intercept: true };
 const templateCache = {};
 let selectedId = null;
 let selectedFrom = null; // "pending" or "history"
@@ -41,7 +41,8 @@ async function allTemplates() {
 }
 
 function render() {
-  $("#timeout").textContent = `Requests time out after ${state.timeoutSeconds} s with 504.`;
+  $("#timeout").textContent = state.intercept ? `Requests time out after ${state.timeoutSeconds} s with 504.` : "";
+  $("#intercept-off").hidden = state.intercept;
   renderAutoReplies();
   renderPending();
   renderHistory();

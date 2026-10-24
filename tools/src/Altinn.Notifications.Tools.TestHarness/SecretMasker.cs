@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Altinn.Notifications.Tools.Simulator;
+namespace Altinn.Notifications.Tools.TestHarness;
 
 /// <summary>
 /// Hides credentials before a request is shown in the GUI. The simulator itself keeps and forwards nothing but the answer.

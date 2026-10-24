@@ -1,4 +1,4 @@
-namespace Altinn.Notifications.Tools.Simulator;
+namespace Altinn.Notifications.Tools.TestHarness;
 
 /// <summary>
 /// A request a mock forwarded, as it arrived.

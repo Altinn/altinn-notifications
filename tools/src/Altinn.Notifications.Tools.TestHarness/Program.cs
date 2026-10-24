@@ -1,17 +1,17 @@
-using Altinn.Notifications.Tools.Simulator;
-using Altinn.Notifications.Tools.Simulator.Configuration;
+using Altinn.Notifications.Tools.TestHarness;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 
-// appsettings.json, the GUI and the templates are in the output folder, so they are found whichever folder the simulator is started from.
+// appsettings.json, the GUI and the templates are in the output folder, so they are found whichever folder the control panel is started from.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = AppContext.BaseDirectory });
 
 builder.Configuration
-    .AddUserSecrets<SimulatorSettings>(optional: true)
+    .AddUserSecrets<TestHarnessSettings>(optional: true)
     .AddEnvironmentVariables();
 
-builder.Services.Configure<SimulatorSettings>(builder.Configuration.GetSection(nameof(SimulatorSettings)));
+builder.Services.Configure<TestHarnessSettings>(builder.Configuration.GetSection(nameof(TestHarnessSettings)));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RequestStore>();
 builder.Services.AddSingleton<TemplateStore>();
@@ -30,11 +30,11 @@ if (!string.IsNullOrEmpty(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         .UseOtlpExporter();
 }
 
-var port = builder.Configuration.GetValue("SimulatorSettings:Port", 5096);
+var port = builder.Configuration.GetValue("TestHarnessSettings:Port", 5096);
 builder.WebHost.UseUrls($"http://localhost:{port}");
 
 var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.MapSimulatorEndpoints();
+app.MapInterceptEndpoints();
 app.Run();
