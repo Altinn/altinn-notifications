@@ -37,23 +37,47 @@ internal sealed class MockTokenIssuer
     {
         var identity = new ClaimsIdentity("mock-org");
         identity.AddClaim(new Claim("urn:altinn:org", org, ClaimValueTypes.String, ClaimIssuer));
-        if (!string.IsNullOrEmpty(scopes))
+        if (NormalizeScopes(scopes) is string scope)
         {
-            identity.AddClaim(new Claim("urn:altinn:scope", scopes, ClaimValueTypes.String, "maskinporten"));
+            identity.AddClaim(new Claim("urn:altinn:scope", scope, ClaimValueTypes.String, "maskinporten"));
         }
 
         identity.AddClaim(new Claim("urn:altinn:orgNumber", orgNumber, ClaimValueTypes.Integer32, ClaimIssuer));
         identity.AddClaim(new Claim("urn:altinn:authenticatemethod", "Mock", ClaimValueTypes.String, ClaimIssuer));
-        identity.AddClaim(new Claim("urn:altinn:authenticationlevel", "3", ClaimValueTypes.Integer32, ClaimIssuer));
+        identity.AddClaim(new Claim("urn:altinn:authlevel", "3", ClaimValueTypes.Integer32, ClaimIssuer));
 
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        return CreateToken(identity, issuer);
+    }
+
+    /// <summary>
+    /// Creates an end user token with the same claims as <c>PrincipalUtil.GetUserToken</c> in the API tests, plus the
+    /// <c>pid</c> and <c>scope</c> claims a token from ID-porten carries, like the Altinn test token generator's personal token.
+    /// The scopes go in <c>scope</c>, where the API's scope check looks when there is no <c>urn:altinn:scope</c>.
+    /// </summary>
+    public string CreatePersonalToken(string issuer, int userId, int partyId, string pid, int authenticationLevel, string? scopes)
+    {
+        var identity = new ClaimsIdentity("mock");
+        identity.AddClaim(new Claim("urn:altinn:userid", userId.ToString(), ClaimValueTypes.String, ClaimIssuer));
+        identity.AddClaim(new Claim("urn:altinn:username", "UserOne", ClaimValueTypes.String, ClaimIssuer));
+        identity.AddClaim(new Claim("urn:altinn:partyid", partyId.ToString(), ClaimValueTypes.Integer32, ClaimIssuer));
+        identity.AddClaim(new Claim("pid", pid, ClaimValueTypes.String, ClaimIssuer));
+        identity.AddClaim(new Claim("urn:altinn:authenticatemethod", "Mock", ClaimValueTypes.String, ClaimIssuer));
+        identity.AddClaim(new Claim("urn:altinn:authlevel", authenticationLevel.ToString(), ClaimValueTypes.Integer32, ClaimIssuer));
+        if (NormalizeScopes(scopes) is string scope)
         {
-            Subject = identity,
-            Issuer = issuer,
-            Audience = "altinn.no",
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = _signingCredentials,
-        });
+            identity.AddClaim(new Claim("scope", scope, ClaimValueTypes.String, ClaimIssuer));
+        }
+
+        return CreateToken(identity, issuer);
+    }
+
+    /// <summary>
+    /// The test token generator takes scopes separated by commas or spaces. A token carries them separated by spaces.
+    /// </summary>
+    internal static string? NormalizeScopes(string? scopes)
+    {
+        string[] parts = (scopes ?? string.Empty).Split([',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length == 0 ? null : string.Join(' ', parts);
     }
 
     /// <summary>
@@ -69,5 +93,17 @@ internal sealed class MockTokenIssuer
                 new { kty = jwk.Kty, use = "sig", alg = SecurityAlgorithms.RsaSha256, kid = jwk.Kid, n = jwk.N, e = jwk.E },
             },
         };
+    }
+
+    private string CreateToken(ClaimsIdentity identity, string issuer)
+    {
+        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Subject = identity,
+            Issuer = issuer,
+            Audience = "altinn.no",
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = _signingCredentials,
+        });
     }
 }

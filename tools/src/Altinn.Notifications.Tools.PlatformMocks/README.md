@@ -9,6 +9,7 @@ Local stand-ins for the Altinn platform APIs the notifications API calls, built 
 | `authorization` | 5151 | The decision endpoint in Altinn Authorization |
 | `conditions` | 5199 | Condition endpoints that orders point to |
 | `maskinporten` | 5197 | The token endpoint the API's condition client gets its token from |
+| `dialogporten` | 5171 | The dialog lookup the API makes before it shows an end user a notification log |
 
 The answers are built from the request, so every person and organisation has contact points and a name. Use any 11-digit national identity number and 9-digit organisation number, including random ones from k6.
 
@@ -62,6 +63,17 @@ The API calls condition endpoints with a Maskinporten token, which it gets from 
 
 The client library has the Maskinporten URLs built in. Pointing it here needs the `TokenEndpoint` and `AssertionAudience` settings from [Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92), and the grant has to be signed, so the API also needs a `ClientId` and an `EncodedJwk`. The Aspire app host sets all four, with a new key for each run.
 
+### Dialogporten
+
+`GET /dialogporten/api/v1/enduser/dialoglookup?instanceRef=urn:altinn:dialog-id:<guid>` answers 200, so every end user may see the notification log of every dialog. The exceptions:
+
+| Request | Answer | The API |
+| :--- | :--- | :--- |
+| No bearer token | 401 | 403 |
+| A dialog id in `DeniedDialogs`, by default `00000000-0000-0000-0000-000000000403` | 403 | 403 |
+
+The mock does not validate the token. The API has already done that before it calls.
+
 ### Anything else
 
 Requests no mapping matches get a 404. When `FallbackUrl` is set, they go to `{FallbackUrl}{system}/{path}` instead, e.g. `http://localhost:5096/intercept/profile/profile/api/v1/...`, so an operator can answer them in the test harness control panel. The mapped endpoints are still answered by the mocks.
@@ -86,6 +98,7 @@ Then start the API with its endpoints pointing at the mocks:
 PlatformSettings__ApiProfileEndpoint=http://localhost:5131/profile/api/v1/ \
 PlatformSettings__ApiRegisterEndpoint=http://localhost:5121/register/api/v1/ \
 PlatformSettings__ApiAuthorizationEndpoint=http://localhost:5151/authorization/api/v1/ \
+DialogportenSettings__BaseUrl=http://localhost:5171/dialogporten/api/v1/ \
 SendConditionClient__MaskinportenSettings__TokenEndpoint=http://localhost:5197/token \
 SendConditionClient__MaskinportenSettings__AssertionAudience=http://localhost:5197/ \
 SendConditionClient__MaskinportenSettings__ClientId=altinn-notifications-local \
@@ -98,13 +111,14 @@ dotnet run --project components/api/src/Altinn.Notifications
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `PlatformMocksSettings:FallbackUrl` | empty | Where unmatched requests go, as `{FallbackUrl}{system}/{path}`. Empty means a 404. |
-| `PlatformMocksSettings:<System>:Enabled` | `true` | Starts the `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` server |
-| `PlatformMocksSettings:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port the server listens on, on localhost only |
+| `PlatformMocksSettings:<System>:Enabled` | `true` | Starts the `Profile`, `Register`, `Authorization`, `Conditions`, `Maskinporten` or `Dialogporten` server |
+| `PlatformMocksSettings:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197`, `5171` | Port the server listens on, on localhost only |
 | `PlatformMocksSettings:Profile:MobileNumber` | `+4799999999` | The mobile number everyone gets |
 | `PlatformMocksSettings:Profile:ReservedPersons` | `["99999999901"]` | National identity numbers that are reserved |
 | `PlatformMocksSettings:Profile:PersonsWithoutContactPoints` | `["88888888801"]` | National identity numbers with no email and no mobile number |
 | `PlatformMocksSettings:Profile:OrganizationsWithoutContactPoints` | `["999999999"]` | Organisation numbers with no contact points |
 | `PlatformMocksSettings:Authorization:DeniedUsers` | `[]` | User ids that get `Deny` |
+| `PlatformMocksSettings:Dialogporten:DeniedDialogs` | `["00000000-0000-0000-0000-000000000403"]` | Dialog ids no end user may see |
 
 There are no secrets.
 
