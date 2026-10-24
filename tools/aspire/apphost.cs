@@ -153,7 +153,7 @@ if (linkMobilityInteractive && !interceptEnabled)
 // Test-only credentials. The mock sends its delivery reports with them, and sms rejects reports that do not have them.
 const string deliveryReportUsername = "linkmobility-mock";
 const string deliveryReportPassword = "linkmobility-mock-test-password";
-var linkMobility = builder.AddProject("linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
     .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
@@ -161,7 +161,8 @@ var linkMobility = builder.AddProject("linkmobility", "../src/Altinn.Notificatio
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)
-    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2).ToString());
+    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2).ToString())
+    .WithParentRelationship(controlPanel.Resource);
 
 sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + linkMobilityPort)
     .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Username", deliveryReportUsername)

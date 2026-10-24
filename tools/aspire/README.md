@@ -50,7 +50,7 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `TestHarness:Intercept` | `false` | `true` sends what the mocks do not recognise to the [control panel](#test-harness-control-panel) |
 | `TestHarness:Port` | `5096` | Port of the `testharness-controlpanel` resource |
 | `TestHarness:TimeoutSeconds` | `120` | How long the control panel holds an intercepted request before it answers 504 |
-| `LinkMobility:Port` | `5093` | Port of the `linkmobility` resource |
+| `LinkMobility:Port` | `5093` | Port of the `wiremock-linkmobility` resource |
 | `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
 | `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [control panel](#test-harness-control-panel). Needs `TestHarness:Intercept`. |
 | `LinkMobility:DeliveryReportDelaySeconds` | `2` | Delay between an accepted SMS and its delivery report |
@@ -79,7 +79,7 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `api` | `components/api/src/Altinn.Notifications` | 5090 |
 | `email` | `components/email-service/src/Altinn.Notifications.Email` | 5091 |
 | `sms` | `components/sms-service/src/Altinn.Notifications.Sms` | 5092 |
-| `linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
+| `wiremock-linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
 | `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
 | `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
@@ -148,9 +148,9 @@ The services do not send by themselves locally, since cron jobs call the trigger
 
 ## Test harness control panel
 
-The `testharness-controlpanel` resource on 5096 always starts, and the mocks (`mock-auth`, `mock-acs` and `wiremock-platform`) are its children in the dashboard, so they fold together under it. See the [tool's README](../src/Altinn.Notifications.Tools.TestHarness/README.md).
+The `testharness-controlpanel` resource on 5096 always starts, and the mocks (`mock-auth`, `mock-acs`, `wiremock-linkmobility` and `wiremock-platform`) are its children in the dashboard, so they fold together under it. See the [tool's README](../src/Altinn.Notifications.Tools.TestHarness/README.md).
 
-With `TestHarness:Intercept` set to `true`, the `mock-acs`, `linkmobility` and `wiremock-platform` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The control panel holds each request until you answer it in its GUI, or until `TestHarness:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`.
+With `TestHarness:Intercept` set to `true`, the `mock-acs`, `wiremock-linkmobility` and `wiremock-platform` resources send requests they have no mapping for to it, instead of answering 404. They wait for it to start. The control panel holds each request until you answer it in its GUI, or until `TestHarness:TimeoutSeconds`, when it answers 504 with `X-Simulator: timeout`.
 
 ```json
 {
@@ -174,9 +174,9 @@ The control panel used to be called the simulator. Its settings moved, and the a
 
 ## SMS through the LinkMobility proxy
 
-`sms` sends to the `linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
+`sms` sends to the `wiremock-linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `wiremock-linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
 
-By default it is a stub, so nothing leaves the machine and no credentials are needed. It answers the send and then posts a delivery report to `sms`, so an SMS ends as `SMS_Delivered` like with LinkMobility. The app host gives `linkmobility` and `sms` the same test credentials for the report endpoint. The last two digits of the recipient number pick other outcomes, e.g. `+4799999901` ends as `SMS_Failed_Undelivered`, `02` as `SMS_Failed_Expired`, `03` gets no report and `04` is rejected as an invalid recipient. See the [scenarios](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#scenarios).
+By default it is a stub, so nothing leaves the machine and no credentials are needed. It answers the send and then posts a delivery report to `sms`, so an SMS ends as `SMS_Delivered` like with LinkMobility. The app host gives `wiremock-linkmobility` and `sms` the same test credentials for the report endpoint. The last two digits of the recipient number pick other outcomes, e.g. `+4799999901` ends as `SMS_Failed_Undelivered`, `02` as `SMS_Failed_Expired`, `03` gets no report and `04` is rejected as an invalid recipient. See the [scenarios](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#scenarios).
 
 To try it, fetch a token, order an SMS and, once the API has processed the order and the SMS shows as `SMS_New` under `GET /notifications/api/v1/future/shipment/{shipmentId}`, send what is waiting:
 

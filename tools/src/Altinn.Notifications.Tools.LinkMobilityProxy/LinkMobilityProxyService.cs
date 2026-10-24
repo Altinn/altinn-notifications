@@ -37,7 +37,7 @@ internal sealed class LinkMobilityProxyService(
 
     private readonly LinkMobilityProxySettings _settings = options.Value;
 
-    // The simulator holds a request until an operator answers or it times out itself, so the client does not time out first.
+    // The control panel holds a request until an operator answers or it times out itself, so the client does not time out first.
     private readonly HttpClient _fallbackClient = new() { Timeout = Timeout.InfiniteTimeSpan };
 
     private WireMockServer? _server;
@@ -55,7 +55,7 @@ internal sealed class LinkMobilityProxyService(
     {
         if (Mode == "interactive" && !HasFallback)
         {
-            throw new InvalidOperationException("LinkMobilityProxySettings:Interactive needs a FallbackUrl, e.g. the simulator's http://localhost:5096/intercept/.");
+            throw new InvalidOperationException("LinkMobilityProxySettings:Interactive needs a FallbackUrl, e.g. the test harness control panel's http://localhost:5096/intercept/.");
         }
 
         _server = WireMockServer.Start(new WireMockServerSettings
@@ -162,7 +162,7 @@ internal sealed class LinkMobilityProxyService(
     }
 
     /// <summary>
-    /// Sends a request to <c>{FallbackUrl}linkmobility/{path}</c>, so an operator can answer it in the simulator.
+    /// Sends a request to <c>{FallbackUrl}linkmobility/{path}</c>, so an operator can answer it in the test harness control panel.
     /// </summary>
     private async Task<IResponseMessage> ForwardAsync(IRequestMessage request)
     {

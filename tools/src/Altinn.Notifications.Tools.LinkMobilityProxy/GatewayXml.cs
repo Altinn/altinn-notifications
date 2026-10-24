@@ -55,7 +55,7 @@ internal static class GatewayXml
     }
 
     /// <summary>
-    /// The messages an answer accepted, those with <c>STATUS OK</c> and a <c>REF</c>, e.g. from an operator in the simulator.
+    /// The messages an answer accepted, those with <c>STATUS OK</c> and a <c>REF</c>, e.g. from an operator in the test harness control panel.
     /// </summary>
     public static List<SmsResult> ReadAccepted(string? xml)
     {

@@ -7,7 +7,7 @@ It runs in one of three modes:
 | Mode | When | What happens |
 | :--- | :--- | :--- |
 | Stub | `Target` is empty (default) | Answers each send by the recipient's [scenario](#scenarios) and posts a delivery report to the SMS service afterwards. Nothing leaves the machine and no credentials are needed. |
-| Interactive | `Target` is empty, `Interactive` is `true` and `FallbackUrl` is set | Every send goes to the [simulator](../Altinn.Notifications.Tools.Simulator/README.md), where an operator answers it. A delivery report follows for each message the answer accepts. |
+| Interactive | `Target` is empty, `Interactive` is `true` and `FallbackUrl` is set | Every send goes to the [test harness control panel](../Altinn.Notifications.Tools.TestHarness/README.md), where an operator answers it. A delivery report follows for each message the answer accepts. |
 | Proxy | `Target` is set, e.g. `https://xml-test.pswin.com` | Forwards every request unchanged to the target and returns its response. **Real SMS are sent.** LinkMobility sends the delivery reports to the endpoint registered for the account, not to the proxy. |
 
 Unlike most tools this one has no menu: it is a server that runs until you stop it.
@@ -38,9 +38,9 @@ In stub mode the last two digits of the recipient number pick what happens. Any 
 
 The report comes `DeliveryReportDelaySeconds` after the send and continues the send's trace. If the SMS service does not answer 2xx, the proxy tries twice more, 2 seconds apart.
 
-In interactive mode the scenario only picks the report's `STATE`: the operator decides whether the send is accepted, and a report follows for each message the answer gives `STATUS OK` and a `REF`, e.g. with the simulator's `OK with REF` template.
+In interactive mode the scenario only picks the report's `STATE`: the operator decides whether the send is accepted, and a report follows for each message the answer gives `STATUS OK` and a `REF`, e.g. with the control panel's `OK with REF` template.
 
-## Simulator fallback
+## Control panel fallback
 
 With `FallbackUrl` set, requests the stub does not recognise, such as another path or a body that is not a `SESSION`, go to `{FallbackUrl}linkmobility/{path}`, e.g. `http://localhost:5096/intercept/linkmobility/unknown`. Without it they get 404.
 
@@ -60,7 +60,7 @@ The log line also shows the scenario, e.g. `LinkMobility stub POST / -> 200 (Und
 
 ## Run with Aspire
 
-The [Aspire app host](../../aspire/README.md#sms-through-the-linkmobility-proxy) starts the proxy as the `linkmobility` resource, points the `sms` service at it and gives both the same delivery report credentials. The masked payloads show up in the dashboard's structured logs, under the same trace as the SMS service's call.
+The [Aspire app host](../../aspire/README.md#sms-through-the-linkmobility-proxy) starts the proxy as the `wiremock-linkmobility` resource, points the `sms` service at it and gives both the same delivery report credentials. The masked payloads show up in the dashboard's structured logs, under the same trace as the SMS service's call.
 
 ## Run on its own
 
@@ -83,7 +83,7 @@ The default delivery report user and password, `username` and `password`, match 
 | `LinkMobilityProxySettings:Port` | `5093` | Port the proxy listens on, on localhost only |
 | `LinkMobilityProxySettings:Target` | empty | Gateway to forward to. Empty means stub mode. |
 | `LinkMobilityProxySettings:Interactive` | `false` | Sends every send to `FallbackUrl` instead of answering it. Needs `FallbackUrl`. |
-| `LinkMobilityProxySettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}linkmobility/{path}`, e.g. `http://localhost:5096/intercept/` for the simulator |
+| `LinkMobilityProxySettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}linkmobility/{path}`, e.g. `http://localhost:5096/intercept/` for the test harness control panel |
 | `LinkMobilityProxySettings:DeliveryReportUrl` | empty | The SMS service's delivery report endpoint. Empty turns delivery reports off. |
 | `LinkMobilityProxySettings:DeliveryReportUsername` | `username` | Basic auth user, the SMS service's `SmsDeliveryReportSettings:UserSettings:Username` |
 | `LinkMobilityProxySettings:DeliveryReportPassword` | `password` | Basic auth password, the SMS service's `SmsDeliveryReportSettings:UserSettings:Password` |

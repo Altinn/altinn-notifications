@@ -17,13 +17,13 @@ public class LinkMobilityProxySettings
     public string Target { get; set; } = string.Empty;
 
     /// <summary>
-    /// Sends every send to <see cref="FallbackUrl"/> instead of answering it, so an operator answers it in the simulator.
+    /// Sends every send to <see cref="FallbackUrl"/> instead of answering it, so an operator answers it in the test harness control panel.
     /// Only in stub mode, and only with a <see cref="FallbackUrl"/>.
     /// </summary>
     public bool Interactive { get; set; }
 
     /// <summary>
-    /// Where requests the stub does not recognise go, as <c>{FallbackUrl}linkmobility/{path}</c>, e.g. the simulator's
+    /// Where requests the stub does not recognise go, as <c>{FallbackUrl}linkmobility/{path}</c>, e.g. the test harness control panel's
     /// <c>http://localhost:5096/intercept/</c>. Empty means a plain 404.
     /// </summary>
     public string FallbackUrl { get; set; } = string.Empty;
