@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Validate all solutions
         run: |
           echo "Validating solution files..."
@@ -171,7 +171,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Cache NuGet packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -213,7 +213,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Setup PostgreSQL
         run: |
           chmod +x tools/dev-setup/dbsetup.sh
@@ -296,7 +296,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Run Shared unit tests
         run: |
           dotnet test components/shared/test/Altinn.Notifications.Shared.Tests/Altinn.Notifications.Shared.Tests.csproj \
@@ -351,7 +351,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Run Email unit tests
         run: |
           dotnet test components/email-service/test/Altinn.Notifications.Email.Tests/Altinn.Notifications.Email.Tests.csproj \
@@ -426,7 +426,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Run SMS unit tests
         run: |
           dotnet test components/sms-service/test/Altinn.Notifications.Sms.Tests/Altinn.Notifications.Sms.Tests.csproj \
@@ -516,7 +516,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Setup PostgreSQL
         run: |
           chmod +x tools/dev-setup/dbsetup.sh
@@ -582,7 +582,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            10.0.402
       - name: Cache NuGet packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
