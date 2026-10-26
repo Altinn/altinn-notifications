@@ -564,14 +564,14 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(notifications.Count, notificationLogCount);
     }
 
-    private async Task UpdateEmailStatusAsync(EmailNotificationRepository repo, Guid notificationId, EmailNotificationResultType status, string? operationId = null)
+    private static async Task UpdateEmailStatusAsync(EmailNotificationRepository repo, Guid notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
         await repo.UpdateSendStatusAsync(unitOfWork, notificationId, status, operationId, cancellationToken: TestContext.Current.CancellationToken);
         await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
     }
 
-    private async Task UpdateSmsStatusAsync(SmsNotificationRepository repo, Guid notificationId, SmsNotificationResultType status)
+    private static async Task UpdateSmsStatusAsync(SmsNotificationRepository repo, Guid notificationId, SmsNotificationResultType status)
     {
         UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
         await repo.UpdateSendStatusAsync(unitOfWork, notificationId, status, cancellationToken: TestContext.Current.CancellationToken);
