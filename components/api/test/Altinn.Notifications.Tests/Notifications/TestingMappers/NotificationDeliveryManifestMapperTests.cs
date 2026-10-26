@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -68,19 +66,15 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
 
         Assert.Equal(2, result.Recipients.Count);
-        Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
-        Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
+        var smsResult = Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
+        var emailResult = Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
 
         // Verify first recipient (SMS)
-        var smsResult = result.Recipients[0] as SmsDeliveryManifestExt;
-        Assert.NotNull(smsResult);
         Assert.Equal(smsDeliveryManifest.LastUpdate, smsResult.LastUpdate);
         Assert.Equal(smsDeliveryManifest.Destination, smsResult.Destination);
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsResult.Status);
 
         // Verify second recipient (Email)
-        var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
-        Assert.NotNull(emailResult);
         Assert.Equal(ProcessingLifecycleExt.Email_New, emailResult.Status);
         Assert.Equal(emailDeliveryManifest.LastUpdate, emailResult.LastUpdate);
         Assert.Equal(emailDeliveryManifest.Destination, emailResult.Destination);
@@ -198,19 +192,16 @@ public class NotificationDeliveryManifestMapperTests
         // Assert
         Assert.Equal(3, result.Recipients.Count);
 
-        Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
-        var smsResult1 = result.Recipients[0] as SmsDeliveryManifestExt;
-        Assert.Equal("+4799999999", smsResult1!.Destination);
+        var smsResult1 = Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
+        Assert.Equal("+4799999999", smsResult1.Destination);
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsResult1.Status);
 
-        Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
-        var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
-        Assert.Equal("recipient@example.com", emailResult!.Destination);
+        var emailResult = Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
+        Assert.Equal("recipient@example.com", emailResult.Destination);
         Assert.Equal(ProcessingLifecycleExt.Email_Succeeded, emailResult.Status);
 
-        Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[2]);
-        var smsResult2 = result.Recipients[2] as SmsDeliveryManifestExt;
-        Assert.Equal("+4788888888", smsResult2!.Destination);
+        var smsResult2 = Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[2]);
+        Assert.Equal("+4788888888", smsResult2.Destination);
         Assert.Equal(ProcessingLifecycleExt.SMS_Failed, smsResult2.Status);
     }
 
@@ -302,6 +293,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.SMS_Failed_Rejected, ProcessingLifecycleExt.SMS_Failed_Rejected)]
     [InlineData(ProcessingLifecycle.SMS_Failed_Undelivered, ProcessingLifecycleExt.SMS_Failed_Undelivered)]
     [InlineData(ProcessingLifecycle.SMS_Failed_BarredReceiver, ProcessingLifecycleExt.SMS_Failed_BarredReceiver)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_ContentTooLarge, ProcessingLifecycleExt.SMS_Failed_ContentTooLarge)]
     [InlineData(ProcessingLifecycle.SMS_Failed_InvalidRecipient, ProcessingLifecycleExt.SMS_Failed_InvalidRecipient)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientReserved, ProcessingLifecycleExt.SMS_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientNotIdentified, ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified)]
@@ -331,8 +323,7 @@ public class NotificationDeliveryManifestMapperTests
         var result = manifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
-        var smsResult = result.Recipients[0] as SmsDeliveryManifestExt;
-        Assert.NotNull(smsResult);
+        var smsResult = Assert.IsType<SmsDeliveryManifestExt>(Assert.Single(result.Recipients));
         Assert.Equal(expected, smsResult.Status);
     }
 
@@ -350,6 +341,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.Email_Failed_InvalidFormat, ProcessingLifecycleExt.Email_Failed_InvalidFormat)]
     [InlineData(ProcessingLifecycle.Email_Failed_TransientError, ProcessingLifecycleExt.Email_Failed_TransientError)]
     [InlineData(ProcessingLifecycle.Email_Failed_PayloadTooLarge, ProcessingLifecycleExt.Email_Failed_PayloadTooLarge)]
+    [InlineData(ProcessingLifecycle.Email_Failed_ContentTooLarge, ProcessingLifecycleExt.Email_Failed_ContentTooLarge)]
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientReserved, ProcessingLifecycleExt.Email_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.Email_Failed_SuppressedRecipient, ProcessingLifecycleExt.Email_Failed_SuppressedRecipient)]
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientNotIdentified, ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified)]
@@ -379,8 +371,7 @@ public class NotificationDeliveryManifestMapperTests
         var result = manifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
-        var emailResult = result.Recipients[0] as EmailDeliveryManifestExt;
-        Assert.NotNull(emailResult);
+        var emailResult = Assert.IsType<EmailDeliveryManifestExt>(Assert.Single(result.Recipients));
         Assert.Equal(expected, emailResult.Status);
     }
 }

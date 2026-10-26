@@ -62,7 +62,7 @@ public class TriggerController(
     }
 
     /// <summary>
-    /// Endpoint to trigger processing for one pair of email notifications (normal and composed). This is intended for testing and debugging purposes, and should not be used in production
+    /// Endpoint to trigger processing for one pair of email notifications (normal using the <see cref="SendingTimePolicy.Anytime"/> policy, and composed). This is intended for testing and debugging purposes, and should not be used in production
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
@@ -71,8 +71,29 @@ public class TriggerController(
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_SendEmailNotifications(CancellationToken cancellationToken = default)
     {
-        await _emailNotificationService.SendNotification(cancellationToken);
+        await _emailNotificationService.SendNotification(SendingTimePolicy.Anytime, cancellationToken);
         await _emailNotificationService.SendComposedNotification(cancellationToken);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Triggers email notification processing restricted to the <see cref="SendingTimePolicy.Daytime"/> window. This is intended for testing and debugging purposes, and should not be used in production
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window).
+    /// </returns>
+    [HttpPost]
+    [Route("sendemaildaytime")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_SendEmailNotificationsDaytime(CancellationToken cancellationToken = default)
+    {
+        if (!_scheduleService.CanSendEmailNow())
+        {
+            return Ok();
+        }
+
+        await _emailNotificationService.SendNotification(SendingTimePolicy.Daytime, cancellationToken);
         return Ok();
     }
 

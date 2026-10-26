@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Orders;
@@ -26,6 +27,8 @@ public static class PostgreUtil
     private static readonly Lazy<SmsNotificationRepository> _smsNotificationRepo = new(() =>
         (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).First(s => s is SmsNotificationRepository));
 
+    private static readonly Lazy<UnitOfWorkRepository> _unitOfWorkRepo = new(() => new UnitOfWorkRepository(_dataSource.Value));
+
     private static NpgsqlDataSource DataSource => _dataSource.Value;
 
     private static NpgsqlDataSource AdminDataSource => _adminDataSource.Value;
@@ -35,6 +38,8 @@ public static class PostgreUtil
     private static EmailNotificationRepository EmailNotificationRepo => _emailNotificationRepo.Value;
 
     private static SmsNotificationRepository SmsNotificationRepo => _smsNotificationRepo.Value;
+
+    private static UnitOfWorkRepository UnitOfWorkRepo => _unitOfWorkRepo.Value;
 
     public static async Task<Guid> PopulateDBWithEmailOrderAndReturnId(string? sendersReference = null)
     {
@@ -100,9 +105,8 @@ public static class PostgreUtil
         return (o, e);
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, EmailNotificationResultType? resultType = null)
-    {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SendingTimePolicy? emailSendingTimePolicy = null, SendingTimePolicy? smsSendingTimePolicy = null, EmailNotificationResultType? resultType = null)    {
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy, smsSendingTimePolicy);
 
         if (sendersReference != null)
         {
@@ -266,11 +270,21 @@ public static class PostgreUtil
         await EmailNotificationRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
         await EmailNotificationRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
 
-        await EmailNotificationRepo.UpdateSendStatus(emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
-        await EmailNotificationRepo.UpdateSendStatus(emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
+        UnitOfWork unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await EmailNotificationRepo.UpdateSendStatusAsync(unitOfWork, emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
 
-        await SmsNotificationRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Delivered);
-        await SmsNotificationRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Delivered);
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await EmailNotificationRepo.UpdateSendStatusAsync(unitOfWork, emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
+
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await SmsNotificationRepo.UpdateSendStatusAsync(unitOfWork, smsNotificationFirst.Id, SmsNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
+
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await SmsNotificationRepo.UpdateSendStatusAsync(unitOfWork, smsNotificationSecond.Id, SmsNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
 
         await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
@@ -642,17 +656,18 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -719,10 +734,11 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -808,17 +824,18 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v2(
+        SELECT notifications.insertorder_v3(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @sendingtimepolicy,
+            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid
+            @orderchainid,
+            @emailsendingtimepolicy
         )
         """;
 
@@ -882,10 +899,11 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@sendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 

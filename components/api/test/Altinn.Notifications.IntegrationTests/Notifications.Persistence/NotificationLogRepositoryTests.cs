@@ -23,6 +23,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class NotificationLogRepositoryTests : IAsyncLifetime
 {
+    private static readonly UnitOfWorkRepository _unitOfWorkRepository = new(ServiceUtil.GetSharedDataSource());
+
     private readonly List<Guid> _orderIdsToCleanup = [];
     private readonly List<Guid> _orderChainIdsToCleanup = [];
 
@@ -1076,7 +1078,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             Recipients = [new Altinn.Notifications.Core.Models.Recipient([new SmsAddressPoint("+4799999999")])],
             Templates =
@@ -1116,19 +1118,28 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             smsNotification,
             DateTime.UtcNow.AddDays(2));
 
-        await smsNotificationRepository.UpdateSendStatus(
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await smsNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             smsNotificationId,
             SmsNotificationResultType.Sending);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
-        await smsNotificationRepository.UpdateSendStatus(
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await smsNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             smsNotificationId,
             SmsNotificationResultType.Accepted,
             gatewayReference);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
-        await smsNotificationRepository.UpdateSendStatus(
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await smsNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             null,
             SmsNotificationResultType.Delivered,
             gatewayReference);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
     }
 
     private static async Task RegisterShipmentWithDeliveredEmailNotification(
@@ -1179,7 +1190,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = sendersReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Email,
             Recipients = [new Altinn.Notifications.Core.Models.Recipient([new EmailAddressPoint("recipient@altinnxyz.no")])],
             Templates =
@@ -1223,18 +1234,27 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
             emailNotification,
             DateTime.UtcNow.AddDays(2));
 
-        await emailNotificationRepository.UpdateSendStatus(
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await emailNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             emailNotificationId,
             EmailNotificationResultType.Sending);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
-        await emailNotificationRepository.UpdateSendStatus(
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await emailNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             emailNotificationId,
             EmailNotificationResultType.Succeeded,
             operationId);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
-        await emailNotificationRepository.UpdateSendStatus(
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await emailNotificationRepository.UpdateSendStatusAsync(
+            unitOfWork,
             null,
             EmailNotificationResultType.Delivered,
             operationId);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
     }
 }

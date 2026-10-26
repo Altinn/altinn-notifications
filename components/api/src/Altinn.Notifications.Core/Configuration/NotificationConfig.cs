@@ -26,6 +26,16 @@ public class NotificationConfig
     public int SmsSendWindowEndHour { get; set; } = 17;
 
     /// <summary>
+    /// Start hour of the email send window, used for email with the Daytime sending time policy
+    /// </summary>
+    public int EmailSendWindowStartHour { get; set; } = 9;
+
+    /// <summary>
+    /// End hour of the email send window, used for email with the Daytime sending time policy
+    /// </summary>
+    public int EmailSendWindowEndHour { get; set; } = 17;
+
+    /// <summary>
     /// The maximum number of entries to return in one status feed page.
     /// </summary>
     public int StatusFeedMaxPageSize { get; set; } = 500;
@@ -83,9 +93,20 @@ public class NotificationConfig
     };
 
     /// <summary>
-    /// Configuration for the process loop of the email notifications background service
+    /// Configuration for the process loop of the email daytime notifications background service
     /// </summary>
-    public ProcessLoopConfig EmailNotificationsProcessLoopConfig { get; set; } = new()
+    public ProcessLoopConfig EmailDaytimeNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the email anytime notifications background service
+    /// </summary>
+    public ProcessLoopConfig EmailAnytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
         PrimaryTaskIdleDelaySeconds = 30,

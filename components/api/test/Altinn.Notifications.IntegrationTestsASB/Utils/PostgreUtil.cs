@@ -54,7 +54,10 @@ public static class PostgreUtil
     {
         using var scope = factory.Host.Services.CreateScope();
         var emailRepo = scope.ServiceProvider.GetRequiredService<IEmailNotificationRepository>();
-        await emailRepo.UpdateSendStatus(notificationId, resultType, operationId);
+        var unitOfWorkRepo = scope.ServiceProvider.GetRequiredService<IUnitOfWorkRepository>();
+        var unitOfWork = await unitOfWorkRepo.StartUnitOfWork();
+        await emailRepo.UpdateSendStatusAsync(unitOfWork, notificationId, resultType, operationId);
+        await unitOfWorkRepo.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>
@@ -143,7 +146,10 @@ public static class PostgreUtil
     {
         using var scope = factory.Host.Services.CreateScope();
         var smsRepo = scope.ServiceProvider.GetRequiredService<ISmsNotificationRepository>();
-        await smsRepo.UpdateSendStatus(notificationId, resultType, gatewayReference);
+        var unitOfWorkRepo = scope.ServiceProvider.GetRequiredService<IUnitOfWorkRepository>();
+        var unitOfWork = await unitOfWorkRepo.StartUnitOfWork();
+        await smsRepo.UpdateSendStatusAsync(unitOfWork, notificationId, resultType, gatewayReference);
+        await unitOfWorkRepo.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>

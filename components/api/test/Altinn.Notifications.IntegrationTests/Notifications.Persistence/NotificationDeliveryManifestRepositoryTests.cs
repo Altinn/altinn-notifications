@@ -17,6 +17,8 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 {
     private const int _notificationExpiryHours = 48;
 
+    private static readonly UnitOfWorkRepository _unitOfWorkRepository = new(ServiceUtil.GetSharedDataSource());
+
     private readonly List<Guid> _orderIdentifiers;
     private readonly List<Guid> _ordersChainIdentifiers;
 
@@ -86,7 +88,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Email,
             Templates =
             [
@@ -150,7 +152,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Created = DateTime.UtcNow,
             Type = OrderType.Notification,
             SendersReference = senderReference,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             NotificationChannel = NotificationChannel.SmsPreferred,
             Templates =
@@ -183,7 +185,9 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
-        await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4");
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await smsRepository.UpdateSendStatusAsync(unitOfWork, smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4", cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
         // Add an Email notification to the order, and set its staus.
         EmailNotification emailNotification = new()
@@ -200,7 +204,9 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
-        await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Failed_RecipientReserved);
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await emailRepository.UpdateSendStatusAsync(unitOfWork, emailNotificationId, EmailNotificationResultType.Failed_RecipientReserved, cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository =
@@ -222,15 +228,13 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Verify SMS recipient
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(recipientPhone, smsDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
 
         // Verify email recipient
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
         Assert.Equal(recipientEmail, emailDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.Email_Failed_RecipientReserved, emailDelivery.Status);
     }
@@ -263,7 +267,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.EmailPreferred,
             Templates =
@@ -333,7 +337,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             NotificationChannel = NotificationChannel.Sms,
             ConditionEndpoint = new Uri(conditionEndpoint),
             Templates =
@@ -389,9 +393,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(deliveryManifest.Recipients);
 
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(phoneNumber, smsDelivery.Destination);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(ProcessingLifecycle.SMS_New, smsDelivery.Status);
@@ -428,7 +430,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.Email,
             Templates =
@@ -484,9 +486,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(deliveryManifest.Recipients);
 
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
 
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
@@ -515,7 +515,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Creator = new(creator),
             Created = DateTime.UtcNow,
             SendersReference = senderReference,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             Templates =
@@ -563,9 +563,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Recipients);
 
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.Equal(phoneNumber, smsDelivery.Destination);
     }
 
@@ -604,7 +602,7 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Daytime,
             ConditionEndpoint = new Uri(conditionEndpoint),
             NotificationChannel = NotificationChannel.EmailPreferred,
             Templates =
@@ -654,13 +652,17 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
-        await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Delivered);
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await emailRepository.UpdateSendStatusAsync(unitOfWork, emailNotificationId, EmailNotificationResultType.Delivered, cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
         // Add an SMS notification to the order, and set its status.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddHours(_notificationExpiryHours));
-        await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "FEF0E7BF-686A-4A6A-A9A1-11B788AD7A95");
+        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await smsRepository.UpdateSendStatusAsync(unitOfWork, smsNotificationId, SmsNotificationResultType.Delivered, "FEF0E7BF-686A-4A6A-A9A1-11B788AD7A95", cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -685,18 +687,14 @@ public sealed class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Check Email notification
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
-        Assert.Single(emailDeliveries);
-
-        var emailDelivery = emailDeliveries[0];
+        var emailDelivery = Assert.Single(emailDeliveries);
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.Email_Delivered, emailDelivery.Status);
 
         // Check SMS notification
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
-        Assert.Single(smsDeliveries);
-
-        var smsDelivery = smsDeliveries[0];
+        var smsDelivery = Assert.Single(smsDeliveries);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
         Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);

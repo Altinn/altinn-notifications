@@ -34,7 +34,7 @@ internal sealed class RecipientComposedEmailValidator : AbstractValidator<Recipi
             When(e => e!.Settings != null, () =>
             {
                 RuleFor(e => e!.Settings)
-                    .SetValidator(new EmailSendingOptionsValidator());
+                    .SetValidator(new EmailSendingOptionsValidator(allowDaytime: false));
 
                 When(e => e!.Settings.Attachments is { Count: > 0 }, () =>
                 {

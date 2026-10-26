@@ -63,7 +63,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
         emailNotificationServiceMock
-            .Setup(e => e.SendNotification(It.IsAny<CancellationToken>()))
+            .Setup(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .Verifiable();
         emailNotificationServiceMock
@@ -82,8 +82,68 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        emailNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        emailNotificationServiceMock.Verify(e => e.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         emailNotificationServiceMock.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenAllowed_TaskQueued()
+    {
+        // Arrange
+        var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+        emailNotificationServiceMock
+            .Setup(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true)
+            .Verifiable();
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        scheduleServiceMock
+            .Setup(e => e.CanSendEmailNow())
+            .Returns(true)
+            .Verifiable();
+
+        var client = GetTestClient(
+            emailNotificationService: emailNotificationServiceMock.Object,
+            notificationScheduleService: scheduleServiceMock.Object);
+
+        string url = _basePath + "/sendemaildaytime";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        scheduleServiceMock.Verify(e => e.CanSendEmailNow(), Times.Once);
+        emailNotificationServiceMock.Verify(e => e.SendNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Trigger_SendEmailNotificationsDaytime_WhenNotAllowed_TaskNotQueued()
+    {
+        // Arrange
+        var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        scheduleServiceMock
+            .Setup(e => e.CanSendEmailNow())
+            .Returns(false)
+            .Verifiable();
+
+        var client = GetTestClient(
+            emailNotificationService: emailNotificationServiceMock.Object,
+            notificationScheduleService: scheduleServiceMock.Object);
+
+        string url = _basePath + "/sendemaildaytime";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        scheduleServiceMock.Verify(e => e.CanSendEmailNow(), Times.Once);
+        emailNotificationServiceMock.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

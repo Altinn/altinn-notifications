@@ -847,7 +847,7 @@ public class EmailAndSmsOrderProcessingServiceTests
             RequestedSendTime = DateTime.UtcNow,
             Created = DateTime.UtcNow.AddDays(-1),
             SendersReference = "senders-reference",
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.EmailAndSms,
             ResourceId = "urn:altinn:resource:ssb-correspondence-dev",
         };

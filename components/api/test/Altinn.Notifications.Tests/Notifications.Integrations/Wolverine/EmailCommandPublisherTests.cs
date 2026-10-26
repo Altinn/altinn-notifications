@@ -1,10 +1,14 @@
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Wolverine.Publishers;
 using Altinn.Notifications.Shared.Commands;
+using Altinn.Notifications.Shared.Exceptions;
 using Altinn.Notifications.Shared.Publishers;
 
 using Moq;
+
+using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
 
@@ -13,66 +17,118 @@ public class EmailCommandPublisherTests
     private readonly Email _email = new(
         Guid.NewGuid(),
         "Test Subject",
-        "Test Body",
+        "<p>Test Body</p>",
         "sender@altinnxyz.no",
         "recipient@altinnxyz.no",
         EmailContentType.Html);
 
-    [Xunit.Fact]
-    public async Task PublishAsync_SuccessfulPublish_PublishesCommand()
+    [Fact]
+    public async Task PublishAsync_WithCancellationToken_ForwardsSameTokenToWolverinePublisher()
     {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        // Arrange
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var wolverinePublisherMock = CreateWolverinePublisherMock();
+        var publisher = new EmailCommandPublisher(wolverinePublisherMock.Object);
 
-        await publisher.PublishAsync(_email, Xunit.TestContext.Current.CancellationToken);
+        // Act
+        await publisher.PublishAsync(_email, cancellationTokenSource.Token);
 
-        messageBusPublisherMock.Verify(
+        // Assert
+        wolverinePublisherMock.Verify(
+            m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), cancellationTokenSource.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishAsync_ValidEmail_MapsAllFieldsToSendEmailCommandAndPublishesOnce()
+    {
+        // Arrange
+        SendEmailCommand? capturedCommand = null;
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<SendEmailCommand, CancellationToken>((command, _) => capturedCommand = command)
+            .Returns(Task.CompletedTask);
+
+        var publisher = new EmailCommandPublisher(wolverinePublisherMock.Object);
+
+        // Act
+        await publisher.PublishAsync(_email, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(_email.NotificationId, capturedCommand.NotificationId);
+        Assert.Equal("Test Subject", capturedCommand.Subject);
+        Assert.Equal("<p>Test Body</p>", capturedCommand.Body);
+        Assert.Equal("sender@altinnxyz.no", capturedCommand.FromAddress);
+        Assert.Equal("recipient@altinnxyz.no", capturedCommand.ToAddress);
+        Assert.Equal(EmailContentType.Html.ToString(), capturedCommand.ContentType);
+
+        wolverinePublisherMock.Verify(
             m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    [Xunit.Fact]
-    public async Task PublishAsync_MessageBusThrowsException_Rethrows()
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsContentTooLarge_ThrowsNotificationSizeLimitExceededWithInnerException()
     {
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
-            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException("Service Bus unavailable"));
+        // Arrange
+        var tooLarge = new ContentTooLargeException("too large", new InvalidOperationException("inner"));
+        var publisher = new EmailCommandPublisher(CreateThrowingWolverinePublisherMock(tooLarge).Object);
 
-        var publisher = CreatePublisher(messageBusPublisherMock);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotificationSizeLimitExceededException>(
+            () => publisher.PublishAsync(_email, TestContext.Current.CancellationToken));
 
-        await Xunit.Assert.ThrowsAsync<TimeoutException>(() => publisher.PublishAsync(_email, Xunit.TestContext.Current.CancellationToken));
+        Assert.Same(tooLarge, exception.InnerException);
+        Assert.Contains(_email.NotificationId.ToString(), exception.Message);
     }
 
-    [Xunit.Fact]
-    public async Task PublishAsync_MapsAllFieldsCorrectlyToSendEmailCommand()
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsOtherException_PropagatesSameException()
     {
-        var notificationId = Guid.NewGuid();
-        var email = new Email(notificationId, "Hello", "<p>World</p>", "from@test.no", "to@test.no", EmailContentType.Html);
+        // Arrange
+        var thrown = new TimeoutException("Service Bus unavailable");
+        var publisher = new EmailCommandPublisher(CreateThrowingWolverinePublisherMock(thrown).Object);
 
-        SendEmailCommand? capturedCommand = null;
-        var messageBusPublisherMock = new Mock<IMessageBusPublisher>();
-        messageBusPublisherMock
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<TimeoutException>(
+            () => publisher.PublishAsync(_email, TestContext.Current.CancellationToken));
+
+        Assert.Same(thrown, exception);
+    }
+
+    [Fact]
+    public async Task PublishAsync_MessageBusThrowsOperationCanceledException_PropagatesSameException()
+    {
+        // Arrange
+        var thrown = new OperationCanceledException();
+        var publisher = new EmailCommandPublisher(CreateThrowingWolverinePublisherMock(thrown).Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => publisher.PublishAsync(_email, TestContext.Current.CancellationToken));
+
+        Assert.Same(thrown, exception);
+    }
+
+    private static Mock<IWolverinePublisher> CreateWolverinePublisherMock()
+    {
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
             .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
-            .Callback<SendEmailCommand, CancellationToken>((cmd, _) => capturedCommand = cmd)
             .Returns(Task.CompletedTask);
 
-        var publisher = CreatePublisher(messageBusPublisherMock);
-
-        await publisher.PublishAsync(email, Xunit.TestContext.Current.CancellationToken);
-
-        Xunit.Assert.NotNull(capturedCommand);
-        Xunit.Assert.Equal("Hello", capturedCommand!.Subject);
-        Xunit.Assert.Equal("<p>World</p>", capturedCommand.Body);
-        Xunit.Assert.Equal("to@test.no", capturedCommand.ToAddress);
-        Xunit.Assert.Equal("from@test.no", capturedCommand.FromAddress);
-        Xunit.Assert.Equal(notificationId, capturedCommand.NotificationId);
-        Xunit.Assert.Equal(EmailContentType.Html.ToString(), capturedCommand.ContentType);
+        return wolverinePublisherMock;
     }
 
-    private static EmailCommandPublisher CreatePublisher(
-        Mock<IMessageBusPublisher> messageBusPublisherMock)
+    private static Mock<IWolverinePublisher> CreateThrowingWolverinePublisherMock(Exception exception)
     {
-        return new EmailCommandPublisher(messageBusPublisherMock.Object);
+        var wolverinePublisherMock = new Mock<IWolverinePublisher>();
+        wolverinePublisherMock
+            .Setup(m => m.PublishCommandAsync(It.IsAny<SendEmailCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        return wolverinePublisherMock;
     }
 }
