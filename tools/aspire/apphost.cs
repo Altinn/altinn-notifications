@@ -62,13 +62,16 @@ if (postgresPort != 5432)
 }
 
 // The test harness control panel always starts, and the mocks are its children in the dashboard so they fold together under it.
-// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them.
+// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them. With
+// Triggers:Enabled it calls the API's trigger endpoints on an interval, like the cron jobs in the cluster, so orders are sent without
+// anyone calling /trigger/send* by hand. Off, the jobs start paused and can still be run from its Triggers tab.
 if (builder.Configuration.GetSection("Simulator").Exists())
 {
     throw new InvalidOperationException("The Simulator settings are now TestHarness: Simulator:Enabled is TestHarness:Intercept, and Port and TimeoutSeconds moved as they are. See tools/aspire/README.md.");
 }
 
 bool interceptEnabled = builder.Configuration.GetValue("TestHarness:Intercept", false);
+bool triggersEnabled = builder.Configuration.GetValue("Triggers:Enabled", true);
 var controlPanelPort = builder.Configuration.GetValue("TestHarness:Port", 5096);
 string controlPanelUrl = "http://localhost:" + controlPanelPort;
 string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : string.Empty;
@@ -80,9 +83,28 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
     .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
+    .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
+    .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
     .WithUrl(controlPanelUrl + "/", "Control panel")
+    .WithUrl(controlPanelUrl + "/#triggers", "Triggers")
     .WithUrl(controlPanelUrl + "/#phone", "Phone")
     .WithUrl(controlPanelUrl + "/#inbox", "Inbox");
+
+// Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
+foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
+{
+    foreach (var setting in job.GetChildren())
+    {
+        controlPanel.WithEnvironment($"TriggerSettings__Jobs__{job.Key}__{setting.Key}", setting.Value ?? string.Empty);
+    }
+}
+
+// With intercept the mocks wait for the control panel and the API for the mocks, so the control panel cannot wait for the API. Its
+// first trigger calls then fail until the API is up.
+if (!interceptEnabled)
+{
+    controlPanel.WaitFor(api);
+}
 
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
@@ -185,13 +207,14 @@ if (linkMobilityInteractive)
     sms.WithEnvironment("SmsGatewaySettings__TimeoutInSeconds", (builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120) + 10).ToString());
 }
 
-// The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
-// turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+// The API's calls to Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints go to local mocks.
+// A system that is turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
 (string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
 [
     ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
     ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
     ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Dialogporten", 5171, "DialogportenSettings__BaseUrl", "/dialogporten/api/v1/"),
     ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
     ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
 ];
@@ -223,9 +246,11 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
     if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
     {
         int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+
+        // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
         foreach (string condition in new[] { "true", "false", "corrupt", "error" })
         {
-            mocks.WithUrl("http://localhost:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
+            mocks.WithUrl("http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
         }
     }
 

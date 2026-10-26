@@ -3,23 +3,33 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.ApiClients.Maskinporten.Config;
+using Altinn.ApiClients.Maskinporten.Handlers;
+using Altinn.ApiClients.Maskinporten.Services;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Integrations.Dialogporten;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Tools.PlatformMocks;
 using Altinn.Notifications.Tools.PlatformMocks.Configuration;
 using Altinn.Notifications.Tools.PlatformMocks.Mocks;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
+using Moq;
 
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -36,6 +46,8 @@ public class PlatformMocksServiceTests
 {
     private const string Person = "12345678901";
     private const string Organization = "310000002";
+
+    private static readonly Guid DeniedDialog = Guid.Parse("00000000-0000-0000-0000-000000000403");
 
     [Fact]
     public async Task Profile_GetUserContactPoints_GivesEveryPersonContactPointsExceptTheListedOnes()
@@ -254,8 +266,102 @@ public class PlatformMocksServiceTests
         Assert.Equal(string.Empty, token.RootElement.GetProperty("scope").GetString());
     }
 
+    [Fact]
+    public async Task Dialogporten_DialogLookup_GivesTheUserAccessToEveryDialogExceptTheDeniedOnes()
+    {
+        await using var mocks = await StartAsync();
+
+        Assert.True(await DialogportenClient(mocks, "end-user-token").CheckUserAccessToDialog(Guid.NewGuid(), TestContext.Current.CancellationToken));
+        Assert.False(await DialogportenClient(mocks, "end-user-token").CheckUserAccessToDialog(DeniedDialog, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Dialogporten_DialogLookupWithoutToken_IsUnauthorized()
+    {
+        await using var mocks = await StartAsync();
+        using var http = new HttpClient();
+
+        using var response = await http.GetAsync(
+            mocks.Urls["dialogporten"] + DialogportenMock.DialogLookupPath + "?instanceRef=urn:altinn:dialog-id:" + Guid.NewGuid(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // The API's Dialogporten client, with the base URL the Aspire app host gives the API and the end user's token from the request.
+    private static DialogportenClient DialogportenClient(RunningMocks mocks, string token)
+    {
+        var authenticationContext = new Mock<IAuthenticationContext>();
+        authenticationContext.Setup(c => c.GetTokenFromContext()).Returns(token);
+        var settings = new DialogportenSettings { Enabled = true, BaseUrl = mocks.Urls["dialogporten"] + "/dialogporten/api/v1/" };
+        return new DialogportenClient(new HttpClient(), Options.Create(settings), authenticationContext.Object);
+    }
+
+    [Fact]
+    public async Task Maskinporten_ConditionClientWithAppHostSettings_GetsItsTokenFromTheMock()
+    {
+        await using var mocks = await StartAsync();
+        string maskinportenUrl = mocks.Urls["maskinporten"];
+
+        // The API's appsettings.Development.json, with the settings the Aspire app host adds on top.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SendConditionClient:MaskinportenSettings:Environment"] = "test",
+                ["SendConditionClient:MaskinportenSettings:Scope"] = "altinn:system/notifications.condition.check",
+                ["SendConditionClient:MaskinportenSettings:TokenEndpoint"] = maskinportenUrl + "/token",
+                ["SendConditionClient:MaskinportenSettings:AssertionAudience"] = maskinportenUrl + "/",
+                ["SendConditionClient:MaskinportenSettings:ClientId"] = "altinn-notifications-local",
+                ["SendConditionClient:MaskinportenSettings:EncodedJwk"] = CreateSigningKey(),
+            })
+            .Build();
+        var settings = new MaskinportenSettings();
+        config.GetSection("SendConditionClient:MaskinportenSettings").Bind(settings);
+
+        // The handler chain AddMaskinportenHttpClient puts in front of the API's condition client. It is built by hand because
+        // the library keeps the settings of the first registration per client type in a static list, for the whole test run.
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var maskinporten = new MaskinportenService(new HttpClient(), NullLogger<MaskinportenService>.Instance, new MemoryTokenCacheProvider(cache));
+        var conditionRequests = new RecordingHandler(new HttpClientHandler());
+        var tokenHandler = new MaskinportenTokenHandler(maskinporten, new SettingsJwkClientDefinition { ClientSettings = settings })
+        {
+            InnerHandler = conditionRequests,
+        };
+
+        var result = await new SendConditionClient(new HttpClient(tokenHandler)).CheckSendCondition(new Uri(mocks.Urls["conditions"] + "/condition/true"));
+
+        Assert.True(result.IsSuccess);
+        var authorization = Assert.Single(conditionRequests.Authorizations);
+        Assert.Equal("Bearer", authorization?.Scheme);
+        Assert.StartsWith("mock-maskinporten-token-", authorization?.Parameter);
+    }
+
     // The API's condition client without the Maskinporten handler in front. The token endpoint is tested on its own above.
     private static SendConditionClient ConditionClient() => new(new HttpClient());
+
+    // A throwaway RSA key as a base64-encoded JWK, as the Aspire app host makes one.
+    private static string CreateSigningKey()
+    {
+        using var rsa = RSA.Create(2048);
+        var key = rsa.ExportParameters(includePrivateParameters: true);
+        var jwk = new Dictionary<string, string>
+        {
+            ["kty"] = "RSA",
+            ["kid"] = "altinn-notifications-local",
+            ["e"] = Base64Url(key.Exponent),
+            ["n"] = Base64Url(key.Modulus),
+            ["d"] = Base64Url(key.D),
+            ["p"] = Base64Url(key.P),
+            ["q"] = Base64Url(key.Q),
+            ["dp"] = Base64Url(key.DP),
+            ["dq"] = Base64Url(key.DQ),
+            ["qi"] = Base64Url(key.InverseQ),
+        };
+
+        return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(jwk));
+
+        static string Base64Url(byte[]? bytes) => Convert.ToBase64String(bytes!).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
 
     private static async Task<RunningMocks> StartAsync(Action<PlatformMocksSettings>? configure = null)
     {
@@ -265,6 +371,8 @@ public class PlatformMocksServiceTests
         settings.Authorization.Port = FreePort();
         settings.Conditions.Port = FreePort();
         settings.Maskinporten.Port = FreePort();
+        settings.Dialogporten.Port = FreePort();
+        settings.Dialogporten.DeniedDialogs = [DeniedDialog];
         settings.Profile.ReservedPersons = ["99999999901"];
         settings.Profile.PersonsWithoutContactPoints = ["88888888801"];
         settings.Profile.OrganizationsWithoutContactPoints = ["999999999"];
@@ -280,6 +388,18 @@ public class PlatformMocksServiceTests
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    // Records the Authorization header of each request that gets past the Maskinporten handler.
+    private sealed class RecordingHandler(HttpMessageHandler inner) : DelegatingHandler(inner)
+    {
+        public List<System.Net.Http.Headers.AuthenticationHeaderValue?> Authorizations { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Authorizations.Add(request.Headers.Authorization);
+            return base.SendAsync(request, cancellationToken);
+        }
     }
 
     private sealed class RunningMocks : IAsyncDisposable

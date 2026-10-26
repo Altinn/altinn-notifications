@@ -2,6 +2,7 @@
 "use strict";
 
 const state = { pending: [], history: [], systems: [], autoReplies: {}, timeoutSeconds: 0, intercept: true };
+const triggers = { apiBaseUrl: "", jobs: [] };
 const templateCache = {};
 let selectedId = null;
 let selectedFrom = null; // "pending" or "history"
@@ -26,11 +27,13 @@ function el(tag, attributes = {}, ...children) {
 }
 
 async function refresh() {
-  const [requests, sms, email] = await Promise.all([fetch("api/state"), fetch("api/mirror/sms"), fetch("api/mirror/email")]);
+  const [requests, jobs, sms, email] = await Promise.all([fetch("api/state"), fetch("api/triggers"), fetch("api/mirror/sms"), fetch("api/mirror/email")]);
   Object.assign(state, await requests.json());
+  Object.assign(triggers, await jobs.json());
   mirror.sms = await sms.json();
   mirror.email = await email.json();
   render();
+  renderTriggers();
   renderPhone();
   renderInbox();
 }
@@ -52,6 +55,7 @@ function render() {
   $("#tab-pending-count").textContent = state.pending.length;
   $("#timeout").textContent = state.intercept ? `Requests time out after ${state.timeoutSeconds} s with 504.` : "";
   $("#intercept-off").hidden = state.intercept;
+  $("#tab-pending-count").textContent = state.pending.length;
   renderAutoReplies();
   renderPending();
   renderHistory();
@@ -293,6 +297,9 @@ function time(value) {
 }
 
 function tick() {
+  for (const node of document.querySelectorAll(".next-run[data-at]")) {
+    node.textContent = `next in ${countdown(node.dataset.at)}`;
+  }
   for (const node of document.querySelectorAll(".countdown[data-expires]")) {
     node.textContent = countdown(node.dataset.expires);
     node.classList.toggle("soon", new Date(node.dataset.expires) - Date.now() < 15000);
@@ -305,6 +312,118 @@ function connect() {
   events.onopen = () => { connection.textContent = "live"; connection.className = "connection live"; };
   events.onmessage = () => refresh();
   events.onerror = () => { connection.textContent = "reconnecting…"; connection.className = "connection down"; };
+}
+
+// The Triggers tab. The cards are built once and then updated in place, so a field being edited or an open history survives
+// the refresh after every run.
+function renderTriggers() {
+  $("#triggers-api").textContent = triggers.apiBaseUrl ? `API: ${triggers.apiBaseUrl}` : "";
+  const on = triggers.jobs.filter(j => j.enabled).length;
+  const failing = triggers.jobs.some(j => j.lastRun && !j.lastRun.succeeded);
+  const count = $("#tab-triggers-count");
+  count.textContent = `${on} on`;
+  count.classList.toggle("failing", failing);
+  count.title = failing ? "A trigger failed on its last run" : "";
+
+  const list = $("#trigger-list");
+  for (const job of triggers.jobs) {
+    let card = list.querySelector(`[data-name="${job.name}"]`);
+    if (!card) {
+      card = buildTriggerCard(job);
+      list.append(card);
+    }
+    updateTriggerCard(card, job);
+  }
+}
+
+function buildTriggerCard(job) {
+  const card = $("#trigger-template").content.firstElementChild.cloneNode(true);
+  card.dataset.name = job.name;
+  $(".name", card).textContent = job.path;
+  $(".description", card).textContent = job.description;
+  $(".cluster", card).textContent = job.clusterSchedule ? `Cluster: ${job.clusterSchedule}` : "Not scheduled in the cluster";
+
+  const enabled = $("input[name=enabled]", card);
+  const interval = $("input[name=interval]", card);
+  const hours = $("input[name=hours]", card);
+  enabled.addEventListener("change", () => updateTrigger(card, { enabled: enabled.checked }));
+  interval.addEventListener("change", () => updateTrigger(card, { intervalSeconds: Number(interval.value) }));
+  hours.addEventListener("change", () => updateTrigger(card, { hours: hours.value.trim() }));
+  $("button.run", card).addEventListener("click", () => runTrigger(card));
+  return card;
+}
+
+function updateTriggerCard(card, job) {
+  const setValue = (input, value) => { if (document.activeElement !== input) input.value = value; };
+  $("input[name=enabled]", card).checked = job.enabled;
+  setValue($("input[name=interval]", card), job.intervalSeconds);
+  setValue($("input[name=hours]", card), job.hours);
+  card.classList.toggle("paused", !job.enabled);
+  $("button.run", card).disabled = job.running;
+
+  let status = "";
+  if (job.running) status = el("span", { class: "badge running" }, "running…");
+  else if (!job.enabled) status = el("span", { class: "badge" }, "paused");
+  else if (job.outsideHours) status = el("span", { class: "badge" }, `waiting for ${job.hours} UTC`);
+  else if (job.nextRunAt) status = el("span", { class: "next-run", "data-at": job.nextRunAt }, `next in ${countdown(job.nextRunAt)}`);
+  $(".trigger-state", card).replaceChildren(status);
+
+  const meta = $(".last-run", card);
+  meta.replaceChildren();
+  const last = job.lastRun;
+  fillMeta(meta, last
+    ? [
+      ["Last run", `${time(last.startedAt)} (${last.source})`],
+      ["Status", statusBadge(last)],
+      ["Duration", `${last.durationMs} ms`],
+      ["Response", last.response ? el("code", { class: "response" }, last.response) : null],
+    ]
+    : [["Last run", "not yet"]]);
+
+  $(".run-count", card).textContent = job.history.length;
+  $(".run-table tbody", card).replaceChildren(...job.history.map(run => el("tr", {},
+    el("td", {}, time(run.startedAt)),
+    el("td", {}, run.source),
+    el("td", {}, statusBadge(run)),
+    el("td", {}, `${run.durationMs} ms`),
+    el("td", { class: "response", title: run.response }, run.response))));
+}
+
+function statusBadge(run) {
+  return run.status === null
+    ? el("span", { class: "status-5" }, "no response")
+    : el("span", { class: `status-${String(run.status)[0]}` }, String(run.status));
+}
+
+async function updateTrigger(card, change) {
+  const error = $(".error", card);
+  error.textContent = "";
+  const response = await fetch(`api/triggers/${encodeURIComponent(card.dataset.name)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(change),
+  });
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({}));
+    error.textContent = Object.values(problem.errors ?? {}).flat().join(" ") || problem.error || `Failed with ${response.status}`;
+    await refresh();
+  }
+}
+
+async function runTrigger(card) {
+  const error = $(".error", card);
+  error.textContent = "";
+  $("button.run", card).disabled = true;
+  const response = await fetch(`api/triggers/${encodeURIComponent(card.dataset.name)}/run`, { method: "POST" });
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({}));
+    error.textContent = problem.error ?? `Failed with ${response.status}`;
+  }
+  await refresh();
+}
+
+async function setAllTriggers(enabled) {
+  await fetch("api/triggers", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
 }
 
 // The Phone tab: one conversation per recipient number, newest message last, like a phone's messages app.
@@ -446,14 +565,18 @@ function recipients(email) {
 }
 
 function showTab() {
-  const tab = ["#phone", "#inbox"].includes(location.hash) ? location.hash.slice(1) : "requests";
+  const tab = ["#triggers", "#phone", "#inbox"].includes(location.hash) ? location.hash.slice(1) : "requests";
   for (const link of document.querySelectorAll(".tabs a")) {
     link.setAttribute("aria-selected", String(link.dataset.tab === tab));
   }
   $("#tab-requests").hidden = tab !== "requests";
+  $("#tab-triggers").hidden = tab !== "triggers";
   $("#tab-phone").hidden = tab !== "phone";
   $("#tab-inbox").hidden = tab !== "inbox";
 }
+
+$("#pause-all").addEventListener("click", () => setAllTriggers(false));
+$("#resume-all").addEventListener("click", () => setAllTriggers(true));
 
 $("#phone-filter").addEventListener("change", renderPhone);
 window.addEventListener("hashchange", showTab);
