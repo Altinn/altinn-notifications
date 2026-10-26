@@ -2,6 +2,8 @@
 #:property AspireUseCliBundle=true
 
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -113,6 +115,58 @@ else if (acsMode != "real")
     throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
 }
 
+// The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
+// turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+(string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
+[
+    ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
+    ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
+    ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
+    ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
+];
+
+if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
+{
+    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+        .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
+
+    foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
+    {
+        bool enabled = builder.Configuration.GetValue($"Mocks:{name}:Enabled", true);
+        int port = builder.Configuration.GetValue($"Mocks:{name}:Port", defaultPort);
+        mocks.WithEnvironment($"PlatformMocksSettings__{name}__Enabled", enabled.ToString())
+            .WithEnvironment($"PlatformMocksSettings__{name}__Port", port.ToString());
+
+        if (enabled && apiSetting.Length > 0)
+        {
+            api.WithEnvironment(apiSetting, "http://localhost:" + port + apiPath);
+        }
+    }
+
+    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
+    {
+        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
+        {
+            mocks.WithUrl("http://localhost:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
+        }
+    }
+
+    // The condition client gets its token from the Maskinporten mock instead of test.maskinporten.no. The grant still has to be
+    // signed, so each run makes a key of its own. The mock does not check it.
+    if (builder.Configuration.GetValue("Mocks:Maskinporten:Enabled", true))
+    {
+        string maskinportenUrl = "http://localhost:" + builder.Configuration.GetValue("Mocks:Maskinporten:Port", 5197);
+        api.WithEnvironment("SendConditionClient__MaskinportenSettings__TokenEndpoint", maskinportenUrl + "/token")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__AssertionAudience", maskinportenUrl + "/")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__ClientId", "altinn-notifications-local")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__EncodedJwk", CreateSigningKey());
+    }
+
+    api.WaitFor(mocks);
+}
+
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
@@ -133,6 +187,32 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// A throwaway RSA key as a base64-encoded JWK, the format MaskinportenSettings:EncodedJwk takes.
+static string CreateSigningKey()
+{
+    using var rsa = RSA.Create(2048);
+    var key = rsa.ExportParameters(includePrivateParameters: true);
+    var jwk = new Dictionary<string, string>
+    {
+        ["kty"] = "RSA",
+        ["kid"] = "altinn-notifications-local",
+        ["alg"] = "RS256",
+        ["use"] = "sig",
+        ["e"] = Base64Url(key.Exponent),
+        ["n"] = Base64Url(key.Modulus),
+        ["d"] = Base64Url(key.D),
+        ["p"] = Base64Url(key.P),
+        ["q"] = Base64Url(key.Q),
+        ["dp"] = Base64Url(key.DP),
+        ["dq"] = Base64Url(key.DQ),
+        ["qi"] = Base64Url(key.InverseQ),
+    };
+
+    return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(jwk));
+
+    static string Base64Url(byte[]? bytes) => Convert.ToBase64String(bytes!).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
