@@ -1,0 +1,6 @@
+{
+  "name": "200 No contact points",
+  "status": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": { "contactPointsList": [] }
+}
