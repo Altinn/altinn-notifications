@@ -134,7 +134,7 @@ The API looks up contact points in Profile, names in Register and access in Auth
 
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
-* The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
+* The Maskinporten settings use the configurable endpoints in `Altinn.ApiClients.Maskinporten` 10.2.0 and later ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)).
 * With `Simulator:Enabled`, requests a mock does not recognise go to the simulator on 5096 instead of a 404.
 
 For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
