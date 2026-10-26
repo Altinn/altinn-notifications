@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_email
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_email_v2
 (
     _email text,
     _from_date timestamptz,
@@ -17,7 +17,10 @@ RETURNS TABLE (
     address text,
     channel text,
     result text,
-    resulttime timestamptz
+    resulttime timestamptz,
+    dialogid text,
+    transmissionid text,
+    senderaddress text
 )
 LANGUAGE sql
 STABLE
@@ -36,16 +39,21 @@ AS $$
         e.toaddress AS address,
         'email'::text AS channel,
         e.result::text AS result,
-        e.resulttime
+        e.resulttime,
+        c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
+        et.fromaddress AS senderaddress
     FROM notifications.emailnotifications e
     JOIN notifications.orders o ON o._id = e._orderid
+    LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
+    LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
     WHERE lower(e.toaddress) = lower(_email)
       AND o.requestedsendtime >= _from_date
       AND o.requestedsendtime <  _to_date
     ORDER BY o.requestedsendtime DESC;
 $$;
 
-COMMENT ON FUNCTION notifications.get_notifications_by_email IS
+COMMENT ON FUNCTION notifications.get_notifications_by_email_v2 IS
 'Retrieves all email notifications sent to a recipient identified by their email address within a given date range.
 Parameters:
 - _email: The email address of the recipient (matched case-insensitively)
@@ -64,4 +72,7 @@ Returns a table with the following columns:
 - address: The address the notification was sent to (the recipient''s email address)
 - channel: The delivery channel (always ''email'' for this function)
 - result: The delivery result status
-- resulttime: When the result was recorded';
+- resulttime: When the result was recorded
+- dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
+- senderaddress: The email address the order was sent from';

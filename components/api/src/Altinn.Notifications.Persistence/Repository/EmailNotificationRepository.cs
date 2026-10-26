@@ -29,13 +29,17 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
-    private const string _getEmailNotificationSql = "SELECT * FROM notifications.claim_email()";
+    private const string _claimAnytimeEmailSql = "SELECT * FROM notifications.claim_anytime_email()";
+    private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email()";
     private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
+
+    /// <inheritdoc/>
+    protected override NotificationChannel Channel => NotificationChannel.Email;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
@@ -93,8 +97,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidNotificationIdentifierException">Thrown when both the notification ID and operation ID are null or empty.</exception>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null)
+    public async Task UpdateSendStatusAsync(UnitOfWork unitOfWork, Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null, CancellationToken cancellationToken = default)
     {
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
         var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
@@ -103,27 +106,37 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             throw new InvalidNotificationIdentifierException("The provided Email identifier is invalid.");
         }
 
-        await ExecuteUpdateWithTransactionAsync(
+        var (identifier, identifierType) = hasNotificationId
+            ? (notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId)
+            : (operationId!, SendStatusIdentifierType.OperationId);
+
+        await ExecuteUpdateAsync(
+            unitOfWork,
             _updateEmailNotificationSql,
             pgcom =>
             {
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, hasNotificationId ? notificationId!.Value : DBNull.Value);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, string.IsNullOrWhiteSpace(deliveryReport) ? DBNull.Value : deliveryReport);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)totalAttachmentSizeBytes ?? DBNull.Value);
             },
-            NotificationChannel.Email,
-            notificationId,
-            operationId,
-            statusIsAcceptedOrSucceeded: status == EmailNotificationResultType.Succeeded,
-            SendStatusIdentifierType.OperationId);
+            identifier,
+            identifierType,
+            isIntermediateStatus: status == EmailNotificationResultType.Succeeded,
+            cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken)
+    public async Task<Email?> GetNewNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
-        await using NpgsqlCommand pgcom = new(_getEmailNotificationSql, unitOfWork.Connection, unitOfWork.Transaction);
+        string claimEmailForSending = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _claimDaytimeEmailSql,
+            _ => _claimAnytimeEmailSql,
+        };
+
+        await using NpgsqlCommand pgcom = new(claimEmailForSending, unitOfWork.Connection, unitOfWork.Transaction);
         return await ReadNewNotificationAsync(pgcom, cancellationToken);
     }
 

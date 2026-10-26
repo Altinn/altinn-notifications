@@ -24,6 +24,7 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/future/dashboard")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+
 [Authorize(Policy = AuthorizationConstants.POLICY_SUPPORT_DASHBOARD_ACCESS)]
 public class DashboardController : ControllerBase
 {

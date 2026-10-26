@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -22,6 +19,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, false)]
         [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, false)]
         [InlineData(SmsNotificationResultType.Failed, false)]
+        [InlineData(SmsNotificationResultType.Failed_ContentTooLarge, false)]
         public void IsSuccessResult_CheckResultForAllEnums(SmsNotificationResultType result, bool expectedIsSuccess)
         {
             bool actualIsSuccess = SmsNotificationSummaryService.IsSuccessResult(result);
@@ -42,6 +40,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(SmsNotificationResultType.Failed_Undelivered, "The SMS was not delivered due to invalid number or no available route to destination.")]
         [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not delivered because the recipient's mobile number was not found.")]
         [InlineData(SmsNotificationResultType.Failed_Rejected, "The SMS was not delivered because it was rejected.")]
+        [InlineData(SmsNotificationResultType.Failed_TTL, "The SMS was in indefinite state Accepted for too long (TTL), and was subsequently set to failed.")]
+        [InlineData(SmsNotificationResultType.Failed_ContentTooLarge, "The SMS was not sent because the SMS message is too large to be queued for sending.")]
         public void GetResultDescription_ExpectedDescription(SmsNotificationResultType result, string expected)
         {
             string actual = SmsNotificationSummaryService.GetResultDescription(result);

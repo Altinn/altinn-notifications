@@ -2,11 +2,15 @@ using System.Collections.Immutable;
 using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Utils;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -22,9 +26,16 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     protected abstract string SourceIdentifier { get; }
 
-    private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
+    /// <summary>
+    /// Gets the notification channel handled by the derived class, used when reporting update failures.
+    /// </summary>
+    protected abstract NotificationChannel Channel { get; }
+
     private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v3(@alternateid)";
+    
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
+
+    private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
@@ -221,38 +232,7 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
-    /// Validates the result of an update operation and throws appropriate exceptions if the update failed.
-    /// </summary>
-    /// <param name="resultAlternateId">The alternate ID returned from the update operation, or null if not found.</param>
-    /// <param name="isExpired">Indicates whether the notification has expired.</param>
-    /// <param name="identifier">The identifier value used for the update.</param>
-    /// <param name="identifierType">The type of identifier used (NotificationId, OperationId, or GatewayReference).</param>
-    /// <param name="channel">The notification channel (Email or SMS).</param>
-    /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database.</exception>
-    /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (TTL).</exception>
-    protected static void HandleUpdateResult(
-        Guid? resultAlternateId,
-        bool isExpired,
-        string identifier,
-        Core.Enums.SendStatusIdentifierType identifierType,
-        Core.Enums.NotificationChannel channel)
-    {
-        // Notification not found in database
-        if (resultAlternateId == null)
-        {
-            throw new Core.Exceptions.NotificationNotFoundException(channel, identifier, identifierType);
-        }
-
-        // Notification has passed its expiry time (TTL) - update was blocked
-        if (isExpired)
-        {
-            throw new Core.Exceptions.NotificationExpiredException(channel, identifier, identifierType);
-        }
-    }
-
-    /// <summary>
-    /// Executes a notification status update within a transaction, handling result validation and order completion.
-    /// This method provides a common template for updating notification status across different notification types.
+    /// Executes a notification status update within the caller's unit of work, handling result validation and order completion.
     /// </summary>
     /// <remarks>
     /// The SQL function called via <paramref name="sqlCommand"/> MUST return a table with exactly three columns in this order:
@@ -262,82 +242,75 @@ public abstract class NotificationRepositoryBase
     /// <item><description>Column 2: is_expired (boolean) - True if the notification has passed its expiry time</description></item>
     /// </list>
     ///
-    /// Identifier precedence for error reporting mirrors SQL function behavior:
-    /// If notificationId is provided (non-null and non-empty), it takes precedence for error messages.
-    /// Otherwise, the secondaryIdentifier is used.
+    /// The method never commits or rolls back. The caller owns the unit of work and is responsible for both.
     /// </remarks>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
     /// <param name="sqlCommand">The SQL command text to execute.</param>
     /// <param name="parameters">Action to configure the command parameters before execution.</param>
-    /// <param name="channel">The notification channel (Email or SMS).</param>
-    /// <param name="notificationId">The notification ID (takes precedence for error reporting if provided).</param>
-    /// <param name="secondaryIdentifier">The secondary identifier (operationId or gatewayReference).</param>
-    /// <param name="statusIsAcceptedOrSucceeded">The current status of the notification indicating whether the status is accepted or succeeded.</param>
-    /// <param name="secondaryIdentifierType">The type of the secondary identifier (OperationId or GatewayReference).</param>    
+    /// <param name="identifier">The identifier reported if the update fails. Callers should mirror the SQL function's lookup precedence.</param>
+    /// <param name="identifierType">The type of <paramref name="identifier"/>.</param>
+    /// <param name="isIntermediateStatus">Whether the new status is an intermediate one that should skip order completion.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
-    /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
-    protected virtual async Task ExecuteUpdateWithTransactionAsync(
+    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the given identifiers.</exception>
+    /// <exception cref="NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
+    protected async Task ExecuteUpdateAsync(
+        Core.Models.UnitOfWork unitOfWork,
         string sqlCommand,
         Action<NpgsqlCommand> parameters,
-        Core.Enums.NotificationChannel channel,
-        Guid? notificationId,
-        string? secondaryIdentifier,
-        bool statusIsAcceptedOrSucceeded,
-        Core.Enums.SendStatusIdentifierType secondaryIdentifierType)
+        string identifier,
+        SendStatusIdentifierType identifierType,
+        bool isIntermediateStatus,
+        CancellationToken cancellationToken)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        var connection = unitOfWork.Connection;
+        var transaction = unitOfWork.Transaction;
 
-        try
+        await using NpgsqlCommand pgcom = new(sqlCommand, connection, transaction);
+        parameters(pgcom);
+
+        Guid? resultAlternateId = null;
+        bool wasUpdated = false;
+        bool isExpired = false;
+
+        await using (var reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            await using NpgsqlCommand pgcom = new(sqlCommand, connection, transaction);
-            parameters(pgcom);
-
-            // Execute and read the result table
-            Guid? resultAlternateId = null;
-            bool wasUpdated = false;
-            bool isExpired = false;
-
-            await using (var reader = await pgcom.ExecuteReaderAsync())
+            if (await reader.ReadAsync(cancellationToken))
             {
-                if (await reader.ReadAsync())
-                {
-                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
-                    wasUpdated = reader.GetBoolean(1);
-                    isExpired = reader.GetBoolean(2);
-                }
+                resultAlternateId = await reader.IsDBNullAsync(0, cancellationToken) ? null : reader.GetGuid(0);
+                wasUpdated = reader.GetBoolean(1);
+                isExpired = reader.GetBoolean(2);
             }
-
-            // Determine which identifier to use for error reporting (mirror SQL precedence)
-            // NotificationId takes priority if provided (non-null and non-empty)
-            var (identifierForError, identifierTypeForError) = notificationId.HasValue && notificationId != Guid.Empty
-                ? (notificationId.Value.ToString(), Core.Enums.SendStatusIdentifierType.NotificationId)
-                : (secondaryIdentifier!, secondaryIdentifierType);
-
-            // Handle not found or expired cases
-            HandleUpdateResult(resultAlternateId, isExpired, identifierForError, identifierTypeForError, channel);
-
-            // Proceed with order completion logic if update was successful
-            // Skip order completion check for intermediate statuses (Succeeded, Accepted)
-            if (wasUpdated && resultAlternateId.HasValue && !statusIsAcceptedOrSucceeded)
-            {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
-                    resultAlternateId.Value,
-                    connection,
-                    transaction);
-
-                if (orderIsSetAsCompleted)
-                {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
-                }
-            }
-
-            await transaction.CommitAsync();
         }
-        catch (Exception)
+
+        // Notification not found in database
+        if (resultAlternateId is not Guid alternateId)
         {
-            await transaction.RollbackAsync();
-            throw;
+            throw new NotificationNotFoundException(Channel, identifier, identifierType);
         }
-    }   
+
+        // Notification has passed its expiry time (TTL) - update was blocked
+        if (isExpired)
+        {
+            throw new NotificationExpiredException(Channel, identifier, identifierType);
+        }
+
+        // Skip order completion when nothing was updated or the status is intermediate (Succeeded, Accepted)
+        if (!wasUpdated || isIntermediateStatus)
+        {
+            return;
+        }
+
+        var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
+            alternateId,
+            connection,
+            transaction);
+
+        if (!orderIsSetAsCompleted)
+        {
+            return;
+        }
+
+        await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
+    }
 }

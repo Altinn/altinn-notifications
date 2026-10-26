@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_shipmentid_v2
 (
     _shipmentid uuid
 )
@@ -15,7 +15,10 @@ RETURNS TABLE (
     address text,
     channel text,
     result text,
-    resulttime timestamptz
+    resulttime timestamptz,
+    dialogid text,
+    transmissionid text,
+    senderaddress text
 )
 LANGUAGE sql
 STABLE
@@ -35,9 +38,14 @@ AS $$
             e.toaddress AS address,
             'email'::text AS channel,
             e.result::text AS result,
-            e.resulttime
+            e.resulttime,
+            c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
+            et.fromaddress AS senderaddress
         FROM notifications.emailnotifications e
         JOIN notifications.orders o ON o._id = e._orderid
+        LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
+        LEFT JOIN notifications.emailtexts et ON et._orderid = o._id
         WHERE o.alternateid = _shipmentid
 
         UNION ALL
@@ -55,16 +63,20 @@ AS $$
             s.mobilenumber AS address,
             'sms'::text AS channel,
             s.result::text AS result,
-            s.resulttime
+            s.resulttime,
+            c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+            c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
+            NULL::text AS senderaddress
         FROM notifications.smsnotifications s
         JOIN notifications.orders o ON o._id = s._orderid
+        LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentid
     )
     SELECT * FROM combined
-    ORDER BY requestedsendtime DESC;
+    ORDER BY requestedsendtime DESC, channel;
 $$;
 
-COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid IS
+COMMENT ON FUNCTION notifications.get_notifications_by_shipmentid_v2 IS
 'Retrieves all email and SMS notifications belonging to a shipment identified by its shipment id (orders.alternateid).
 Parameters:
 - _shipmentid: The shipment id (orders.alternateid) to look up
@@ -81,4 +93,7 @@ Returns a table with the following columns:
 - address: The address the notification was sent to (email address or mobile number)
 - channel: The delivery channel (''email'' or ''sms'')
 - result: The delivery result status
-- resulttime: When the result was recorded';
+- resulttime: When the result was recorded
+- dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
+- senderaddress: The email address the notification was sent from (null for SMS notifications)';

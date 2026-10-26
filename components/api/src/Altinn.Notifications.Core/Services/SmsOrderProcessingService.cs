@@ -116,7 +116,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// </returns>
     private DateTime GetExpirationDateTime(NotificationOrder order)
     {
-        return order.SendingTimePolicy switch
+        return order.SmsSendingTimePolicy switch
         {
             SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
             _ => order.RequestedSendTime.AddHours(48),

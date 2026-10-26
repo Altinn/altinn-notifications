@@ -1,17 +1,18 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the email notification service.
+/// Creates, sends and tracks the status of email notifications.
 /// </summary>
 public interface IEmailNotificationService : INotificationService
 {
     /// <summary>
     /// Builds in-memory email notifications for the given recipient and address points.
-    /// Does not persist. Expiry time is computed internally.
+    /// Does not persist.
     /// </summary>
     /// <param name="orderId">The unique identifier for the order associated with the notification.</param>
     /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
@@ -22,21 +23,24 @@ public interface IEmailNotificationService : INotificationService
     Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends the next pending email notification, if any.
+    /// Sends the next pending email notification that is eligible under the specified sending time policy, if any.
     /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when email notifications should be sent.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns><see langword="true"/> if a pending notification was found; otherwise <see langword="false"/>.</returns>
-    Task<bool> SendNotification(CancellationToken cancellationToken);
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends the next pending composed email notification, if any.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns><see langword="true"/> if a pending composed notification was found; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if a composed notification was claimed and processed; otherwise <see langword="false"/>.</returns>
     Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.
     /// </summary>
+    /// <param name="sendOperationResult">The result of the send operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 }

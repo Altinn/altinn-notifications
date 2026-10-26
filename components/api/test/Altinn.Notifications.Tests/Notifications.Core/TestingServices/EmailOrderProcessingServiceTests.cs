@@ -189,10 +189,73 @@ public class EmailOrderProcessingServiceTests
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<EmailAddressPoint>>(), It.IsAny<EmailRecipient>(), It.IsAny<bool>()), Times.Exactly(order.Recipients.Count));
     }
 
+    [Fact]
+    public async Task ProcessOrder_WhenEmailSendingTimePolicyIsDaytime_ExpiryIsCalculatedBySchedulingService()
+    {
+        // Arrange
+        var requestedSendTime = new DateTime(2025, 8, 25, 20, 0, 0, DateTimeKind.Utc);
+        var daytimeExpiry = new DateTime(2025, 8, 28, 8, 0, 0, DateTimeKind.Utc);
+
+        var order = CreateOrder(requestedSendTime, SendingTimePolicy.Daytime);
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        scheduleServiceMock.Setup(s => s.GetEmailExpirationDateTime(requestedSendTime)).Returns(daytimeExpiry);
+
+        var service = GetTestService(emailService: CreateEmailServiceMock(), notificationScheduleService: scheduleServiceMock.Object);
+
+        // Act
+        var result = await service.ProcessOrder(order);
+
+        // Assert
+        Assert.Equal(daytimeExpiry, result.ExpirationDateTime);
+        scheduleServiceMock.Verify(s => s.GetEmailExpirationDateTime(requestedSendTime), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(null)]
+    public async Task ProcessOrder_WhenEmailSendingTimePolicyIsNotDaytime_ExpiryIs48HoursAfterRequestedSendTime(SendingTimePolicy? emailSendingTimePolicy)
+    {
+        // Arrange
+        var requestedSendTime = new DateTime(2025, 8, 25, 20, 0, 0, DateTimeKind.Utc);
+
+        var order = CreateOrder(requestedSendTime, emailSendingTimePolicy);
+
+        var scheduleServiceMock = new Mock<INotificationScheduleService>();
+        var service = GetTestService(emailService: CreateEmailServiceMock(), notificationScheduleService: scheduleServiceMock.Object);
+
+        // Act
+        var result = await service.ProcessOrder(order);
+
+        // Assert
+        Assert.Equal(requestedSendTime.AddHours(48), result.ExpirationDateTime);
+        scheduleServiceMock.Verify(s => s.GetEmailExpirationDateTime(It.IsAny<DateTime>()), Times.Never);
+    }
+
+    private static IEmailNotificationService CreateEmailServiceMock()
+    {
+        var serviceMock = new Mock<IEmailNotificationService>();
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<EmailAddressPoint>>(), It.IsAny<EmailRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
+        return serviceMock.Object;
+    }
+
+    private static NotificationOrder CreateOrder(DateTime requestedSendTime, SendingTimePolicy? emailSendingTimePolicy)
+    {
+        return new NotificationOrder()
+        {
+            Id = Guid.NewGuid(),
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Email,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
+            Recipients = [new([new EmailAddressPoint("email@test.com")], organizationNumber: "123456")]
+        };
+    }
+
     private static EmailOrderProcessingService GetTestService(
          IEmailNotificationService? emailService = null,
          IContactPointService? contactPointService = null,
-         IKeywordsService? keywordsService = null)
+         IKeywordsService? keywordsService = null,
+         INotificationScheduleService? notificationScheduleService = null)
     {
         if (emailService == null)
         {
@@ -215,6 +278,8 @@ public class EmailOrderProcessingServiceTests
             keywordsService = keywordsServiceMock.Object;
         }
 
-        return new EmailOrderProcessingService(emailService, contactPointService, keywordsService);
+        notificationScheduleService ??= new Mock<INotificationScheduleService>().Object;
+
+        return new EmailOrderProcessingService(emailService, contactPointService, keywordsService, notificationScheduleService);
     }
 }
