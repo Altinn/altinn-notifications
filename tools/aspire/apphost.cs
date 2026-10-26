@@ -162,13 +162,54 @@ else if (acsMode != "real")
     throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
 }
 
-// The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
-// turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+// SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
+// Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
+// machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
+bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
+if (linkMobilityInteractive && !interceptEnabled)
+{
+    throw new InvalidOperationException("LinkMobility:Interactive needs TestHarness:Intercept.");
+}
+
+// Test-only credentials. The mock sends its delivery reports with them, and sms rejects reports that do not have them.
+const string deliveryReportUsername = "linkmobility-mock";
+const string deliveryReportPassword = "linkmobility-mock-test-password";
+var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+    .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
+    .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
+    .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
+    .WithEnvironment("LinkMobilityProxySettings__FallbackUrl", interceptUrl)
+    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
+    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
+    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)
+    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2).ToString())
+    .WithParentRelationship(controlPanel.Resource);
+
+sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + linkMobilityPort)
+    .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Username", deliveryReportUsername)
+    .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Password", deliveryReportPassword)
+    .WaitFor(linkMobility);
+
+if (interceptEnabled)
+{
+    linkMobility.WaitFor(controlPanel);
+}
+
+if (linkMobilityInteractive)
+{
+    // sms gives up on the gateway after 30 seconds by default, long before an operator has answered.
+    sms.WithEnvironment("SmsGatewaySettings__TimeoutInSeconds", (builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120) + 10).ToString());
+}
+
+// The API's calls to Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints go to local mocks.
+// A system that is turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
 (string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
 [
     ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
     ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
     ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Dialogporten", 5171, "DialogportenSettings__BaseUrl", "/dialogporten/api/v1/"),
     ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
     ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
 ];
@@ -200,9 +241,11 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
     if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
     {
         int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+
+        // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
         foreach (string condition in new[] { "true", "false", "corrupt", "error" })
         {
-            mocks.WithUrl("http://localhost:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
+            mocks.WithUrl("http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
         }
     }
 
