@@ -22,13 +22,13 @@ public class NotificationResultTypeExtensionsTests
         EmailNotificationResultType.Failed_TransientError
     ];
 
-    public static IEnumerable<object[]> PendingSmsResults() => _pendingSmsResults.Select(r => new object[] { r });
+    public static TheoryData<SmsNotificationResultType> PendingSmsResults() => new(_pendingSmsResults);
 
-    public static IEnumerable<object[]> FinalSmsResults() => Enum.GetValues<SmsNotificationResultType>().Except(_pendingSmsResults).Select(r => new object[] { r });
+    public static TheoryData<SmsNotificationResultType> FinalSmsResults() => new(Enum.GetValues<SmsNotificationResultType>().Except(_pendingSmsResults));
 
-    public static IEnumerable<object[]> PendingEmailResults() => _pendingEmailResults.Select(r => new object[] { r });
+    public static TheoryData<EmailNotificationResultType> PendingEmailResults() => new(_pendingEmailResults);
 
-    public static IEnumerable<object[]> FinalEmailResults() => Enum.GetValues<EmailNotificationResultType>().Except(_pendingEmailResults).Select(r => new object[] { r });
+    public static TheoryData<EmailNotificationResultType> FinalEmailResults() => new(Enum.GetValues<EmailNotificationResultType>().Except(_pendingEmailResults));
 
     [Theory]
     [MemberData(nameof(PendingEmailResults))]
