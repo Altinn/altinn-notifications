@@ -1,9 +1,9 @@
 #:sdk Aspire.AppHost.Sdk@13.6.4
 #:property AspireUseCliBundle=true
+#:property TreatProjectReferencesAsResources=false
+#:project ../src/Altinn.Notifications.Aspire.Hosting/Altinn.Notifications.Aspire.Hosting.csproj
 
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -64,7 +64,8 @@ if (postgresPort != 5432)
 // The test harness control panel always starts, and the mocks are its children in the dashboard so they fold together under it.
 // With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them. With
 // Triggers:Enabled it calls the API's trigger endpoints on an interval, like the cron jobs in the cluster, so orders are sent without
-// anyone calling /trigger/send* by hand. Off, the jobs start paused and can still be run from its Triggers tab.
+// anyone calling /trigger/send* by hand. Off, the jobs start paused and can still be run from its Triggers tab or the dashboard.
+// The mocks are wired up by the extensions in tools/src/Altinn.Notifications.Aspire.Hosting.
 if (builder.Configuration.GetSection("Simulator").Exists())
 {
     throw new InvalidOperationException("The Simulator settings are now TestHarness: Simulator:Enabled is TestHarness:Intercept, and Port and TimeoutSeconds moved as they are. See tools/aspire/README.md.");
@@ -72,53 +73,20 @@ if (builder.Configuration.GetSection("Simulator").Exists())
 
 bool interceptEnabled = builder.Configuration.GetValue("TestHarness:Intercept", false);
 bool triggersEnabled = builder.Configuration.GetValue("Triggers:Enabled", true);
-var controlPanelPort = builder.Configuration.GetValue("TestHarness:Port", 5096);
-string controlPanelUrl = "http://localhost:" + controlPanelPort;
-string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : string.Empty;
-
-// The dashboard's own URL, so each held request can link to its trace.
-string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
-var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", launchProfileName: null)
-    .WithEnvironment("TestHarnessSettings__Port", controlPanelPort.ToString())
-    .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
-    .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
-    .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
-    .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
-    .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
-    .WithUrl(controlPanelUrl + "/", "Control panel")
-    .WithUrl(controlPanelUrl + "/#triggers", "Triggers")
-    .WithUrl(controlPanelUrl + "/#phone", "Phone")
-    .WithUrl(controlPanelUrl + "/#inbox", "Inbox");
-
-// Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
-foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
-{
-    foreach (var setting in job.GetChildren())
-    {
-        controlPanel.WithEnvironment($"TriggerSettings__Jobs__{job.Key}__{setting.Key}", setting.Value ?? string.Empty);
-    }
-}
-
-// With intercept the mocks wait for the control panel and the API for the mocks, so the control panel cannot wait for the API. Its
-// first trigger calls then fail until the API is up.
-if (!interceptEnabled)
-{
-    controlPanel.WaitFor(api);
-}
+var controlPanel = builder.AddTestHarness(
+        "testharness-controlpanel",
+        builder.Configuration.GetValue("TestHarness:Port", 5096),
+        interceptEnabled,
+        builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120))
+    .WithTriggers(api, triggersEnabled, builder.Configuration.GetSection("Triggers:Jobs"));
 
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
 if (authMode == "mock")
 {
-    var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
-    string authUrl = "http://localhost:" + authPort;
-    var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
-        .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
-        .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration")
-        .WithParentRelationship(controlPanel.Resource);
-
-    api.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", authUrl + "/authentication/api/v1/openid/")
-        .WaitFor(auth);
+    var auth = builder.AddMockAuth("mock-auth", builder.Configuration.GetValue("Auth:Port", 5094), controlPanel);
+    api.WithMockAuth(auth);
+    controlPanel.WithTestMessageCommands(api, auth);
 }
 else if (authMode != "at23")
 {
@@ -141,24 +109,9 @@ sms.WaitFor(serviceBus);
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
 if (acsMode == "mock")
 {
-    // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
-    const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
-    var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
-    var acs = builder.AddProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
-        .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
-        .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
-        .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
-        .WithEnvironment("AcsMockSettings__MirrorUrl", controlPanelUrl + "/mirror/")
-        .WithParentRelationship(controlPanel.Resource)
+    var acs = builder.AddAcsMock("mock-acs", builder.Configuration.GetValue("Acs:Port", 5095), controlPanel)
         .WaitFor(serviceBus);
-
-    if (interceptEnabled)
-    {
-        acs.WaitFor(controlPanel);
-    }
-
-    email.WithEnvironment("CommunicationServicesSettings__ConnectionString", "endpoint=http://localhost:" + acsPort + "/;accesskey=" + acsAccessKey)
-        .WaitFor(acs);
+    email.WithAcsMock(acs);
 }
 else if (acsMode != "real")
 {
@@ -169,104 +122,37 @@ else if (acsMode != "real")
 // Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
 // machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
 // It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
-var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
+string linkMobilityTarget = builder.Configuration["LinkMobility:Target"] ?? string.Empty;
 bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
-if (linkMobilityInteractive && !interceptEnabled)
-{
-    throw new InvalidOperationException("LinkMobility:Interactive needs TestHarness:Intercept.");
-}
-
-// Test-only credentials. The mock sends its delivery reports with them, and sms rejects reports that do not have them.
-const string deliveryReportUsername = "linkmobility-mock";
-const string deliveryReportPassword = "linkmobility-mock-test-password";
-var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
-    .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
-    .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
-    .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
-    .WithEnvironment("LinkMobilityProxySettings__FallbackUrl", interceptUrl)
-    .WithEnvironment("LinkMobilityProxySettings__MirrorUrl", controlPanelUrl + "/mirror/")
-    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
-    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
-    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)
-    .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2).ToString())
-    .WithParentRelationship(controlPanel.Resource);
-
-sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + linkMobilityPort)
-    .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Username", deliveryReportUsername)
-    .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Password", deliveryReportPassword)
-    .WaitFor(linkMobility);
-
-if (interceptEnabled)
-{
-    linkMobility.WaitFor(controlPanel);
-}
-
-if (linkMobilityInteractive)
-{
-    // sms gives up on the gateway after 30 seconds by default, long before an operator has answered.
-    sms.WithEnvironment("SmsGatewaySettings__TimeoutInSeconds", (builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120) + 10).ToString());
-}
+var linkMobility = builder.AddLinkMobilityMock(
+    "wiremock-linkmobility",
+    builder.Configuration.GetValue("LinkMobility:Port", 5093),
+    controlPanel,
+    linkMobilityTarget,
+    linkMobilityInteractive,
+    builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2));
+sms.WithLinkMobilityMock(linkMobility);
 
 // The API's calls to Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints go to local mocks.
-// A system that is turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
-(string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
-[
-    ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
-    ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
-    ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
-    ("Dialogporten", 5171, "DialogportenSettings__BaseUrl", "/dialogporten/api/v1/"),
-    ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
-    ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
-];
-
-if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
+// Mocks:<system>:Enabled|Port turn a system off or move it.
+bool mocksEnabled = builder.Configuration.GetValue("Mocks:Enabled", true);
+if (mocksEnabled)
 {
-    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
-        .WithEnvironment("PlatformMocksSettings__FallbackUrl", interceptUrl)
-        .WithParentRelationship(controlPanel.Resource);
-
-    if (interceptEnabled)
-    {
-        mocks.WaitFor(controlPanel);
-    }
-
-    foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
-    {
-        bool enabled = builder.Configuration.GetValue($"Mocks:{name}:Enabled", true);
-        int port = builder.Configuration.GetValue($"Mocks:{name}:Port", defaultPort);
-        mocks.WithEnvironment($"PlatformMocksSettings__{name}__Enabled", enabled.ToString())
-            .WithEnvironment($"PlatformMocksSettings__{name}__Port", port.ToString());
-
-        if (enabled && apiSetting.Length > 0)
-        {
-            api.WithEnvironment(apiSetting, "http://localhost:" + port + apiPath);
-        }
-    }
-
-    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
-    {
-        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
-
-        // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
-        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
-        {
-            mocks.WithUrl("http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
-        }
-    }
-
-    // The condition client gets its token from the Maskinporten mock instead of test.maskinporten.no. The grant still has to be
-    // signed, so each run makes a key of its own. The mock does not check it.
-    if (builder.Configuration.GetValue("Mocks:Maskinporten:Enabled", true))
-    {
-        string maskinportenUrl = "http://localhost:" + builder.Configuration.GetValue("Mocks:Maskinporten:Port", 5197);
-        api.WithEnvironment("SendConditionClient__MaskinportenSettings__TokenEndpoint", maskinportenUrl + "/token")
-            .WithEnvironment("SendConditionClient__MaskinportenSettings__AssertionAudience", maskinportenUrl + "/")
-            .WithEnvironment("SendConditionClient__MaskinportenSettings__ClientId", "altinn-notifications-local")
-            .WithEnvironment("SendConditionClient__MaskinportenSettings__EncodedJwk", CreateSigningKey());
-    }
-
-    api.WaitFor(mocks);
+    var mocks = builder.AddPlatformMocks("wiremock-platform", controlPanel, builder.Configuration.GetSection("Mocks"));
+    api.WithPlatformMocks(mocks);
 }
+
+// What the settings above started, in the control panel's details in the dashboard.
+controlPanel.WithActiveSettings(new Dictionary<string, string>
+{
+    ["Auth:Mode"] = authMode,
+    ["Acs:Mode"] = acsMode,
+    ["LinkMobility:Target"] = linkMobilityTarget.Length > 0 ? linkMobilityTarget : "(stub)",
+    ["LinkMobility:Interactive"] = linkMobilityInteractive.ToString(),
+    ["Mocks:Enabled"] = mocksEnabled.ToString(),
+    ["TestHarness:Intercept"] = interceptEnabled.ToString(),
+    ["Triggers:Enabled"] = triggersEnabled.ToString(),
+});
 
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
@@ -288,32 +174,6 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
-}
-
-// A throwaway RSA key as a base64-encoded JWK, the format MaskinportenSettings:EncodedJwk takes.
-static string CreateSigningKey()
-{
-    using var rsa = RSA.Create(2048);
-    var key = rsa.ExportParameters(includePrivateParameters: true);
-    var jwk = new Dictionary<string, string>
-    {
-        ["kty"] = "RSA",
-        ["kid"] = "altinn-notifications-local",
-        ["alg"] = "RS256",
-        ["use"] = "sig",
-        ["e"] = Base64Url(key.Exponent),
-        ["n"] = Base64Url(key.Modulus),
-        ["d"] = Base64Url(key.D),
-        ["p"] = Base64Url(key.P),
-        ["q"] = Base64Url(key.Q),
-        ["dp"] = Base64Url(key.DP),
-        ["dq"] = Base64Url(key.DQ),
-        ["qi"] = Base64Url(key.InverseQ),
-    };
-
-    return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(jwk));
-
-    static string Base64Url(byte[]? bytes) => Convert.ToBase64String(bytes!).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)

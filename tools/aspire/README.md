@@ -173,6 +173,7 @@ With `TestHarness:Intercept` set to `true`, the `mock-acs`, `wiremock-linkmobili
 * The **Phone** link opens its [Phone tab](../src/Altinn.Notifications.Tools.TestHarness/README.md#phone), where every SMS `wiremock-linkmobility` receives shows up as on the recipient's phone, with its delivery status. The app host sets `LinkMobilityProxySettings__MirrorUrl` so the mock sends copies there. They are unmasked, since it is local test data and the control panel only listens on localhost; the mock's own log stays masked.
 * The **Inbox** link opens its [Inbox tab](../src/Altinn.Notifications.Tools.TestHarness/README.md#inbox), the same for every email `mock-acs` receives, with the HTML body in a sandbox without scripts. The app host sets `AcsMockSettings__MirrorUrl` for it.
 * Each held request links to its trace in the dashboard when it has a `traceparent`.
+* While a request is held, the dashboard shows a notification with an **Answer it** link to the GUI. It goes away when the request is answered, times out or is cancelled. Answering stays in the GUI.
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.
 * With `LinkMobility:Interactive` also `true`, every SMS send is held in the control panel, not only unknown requests. See [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy).
@@ -288,6 +289,19 @@ Run the tests with `-e altinn_env=local`, see [Running against the local Aspire 
 
 ## Dashboard actions
 
+### Control panel commands
+
+The `testharness-controlpanel` resource has these actions, so the common steps need no trip to its GUI:
+
+| Action | What it does |
+| :--- | :--- |
+| **Run trigger** | Asks which trigger, calls it now whether its job is paused or not, and shows the run as the response |
+| **Pause triggers** / **Resume triggers** | Pauses or resumes every trigger job, like **Pause all** and **Resume all** in the Triggers tab. Resume also turns on the jobs that are off by default. |
+| **Clear Phone** / **Clear Inbox** | Empties the Phone or Inbox tab |
+| **Send test SMS** / **Send test email** | Asks for a recipient and text, gets a `ttd` token from `mock-auth` and orders an instant SMS or email from `api`. It goes through `sms` or `email` to the mock and shows up in the Phone or Inbox tab. The recipient picks the mock's scenario, e.g. `+4799999901` or `bounce@example.com`. Only with `Auth:Mode` = `mock`. |
+
+The control panel's details also list the settings that decide what the app host started: `Auth:Mode`, `Acs:Mode`, `LinkMobility:Target`, `LinkMobility:Interactive`, `Mocks:Enabled`, `TestHarness:Intercept` and `Triggers:Enabled`. Change them in `appsettings.Local.json` and restart the app host; they are not parameters, because they decide which resources exist.
+
 ### Run tests
 
 Each service has a **Run tests** action. It runs `dotnet test` on that component's solution, e.g. `components/api/Altinn.Notifications.API.slnx`.
@@ -316,6 +330,19 @@ When a `.cs`, `.csproj` or `.json` file changes under a service's `src` folder, 
 * It uses whatever `kubectl config current-context` and namespace you are on.
 * A port-forward only carries HTTP. Service Bus messages still go to the local emulator, so a forwarded service does not see messages from your local services, and the other way round.
 * Use **Use local** to switch back. The normal **Start** or **Restart** fails while the forward holds the port.
+
+## Hosting extensions
+
+The mocks are wired up by the extensions in [Altinn.Notifications.Aspire.Hosting](../src/Altinn.Notifications.Aspire.Hosting/README.md), e.g. `builder.AddAcsMock(...)` and `email.WithAcsMock(acs)`, so `apphost.cs` only reads the settings and connects the resources. The app host references the library with `#:project` and sets `TreatProjectReferencesAsResources=false`, so Aspire compiles against it instead of starting it as a resource.
+
+`Aspire.Hosting` in `Directory.Packages.props` has to be the version of `Aspire.AppHost.Sdk` in `apphost.cs`. A test in the tools tests fails when they differ, so bump both together.
+
+### Why not WireMock.Net.Aspire or Mailpit
+
+Both come up as ready-made alternatives to the mocks here. Neither is used, for these reasons:
+
+* **WireMock.Net.Aspire** is a separate package from the WireMock.Net project, not part of Aspire. `AddWireMock` runs WireMock.Net as a container, set up with JSON mappings or through its admin API. `wiremock-platform` already uses WireMock.Net, but in its own process, because it needs C# callbacks that a container cannot run: Dialogporten looks up its answer in code, unknown requests are forwarded to the control panel, and each request gets a span in the caller's trace. `mock-acs` and `wiremock-linkmobility` are logic rather than lookups: they check the HMAC signature, send delivery reports to Service Bus or `sms`, pick the outcome from the recipient and copy each message to the Phone and Inbox tabs. Moving only the static mocks would add a container and lose the spans, for little gain. It becomes worth a look if mappings need to be changed while the stack runs, beyond what **Auto-reply** in the control panel does.
+* **Mailpit** (`CommunityToolkit.Aspire.Hosting.MailPit`) is a container with an SMTP server and a webmail-like inbox. The email service sends through the ACS API, not SMTP, so `mock-acs` would have to relay each email to it. The Inbox tab already shows every email with its delivery status and an HTML preview. Mailpit could be added later as an optional relay, off by default, if we need to see emails as a real mail client renders them or check their HTML and spam score.
 
 ## Troubleshooting
 

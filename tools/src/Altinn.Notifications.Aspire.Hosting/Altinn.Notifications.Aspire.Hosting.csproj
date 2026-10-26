@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1600
+		</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting" />
+	</ItemGroup>
+
+	<!-- The app host starts the mocks from source, so the extensions need to know where the tools are. -->
+	<ItemGroup>
+		<AssemblyMetadata Include="ToolsSourceDirectory" Value="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))" />
+	</ItemGroup>
+
+</Project>
