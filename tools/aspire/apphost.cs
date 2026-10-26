@@ -1,4 +1,4 @@
-#:sdk Aspire.AppHost.Sdk@13.6.1
+#:sdk Aspire.AppHost.Sdk@13.6.4
 #:property AspireUseCliBundle=true
 
 using System.Diagnostics;
