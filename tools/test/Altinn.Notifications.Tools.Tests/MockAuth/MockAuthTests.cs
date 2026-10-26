@@ -14,6 +14,7 @@ using Altinn.Notifications.Tools.MockAuth.Configuration;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 using Xunit;
@@ -169,6 +170,20 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
         await new ScopeAccessHandler().HandleAsync(context);
 
         return context.HasSucceeded;
+    }
+
+    [Fact]
+    public async Task GetEnterpriseToken_WithCommaSeparatedScopes_ReturnsSpaceSeparatedScopeClaim()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+
+        string token = await client.GetStringAsync(
+            "/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create",
+            TestContext.Current.CancellationToken);
+
+        var jwt = new JsonWebToken(token);
+        Assert.Equal("altinn:serviceowner/notifications.create altinn:serviceowner/notifications.composedemail.create", jwt.GetClaim("urn:altinn:scope").Value);
     }
 
     private static AuthenticationHeaderValue Basic(string username, string password)
