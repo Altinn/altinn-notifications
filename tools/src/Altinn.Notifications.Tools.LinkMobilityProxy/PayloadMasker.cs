@@ -24,6 +24,44 @@ internal static partial class PayloadMasker
         return xml;
     }
 
+    /// <summary>
+    /// Hides the password only.
+    /// </summary>
+    public static string MaskPassword(string text)
+    {
+        return PasswordRegex().Replace(text, "<PW>***</PW>");
+    }
+
+    /// <summary>
+    /// Replaces the content of each <c>&lt;PW&gt;</c> with <c>***</c> and leaves every other byte as it is, so the rest of the body
+    /// keeps its exact bytes, invalid ones included. A <c>&lt;PW&gt;</c> without an end is masked to the end of the body.
+    /// </summary>
+    public static byte[] MaskPassword(ReadOnlySpan<byte> body)
+    {
+        var masked = new MemoryStream(body.Length);
+        while (body.IndexOf("<PW>"u8) is int start and >= 0)
+        {
+            start += "<PW>".Length;
+            masked.Write(body[..start]);
+            masked.Write("***"u8);
+
+            int end = body[start..].IndexOf("</PW>"u8);
+            body = end < 0 ? [] : body[(start + end)..];
+        }
+
+        masked.Write(body);
+        return masked.ToArray();
+    }
+
+    /// <summary>
+    /// Whether a text holds a password that is not masked, e.g. because its body was in an encoding where
+    /// <see cref="MaskPassword(ReadOnlySpan{byte})"/> does not find the ASCII tags.
+    /// </summary>
+    public static bool HasUnmaskedPassword(string text)
+    {
+        return PasswordRegex().Matches(text).Any(m => m.Value != "<PW>***</PW>");
+    }
+
     [GeneratedRegex("<PW>.*?</PW>", RegexOptions.Singleline)]
     private static partial Regex PasswordRegex();
 

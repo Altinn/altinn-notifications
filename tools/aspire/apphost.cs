@@ -168,6 +168,7 @@ else if (acsMode != "real")
 // SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
 // Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
 // machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+// LinkMobility:LogPayloads = Plain logs the payloads unmasked but for the password, to debug what reaches LinkMobility.
 // It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
 var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
 bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
@@ -189,6 +190,8 @@ var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.No
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2).ToString())
+    .WithEnvironment("LinkMobilityProxySettings__LogPayloads", builder.Configuration["LinkMobility:LogPayloads"] ?? "Masked")
+    .WithEnvironment("LinkMobilityProxySettings__PayloadFolder", builder.Configuration["LinkMobility:PayloadFolder"] ?? string.Empty)
     .WithParentRelationship(controlPanel.Resource);
 
 sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + linkMobilityPort)
