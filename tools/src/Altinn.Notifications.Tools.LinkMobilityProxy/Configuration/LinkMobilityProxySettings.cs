@@ -55,4 +55,32 @@ public class LinkMobilityProxySettings
     /// holds up or fails a send.
     /// </summary>
     public string MirrorUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// How request and response payloads are logged. <see cref="PayloadLogMode.Plain"/> is for debugging what reaches LinkMobility,
+    /// and only starts when the proxy listens on localhost only.
+    /// </summary>
+    public PayloadLogMode LogPayloads { get; set; } = PayloadLogMode.Masked;
+
+    /// <summary>
+    /// A folder that gets a byte-exact copy of each request and response body, with only the password masked, e.g. to attach to
+    /// a LinkMobility ticket. Only with <see cref="PayloadLogMode.Plain"/>. Empty means no copies.
+    /// </summary>
+    public string PayloadFolder { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// How the proxy logs request and response payloads.
+/// </summary>
+public enum PayloadLogMode
+{
+    /// <summary>
+    /// The password, recipient numbers and message texts are masked.
+    /// </summary>
+    Masked,
+
+    /// <summary>
+    /// Only the password is masked. Each body is logged as text, as text with invisible characters escaped, and as hex of its bytes.
+    /// </summary>
+    Plain,
 }

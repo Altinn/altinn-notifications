@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 
 using Altinn.Notifications.Tools.LinkMobilityProxy.Configuration;
@@ -21,7 +22,7 @@ namespace Altinn.Notifications.Tools.LinkMobilityProxy;
 /// <summary>
 /// Runs a WireMock server in front of LinkMobility that either forwards to <see cref="LinkMobilityProxySettings.Target"/>
 /// or answers sends itself by <see cref="SmsScenario"/> and sends delivery reports for them, and logs every request and response
-/// with <see cref="PayloadMasker"/> applied.
+/// with <see cref="PayloadMasker"/> applied, or with <see cref="PlainPayload"/> when <see cref="LinkMobilityProxySettings.LogPayloads"/> is Plain.
 /// </summary>
 internal sealed class LinkMobilityProxyService(
     IOptions<LinkMobilityProxySettings> options,
@@ -43,9 +44,13 @@ internal sealed class LinkMobilityProxyService(
 
     private WireMockServer? _server;
 
+    private int _payloadCount;
+
     private string Mode => !string.IsNullOrWhiteSpace(_settings.Target) ? "proxy" : _settings.Interactive ? "interactive" : "stub";
 
     private bool HasFallback => !string.IsNullOrWhiteSpace(_settings.FallbackUrl);
+
+    private bool HasPayloadFolder => !string.IsNullOrWhiteSpace(_settings.PayloadFolder);
 
     /// <summary>
     /// The URL the proxy listens on, once started.
@@ -59,9 +64,16 @@ internal sealed class LinkMobilityProxyService(
             throw new InvalidOperationException("LinkMobilityProxySettings:Interactive needs a FallbackUrl, e.g. the test harness control panel's http://localhost:5096/intercept/.");
         }
 
+        string[] urls = [$"http://localhost:{_settings.Port}"];
+        EnsurePayloadLoggingIsLocal(_settings, urls);
+        if (HasPayloadFolder)
+        {
+            Directory.CreateDirectory(_settings.PayloadFolder);
+        }
+
         _server = WireMockServer.Start(new WireMockServerSettings
         {
-            Urls = [$"http://localhost:{_settings.Port}"],
+            Urls = urls,
             StartAdminInterface = false,
             MaxRequestLogCount = 100,
         });
@@ -104,7 +116,33 @@ internal sealed class LinkMobilityProxyService(
             Mode == "proxy" ? $" to {_settings.Target}" : HasFallback ? $" with fallback to {_settings.FallbackUrl}" : string.Empty,
             Mode != "proxy" && deliveryReports.IsEnabled ? $"to {_settings.DeliveryReportUrl}" : "off");
 
+        if (_settings.LogPayloads == PayloadLogMode.Plain)
+        {
+            logger.LogWarning(
+                "LinkMobility proxy logs payloads in plain text: recipient numbers and message texts, which can hold one-time codes, are not masked. Only <PW> is. Byte-exact copies go to {PayloadFolder}. Set LinkMobilityProxySettings:LogPayloads to Masked when done.",
+                HasPayloadFolder ? Path.GetFullPath(_settings.PayloadFolder) : "no folder");
+        }
+
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Refuses payload settings that could expose recipient numbers and message texts: <see cref="PayloadLogMode.Plain"/> only
+    /// when every URL the proxy listens on is loopback, and <see cref="LinkMobilityProxySettings.PayloadFolder"/> only with Plain.
+    /// </summary>
+    internal static void EnsurePayloadLoggingIsLocal(LinkMobilityProxySettings settings, IEnumerable<string> urls)
+    {
+        if (settings.LogPayloads == PayloadLogMode.Plain
+            && urls.FirstOrDefault(url => !Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsLoopback) is { } exposed)
+        {
+            throw new InvalidOperationException(
+                $"LinkMobilityProxySettings:LogPayloads=Plain logs recipient numbers and message texts, so it needs the proxy to listen on localhost only, not on {exposed}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.PayloadFolder) && settings.LogPayloads != PayloadLogMode.Plain)
+        {
+            throw new InvalidOperationException("LinkMobilityProxySettings:PayloadFolder needs LogPayloads=Plain.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -252,6 +290,12 @@ internal sealed class LinkMobilityProxyService(
             ? string.Join(", ", messages.Select(m => SmsScenarios.Pick(m.Recipient)))
             : "-";
 
+        if (_settings.LogPayloads == PayloadLogMode.Plain)
+        {
+            LogPlain(request, response, scenarios);
+            return;
+        }
+
         logger.LogInformation(
             "LinkMobility {Mode} {Method} {Path} -> {StatusCode} ({Scenario})\nRequest: {RequestBody}\nResponse: {ResponseBody}",
             Mode,
@@ -263,14 +307,84 @@ internal sealed class LinkMobilityProxyService(
             PayloadMasker.Mask(BodyText(response.BodyData)));
     }
 
+    private void LogPlain(IRequestMessage request, IResponseMessage response, string scenarios)
+    {
+        byte[] requestBody = BodyBytes(request.BodyData);
+        byte[] responseBody = BodyBytes(response.BodyData);
+        string? requestType = Header(request.Headers, "Content-Type");
+        string? responseType = Header(response.Headers, "Content-Type");
+
+        logger.LogInformation(
+            "LinkMobility {Mode} {Method} {Path} -> {StatusCode} ({Scenario})\n{Request}\n{Response}{Files}",
+            Mode,
+            request.Method,
+            request.Path,
+            response.StatusCode,
+            scenarios,
+            PlainPayload.Describe("Request", requestBody, requestType),
+            PlainPayload.Describe("Response", responseBody, responseType),
+            WritePayloads(request.DateTime, requestBody, requestType, responseBody, responseType));
+    }
+
+    /// <summary>
+    /// Writes the request and response bodies with only the password masked to <see cref="LinkMobilityProxySettings.PayloadFolder"/>,
+    /// named by time, a running number and the gateway references, and returns a line with their paths for the log.
+    /// </summary>
+    private string WritePayloads(DateTime time, byte[] requestBody, string? requestType, byte[] responseBody, string? responseType)
+    {
+        if (!HasPayloadFolder)
+        {
+            return string.Empty;
+        }
+
+        var request = PlainPayload.MaskedBytes(requestBody, requestType);
+        var response = PlainPayload.MaskedBytes(responseBody, responseType);
+        if (request is null || response is null)
+        {
+            return "\nFiles: [left out: the password could not be masked in the bytes]";
+        }
+
+        var references = GatewayXml.ReadAccepted(PlainPayload.Encoding(responseType).GetString(response)).Select(r => r.Reference!).ToList();
+        string name = string.Join(
+            '-',
+            time.ToUniversalTime().ToString("yyyyMMdd'T'HHmmssfff'Z'", CultureInfo.InvariantCulture),
+            Interlocked.Increment(ref _payloadCount).ToString("D4", CultureInfo.InvariantCulture),
+            references.Count == 0 ? "no-ref" : "ref-" + string.Join('+', references.Take(3).Select(SafeFileName)));
+
+        try
+        {
+            string requestPath = Path.GetFullPath(Path.Combine(_settings.PayloadFolder, name + "-request.xml"));
+            string responsePath = Path.GetFullPath(Path.Combine(_settings.PayloadFolder, name + "-response.xml"));
+            File.WriteAllBytes(requestPath, request);
+            File.WriteAllBytes(responsePath, response);
+            return $"\nFiles: {requestPath}\n       {responsePath}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"\nFiles: [not written: {ex.Message}]";
+        }
+    }
+
+    private static string SafeFileName(string value)
+    {
+        return string.Concat(value.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+    }
+
     // WireMock keeps a body as a string or as bytes, depending on what it detected.
     private static string? BodyText(IBodyData? body)
     {
         return body?.BodyAsString ?? (body?.BodyAsBytes is { } bytes ? Encoding.UTF8.GetString(bytes) : null);
     }
 
+    // The bytes as they went over the wire. A body WireMock only has as a string, such as the stub's own answers, is encoded
+    // as WireMock writes it.
+    private static byte[] BodyBytes(IBodyData? body)
+    {
+        return body?.BodyAsBytes ?? (body?.BodyAsString is { } text ? (body.Encoding ?? Encoding.UTF8).GetBytes(text) : []);
+    }
+
     private static string? Header(IDictionary<string, WireMockList<string>>? headers, string name)
     {
-        return headers is not null && headers.TryGetValue(name, out var values) ? values.FirstOrDefault() : null;
+        return headers?.FirstOrDefault(h => h.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value?.FirstOrDefault();
     }
 }

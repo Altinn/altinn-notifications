@@ -66,6 +66,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
 | `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [control panel](#test-harness-control-panel). Needs `TestHarness:Intercept`. |
 | `LinkMobility:DeliveryReportDelaySeconds` | `2` | Delay between an accepted SMS and its delivery report |
+| `LinkMobility:LogPayloads` | `Masked` | `Plain` logs SMS payloads unmasked but for the password, see [Debugging what LinkMobility gets](#debugging-what-linkmobility-gets) |
+| `LinkMobility:PayloadFolder` | empty | With `Plain`, a folder that gets a byte-exact copy of each request and response |
 
 For example, with Docker, a separate database on 5442 and localtest running:
 
@@ -222,7 +224,7 @@ The cluster schedules are from [docs/architecture/notifications.md](../../docs/a
 
 ## SMS through the LinkMobility proxy
 
-`sms` sends to the `wiremock-linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked. Filter the structured logs on `wiremock-linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
+`sms` sends to the `wiremock-linkmobility` resource instead of LinkMobility. It logs every request and response with the password, recipient numbers and message texts masked, unless you [turn that off](#debugging-what-linkmobility-gets). Filter the structured logs on `wiremock-linkmobility`, or open the trace of an SMS to see the call next to the SMS service's span.
 
 By default it is a stub, so nothing leaves the machine and no credentials are needed. It answers the send and then posts a delivery report to `sms`, so an SMS ends as `SMS_Delivered` like with LinkMobility. The app host gives `wiremock-linkmobility` and `sms` the same test credentials for the report endpoint. The last two digits of the recipient number pick other outcomes, e.g. `+4799999901` ends as `SMS_Failed_Undelivered`, `02` as `SMS_Failed_Expired`, `03` gets no report and `04` is rejected as an invalid recipient. See the [scenarios](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#scenarios).
 
@@ -256,6 +258,22 @@ To send real SMS through LinkMobility's test gateway, set the target in `appsett
 ```
 
 **Use cluster** on `sms` bypasses the proxy, since the cluster's SMS service uses its own gateway settings.
+
+### Debugging what LinkMobility gets
+
+To see exactly what `sms` sends, e.g. when special characters or line breaks come out wrong on the phone, set `LogPayloads` to `Plain`. The proxy then logs each request and response in full but for `<PW>`, once as text, once with invisible characters escaped (`\r`, `\n`, `\u0007`, `[U+00A0]` for a non-breaking space, `[U+FFFD]` where bytes were not valid in the charset) and once as hex of the bytes as they went over the wire. With `PayloadFolder` it also writes each body to a file you can attach to a LinkMobility ticket. It works in stub and proxy mode, and the payload LinkMobility gets is unchanged.
+
+```json
+{
+  "LinkMobility": {
+    "Target": "https://xml-test.pswin.com",
+    "LogPayloads": "Plain",
+    "PayloadFolder": "C:\\data\\claude\\logs\\linkmobility"
+  }
+}
+```
+
+Recipient numbers and message texts, which can hold one-time codes, then end up in the dashboard and the files, so turn it off when done. The proxy logs a warning at startup while it is on, and refuses to start with it unless it listens on localhost only. See [the proxy README](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md#plain-payload-logging).
 
 ## Bruno and k6
 

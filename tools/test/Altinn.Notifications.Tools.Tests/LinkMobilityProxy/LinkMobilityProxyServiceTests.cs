@@ -1,9 +1,12 @@
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Tools.LinkMobilityProxy;
+using Altinn.Notifications.Tools.LinkMobilityProxy.Configuration;
 
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -169,8 +172,177 @@ public class LinkMobilityProxyServiceTests
         Assert.Empty(host.Sender.Sent);
     }
 
+    [Fact]
+    public async Task StubMode_Plain_LogsTextEscapedAndBytesWithOnlyPasswordMasked()
+    {
+        await using var host = await ProxyHost.StartAsync(s => s.LogPayloads = PayloadLogMode.Plain);
+
+        using var http = new HttpClient();
+        using var response = await PostAsync(http, host.Url, OddSendRequest("+4799123456"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var entry = await host.Logger.WaitForAsync("LinkMobility stub POST / -> 200 (Delivered)");
+        Assert.Contains("<PW>***</PW>", entry);
+        Assert.Contains("<RCV>+4799123456</RCV>", entry);
+        Assert.Contains("<TEXT>Kode 123456\r\næøå", entry);
+        Assert.Contains(@"Escaped: <?xml version=""1.0"" encoding=""iso-8859-1""?><SESSION><CLIENT>user</CLIENT><PW>***</PW>", entry);
+        Assert.Contains(@"<TEXT>Kode 123456\r\næøå[U+00A0]a[U+FFFD]</TEXT>", entry);
+
+        // 0D 0A is \r\n, C3 A6 C3 B8 C3 A5 æøå in UTF-8, C2 A0 the NBSP, and FF the invalid byte.
+        Assert.Contains("0D 0A C3 A6 C3 B8 C3 A5 C2 A0 61 FF 3C 2F 54 45 58 54 3E", entry);
+        Assert.Contains("Response: text/xml, ", entry);
+        Assert.DoesNotContain("secret", entry);
+        Assert.DoesNotContain(PlainPayload.Hex("secret"u8.ToArray()), entry);
+    }
+
+    [Fact]
+    public async Task StubMode_Plain_ControlCharacterXmlDoesNotAllow_IsLoggedThoughTheStubRejectsTheSend()
+    {
+        await using var host = await ProxyHost.StartAsync(s => s.LogPayloads = PayloadLogMode.Plain);
+
+        using var http = new HttpClient();
+        using var response = await PostAsync(http, host.Url, OddSendRequest("+4799123456", "\u0007"));
+
+        // XML 1.0 does not allow a raw bell, so the stub cannot read the send.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var entry = await host.Logger.WaitForAsync("LinkMobility stub POST / -> 404 (-)");
+        Assert.Contains("<TEXT>Kode 123456\r\n\u0007æøå", entry);
+        Assert.Contains(@"<TEXT>Kode 123456\r\n\u0007æøå[U+00A0]a[U+FFFD]</TEXT>", entry);
+        Assert.Contains("0D 0A 07 C3 A6", entry);
+        Assert.DoesNotContain("secret", entry);
+    }
+
+    [Fact]
+    public async Task StubMode_PlainWithPayloadFolder_WritesByteExactFilesWithOnlyPasswordMasked()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "linkmobility-proxy-tests", Guid.NewGuid().ToString());
+        try
+        {
+            await using var host = await ProxyHost.StartAsync(s =>
+            {
+                s.LogPayloads = PayloadLogMode.Plain;
+                s.PayloadFolder = folder;
+            });
+
+            using var http = new HttpClient();
+            using var response = await PostAsync(http, host.Url, OddSendRequest("+4799123456"));
+            string reference = Assert.Single(GatewayXml.ReadAccepted(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))).Reference!;
+
+            var entry = await host.Logger.WaitForAsync("LinkMobility stub POST");
+            string requestFile = Assert.Single(Directory.GetFiles(folder, "*-request.xml"));
+            string responseFile = Assert.Single(Directory.GetFiles(folder, "*-response.xml"));
+            Assert.EndsWith($"-0001-ref-{reference}-request.xml", requestFile);
+            Assert.Contains(requestFile, entry);
+            Assert.Equal(PayloadMasker.MaskPassword(OddSendRequest("+4799123456")), await File.ReadAllBytesAsync(requestFile, TestContext.Current.CancellationToken));
+            Assert.Contains($"<REF>{reference}</REF>", await File.ReadAllTextAsync(responseFile, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task StubMode_Plain_WarnsAtStartup()
+    {
+        await using var host = await ProxyHost.StartAsync(s => s.LogPayloads = PayloadLogMode.Plain);
+
+        Assert.Contains(host.Logger.Messages, m => m.StartsWith("LinkMobility proxy logs payloads in plain text", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ProxyMode_Plain_ForwardsBytesUnchangedAndLogsThem()
+    {
+        using var gateway = WireMockServer.Start();
+        gateway.Given(Request.Create().UsingPost()).RespondWith(Response.Create().WithStatusCode(200).WithBody("<SESSION><LOGON>OK</LOGON></SESSION>"));
+        await using var host = await ProxyHost.StartAsync(s =>
+        {
+            s.Target = gateway.Url!;
+            s.LogPayloads = PayloadLogMode.Plain;
+        });
+
+        using var http = new HttpClient();
+        using var response = await PostAsync(http, host.Url, OddSendRequest("+4799123456", "\u0007"));
+
+        Assert.Equal(OddSendRequest("+4799123456", "\u0007"), Assert.Single(gateway.LogEntries).RequestMessage!.BodyAsBytes);
+        var entry = await host.Logger.WaitForAsync("LinkMobility proxy POST");
+        Assert.Contains("<RCV>+4799123456</RCV>", entry);
+        Assert.Contains(@"\u0007æøå[U+00A0]a[U+FFFD]", entry);
+        Assert.Contains("61 FF 3C", entry);
+        Assert.Contains("<SESSION><LOGON>OK</LOGON></SESSION>", entry);
+        Assert.DoesNotContain("secret", entry);
+    }
+
+    [Fact]
+    public async Task Masked_IsTheDefault()
+    {
+        await using var host = await ProxyHost.StartAsync();
+
+        using var http = new HttpClient();
+        using var response = await PostAsync(http, host.Url, OddSendRequest("+4799123456"));
+
+        Assert.Equal(PayloadLogMode.Masked, host.Settings.LogPayloads);
+        var entry = await host.Logger.WaitForAsync("LinkMobility stub POST");
+        Assert.Contains("<TEXT>[masked, ", entry);
+        Assert.DoesNotContain("Escaped:", entry);
+        Assert.DoesNotContain("+4799123456", entry);
+    }
+
+    [Theory]
+    [InlineData("http://localhost:5093")]
+    [InlineData("http://127.0.0.1:5093")]
+    [InlineData("http://[::1]:5093")]
+    public void EnsurePayloadLoggingIsLocal_PlainOnLoopback_IsAllowed(string url)
+    {
+        LinkMobilityProxyService.EnsurePayloadLoggingIsLocal(new LinkMobilityProxySettings { LogPayloads = PayloadLogMode.Plain }, ["http://localhost:5093", url]);
+    }
+
+    [Theory]
+    [InlineData("http://0.0.0.0:5093")]
+    [InlineData("http://*:5093")]
+    [InlineData("http://+:5093")]
+    [InlineData("http://[::]:5093")]
+    [InlineData("http://linkmobility-proxy:5093")]
+    public void EnsurePayloadLoggingIsLocal_PlainNotOnLoopbackOnly_Throws(string url)
+    {
+        var settings = new LinkMobilityProxySettings { LogPayloads = PayloadLogMode.Plain };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LinkMobilityProxyService.EnsurePayloadLoggingIsLocal(settings, ["http://localhost:5093", url]));
+        Assert.Contains(url, ex.Message);
+
+        // Masked logging is fine anywhere.
+        LinkMobilityProxyService.EnsurePayloadLoggingIsLocal(new LinkMobilityProxySettings(), [url]);
+    }
+
+    [Fact]
+    public async Task PayloadFolderWithoutPlain_FailsToStart()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ProxyHost.StartAsync(s => s.PayloadFolder = Path.GetTempPath()));
+    }
+
     private static Task<HttpResponseMessage> PostAsync(HttpClient http, string url, string body)
     {
         return http.PostAsync(url, new StringContent(body, Encoding.UTF8, "text/xml"), TestContext.Current.CancellationToken);
+    }
+
+    private static Task<HttpResponseMessage> PostAsync(HttpClient http, string url, byte[] body)
+    {
+        var content = new ByteArrayContent(body);
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse("text/xml; charset=utf-8");
+        return http.PostAsync(url, content, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// A send whose text has \r\n, <paramref name="extra"/>, æøå, a non-breaking space and an invalid UTF-8 byte, as the bytes
+    /// LinkMobility would get.
+    /// </summary>
+    private static byte[] OddSendRequest(string recipient, string extra = "")
+    {
+        string before = """<?xml version="1.0" encoding="iso-8859-1"?><SESSION><CLIENT>user</CLIENT><PW>secret</PW><MSGLST><MSG><ID>1</ID><TEXT>Kode 123456""" + "\r\n" + extra + "æøå\u00A0a";
+        string after = $"""</TEXT><SND>Altinn</SND><RCV>{recipient}</RCV><TTL>2880</TTL></MSG></MSGLST></SESSION>""";
+        return [.. Encoding.UTF8.GetBytes(before), 0xFF, .. Encoding.UTF8.GetBytes(after)];
     }
 }
