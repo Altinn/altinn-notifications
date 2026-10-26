@@ -69,6 +69,20 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
         Assert.Equal("991825827", result.ClaimsIdentity.FindFirst("urn:altinn:orgNumber")?.Value);
     }
 
+    [Fact]
+    public async Task GetEnterpriseToken_WithCommaSeparatedScopes_ReturnsSpaceSeparatedScopeClaim()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+
+        string token = await client.GetStringAsync(
+            "/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create",
+            TestContext.Current.CancellationToken);
+
+        var jwt = new JsonWebToken(token);
+        Assert.Equal("altinn:serviceowner/notifications.create altinn:serviceowner/notifications.composedemail.create", jwt.GetClaim("urn:altinn:scope").Value);
+    }
+
     private static AuthenticationHeaderValue Basic(string username, string password)
     {
         return new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}")));

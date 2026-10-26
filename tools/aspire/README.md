@@ -133,19 +133,15 @@ The API looks up contact points in Profile, names in Register and access in Auth
 | Profile | 5131 | `PlatformSettings:ApiProfileEndpoint` |
 | Register | 5121 | `PlatformSettings:ApiRegisterEndpoint` |
 | Authorization | 5151 | `PlatformSettings:ApiAuthorizationEndpoint` |
-| Conditions | 5199 | Nothing. Orders point to the condition URLs themselves, which are listed in the URLs column. |
+| Conditions | 5199 | Nothing. Orders point to the condition URLs themselves, which are listed in the URLs column. They use `local.altinn.cloud`, which resolves to 127.0.0.1, since the API does not accept `localhost` in condition URLs. |
 | Maskinporten | 5197 | `SendConditionClient:MaskinportenSettings:TokenEndpoint`, `AssertionAudience`, `ClientId`, and an `EncodedJwk` made for each run |
 
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
-* The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
+* The Maskinporten settings use the configurable endpoints in `Altinn.ApiClients.Maskinporten` 10.2.0 and later ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)).
 * With `TestHarness:Intercept`, requests a mock does not recognise go to the [control panel](#test-harness-control-panel) on 5096 instead of a 404.
 
-For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
-
-```bash
-docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env" usebruno/cli:latest run "test-util/new-auth-token.bru" "v2 (future)/create-notifications" --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
-```
+To run Bruno and k6 against the mocks, see [Bruno and k6](#bruno-and-k6).
 
 The services do not send by themselves locally, since cron jobs call the trigger endpoints in the cluster. Call `POST /notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` on the API to send what is waiting.
 
@@ -174,6 +170,35 @@ The control panel used to be called the simulator. Its settings moved, and the a
 | `Simulator:Enabled` | `TestHarness:Intercept`. The control panel itself always starts now. |
 | `Simulator:Port` | `TestHarness:Port` |
 | `Simulator:TimeoutSeconds` | `TestHarness:TimeoutSeconds` |
+
+## Bruno and k6
+
+Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth` resource) and the platform mocks (`wiremock-platform`) on. No at23 account, token generator credentials or secrets are needed.
+
+### Bruno
+
+`components/api/test/bruno/aspire.env` has test data that matches the platform mocks.
+
+* **Bruno app** (`Bruno.exe`): copy `aspire.env` to `.env` in the collection folder, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token.
+* **Bruno CLI in Docker**: mount the collection read-only, or the CLI writes the token into `environments/v2 aspire.bru`, and point it at the host:
+
+  ```bash
+  docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env"     usebruno/cli:latest run "test-util/new-auth-token.bru" "instant-demo" "v2 (future)" -r     --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
+  ```
+
+  The CLI warns that it cannot save the token to the read-only environment file. That is expected: it keeps the token for the rest of the run.
+
+The condition URLs in `aspire.env` stay on `local.altinn.cloud` also when Bruno runs in Docker, since the API calls them.
+
+Instant SMS and email, future orders to phone numbers, email addresses, persons and organisations, orders with conditions and reminders, and the shipment and status feed lookups all pass. These do not:
+
+* `composed-email`: `new auth token` only asks for `altinn:serviceowner/notifications.create`, not the `notifications.composedemail.create` scope, so they get `403` in every environment. The happy paths also need SAS URLs to real blobs.
+* `notification-log`: need `dialogporten_dialog_id` and `dialogporten_transmission_id`, which no environment sets.
+* `validation-demo-contract`: its `ValidationError` test compares the JSON body with a string, so it fails in every environment.
+
+### k6
+
+Run the tests with `-e altinn_env=local`, see [Running against the local Aspire stack](../../components/api/test/k6/ReadMe.md#running-against-the-local-aspire-stack) in the k6 README.
 
 ## Dashboard actions
 
