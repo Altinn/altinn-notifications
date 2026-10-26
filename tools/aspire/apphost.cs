@@ -62,13 +62,16 @@ if (postgresPort != 5432)
 }
 
 // The test harness control panel always starts, and the mocks are its children in the dashboard so they fold together under it.
-// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them.
+// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them. With
+// Triggers:Enabled it calls the API's trigger endpoints on an interval, like the cron jobs in the cluster, so orders are sent without
+// anyone calling /trigger/send* by hand. Off, the jobs start paused and can still be run from its Triggers tab.
 if (builder.Configuration.GetSection("Simulator").Exists())
 {
     throw new InvalidOperationException("The Simulator settings are now TestHarness: Simulator:Enabled is TestHarness:Intercept, and Port and TimeoutSeconds moved as they are. See tools/aspire/README.md.");
 }
 
 bool interceptEnabled = builder.Configuration.GetValue("TestHarness:Intercept", false);
+bool triggersEnabled = builder.Configuration.GetValue("Triggers:Enabled", true);
 var controlPanelPort = builder.Configuration.GetValue("TestHarness:Port", 5096);
 string controlPanelUrl = "http://localhost:" + controlPanelPort;
 string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : string.Empty;
@@ -80,7 +83,26 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
     .WithEnvironment("TestHarnessSettings__DashboardUrl", dashboardUrl)
-    .WithUrl(controlPanelUrl + "/", "Control panel");
+    .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
+    .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
+    .WithUrl(controlPanelUrl + "/", "Control panel")
+    .WithUrl(controlPanelUrl + "/#triggers", "Triggers");
+
+// Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
+foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
+{
+    foreach (var setting in job.GetChildren())
+    {
+        controlPanel.WithEnvironment($"TriggerSettings__Jobs__{job.Key}__{setting.Key}", setting.Value ?? string.Empty);
+    }
+}
+
+// With intercept the mocks wait for the control panel and the API for the mocks, so the control panel cannot wait for the API. Its
+// first trigger calls then fail until the API is up.
+if (!interceptEnabled)
+{
+    controlPanel.WaitFor(api);
+}
 
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";

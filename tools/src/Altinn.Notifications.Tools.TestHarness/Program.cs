@@ -1,5 +1,8 @@
 using Altinn.Notifications.Tools.TestHarness;
 using Altinn.Notifications.Tools.TestHarness.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Triggers;
+
+using Microsoft.Extensions.Options;
 
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -15,6 +18,17 @@ builder.Services.Configure<TestHarnessSettings>(builder.Configuration.GetSection
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RequestStore>();
 builder.Services.AddSingleton<TemplateStore>();
+
+// The scheduler that calls the API's trigger endpoints, like the cron jobs in the cluster.
+builder.Services.Configure<TriggerSettings>(builder.Configuration.GetSection(nameof(TriggerSettings)));
+builder.Services.AddHttpClient(TriggerScheduler.HttpClientName, (services, client) =>
+{
+    var settings = services.GetRequiredService<IOptions<TriggerSettings>>().Value;
+    client.BaseAddress = new Uri(settings.ApiBaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+});
+builder.Services.AddSingleton<TriggerScheduler>();
+builder.Services.AddHostedService(services => services.GetRequiredService<TriggerScheduler>());
 
 // Aspire sets OTEL_EXPORTER_OTLP_ENDPOINT. The mocks forward traceparent, so the held request shows up in the caller's trace.
 if (!string.IsNullOrEmpty(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
@@ -37,4 +51,5 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapInterceptEndpoints();
+app.MapTriggerEndpoints();
 app.Run();

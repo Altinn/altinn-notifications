@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.TestHarness;
 
-public class InterceptTests(WebApplicationFactory<TestHarnessSettings> factory) : IClassFixture<WebApplicationFactory<TestHarnessSettings>>
+public class InterceptTests(TestHarnessFactory factory) : IClassFixture<TestHarnessFactory>
 {
     [Fact]
     public async Task HeldRequest_AnsweredThroughApi_ReachesCaller()
