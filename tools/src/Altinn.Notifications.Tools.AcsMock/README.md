@@ -49,6 +49,12 @@ The local part of the first recipient that matches a keyword picks what happens.
 
 Every request is logged with the response. Recipient addresses keep only their first character and domain, e.g. `o***@example.com`. Subjects, bodies, display names and attachments are replaced with their length, since they can hold personal data or one-time codes. Under Aspire the logs and traces also go to the dashboard.
 
+## Copies to the control panel
+
+With `MirrorUrl` set, e.g. to `http://localhost:5096/mirror/`, the mock sends a copy of each send it accepts or rejects as an invalid address (sender, recipients, subject, plain text and HTML body, operation id and scenario) to the [test harness control panel](../Altinn.Notifications.Tools.TestHarness/README.md#inbox)'s Inbox tab. When an operation fails, or the mock sends its delivery report, it sends the outcome too. The copies are unmasked, so only point `MirrorUrl` at localhost. The log stays masked.
+
+The copies are queued and posted in the background, two seconds at most each. When the control panel is slow or not running, they are dropped: a send is never held up or failed by them. A throttled first attempt sends no copy, since the email service sends it again.
+
 ## Prerequisites
 
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
@@ -83,6 +89,7 @@ CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/
 | `AcsMockSettings:ServiceBusConnectionString` | the local emulator | Where delivery reports go. Empty turns them off. |
 | `AcsMockSettings:DeliveryReportQueueName` | `altinn.notifications.email.deliveryreports` | The queue the API reads delivery reports from |
 | `AcsMockSettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}acs/{path}`, e.g. `http://localhost:5096/intercept/` for the test harness control panel |
+| `AcsMockSettings:MirrorUrl` | empty | Where [copies](#copies-to-the-control-panel) of sends and their outcome go, e.g. `http://localhost:5096/mirror/`. Empty means none. |
 
 There are no secrets.
 

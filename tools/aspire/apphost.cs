@@ -87,7 +87,8 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
     .WithUrl(controlPanelUrl + "/", "Control panel")
     .WithUrl(controlPanelUrl + "/#triggers", "Triggers")
-    .WithUrl(controlPanelUrl + "/#phone", "Phone");
+    .WithUrl(controlPanelUrl + "/#phone", "Phone")
+    .WithUrl(controlPanelUrl + "/#inbox", "Inbox");
 
 // Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
 foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
@@ -136,7 +137,7 @@ email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
-// delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
+// delivery reports on the emulator's queue. It sends a copy of each email and its outcome to the control panel's Inbox tab. real: the email service uses the connection string from its own settings.
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
 if (acsMode == "mock")
 {
@@ -147,6 +148,7 @@ if (acsMode == "mock")
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
+        .WithEnvironment("AcsMockSettings__MirrorUrl", controlPanelUrl + "/mirror/")
         .WithParentRelationship(controlPanel.Resource)
         .WaitFor(serviceBus);
 
