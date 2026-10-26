@@ -34,6 +34,19 @@ app.MapGet("/api/GetEnterpriseToken", (HttpContext context, MockTokenIssuer issu
     return Results.Text(issuer.CreateEnterpriseToken(BaseUrl(context), org ?? "ttd", orgNumber ?? "991825827", scopes));
 });
 
+// An end user token, like the test token generator's personal token. Bruno's "test-util/end user dialog token" asks for one
+// with the scopes the end user notification log and Dialogporten need.
+app.MapGet("/api/GetPersonalToken", (HttpContext context, MockTokenIssuer issuer, IOptions<MockAuthSettings> settings, int? userId, int? partyId, string? pid, int? authLvl, string? scopes) =>
+{
+    if (!HasBasicAuth(context, settings.Value))
+    {
+        context.Response.Headers.WWWAuthenticate = "Basic";
+        return Results.Unauthorized();
+    }
+
+    return Results.Text(issuer.CreatePersonalToken(BaseUrl(context), userId ?? 20000000, partyId ?? 50000000, pid ?? "12345678901", authLvl ?? 3, scopes));
+});
+
 app.MapGet($"{OpenIdPath}/.well-known/openid-configuration", (HttpContext context) =>
 {
     string baseUrl = BaseUrl(context);

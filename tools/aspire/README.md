@@ -53,11 +53,15 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
 | `Acs:Port` | `5095` | Port of the `mock-acs` resource |
 | `Mocks:Enabled` | `true` | `false` turns all [platform mocks](#platform-mocks) off |
-| `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Conditions` or `Maskinporten` |
-| `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5199`, `5197` | Port of each mock |
+| `Mocks:<System>:Enabled` | `true` | Turns one mock off: `Profile`, `Register`, `Authorization`, `Dialogporten`, `Conditions` or `Maskinporten` |
+| `Mocks:<System>:Port` | `5131`, `5121`, `5151`, `5171`, `5199`, `5197` | Port of each mock |
 | `TestHarness:Intercept` | `false` | `true` sends what the mocks do not recognise to the [control panel](#test-harness-control-panel) |
 | `TestHarness:Port` | `5096` | Port of the `testharness-controlpanel` resource |
 | `TestHarness:TimeoutSeconds` | `120` | How long the control panel holds an intercepted request before it answers 504 |
+| `Triggers:Enabled` | `true` | Calls the API's trigger endpoints on an interval, like the cron jobs in the cluster. `false` starts every job paused. See [Triggers](#triggers). |
+| `Triggers:Jobs:<name>:Enabled` | see [Triggers](#triggers) | Whether one trigger runs on its own, e.g. `Triggers:Jobs:sendemail:Enabled` |
+| `Triggers:Jobs:<name>:IntervalSeconds` | see [Triggers](#triggers) | Seconds between runs of one trigger |
+| `Triggers:Jobs:<name>:Hours` | see [Triggers](#triggers) | The UTC hours one trigger runs in, like a cron hour field (`7-16`). Empty is all day. |
 | `LinkMobility:Port` | `5093` | Port of the `wiremock-linkmobility` resource |
 | `LinkMobility:Target` | empty | Sends SMS through LinkMobility, see [SMS through the LinkMobility proxy](#sms-through-the-linkmobility-proxy) |
 | `LinkMobility:Interactive` | `false` | `true` holds every SMS send in the [control panel](#test-harness-control-panel). Needs `TestHarness:Intercept`. |
@@ -90,8 +94,8 @@ Before the dashboard starts, the app host builds the API, Email and SMS projects
 | `wiremock-linkmobility` | The [LinkMobility proxy](../src/Altinn.Notifications.Tools.LinkMobilityProxy/README.md), which `sms` sends to instead of LinkMobility | 5093 |
 | `mock-auth` | The [mock token issuer](../src/Altinn.Notifications.Tools.MockAuth/README.md) the API trusts. Not started when `Auth:Mode` is `at23`. | 5094 |
 | `mock-acs` | The [ACS mock](../src/Altinn.Notifications.Tools.AcsMock/README.md) that `email` sends to instead of Azure Communication Services. Not started when `Acs:Mode` is `real`. | 5095 |
-| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5199, 5197 |
-| `testharness-controlpanel` | The [test harness control panel](#test-harness-control-panel). Always started. The mocks are grouped under it in the dashboard. | 5096 |
+| `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5171, 5199, 5197 |
+| `testharness-controlpanel` | The [test harness control panel](#test-harness-control-panel). Always started. Calls the [trigger endpoints](#triggers) on a schedule, and the mocks are grouped under it in the dashboard. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
 | `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
 
@@ -107,6 +111,8 @@ By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-aut
 ```bash
 curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
 ```
+
+The issuer also makes the tokens for composed email, the support dashboard and the end user notification log, and the `dashboard` and `enduser` folders in Bruno fetch theirs from it. See [tokens the API accepts](../src/Altinn.Notifications.Tools.MockAuth/README.md#tokens-the-api-accepts).
 
 Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the Altinn test token generator, e.g. with the `v2 local` environment in Bruno.
 
@@ -131,28 +137,25 @@ With `TestHarness:Intercept`, requests the mock does not recognise go to the [co
 
 ## Platform mocks
 
-The API looks up contact points in Profile, names in Register and access in Authorization, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
+The API looks up contact points in Profile, names in Register and access in Authorization, asks Dialogporten whether an end user may see a dialog's notification log, and calls the condition endpoint of an order before sending, with a token from Maskinporten. By default the `wiremock-platform` resource answers all of these locally, so orders to persons and organisations, with conditions and reminders, are processed without at23. See the [tool's README](../src/Altinn.Notifications.Tools.PlatformMocks/README.md) for what each mock answers.
 
 | System | Port | What the app host sets on the API |
 | :--- | :--- | :--- |
 | Profile | 5131 | `PlatformSettings:ApiProfileEndpoint` |
 | Register | 5121 | `PlatformSettings:ApiRegisterEndpoint` |
 | Authorization | 5151 | `PlatformSettings:ApiAuthorizationEndpoint` |
-| Conditions | 5199 | Nothing. Orders point to the condition URLs themselves, which are listed in the URLs column. |
+| Dialogporten | 5171 | `DialogportenSettings:BaseUrl` |
+| Conditions | 5199 | Nothing. Orders point to the condition URLs themselves, which are listed in the URLs column. They use `local.altinn.cloud`, which resolves to 127.0.0.1, since the API does not accept `localhost` in condition URLs. |
 | Maskinporten | 5197 | `SendConditionClient:MaskinportenSettings:TokenEndpoint`, `AssertionAudience`, `ClientId`, and an `EncodedJwk` made for each run |
 
 * Any national identity number or organisation number gets contact points, so k6 can use random ones.
 * A system that is turned off keeps the endpoint from the API's own `appsettings.json`, for example `localhost:5030` for a local altinn-profile.
-* The Maskinporten settings need `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). Until the API uses that version, the condition client still goes to test.maskinporten.no, gets no token, and the API treats every condition check as failed: it retries the order once and then sends it.
+* The Maskinporten settings use the configurable endpoints in `Altinn.ApiClients.Maskinporten` 10.2.0 and later ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)).
 * With `TestHarness:Intercept`, requests a mock does not recognise go to the [control panel](#test-harness-control-panel) on 5096 instead of a 404.
 
-For Bruno, `components/api/test/bruno/aspire.env` has test data that matches the mocks. Pass it to the CLI, or copy it to `.env` for the Bruno app:
+To run Bruno and k6 against the mocks, see [Bruno and k6](#bruno-and-k6).
 
-```bash
-docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env" usebruno/cli:latest run "test-util/new-auth-token.bru" "v2 (future)/create-notifications" --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
-```
-
-The services do not send by themselves locally, since cron jobs call the trigger endpoints in the cluster. Call `POST /notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` on the API to send what is waiting.
+The `testharness-controlpanel` resource calls the trigger endpoints, so a future order is sent within about 15 seconds of its send time. See [Triggers](#triggers).
 
 ## Test harness control panel
 
@@ -180,6 +183,41 @@ The control panel used to be called the simulator. Its settings moved, and the a
 | `Simulator:Enabled` | `TestHarness:Intercept`. The control panel itself always starts now. |
 | `Simulator:Port` | `TestHarness:Port` |
 | `Simulator:TimeoutSeconds` | `TestHarness:TimeoutSeconds` |
+
+## Triggers
+
+In the cluster, cron jobs call the API's `/notifications/api/v1/trigger/...` endpoints to send waiting notifications, expire old ones and clean up. Locally the `testharness-controlpanel` resource does the same, so an order that is not `instant` goes out without anyone calling a trigger by hand. Past-due orders and retries need no trigger: the API's own background service picks them up.
+
+| Trigger | Locally | In the cluster |
+| :--- | :--- | :--- |
+| `sendemail` | every 15 s | `*/1 * * * *` |
+| `sendemaildaytime` | every 15 s | not in the documented cron jobs |
+| `sendsmsanytime` | every 15 s | `*/1 * * * *` |
+| `sendsms` (daytime) | every 15 s, hours `7-16` UTC | `* 7-16 * * *` |
+| `terminateexpirednotifications` | every 60 s | `*/15 * * * *` |
+| `deleteoldstatusfeedrecords` | off, every 300 s, hours `2-5` UTC | `*/5 2-5 * * *` |
+| `pastdueoneorder`, `retryoneorder` | off, run by hand | not scheduled, debug only |
+
+The cluster schedules are from [docs/architecture/notifications.md](../../docs/architecture/notifications.md#cron-jobs). The intervals are shorter locally so a test order goes out quickly.
+
+* The daytime triggers run as in the cluster: the scheduler calls them within their cron hours, and the API itself skips the work outside its send window (09-17 Norwegian time, `NotificationConfig:SmsSendWindowStartHour` and the like). A daytime order made in the evening waits until the next morning, as in production.
+* The trigger endpoints have no authentication: in the cluster only the cron jobs inside it reach them. The scheduler sends an empty `POST` with `Content-Type: application/json`, which the endpoints require.
+* A job never overlaps itself, like `concurrencyPolicy: Forbid` in the cluster. A run that is due while the previous one is still going is skipped.
+* The **Triggers** link in the URLs column opens the control panel's **Triggers** tab. Each trigger can be paused or resumed, have its interval and hours changed, or be run now. It shows the last run (time, status, duration, response) and the last 20 runs. Changes last until the control panel restarts. For lasting ones, set `Triggers:Jobs` in `appsettings.Local.json`:
+
+```json
+{
+  "Triggers": {
+    "Jobs": {
+      "sendemail": { "IntervalSeconds": 5 },
+      "terminateexpirednotifications": { "Enabled": false }
+    }
+  }
+}
+```
+
+* The first trigger calls can fail while the API starts. With `TestHarness:Intercept` off, the `testharness-controlpanel` resource waits for the API's process, but not until the API listens. With it on, it cannot wait at all, since the mocks wait for the control panel and the API for the mocks. The Triggers tab shows those calls as `no response`, and the log says once when a trigger fails and once when it works again.
+* With `Triggers:Enabled` set to `false` the control panel still starts, with every trigger paused. Run them from the **Triggers** tab, or call `POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail` yourself to send what is waiting.
 
 ## SMS through the LinkMobility proxy
 
@@ -217,6 +255,35 @@ To send real SMS through LinkMobility's test gateway, set the target in `appsett
 ```
 
 **Use cluster** on `sms` bypasses the proxy, since the cluster's SMS service uses its own gateway settings.
+
+## Bruno and k6
+
+Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth` resource) and the platform mocks (`wiremock-platform`) on. No at23 account, token generator credentials or secrets are needed.
+
+### Bruno
+
+`components/api/test/bruno/aspire.env` has test data that matches the platform mocks.
+
+* **Bruno app** (`Bruno.exe`): copy `aspire.env` to `.env` in the collection folder, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token.
+* **Bruno CLI in Docker**: mount the collection read-only, or the CLI writes the token into `environments/v2 aspire.bru`, and point it at the host:
+
+  ```bash
+  docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env"     usebruno/cli:latest run "test-util/new-auth-token.bru" "instant-demo" "v2 (future)" -r     --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
+  ```
+
+  The CLI warns that it cannot save the token to the read-only environment file. That is expected: it keeps the token for the rest of the run.
+
+The condition URLs in `aspire.env` stay on `local.altinn.cloud` also when Bruno runs in Docker, since the API calls them.
+
+Instant SMS and email, future orders to phone numbers, email addresses, persons and organisations, orders with conditions and reminders, and the shipment and status feed lookups all pass. These do not:
+
+* `composed-email`: `new auth token` only asks for `altinn:serviceowner/notifications.create`, not the `notifications.composedemail.create` scope, so they get `403` in every environment. The happy paths also need SAS URLs to real blobs.
+* `notification-log`: need `dialogporten_dialog_id` and `dialogporten_transmission_id`, which no environment sets.
+* `validation-demo-contract`: its `ValidationError` test compares the JSON body with a string, so it fails in every environment.
+
+### k6
+
+Run the tests with `-e altinn_env=local`, see [Running against the local Aspire stack](../../components/api/test/k6/ReadMe.md#running-against-the-local-aspire-stack) in the k6 README.
 
 ## Dashboard actions
 
