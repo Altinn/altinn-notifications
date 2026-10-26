@@ -15,6 +15,8 @@ using Altinn.ApiClients.Maskinporten.Services;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Integrations.Dialogporten;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.SendCondition;
 using Altinn.Notifications.Tools.PlatformMocks;
@@ -26,6 +28,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
+using Moq;
 
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -42,6 +46,8 @@ public class PlatformMocksServiceTests
 {
     private const string Person = "12345678901";
     private const string Organization = "310000002";
+
+    private static readonly Guid DeniedDialog = Guid.Parse("00000000-0000-0000-0000-000000000403");
 
     [Fact]
     public async Task Profile_GetUserContactPoints_GivesEveryPersonContactPointsExceptTheListedOnes()
@@ -261,6 +267,37 @@ public class PlatformMocksServiceTests
     }
 
     [Fact]
+    public async Task Dialogporten_DialogLookup_GivesTheUserAccessToEveryDialogExceptTheDeniedOnes()
+    {
+        await using var mocks = await StartAsync();
+
+        Assert.True(await DialogportenClient(mocks, "end-user-token").CheckUserAccessToDialog(Guid.NewGuid(), TestContext.Current.CancellationToken));
+        Assert.False(await DialogportenClient(mocks, "end-user-token").CheckUserAccessToDialog(DeniedDialog, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Dialogporten_DialogLookupWithoutToken_IsUnauthorized()
+    {
+        await using var mocks = await StartAsync();
+        using var http = new HttpClient();
+
+        using var response = await http.GetAsync(
+            mocks.Urls["dialogporten"] + DialogportenMock.DialogLookupPath + "?instanceRef=urn:altinn:dialog-id:" + Guid.NewGuid(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // The API's Dialogporten client, with the base URL the Aspire app host gives the API and the end user's token from the request.
+    private static DialogportenClient DialogportenClient(RunningMocks mocks, string token)
+    {
+        var authenticationContext = new Mock<IAuthenticationContext>();
+        authenticationContext.Setup(c => c.GetTokenFromContext()).Returns(token);
+        var settings = new DialogportenSettings { Enabled = true, BaseUrl = mocks.Urls["dialogporten"] + "/dialogporten/api/v1/" };
+        return new DialogportenClient(new HttpClient(), Options.Create(settings), authenticationContext.Object);
+    }
+
+    [Fact]
     public async Task Maskinporten_ConditionClientWithAppHostSettings_GetsItsTokenFromTheMock()
     {
         await using var mocks = await StartAsync();
@@ -334,6 +371,8 @@ public class PlatformMocksServiceTests
         settings.Authorization.Port = FreePort();
         settings.Conditions.Port = FreePort();
         settings.Maskinporten.Port = FreePort();
+        settings.Dialogporten.Port = FreePort();
+        settings.Dialogporten.DeniedDialogs = [DeniedDialog];
         settings.Profile.ReservedPersons = ["99999999901"];
         settings.Profile.PersonsWithoutContactPoints = ["88888888801"];
         settings.Profile.OrganizationsWithoutContactPoints = ["999999999"];
