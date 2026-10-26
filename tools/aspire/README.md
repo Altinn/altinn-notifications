@@ -337,6 +337,13 @@ The mocks are wired up by the extensions in [Altinn.Notifications.Aspire.Hosting
 
 `Aspire.Hosting` in `Directory.Packages.props` has to be the version of `Aspire.AppHost.Sdk` in `apphost.cs`. A test in the tools tests fails when they differ, so bump both together.
 
+### Why not WireMock.Net.Aspire or Mailpit
+
+Both come up as ready-made alternatives to the mocks here. Neither is used, for these reasons:
+
+* **WireMock.Net.Aspire** is a separate package from the WireMock.Net project, not part of Aspire. `AddWireMock` runs WireMock.Net as a container, set up with JSON mappings or through its admin API. `wiremock-platform` already uses WireMock.Net, but in its own process, because it needs C# callbacks that a container cannot run: Dialogporten looks up its answer in code, unknown requests are forwarded to the control panel, and each request gets a span in the caller's trace. `mock-acs` and `wiremock-linkmobility` are logic rather than lookups: they check the HMAC signature, send delivery reports to Service Bus or `sms`, pick the outcome from the recipient and copy each message to the Phone and Inbox tabs. Moving only the static mocks would add a container and lose the spans, for little gain. It becomes worth a look if mappings need to be changed while the stack runs, beyond what **Auto-reply** in the control panel does.
+* **Mailpit** (`CommunityToolkit.Aspire.Hosting.MailPit`) is a container with an SMTP server and a webmail-like inbox. The email service sends through the ACS API, not SMTP, so `mock-acs` would have to relay each email to it. The Inbox tab already shows every email with its delivery status and an HTML preview. Mailpit could be added later as an optional relay, off by default, if we need to see emails as a real mail client renders them or check their HTML and spam score.
+
 ## Troubleshooting
 
 * **`MSB4166: Child node exited prematurely` when a service starts**: an MSBuild worker crashed. Restart the service.
