@@ -31,6 +31,11 @@ public class TestHarnessSettings
     public int HistorySize { get; set; } = 200;
 
     /// <summary>
+    /// How many messages the Phone tab keeps. The oldest are dropped.
+    /// </summary>
+    public int MirrorSize { get; set; } = 200;
+
+    /// <summary>
     /// The Aspire dashboard, e.g. <c>https://localhost:17043</c>. When set, requests with a <c>traceparent</c> link to their trace.
     /// </summary>
     public string DashboardUrl { get; set; } = string.Empty;

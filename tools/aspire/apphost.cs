@@ -86,7 +86,8 @@ var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn
     .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
     .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
     .WithUrl(controlPanelUrl + "/", "Control panel")
-    .WithUrl(controlPanelUrl + "/#triggers", "Triggers");
+    .WithUrl(controlPanelUrl + "/#triggers", "Triggers")
+    .WithUrl(controlPanelUrl + "/#phone", "Phone");
 
 // Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
 foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
@@ -165,6 +166,7 @@ else if (acsMode != "real")
 // SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
 // Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
 // machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+// It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
 var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
 bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
 if (linkMobilityInteractive && !interceptEnabled)
@@ -180,6 +182,7 @@ var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.No
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
     .WithEnvironment("LinkMobilityProxySettings__FallbackUrl", interceptUrl)
+    .WithEnvironment("LinkMobilityProxySettings__MirrorUrl", controlPanelUrl + "/mirror/")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)

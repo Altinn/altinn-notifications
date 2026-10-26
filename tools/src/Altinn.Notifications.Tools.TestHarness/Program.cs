@@ -1,5 +1,6 @@
 using Altinn.Notifications.Tools.TestHarness;
 using Altinn.Notifications.Tools.TestHarness.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Mirror;
 using Altinn.Notifications.Tools.TestHarness.Triggers;
 
 using Microsoft.Extensions.Options;
@@ -18,6 +19,11 @@ builder.Services.Configure<TestHarnessSettings>(builder.Configuration.GetSection
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RequestStore>();
 builder.Services.AddSingleton<TemplateStore>();
+
+// What the mocks send to /mirror, for the Phone tab.
+builder.Services.AddSingleton(services => new MirrorStores(
+    services.GetRequiredService<IOptions<TestHarnessSettings>>().Value.MirrorSize,
+    services.GetRequiredService<TimeProvider>()));
 
 // The scheduler that calls the API's trigger endpoints, like the cron jobs in the cluster.
 builder.Services.Configure<TriggerSettings>(builder.Configuration.GetSection(nameof(TriggerSettings)));
@@ -51,5 +57,6 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapInterceptEndpoints();
+app.MapMirrorEndpoints();
 app.MapTriggerEndpoints();
 app.Run();
