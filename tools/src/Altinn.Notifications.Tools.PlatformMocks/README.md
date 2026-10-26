@@ -62,7 +62,7 @@ The API calls condition endpoints with a Maskinporten token, which it gets from 
 
 `POST /token` takes the JWT bearer grant `Altinn.ApiClients.Maskinporten` sends and answers with a token for the scope in the grant, valid for 120 seconds. It does not check the signature or the client, so any key and client id work.
 
-The client library has the Maskinporten URLs built in. Pointing it here needs the `TokenEndpoint` and `AssertionAudience` settings from [Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92), and the grant has to be signed, so the API also needs a `ClientId` and an `EncodedJwk`. The Aspire app host sets all four, with a new key for each run.
+The API points the client library here with its `TokenEndpoint` and `AssertionAudience` settings (`Altinn.ApiClients.Maskinporten` 10.2.0 and later, [Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)). The grant has to be signed, so the API also needs a `ClientId` and an `EncodedJwk`. The Aspire app host sets all four, with a new key for each run.
 
 ### Anything else
 
