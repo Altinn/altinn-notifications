@@ -79,7 +79,7 @@ namespace Altinn.Notifications.Controllers
         [HttpPost]
         [Route("getmetrics")]
         [Consumes("application/json")]
-        [ServiceFilter(typeof(MetricsApiKeyFilter))]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<ActionResult> TriggerGetMetrics(CancellationToken cancellationToken)
         {
             await _metricsService.TriggerGetMetrics(cancellationToken);
