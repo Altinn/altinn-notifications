@@ -21,7 +21,8 @@ public class RegisterClient : IRegisterClient
     private const int _partyQueryMaxItems = 100;
     private readonly HttpClient _client;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
-    private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
+    private readonly string _nameComponentsLookupEndpoint = "v1/parties/nameslookup";
+    private readonly string _partiesQueryEndpoint = "v2/internal/parties/query";
 
     private readonly IAccessTokenGenerator _accessTokenGenerator;
 
@@ -29,12 +30,12 @@ public class RegisterClient : IRegisterClient
     /// Initializes a new instance of the <see cref="RegisterClient"/> class.
     /// </summary>
     /// <param name="client">The HTTP client used to make requests to the register service.</param>
-    /// <param name="settings">The platform settings containing the API endpoints.</param>
+    /// <param name="settings">The register settings containing the API endpoint.</param>
     /// <param name="accessTokenGenerator">The access token generator.</param>
-    public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings, IAccessTokenGenerator accessTokenGenerator)
+    public RegisterClient(HttpClient client, IOptions<RegisterSettings> settings, IAccessTokenGenerator accessTokenGenerator)
     {
         _client = client;
-        _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+        _client.BaseAddress = new Uri(settings.Value.ApiEndpoint);
 
         _accessTokenGenerator = accessTokenGenerator;
 
@@ -62,18 +63,18 @@ public class RegisterClient : IRegisterClient
         return partyDetails;
     }
 
-    private async Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken)
+    private async Task<List<Party>> GetParties(Altinn.Register.Contracts.PartyUrn[] parties, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parties);
 
-        if (parties.Count == 0)
+        if (parties.Length == 0)
         {
             return [];
         }
 
         try
         {
-            using HttpRequestMessage requestMessage = new(HttpMethod.Post, "notifications/parties/query")
+            using HttpRequestMessage requestMessage = new(HttpMethod.Post, _partiesQueryEndpoint)
             {
                 Content = JsonContent.Create(new PartyQueryList<PartyUrn> { Data = [.. parties] }, options: _jsonSerializerOptions)
             };

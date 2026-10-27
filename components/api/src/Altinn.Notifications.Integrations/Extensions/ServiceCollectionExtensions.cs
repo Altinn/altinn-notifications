@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required PlatformSettings is missing from application configuration");
 
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
+        services.Configure<RegisterSettings>(config.GetSection(nameof(RegisterSettings)));
         services.Configure<DialogportenSettings>(config.GetSection("DialogportenSettings"));
 
         services.AddHttpClient<IProfileClient, ProfileClient>();

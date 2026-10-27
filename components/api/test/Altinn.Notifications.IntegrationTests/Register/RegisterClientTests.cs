@@ -40,7 +40,7 @@ public class RegisterClientTests
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
         {
             Assert.Equal(HttpMethod.Post, request!.Method);
-            Assert.Equal("/register/api/v1/notifications/parties/query", request.RequestUri!.AbsolutePath);
+            Assert.Equal("/register/api/v2/internal/parties/query", request.RequestUri!.AbsolutePath);
             Assert.Equal("valid-token", Assert.Single(request.Headers.GetValues("PlatformAccessToken")));
 
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
@@ -423,9 +423,9 @@ public class RegisterClientTests
             return await GetPartyDetailsResponse(lookup!);
         });
 
-        PlatformSettings settings = new()
+        RegisterSettings settings = new()
         {
-            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
+            ApiEndpoint = "https://dummy.endpoint/register/api/"
         };
 
         Mock<IAccessTokenGenerator> accessTokenGenerator = new();
