@@ -21,5 +21,20 @@ namespace Altinn.Notifications.Core.Persistence
         /// Get the daily email metrics for a given day, month and year
         /// </summary>
         Task<DailyMetrics<DailyEmailMetricsRecord>> GetDailyEmailMetrics(int day, int month, int year, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Get the current pending email notification counts used for custom metrics.
+        /// </summary>
+        Task<(long AnytimeCount, long DaytimeCount, long ComposedCount)> GetEmailNotificationsMetrics(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Get the current pending SMS notification counts used for custom metrics.
+        /// </summary>
+        Task<(long AnytimeCount, long DaytimeCount)> GetSmsNotificationsMetrics(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Get the current order backlog counts (not due and past due) used for custom metrics.
+        /// </summary>
+        Task<(long OrdersNotDueCount, long OrdersPastDueCount)> GetOrderMetrics(CancellationToken cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -14,6 +15,7 @@ namespace Altinn.Notifications.Core.Services
     public class MetricsService : IMetricsService
     {
         private readonly IMetricsRepository _metricsRepository;
+        private readonly IBacklogMetrics _backlogMetrics;
         private readonly ILogger<MetricsService> _logger;
         private readonly IHostEnvironment _hostEnvironment;
         private const int DaysOffsetForDailyMetrics = 1; // Fetch yesterdays metrics
@@ -21,9 +23,14 @@ namespace Altinn.Notifications.Core.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsService"/> class.
         /// </summary>
-        public MetricsService(IMetricsRepository metricsRepository, ILogger<MetricsService> logger, IHostEnvironment hostEnvironment)
+        public MetricsService(
+            IMetricsRepository metricsRepository,
+            IBacklogMetrics backlogMetrics,
+            ILogger<MetricsService> logger,
+            IHostEnvironment hostEnvironment)
         {
             _metricsRepository = metricsRepository;
+            _backlogMetrics = backlogMetrics;
             _logger = logger;
             _hostEnvironment = hostEnvironment;
         }
@@ -46,6 +53,23 @@ namespace Altinn.Notifications.Core.Services
         {
             var date = DateTime.UtcNow.AddDays(-DaysOffsetForDailyMetrics);
             return await _metricsRepository.GetDailyEmailMetrics(date.Day, date.Month, date.Year, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task TriggerGetMetrics(CancellationToken cancellationToken)
+        {
+            var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
+            var (smsNotificationsAnytime, smsNotificationsDaytime) = await _metricsRepository.GetSmsNotificationsMetrics(cancellationToken);
+            var (ordersNotDue, ordersPastDue) = await _metricsRepository.GetOrderMetrics(cancellationToken);
+
+            _backlogMetrics.RecordBacklogMetrics(
+                emailNotificationsAnytime,
+                emailNotificationsDaytime,
+                emailNotificationsComposed,
+                smsNotificationsAnytime,
+                smsNotificationsDaytime,
+                ordersNotDue,
+                ordersPastDue);
         }
 
         /// <inheritdoc/>

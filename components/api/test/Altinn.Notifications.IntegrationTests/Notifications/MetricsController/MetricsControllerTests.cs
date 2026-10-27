@@ -264,6 +264,29 @@ public class MetricsControllerTests : IClassFixture<IntegrationTestWebApplicatio
         Assert.Contains("validation not configured", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task TriggerGetMetrics_WithValidApiKey_ReturnsOk()
+    {
+        // Arrange
+        Mock<IMetricsService> serviceMock = new();
+        serviceMock
+            .Setup(e => e.TriggerGetMetrics(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = GetTestClient(metricsService: serviceMock.Object);
+
+        string url = _basePath + "/getmetrics";
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        httpRequestMessage.Headers.Add("x-api-key", "valid-api-key");
+
+        // Act
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        serviceMock.Verify(e => e.TriggerGetMetrics(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private HttpClient GetTestClient(
         IMetricsService? metricsService = null)
     {

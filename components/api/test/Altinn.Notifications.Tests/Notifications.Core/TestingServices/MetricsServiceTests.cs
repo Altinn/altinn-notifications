@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Metrics;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -17,12 +18,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     public class MetricsServiceTests
     {
         private readonly Mock<IMetricsRepository> _metricsRepositoryMock;
+        private readonly Mock<IBacklogMetrics> _backlogMetricsMock;
         private readonly Mock<ILogger<MetricsService>> _loggerMock;
         private readonly Mock<IHostEnvironment> _hostEnvironmentMock;
 
         public MetricsServiceTests()
         {
             _metricsRepositoryMock = new Mock<IMetricsRepository>();
+            _backlogMetricsMock = new Mock<IBacklogMetrics>();
             _loggerMock = new Mock<ILogger<MetricsService>>();
             _hostEnvironmentMock = new Mock<IHostEnvironment>();
             _hostEnvironmentMock.SetupGet(h => h.EnvironmentName).Returns("UnitTest");
@@ -44,7 +47,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(r => r.GetDailySmsMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected);
 
-            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
             DailyMetrics<DailySmsMetricsRecord> actual = await service.GetDailySmsMetrics(TestContext.Current.CancellationToken);
@@ -70,7 +73,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(r => r.GetDailyEmailMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected);
 
-            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
             DailyMetrics<DailyEmailMetricsRecord> actual = await service.GetDailyEmailMetrics(TestContext.Current.CancellationToken);
@@ -78,6 +81,32 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Assert
             Assert.Same(expected, actual);
             _metricsRepositoryMock.Verify(r => r.GetDailyEmailMetrics(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task TriggerGetMetrics_InvokesRepositoryMetricsQuery()
+        {
+            // Arrange
+            _metricsRepositoryMock
+                .Setup(r => r.GetEmailNotificationsMetrics(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((5, 3, 2));
+            _metricsRepositoryMock
+                .Setup(r => r.GetSmsNotificationsMetrics(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((7, 11));
+            _metricsRepositoryMock
+                .Setup(r => r.GetOrderMetrics(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((13, 17));
+
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+
+            // Act
+            await service.TriggerGetMetrics(TestContext.Current.CancellationToken);
+
+            // Assert
+            _metricsRepositoryMock.Verify(r => r.GetEmailNotificationsMetrics(It.IsAny<CancellationToken>()), Times.Once);
+            _metricsRepositoryMock.Verify(r => r.GetSmsNotificationsMetrics(It.IsAny<CancellationToken>()), Times.Once);
+            _metricsRepositoryMock.Verify(r => r.GetOrderMetrics(It.IsAny<CancellationToken>()), Times.Once);
+            _backlogMetricsMock.Verify(m => m.RecordBacklogMetrics(5, 3, 2, 7, 11, 13, 17), Times.Once);
         }
 
         [Fact]
@@ -92,7 +121,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Metrics = new List<DailySmsMetricsRecord>() // empty list is fine for serialization
             };
 
-            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
             MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
@@ -133,7 +162,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Metrics = new List<DailyEmailMetricsRecord>() // empty list is fine for serialization
             };
 
-            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
             MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
@@ -176,7 +205,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Use string.Empty instead of null to avoid CS8603
             _ = _hostEnvironmentMock.SetupGet(h => h.EnvironmentName).Returns(string.Empty);
-            var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
+            var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
             MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);

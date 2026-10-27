@@ -72,6 +72,20 @@ namespace Altinn.Notifications.Controllers
             return await BuildParquetResponseAsync(data, cancellationToken);
         }
 
+        /// <summary>
+        /// Endpoint for triggering retrieval and emission of frequently used custom metrics.
+        /// </summary>
+        /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+        [HttpPost]
+        [Route("getmetrics")]
+        [Consumes("application/json")]
+        [ServiceFilter(typeof(MetricsApiKeyFilter))]
+        public async Task<ActionResult> TriggerGetMetrics(CancellationToken cancellationToken)
+        {
+            await _metricsService.TriggerGetMetrics(cancellationToken);
+            return Ok();
+        }
+
         private async Task<ActionResult> BuildParquetResponseAsync<T>(DailyMetrics<T> data, CancellationToken ct)
         {
             var response = await _metricsService.GetParquetFile(data, ct);
