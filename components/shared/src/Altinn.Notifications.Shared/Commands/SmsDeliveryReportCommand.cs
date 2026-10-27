@@ -25,4 +25,10 @@ public sealed record SmsDeliveryReportCommand
     /// </summary>
     [JsonPropertyName("sendResult")]
     public string SendResult { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the raw delivery report payload received from the SMS gateway.
+    /// </summary>
+    [JsonPropertyName("deliveryReport")]
+    public string? DeliveryReport { get; init; }
 }

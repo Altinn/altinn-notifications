@@ -2,10 +2,13 @@
 
 using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using Azure.Messaging.ServiceBus;
+
 using JasperFx;
 using JasperFx.CodeGeneration;
+
 using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
 using Wolverine.Runtime.Handlers;
@@ -33,15 +36,25 @@ internal sealed class SendSmsCommandHandlerPolicy(WolverineSettings wolverineSet
         var chain = chains.FirstOrDefault(c => c.MessageType == typeof(SendSmsCommand))
             ?? throw new UnreachableException($"No handler chain found for {nameof(SendSmsCommand)}. Ensure the handler is registered before adding this policy.");
 
-        var policy = wolverineSettings.SendSmsQueuePolicy;
+        var infrastructurePolicy = wolverineSettings.SendSmsQueuePolicy;
+        var gatewayErrorPolicy = wolverineSettings.SendSmsQueueGatewayErrorPolicy;
 
+        // Infrastructure transient errors: fast in-lock cooldown retries, then scheduled retries.
         chain
            .OnException<TimeoutException>()
            .Or<ServiceBusException>()
            .Or<TaskCanceledException>()
-           .Or<InvalidOperationException>()
-           .RetryWithCooldown(policy.GetCooldownDelays())
-           .Then.ScheduleRetry(policy.GetScheduleDelays())
+           .Or<HttpRequestException>()
+           .RetryWithCooldown(infrastructurePolicy.GetCooldownDelays())
+           .Then.ScheduleRetry(infrastructurePolicy.GetScheduleDelays())
+           .Then.MoveToErrorQueue();
+
+        // SMS gateway errors: no immediate in-lock cooldown retries to avoid amplifying load
+        // on the gateway during outages or rate-limiting windows (e.g. 504 responses from Link Mobility).
+        // Goes directly to spread-out scheduled retries to allow the gateway time to recover.
+        chain
+           .OnException<SmsGatewayException>()
+           .ScheduleRetry(gatewayErrorPolicy.GetScheduleDelays())
            .Then.MoveToErrorQueue();
     }
 }

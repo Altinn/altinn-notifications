@@ -3,49 +3,38 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Defines email configuration settings used in notification orders.
+/// Holds the email configuration settings for a notification order.
 /// </summary>
-public class EmailSendingOptions
+public record EmailSendingOptions
 {
     /// <summary>
-    /// Gets or sets the sender's email address.
+    /// The optional sender address shown to the recipient; uses the system default when not set.
     /// </summary>
-    /// <remarks>
-    /// This value determines which address will appear as the sender in the recipient's mailbox.
-    /// </remarks>
-    public string? SenderEmailAddress { get; set; }
+    public string? SenderEmailAddress { get; init; }
 
     /// <summary>
-    /// Gets or sets the subject line of the email.
+    /// The subject line displayed as the email headline in the recipient's inbox.
     /// </summary>
-    /// <remarks>
-    /// Displayed as the email headline in the recipient's inbox.
-    /// </remarks>
-    public required string Subject { get; set; }
+    public required string Subject { get; init; }
 
     /// <summary>
-    /// Gets or sets the main body content of the email.
+    /// The main body content of the email.
     /// </summary>
     /// <remarks>
-    /// Contains the primary message content to be delivered to the recipient.
     /// May include plain text or HTML markup depending on the <see cref="ContentType"/> setting.
     /// </remarks>
-    public required string Body { get; set; }
+    public required string Body { get; init; }
 
     /// <summary>
-    /// Gets or sets the content type (plain text or HTML) of the email.
+    /// The content type of the email body.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="EmailContentType.Plain"/>.
-    /// Determines how email clients will render the body content.
+    /// Determines how email clients render the body content. Defaults to <see cref="EmailContentType.Plain"/>.
     /// </remarks>
-    public EmailContentType ContentType { get; set; } = EmailContentType.Plain;
+    public EmailContentType ContentType { get; init; } = EmailContentType.Plain;
 
     /// <summary>
-    /// Gets or sets the policy defining when the email should be sent.
+    /// The policy that controls when the email may be delivered.
     /// </summary>
-    /// <remarks>
-    /// Defaults to <see cref="SendingTimePolicy.Anytime"/> allowing delivery at any time.
-    /// </remarks>
-    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.Anytime;
+    public SendingTimePolicy SendingTimePolicy { get; init; } = SendingTimePolicy.Anytime;
 }

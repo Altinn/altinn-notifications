@@ -18,8 +18,9 @@ public interface IProfileClient
     /// Retrieves contact points for a list of users corresponding to a list of national identity numbers
     /// </summary>
     /// <param name="nationalIdentityNumbers">A list of national identity numbers to look up contact points for</param>
+    /// <param name="useStaleContactInfo">Indicates whether to use stale contact information.</param>
     /// <returns>A list of contact points for the provided national identity numbers </returns>
-    Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers);
+    Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers, bool useStaleContactInfo);
 
     /// <summary>
     /// Retrieves the user registered contact points for a list of organizations identified by organization numbers

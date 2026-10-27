@@ -31,6 +31,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public bool? IgnoreReservation { get; internal set; }
 
     /// <inheritdoc/>>
+    public bool UseStaleContactInformation { get; internal set; }
+    
+    /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>
@@ -53,9 +56,14 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
 
     /// <summary>
-    /// Gets the sending time policy for the notification order. Can be null
+    /// Gets the SMS sending time policy for the notification order. Can be null
     /// </summary>
-    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+    public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
+
+    /// <summary>
+    /// Gets the email sending time policy for the notification order. Can be null
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.
@@ -68,6 +76,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         DateTime created,
         NotificationChannel notificationChannel,
         bool? ignoreReservation,
+        bool useStaleContactInformation,
         string? resourceId,
         Uri? conditionEndpoint,
         ProcessingStatus processingStatus, 
@@ -81,6 +90,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         Created = created;
         NotificationChannel = notificationChannel;
         IgnoreReservation = ignoreReservation;
+        UseStaleContactInformation = useStaleContactInformation;
         ResourceId = resourceId;
         ResourceAction = resourceAction;
         ConditionEndpoint = conditionEndpoint;

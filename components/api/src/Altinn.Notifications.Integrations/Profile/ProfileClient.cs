@@ -33,11 +33,12 @@ public class ProfileClient : IProfileClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers)
+    public async Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers, bool useStaleContactInfo)
     {
         var lookupObject = new UserContactPointLookup
         {
-            NationalIdentityNumbers = nationalIdentityNumbers
+            NationalIdentityNumbers = nationalIdentityNumbers,
+            UseStaleContactInfo = useStaleContactInfo
         };
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonOptions), Encoding.UTF8, _jsonMediaType);

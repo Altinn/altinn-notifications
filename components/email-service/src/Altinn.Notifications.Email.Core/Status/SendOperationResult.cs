@@ -31,6 +31,12 @@ namespace Altinn.Notifications.Email.Core.Status
         public EmailSendResult? SendResult { get; set; }
 
         /// <summary>
+        /// Total raw attachment size in bytes; null for standard emails.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public long? TotalAttachmentSizeBytes { get; set; }
+
+        /// <summary>
         /// Json serializes the <see cref="SendOperationResult"/>
         /// </summary>
         public string Serialize()

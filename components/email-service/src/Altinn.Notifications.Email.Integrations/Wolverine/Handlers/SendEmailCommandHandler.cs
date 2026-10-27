@@ -17,7 +17,8 @@ public static class SendEmailCommandHandler
     /// <param name="command">The send-email command to process.</param>
     /// <param name="sendingService">The service responsible for sending the email.</param>
     /// <param name="logger">The logger used to record processing errors.</param>
-    public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger)
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    public static async Task HandleAsync(SendEmailCommand command, ISendingService sendingService, ILogger logger, CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<EmailContentType>(command.ContentType, ignoreCase: true, out var contentType))
         {
@@ -42,34 +43,28 @@ public static class SendEmailCommandHandler
 
         try
         {
-            await sendingService.SendAsync(email);
+            await sendingService.SendAsync(email, cancellationToken);
 
             logger.LogInformation(
                 "Successfully dispatched email for NotificationId: {NotificationId}",
                 command.NotificationId);
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogOnSendEmailFailed(logger, ex, command.NotificationId);
+            LogOnSendEmailFailed(logger, command.NotificationId);
 
             throw;
         }
     }
 
     /// <summary>
-    /// Logs a send-email failure at error level.
+    /// Logs a send-email failure at warning level.
     /// </summary>
     /// <param name="logger">The logger to write to.</param>
-    /// <param name="exception">The exception that caused the failure.</param>
     /// <param name="notificationId">The notification ID associated with the failed send attempt.</param>
-    private static void LogOnSendEmailFailed(ILogger logger, Exception exception, Guid notificationId)
+    private static void LogOnSendEmailFailed(ILogger logger, Guid notificationId)
     {
-        logger.LogError(
-            exception,
+        logger.LogWarning(
             "SendEmailCommandHandler failed to send email for NotificationId: {NotificationId}.",
             notificationId);
     }

@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-
 using Azure.Messaging.ServiceBus;
 
 using Wolverine;
@@ -16,10 +16,15 @@ namespace Altinn.Notifications.Integrations.Wolverine;
 public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
 {
     private const string _attemptsKey = "wolverine-attempts";
+    private const string _enqueuedAtKey = "wolverine-enqueued-at";
+    private const string _diagnosticIdKey = "Diagnostic-Id";
+    private const string _traceParentKey = "traceparent";
+    private const string _traceStateKey = "tracestate";
+    private const string _baggageKey = "baggage";
 
     /// <summary>
     /// Maps the specified incoming service bus message to the provided envelope by assigning an email delivery report
-    /// command. Restores the retry attempt counter if the message was re-enqueued by a ScheduleRetry policy.
+    /// command. Restores the retry attempt counter and original enqueue time if the message was re-enqueued by a ScheduleRetry policy.
     /// </summary>
     /// <param name="envelope">The envelope to which the email delivery report command will be assigned.</param>
     /// <param name="incoming">The incoming service bus message containing the Event Grid payload.</param>
@@ -32,13 +37,33 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         {
             envelope.Attempts = count;
         }
+
+        if (incoming.ApplicationProperties.TryGetValue(_enqueuedAtKey, out var enqueuedAt) && enqueuedAt is string raw)
+        {
+            envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey] = raw;
+        }
+        else
+        {
+            envelope.SetEnqueuedAt(incoming.EnqueuedTime);
+        }
+
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _diagnosticIdKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceParentKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _traceStateKey);
+        CopyIncomingTraceHeaderIfPresent(incoming, envelope, _baggageKey);
+
+        if (TryGetValidParentId(incoming, out string? parentId))
+        {
+            envelope.ParentId = parentId;
+        }
     }
 
     /// <summary>
     /// Maps the envelope back to an outgoing ServiceBusMessage by copying the original
     /// Event Grid payload. This is required for Wolverine retry policies
     /// (e.g. <c>ScheduleRetry</c>) that re-enqueue the message.
-    /// Preserves the current attempt counter so the retry policy can track progress.
+    /// Preserves the current attempt counter, original enqueue time, and scheduled
+    /// delivery time so the retry policy can track progress and delay re-delivery correctly.
     /// </summary>
     /// <param name="envelope">The envelope whose message is an <see cref="EmailDeliveryReportCommand"/>.</param>
     /// <param name="outgoing">The outgoing ServiceBusMessage to populate.</param>
@@ -55,5 +80,89 @@ public class EventGridEnvelopeMapper : IAzureServiceBusEnvelopeMapper
         outgoing.ContentType = command.Message.ContentType;
         outgoing.Subject = command.Message.Subject;
         outgoing.ApplicationProperties[_attemptsKey] = envelope.Attempts;
+
+        if (envelope.ScheduledTime.HasValue)
+        {
+            outgoing.ScheduledEnqueueTime = envelope.ScheduledTime.Value.UtcDateTime;
+        }
+
+        if (envelope.HasEnqueuedAt())
+        {
+            outgoing.ApplicationProperties[_enqueuedAtKey] = envelope.Headers[EnvelopeExtensions.EnqueuedAtHeaderKey];
+        }
+
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _diagnosticIdKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceParentKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _traceStateKey);
+        CopyOutgoingTraceHeaderIfPresent(envelope, outgoing, _baggageKey);
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_diagnosticIdKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_diagnosticIdKey] = envelope.ParentId;
+        }
+
+        if (!outgoing.ApplicationProperties.ContainsKey(_traceParentKey)
+            && !string.IsNullOrWhiteSpace(envelope.ParentId))
+        {
+            outgoing.ApplicationProperties[_traceParentKey] = envelope.ParentId;
+        }
+    }
+
+    private static void CopyIncomingTraceHeaderIfPresent(ServiceBusReceivedMessage incoming, Envelope envelope, string key)
+    {
+        if (incoming.ApplicationProperties.TryGetValue(key, out var value) && value is string stringValue)
+        {
+            envelope.Headers[key] = stringValue;
+        }
+    }
+
+    private static void CopyOutgoingTraceHeaderIfPresent(Envelope envelope, ServiceBusMessage outgoing, string key)
+    {
+        if (envelope.Headers.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value))
+        {
+            outgoing.ApplicationProperties[key] = value;
+        }
+    }
+
+    private static bool TryGetValidParentId(ServiceBusReceivedMessage incoming, out string? parentId)
+    {
+        parentId = null;
+        incoming.ApplicationProperties.TryGetValue(_traceStateKey, out var traceStateRaw);
+        string? traceState = traceStateRaw as string;
+
+        if (TryParseTraceContext(incoming, _traceParentKey, traceState, out string? traceParent))
+        {
+            parentId = traceParent;
+            return true;
+        }
+
+        if (TryParseTraceContext(incoming, _diagnosticIdKey, traceState, out string? diagnosticId))
+        {
+            parentId = diagnosticId;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseTraceContext(ServiceBusReceivedMessage incoming, string key, string? traceState, out string? parentId)
+    {
+        parentId = null;
+
+        if (!incoming.ApplicationProperties.TryGetValue(key, out var value)
+            || value is not string candidate
+            || string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        if (!ActivityContext.TryParse(candidate, traceState, out _))
+        {
+            return false;
+        }
+
+        parentId = candidate;
+        return true;
     }
 }

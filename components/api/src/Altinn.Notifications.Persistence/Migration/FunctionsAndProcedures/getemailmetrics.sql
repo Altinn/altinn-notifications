@@ -16,26 +16,11 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
-  select 
-    -- references and correlation
-    email._id as email_id --unique recipient/"functional email"
-,   email.alternateid as shipmentid --unique per notification/reminder (but the same for the same notification/reminder to multiple recipients, e.g. to an organization where people with access to the resource have custom contact information)
-,   orders.sendersreference as senders_reference --senders reference (not necessarily unique)
-,   orders.requestedsendtime --requested sending time (to determine when it is correct to invoice, if applicable. May differ slightly from actual sending time, so check in combination with status/gateway ref)
-,   orders.creatorname --orderer's maskinporten ID (the real service owner can be hidden by aggregation, e.g. correspondence)    
-,   orders.notificationorder ->> 'ResourceId' as resourceid --resourceid, can in combination with creatorname provide real service owner or granulation corresponding to service code etc.
+ SELECT e.email_id, e.shipmentid, e.senders_reference, e.requestedsendtime, e.creatorname, e.resourceid, e.result, e.operationid
+    FROM notifications.email_metrics_recent e
+    WHERE e.resulttime >= start_date
+      AND e.resulttime < start_date + INTERVAL '1 day';
 
-     -- operator status
-,   email.result::text as result -- status of the delivery (error, but with an operationid may mean that the message was attempted sent/tariffed, but for various reasons did not reach the user)
-,   email.operationid -- reference at ACS (a reference likely means that ACS bills for this - but not necessarily)
-
-from notifications.emailnotifications as email
-         inner join notifications.orders orders on orders._id = email._orderid
-         WHERE email.resulttime >= start_date
-			AND email.resulttime < start_date + INTERVAL '1 day'
-            AND email.result NOT IN ('New',
-                           'Sending',
-                           'Succeeded');
 END;
 $BODY$;
 

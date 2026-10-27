@@ -1,4 +1,4 @@
-﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
@@ -51,7 +51,9 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime currentTime = _dateTime.UtcNow();
 
-        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId, orderRequest.ResourceAction);
+        /* UseStaleContactInformation is not supported by version 1 of the API. Using false were required. */
+
+        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId, false, orderRequest.ResourceAction);
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
@@ -66,6 +68,7 @@ public class OrderRequestService : IOrderRequestService
             ResourceAction = orderRequest.ResourceAction,
             SendersReference = orderRequest.SendersReference,
             IgnoreReservation = orderRequest.IgnoreReservation,
+            UseStaleContactInformation = false,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             NotificationChannel = orderRequest.NotificationChannel,
             RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime
@@ -89,27 +92,52 @@ public class OrderRequestService : IOrderRequestService
     /// <inheritdoc/>
     public async Task<Result<NotificationOrderChainResponse>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
-        // 1. Get the current time
+        // 1. Early cancellation check.
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        // 2. Idempotency pre-check for retries: if this idempotency key was already
+        //    committed by a previous request, return the existing chain immediately.
+        //
+        //    This serves three purposes:
+        //    - Avoids redundant contact-point lookups against external registries (KRR etc.)
+        //    - Avoids redundant construction of order and reminder objects
+        //    - Prevents a retry from failing with MissingContactInformation when the
+        //      recipient's contact data (e.g. KRR reservation status) has changed
+        //      since the original successful request
+        //
+        //    This is intentionally NOT the TOCTOU guard. Two genuinely concurrent
+        //    first-time requests will both pass this check, but the atomic
+        //    ON CONFLICT DO NOTHING in the database insert handles that narrow window.
+        var existingChain = await _repository.GetOrderChainTracking(
+            orderRequest.Creator.ShortName,
+            orderRequest.IdempotencyId,
+            cancellationToken);
+
+        if (existingChain != null)
+        {
+            return existingChain;
+        }
+
+        // 3. Get the current time.
         DateTime currentTime = _dateTime.UtcNow();
 
-        // 2. Early cancellation if someone’s already cancelled
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 3. Create the main order
+        // 4. Create the main order (performs contact-point lookup).
         var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
         if (mainOrderResult.IsProblem)
         {
             return mainOrderResult.Problem;
         }
 
-        // 4. Create reminders
+        // 5. Create reminders (performs contact-point lookup).
         var remindersResult = await CreateReminderNotificationOrdersAsync(orderRequest.Reminders, orderRequest.Creator, currentTime, cancellationToken);
         if (remindersResult.IsProblem)
         {
             return remindersResult.Problem;
         }
 
-        // 5. Create the response
+        // 6. Persist atomically and return the response.
+        //    If a concurrent first-time request won the race, result.IsNewlyCreated
+        //    will be false and the existing chain's data is returned directly.
         return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
     }
 
@@ -212,6 +240,7 @@ public class OrderRequestService : IOrderRequestService
         {
             Channel = NotificationChannel.Email,
             Templates = [CreateEmailTemplate(recipientEmail.Settings!)],
+            EmailSendingTimePolicy = recipientEmail.Settings.SendingTimePolicy,
             Recipients = [new([new EmailAddressPoint(recipientEmail.EmailAddress)])]
         };
     }
@@ -221,7 +250,7 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractPersonRecipientComponents(RecipientPerson recipientPerson)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientPerson.SmsSettings, recipientPerson.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientPerson.SmsSettings, recipientPerson.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
@@ -230,7 +259,9 @@ public class OrderRequestService : IOrderRequestService
             ResourceId = recipientPerson.ResourceId,
             ResourceAction = recipientPerson.ResourceAction,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             IgnoreReservation = recipientPerson.IgnoreReservation,
+            UseStaleContactInformation = recipientPerson.UseStaleContactInformation,
             Recipients = [new([], nationalIdentityNumber: recipientPerson.NationalIdentityNumber)]
         };
     }
@@ -282,12 +313,13 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractOrganizationRecipientComponents(RecipientOrganization recipientOrganization)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientOrganization.SmsSettings, recipientOrganization.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientOrganization.SmsSettings, recipientOrganization.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
             Templates = templates,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             Channel = recipientOrganization.ChannelSchema,
             ResourceId = recipientOrganization.ResourceId,
             ResourceAction = recipientOrganization.ResourceAction,
@@ -342,12 +374,13 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private static RecipientDeliveryDetails ExtractExternalIdentityRecipientComponents(RecipientExternalIdentity recipientExternalIdentity)
     {
-        var (templates, smsSendingTimePolicy) = ExtractTemplatesFromSettings(recipientExternalIdentity.SmsSettings, recipientExternalIdentity.EmailSettings);
+        var (templates, smsSendingTimePolicy, emailSendingTimePolicy) = ExtractTemplatesFromSettings(recipientExternalIdentity.SmsSettings, recipientExternalIdentity.EmailSettings);
 
         return new RecipientDeliveryDetails
         {
             Templates = templates,
             SmsSendingTimePolicy = smsSendingTimePolicy,
+            EmailSendingTimePolicy = emailSendingTimePolicy,
             Channel = recipientExternalIdentity.ChannelSchema,
             ResourceId = recipientExternalIdentity.ResourceId,
             ResourceAction = recipientExternalIdentity.ResourceAction,
@@ -391,7 +424,7 @@ public class OrderRequestService : IOrderRequestService
     {
         var deliveryDetails = ExtractDeliveryDetails(orderRequest.Recipient);
 
-        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
+        var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.UseStaleContactInformation, deliveryDetails.ResourceAction);
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
@@ -415,7 +448,9 @@ public class OrderRequestService : IOrderRequestService
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint,
             IgnoreReservation = deliveryDetails.IgnoreReservation,
-            SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy
+            UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+            SmsSendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+            EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy
         };
     }
 
@@ -431,6 +466,9 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="resourceId">
     /// An optional resource identifier used for authorization during contact point lookup.
     /// </param>
+    /// <param name="useStaleContactInformation">
+    /// A flag indicating whether to use stale contact information during the lookup.
+    /// </param>
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
@@ -438,7 +476,7 @@ public class OrderRequestService : IOrderRequestService
     /// A <see cref="RecipientLookupResult"/> containing information about reserved recipients and those
     /// with missing contact details, or <c>null</c> if all recipients already have the required contact information.
     /// </returns>
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId, string? resourceAction = null)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId, bool useStaleContactInformation, string? resourceAction = null)
     {
         List<Recipient> recipientsWithoutContactPoint = FilterRecipientsWithoutContactPoints(channel, originalRecipients);
         if (recipientsWithoutContactPoint.Count == 0)
@@ -449,20 +487,20 @@ public class OrderRequestService : IOrderRequestService
         switch (channel)
         {
             case NotificationChannel.Email:
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, useStaleContactInformation, resourceAction);
                 break;
 
             case NotificationChannel.Sms:
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, useStaleContactInformation, resourceAction);
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, useStaleContactInformation, resourceAction);
                 break;
 
             case NotificationChannel.SmsPreferred:
             case NotificationChannel.EmailPreferred:
-                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, resourceAction);
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId, OrderLifecycleStage.Registration, useStaleContactInformation, resourceAction);
                 break;
         }
 
@@ -489,12 +527,14 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Extracts notification templates from the provided SMS and email settings.
+    /// Extracts notification templates and the per-channel sending time policies from the provided SMS and email settings.
+    /// A policy is only set for a channel that has settings.
     /// </summary>
-    private static (List<INotificationTemplate> Templates, SendingTimePolicy? SmsSendingTimePolicy) ExtractTemplatesFromSettings(SmsSendingOptions? smsSettings, EmailSendingOptions? emailSettings)
+    private static (List<INotificationTemplate> Templates, SendingTimePolicy? SmsSendingTimePolicy, SendingTimePolicy? EmailSendingTimePolicy) ExtractTemplatesFromSettings(SmsSendingOptions? smsSettings, EmailSendingOptions? emailSettings)
     {
         var templates = new List<INotificationTemplate>();
         SendingTimePolicy? smsSendingTimePolicy = null;
+        SendingTimePolicy? emailSendingTimePolicy = null;
 
         if (smsSettings != null)
         {
@@ -505,9 +545,10 @@ public class OrderRequestService : IOrderRequestService
         if (emailSettings != null)
         {
             templates.Add(CreateEmailTemplate(emailSettings));
+            emailSendingTimePolicy = emailSettings.SendingTimePolicy;
         }
 
-        return (templates, smsSendingTimePolicy);
+        return (templates, smsSendingTimePolicy, emailSendingTimePolicy);
     }
 
     /// <summary>
@@ -567,7 +608,7 @@ public class OrderRequestService : IOrderRequestService
 
             var deliveryDetails = ExtractDeliveryDetails(notificationReminder.Recipient);
 
-            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.ResourceAction);
+            var lookupResult = await GetRecipientLookupResult(deliveryDetails.Recipients, deliveryDetails.Channel, deliveryDetails.ResourceId, deliveryDetails.UseStaleContactInformation, deliveryDetails.ResourceAction);
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
@@ -588,7 +629,9 @@ public class OrderRequestService : IOrderRequestService
                 ResourceAction = deliveryDetails.ResourceAction,
                 NotificationChannel = deliveryDetails.Channel,
                 IgnoreReservation = deliveryDetails.IgnoreReservation,
-                SendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+                UseStaleContactInformation = deliveryDetails.UseStaleContactInformation,
+                SmsSendingTimePolicy = deliveryDetails.SmsSendingTimePolicy,
+                EmailSendingTimePolicy = deliveryDetails.EmailSendingTimePolicy,
                 SendersReference = notificationReminder.SendersReference,
                 RequestedSendTime = notificationReminder.RequestedSendTime,
                 ConditionEndpoint = notificationReminder.ConditionEndpoint
@@ -633,31 +676,24 @@ public class OrderRequestService : IOrderRequestService
     /// </exception>
     private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
-        var savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        var result = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
-        // The first is the main shipment
-        var savedMain = savedOrders[0];
-
-        // Build response
-        var response = new NotificationOrderChainResponse
+        return new NotificationOrderChainResponse
         {
-            OrderChainId = orderRequest.OrderChainId,
+            OrderChainId = result.OrderChainId,
+            IsNewlyCreated = result.IsNewlyCreated,
             OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = savedMain.Id,
-                SendersReference = savedMain.SendersReference,
-                Reminders = savedOrders.Count > 1
-                    ? [.. savedOrders
-                        .Where(o => o.Id != savedMain.Id)
-                        .Select(o => new NotificationOrderChainShipment
-                        {
-                            ShipmentId = o.Id,
-                            SendersReference = o.SendersReference
-                        })]
-                    : null
+                ShipmentId = result.ShipmentId,
+                SendersReference = result.SendersReference,
+                Reminders = result.IsNewlyCreated
+                    ? reminderOrders?.Select(o => new NotificationOrderChainShipment
+                    {
+                        ShipmentId = o.Id,
+                        SendersReference = o.SendersReference
+                    }).ToList()
+                    : result.Reminders
             }
         };
-
-        return response;
     }
 }

@@ -88,7 +88,7 @@ public class UtilTests
 
         // Assert
         Assert.Null(result);
-    }    
+    }
 
     [Fact]
     public async Task GetAndMapDeadDeliveryReports_ReturnsEmptyList_WhenNoReportsFound()
@@ -109,7 +109,7 @@ public class UtilTests
             1,
             100,
             DeliveryReportChannel.AzureCommunicationServices,
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -173,7 +173,7 @@ public class UtilTests
             1,
             100,
             DeliveryReportChannel.AzureCommunicationServices,
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -231,7 +231,7 @@ public class UtilTests
             1,
             100,
             DeliveryReportChannel.AzureCommunicationServices,
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
@@ -270,7 +270,7 @@ public class UtilTests
                 DeliveryReportChannel.LinkMobility,
                 cts.Token),
             Times.Once);
-    }    
+    }
 
     [Fact]
     public void RetryExceededReason_ReturnsCorrectValue()

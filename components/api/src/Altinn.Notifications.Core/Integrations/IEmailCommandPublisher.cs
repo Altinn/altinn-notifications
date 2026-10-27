@@ -1,31 +1,27 @@
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 
 namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
-/// Defines methods for publishing email notifications from the API to the Email service.
+/// Publishes email notifications from the API to the Email service.
 /// </summary>
 public interface IEmailCommandPublisher
 {
     /// <summary>
-    /// Enqueues a single email notification for asynchronous delivery to the Email service.
+    /// Queues a single email notification for asynchronous delivery by the Email service.
     /// </summary>
     /// <param name="email">The email to deliver.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>
-    /// A task that completes when the publish attempt has finished. Returns <c>null</c> when the
-    /// publish succeeded; otherwise returns the <see cref="Email"/> that failed to publish.
-    /// </returns>
-    Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Enqueues a batch of email notifications for asynchronous delivery to the Email service.
-    /// </summary>
-    /// <param name="emails">The collection of emails to deliver.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>
-    /// A task that completes with a read-only list of <see cref="Email"/> objects for notifications
-    /// that failed to deliver. An empty list indicates that all notifications were delivered successfully.
-    /// </returns>
-    Task<IReadOnlyList<Email>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken);
+    /// <returns>A task that completes when the email has been queued.</returns>
+    /// <exception cref="NotificationSizeLimitExceededException">
+    /// Thrown when the email is larger than the message queue accepts. This failure is permanent and should not be retried.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when <paramref name="cancellationToken"/> is cancelled before the email is queued.
+    /// </exception>
+    /// <remarks>
+    /// Other exceptions, such as transient message bus failures, are passed on unchanged and may be retried.
+    /// </remarks>
+    Task PublishAsync(Email email, CancellationToken cancellationToken);
 }

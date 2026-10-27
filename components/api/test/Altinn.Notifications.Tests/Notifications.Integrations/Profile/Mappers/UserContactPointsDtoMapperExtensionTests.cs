@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.Profile.Mappers;
 public class UserContactPointsDtoMapperExtensionTests
 {
     [Fact]
-    public void ToUserContactPoint_NullValues_MapsCorrectly()   
+    public void ToUserContactPoint_NullValues_MapsCorrectly()
     {
         // Arrange
         var userContactPointsDTO = new UserContactPointsDto
@@ -18,10 +18,10 @@ public class UserContactPointsDtoMapperExtensionTests
             Email = null,
             MobileNumber = null
         };
-    
+
         // Act
         var mappedResult = userContactPointsDTO.ToUserContactPoint();
-    
+
         // Assert
         Assert.Equal(0, mappedResult.UserId);
         Assert.Equal(string.Empty, mappedResult.NationalIdentityNumber);
@@ -31,7 +31,7 @@ public class UserContactPointsDtoMapperExtensionTests
     }
 
     [Fact]
-    public void ToUserContactPoint_WithValues_MapsCorrectly()   
+    public void ToUserContactPoint_WithValues_MapsCorrectly()
     {
         // Arrange
         var testData = new
@@ -50,10 +50,10 @@ public class UserContactPointsDtoMapperExtensionTests
             IsReserved = testData.isReserved,
             MobileNumber = testData.mobileNumber
         };
-    
+
         // Act
         var mappedResult = userContactPointsDTO.ToUserContactPoint();
-    
+
         // Assert
         Assert.Equal(testData.userId, mappedResult.UserId);
         Assert.Equal(testData.nationalIdentityNumber, mappedResult.NationalIdentityNumber);

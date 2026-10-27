@@ -37,5 +37,14 @@ public enum OrderType : uint
     /// they are immediately saved to the database and directly forwarded to the appropriate 
     /// delivery service (SMS or Email) without waiting for cronjob processing.
     /// </remarks>
-    Instant = 2
+    Instant = 2,
+
+    /// <summary>
+    /// Represents a composed email order that references one or more files via SAS URLs.
+    /// </summary>
+    /// <remarks>
+    /// Composed orders are processed through a dedicated pipeline isolated from the standard email pipeline
+    /// to prevent head-of-line blocking. The email service downloads the referenced files from blob storage at send time.
+    /// </remarks>
+    Composed = 3
 }

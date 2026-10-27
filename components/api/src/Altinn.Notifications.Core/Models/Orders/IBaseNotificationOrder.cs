@@ -33,6 +33,11 @@ public interface IBaseNotificationOrder
     public bool? IgnoreReservation { get; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to use potentially stale contact information from the Common Contact Register (KRR).
+    /// </summary>
+    public bool UseStaleContactInformation { get; }
+
+    /// <summary>
     /// Gets or sets the id of the resource that the notification is related to
     /// </summary>
     public string? ResourceId { get; }
@@ -53,9 +58,16 @@ public interface IBaseNotificationOrder
     public DateTime Created { get; }
 
     /// <summary>
-    /// Gets the sending time policy for the notification order
+    /// Gets the sending time policy for the SMS notifications of the notification order.
+    /// Null when the order has no SMS template.
     /// </summary>
-    public SendingTimePolicy? SendingTimePolicy { get; }
+    public SendingTimePolicy? SmsSendingTimePolicy { get; }
+
+    /// <summary>
+    /// Gets the sending time policy for the email notifications of the notification order.
+    /// Null when the order has no email template.
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; }
 
     /// <summary>
     /// Gets the type of the notification order.

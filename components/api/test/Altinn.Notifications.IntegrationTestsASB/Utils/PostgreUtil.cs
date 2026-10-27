@@ -46,7 +46,7 @@ public static class PostgreUtil
     /// <summary>
     /// Updates the send status of an email notification.
     /// </summary>
-    public static async Task UpdateSendStatus(
+    public static async Task UpdateEmailSendStatus(
         IntegrationTestWebApplicationFactory factory,
         Guid notificationId,
         EmailNotificationResultType resultType,
@@ -54,7 +54,10 @@ public static class PostgreUtil
     {
         using var scope = factory.Host.Services.CreateScope();
         var emailRepo = scope.ServiceProvider.GetRequiredService<IEmailNotificationRepository>();
-        await emailRepo.UpdateSendStatus(notificationId, resultType, operationId);
+        var unitOfWorkRepo = scope.ServiceProvider.GetRequiredService<IUnitOfWorkRepository>();
+        var unitOfWork = await unitOfWorkRepo.StartUnitOfWork();
+        await emailRepo.UpdateSendStatusAsync(unitOfWork, notificationId, resultType, operationId);
+        await unitOfWorkRepo.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>
@@ -92,6 +95,21 @@ public static class PostgreUtil
             throw new InvalidOperationException("Query returned no rows.");
         }
 
+        if (await reader.IsDBNullAsync(0))
+        {
+            var type = typeof(T);
+            bool isNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+            if (!isNullable)
+            {
+                throw new InvalidOperationException(
+                    $"Column 0 is NULL but T is non-nullable value type '{type.Name}'. " +
+                    $"Use '{type.Name}?' if a NULL result is expected.");
+            }
+
+            return default!;
+        }
+
         return await reader.GetFieldValueAsync<T>(0);
     }
 
@@ -110,7 +128,7 @@ public static class PostgreUtil
 
         await orderRepo.Create(order);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await smsRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1), 0);
+        await smsRepo.AddNotification(notification, expiry ?? DateTime.UtcNow.AddDays(1));
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
         return (order, notification);
@@ -128,7 +146,10 @@ public static class PostgreUtil
     {
         using var scope = factory.Host.Services.CreateScope();
         var smsRepo = scope.ServiceProvider.GetRequiredService<ISmsNotificationRepository>();
-        await smsRepo.UpdateSendStatus(notificationId, resultType, gatewayReference);
+        var unitOfWorkRepo = scope.ServiceProvider.GetRequiredService<IUnitOfWorkRepository>();
+        var unitOfWork = await unitOfWorkRepo.StartUnitOfWork();
+        await smsRepo.UpdateSendStatusAsync(unitOfWork, notificationId, resultType, gatewayReference);
+        await unitOfWorkRepo.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>
@@ -194,6 +215,76 @@ public static class PostgreUtil
 
         await using var reader = await cmd.ExecuteReaderAsync();
         return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
+    }
+
+    /// <summary>
+    /// Looks up the most recent dead delivery report with the given reason.
+    /// Useful when no natural key (gatewayReference, operationId) is available in the payload.
+    /// </summary>
+    public static async Task<DeadDeliveryReportRow?> GetLatestDeadDeliveryReportByReason(string connectionString, string reason)
+    {
+        const string sql = """
+            SELECT id, channel, reason, attemptcount, resolved
+            FROM notifications.deaddeliveryreports
+            WHERE reason = @reason
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("reason", reason);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? await ReadDeadDeliveryReportRow(reader) : null;
+    }
+
+    /// <summary>
+    /// Deletes a dead delivery report by its primary key ID.
+    /// </summary>
+    public static async Task<bool> DeleteDeadDeliveryReportById(string connectionString, long id)
+    {
+        const string sql = """
+            DELETE FROM notifications.deaddeliveryreports WHERE id = @id
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("id", id);
+
+        var rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Returns the firstseen and lastattempt timestamps for a dead delivery report
+    /// identified by its messageId.
+    /// </summary>
+    public static async Task<(DateTime FirstSeen, DateTime LastAttempt)?> GetDeadDeliveryReportTimestampsAsync(
+        string connectionString,
+        string messageId)
+    {
+        const string sql = """
+            SELECT firstseen, lastattempt
+            FROM notifications.deaddeliveryreports
+            WHERE deliveryreport ->> 'messageId' = @messageId
+            ORDER BY id DESC
+            LIMIT 1
+            """;
+
+        await using var dataSource = NpgsqlDataSource.Create(connectionString);
+        await using var cmd = dataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("messageId", messageId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return (
+            FirstSeen: await reader.GetFieldValueAsync<DateTime>(0),
+            LastAttempt: await reader.GetFieldValueAsync<DateTime>(1));
     }
 
     private static async Task<DeadDeliveryReportRow> ReadDeadDeliveryReportRow(NpgsqlDataReader reader)

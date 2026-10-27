@@ -25,6 +25,11 @@ public class SmsSendOperationResult
     public SmsNotificationResultType SendResult { get; set; }
 
     /// <summary>
+    /// Gets or sets the raw delivery report payload received from the SMS gateway.
+    /// </summary>
+    public string? DeliveryReport { get; set; }
+
+    /// <summary>
     /// Serializes the <see cref="SmsSendOperationResult"/> object to a JSON string.
     /// </summary>
     /// <returns>A JSON string representation of the <see cref="SmsSendOperationResult"/> object.</returns>

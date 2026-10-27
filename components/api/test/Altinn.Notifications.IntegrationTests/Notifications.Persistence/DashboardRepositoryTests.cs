@@ -1,0 +1,878 @@
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.IntegrationTests.Utils;
+using Altinn.Notifications.Persistence.Repository;
+
+using Xunit;
+
+namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
+
+public sealed class DashboardRepositoryTests : IAsyncLifetime
+{
+    private readonly List<Guid> _orderIdsToDelete = [];
+    private readonly List<Guid> _orderChainIdsToDelete = [];
+    private readonly string _recipientNin = Random.Shared.NextInt64(10_000_000_000, 99_999_999_999).ToString();
+    private readonly string _recipientOrgNumber = Random.Shared.NextInt64(100_000_000, 999_999_999).ToString();
+    private readonly string _recipientEmail = $"dashboard-{Guid.NewGuid():N}@example.com";
+    private readonly string _recipientPhoneNumber = $"+479{Random.Shared.NextInt64(1_000_000, 9_999_999)}";
+
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_orderIdsToDelete.Count > 0)
+        {
+            await PostgreUtil.DeleteOrdersByAlternateIds(_orderIdsToDelete);
+        }
+
+        await PostgreUtil.DeleteOrdersChainByOrderIds(_orderChainIdsToDelete);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_ReturnsEmailAndSmsForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 09, 00, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "email" && r.NationalIdentityNumber == _recipientNin));
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "sms" && r.NationalIdentityNumber == _recipientNin));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_UnknownNin_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our NIN so the table is non-empty
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different NIN
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            "00000000000",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-1), recipientNin: _recipientNin);
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-30), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(_recipientNin, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByNinAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, orderType: orderType);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_SingleOrderWithEmailAndSms_GroupedUnderOneShipment()
+    {
+        // Arrange — one order that produced both an email and an SMS notification for the same NIN.
+        // The SQL function returns two rows with the same shipmentid, so the second row must hit
+        // the groups.TryGetValue(shipmentId, ...) == true branch and be appended to the same entry.
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(2, result[0].DeliveryAttempts.Count);
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "email");
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "sms");
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_ReturnsEmailAndSmsForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 09, 00, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "email" && r.OrganizationNumber == _recipientOrgNumber));
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "sms" && r.OrganizationNumber == _recipientOrgNumber));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_UnknownOrgNumber_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our org so the table is non-empty
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different org number
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            "000000000",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-1), recipientOrgNumber: _recipientOrgNumber);
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-30), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(_recipientOrgNumber, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber, orderType: orderType);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_SingleOrderWithEmailAndSms_GroupedUnderOneShipment()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(2, result[0].DeliveryAttempts.Count);
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "email");
+        Assert.Contains(result[0].DeliveryAttempts, r => r.Channel == "sms");
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_ReturnsNotificationForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "email" && r.EmailAddress == _recipientEmail));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_UnknownEmail_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our email so the table is non-empty
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different email address
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            $"unknown-{Guid.NewGuid():N}@example.com",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-1), toAddress: _recipientEmail);
+        await SeedOrderWithEmailNotification(DateTime.UtcNow.AddDays(-30), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(_recipientEmail, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("email", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByEmailAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail, orderType: orderType);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_CaseInsensitiveMatch_ReturnsNotification()
+    {
+        // Arrange — seeded address is lower-case, queried address is upper-case
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail.ToUpperInvariant(),
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_RecipientNinIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientNin, attempt.NationalIdentityNumber);
+        Assert.Null(attempt.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_RecipientOrgNoIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber, toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientOrgNumber, attempt.OrganizationNumber);
+        Assert.Null(attempt.NationalIdentityNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_ReturnsNotificationForRecipientWithinRange()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Contains(result, n => n.DeliveryAttempts.Any(r => r.Channel == "sms" && r.MobileNumber == _recipientPhoneNumber));
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_UnknownPhoneNumber_ReturnsEmpty()
+    {
+        // Arrange — seed a notification for our phone number so the table is non-empty
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — query with a different phone number
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            $"+4790{Random.Shared.NextInt64(100_000, 999_999)}",
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_DateRangeExcludesNotifications_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act — date window after the requestedsendtime
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2024, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_NullDates_DefaultsToLastSevenDays()
+    {
+        // Arrange — order inside the default 7-day window, plus one outside it
+        await SeedOrderWithSmsNotification(DateTime.UtcNow.AddDays(-1), mobileNumber: _recipientPhoneNumber);
+        await SeedOrderWithSmsNotification(DateTime.UtcNow.AddDays(-30), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(_recipientPhoneNumber, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.All(result, n => Assert.All(n.DeliveryAttempts, r => Assert.Equal("sms", r.Channel)));
+    }
+
+    [Theory]
+    [InlineData(OrderType.Reminder, "Reminder")]
+    [InlineData(OrderType.Instant, "Instant")]
+    [InlineData(OrderType.Notification, "Notification")]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_NotificationType_IsReturnedCorrectly(OrderType orderType, string expectedType)
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), orderType: orderType, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(expectedType, result[0].NotificationType);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_RecipientNinIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientNin, attempt.NationalIdentityNumber);
+        Assert.Null(attempt.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_RecipientOrgNoIsMapped()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber, mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var attempt = Assert.Single(Assert.Single(result).DeliveryAttempts);
+        Assert.Equal(_recipientOrgNumber, attempt.OrganizationNumber);
+        Assert.Null(attempt.NationalIdentityNumber);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_ReturnsEmailAndSmsForSeededOrder()
+    {
+        // Arrange
+        Guid orderId = await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Contains(notification.DeliveryAttempts, r => r.Channel == "email");
+        Assert.Contains(notification.DeliveryAttempts, r => r.Channel == "sms");
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_UnknownShipmentId_ReturnsEmpty()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_OrderWithoutDialog_ReturnsEmailSenderAndNullDialogId()
+    {
+        // Arrange
+        await SeedOrderWithEmailNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), toAddress: _recipientEmail);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(
+            _recipientEmail,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.DialogId);
+        Assert.Null(notification.TransmissionId);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_SmsOrder_ReturnsNullSenderAddress()
+    {
+        // Arrange
+        await SeedOrderWithSmsNotification(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.DialogId);
+        Assert.Null(notification.TransmissionId);
+        Assert.Null(notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByShipmentIdAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        Guid orderId = await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByShipmentIdAsync(orderId, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByNinAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientNin: _recipientNin);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByNinAsync(
+            _recipientNin,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByOrgNumberAsync_OrderWithEmailAndSms_ReturnsEmailSender()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), recipientOrgNumber: _recipientOrgNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByOrgNumberAsync(
+            _recipientOrgNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(2, notification.DeliveryAttempts.Count);
+        Assert.Equal("sender@domain.com", notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_OrderWithEmailAndSms_ReturnsNullSenderAddress()
+    {
+        // Arrange
+        await SeedOrderWithEmailAndSmsNotifications(new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc), mobileNumber: _recipientPhoneNumber);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(
+            _recipientPhoneNumber,
+            new DateTime(2023, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2023, 07, 01, 0, 0, 0, DateTimeKind.Utc),
+            CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Null(notification.SenderAddress);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByEmailAsync_ChainedOrderWithDialog_ReturnsDialogAndTransmissionId()
+    {
+        // Arrange
+        var dialogId = Guid.NewGuid();
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndEmailNotification(
+            dialogId: dialogId,
+            transmissionId: "dashboard-transmission",
+            toAddress: _recipientEmail);
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByEmailAsync(_recipientEmail, null, null, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(dialogId.ToString(), notification.DialogId);
+        Assert.Equal("dashboard-transmission", notification.TransmissionId);
+    }
+
+    [Fact]
+    public async Task GetDashboardNotificationsByPhoneNumberAsync_ChainedOrderWithDialog_ReturnsDialogAndTransmissionId()
+    {
+        // Arrange
+        var dialogId = Guid.NewGuid();
+        (Guid orderId, Guid orderChainId) = await PostgreUtil.PopulateDBWithChainedOrderAndSmsNotification(
+            dialogId: dialogId,
+            transmissionId: "dashboard-transmission",
+            mobileNumber: _recipientPhoneNumber);
+        _orderIdsToDelete.Add(orderId);
+        _orderChainIdsToDelete.Add(orderChainId);
+
+        DashboardRepository sut = GetRepository();
+
+        // Act
+        var result = await sut.GetDashboardNotificationsByPhoneNumberAsync(_recipientPhoneNumber, null, null, CancellationToken.None);
+
+        // Assert
+        var notification = Assert.Single(result);
+        Assert.Equal(orderId, notification.ShipmentId);
+        Assert.Equal(dialogId.ToString(), notification.DialogId);
+        Assert.Equal("dashboard-transmission", notification.TransmissionId);
+    }
+
+    private static DashboardRepository GetRepository() =>
+        ServiceUtil.GetServices([typeof(IDashboardRepository)])
+            .OfType<DashboardRepository>()
+            .First();
+
+    private async Task<Guid> SeedOrderWithEmailNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, OrderType orderType = OrderType.Notification, string toAddress = "recipient@example.com")
+    {
+        var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
+        var emailRepo = ServiceUtil.GetServices([typeof(IEmailNotificationRepository)]).OfType<EmailNotificationRepository>().First();
+
+        NotificationOrder order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        order.RequestedSendTime = requestedSendTime;
+        order.Type = orderType;
+
+        await orderRepo.Create(order);
+
+        await emailRepo.AddNotification(
+                new EmailNotification
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    RequestedSendTime = requestedSendTime,
+                    Recipient = new() { ToAddress = toAddress, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    SendResult = new(EmailNotificationResultType.Succeeded, requestedSendTime)
+                },
+                requestedSendTime.AddDays(1));
+
+        _orderIdsToDelete.Add(order.Id);
+        return order.Id;
+    }
+
+    private async Task<Guid> SeedOrderWithSmsNotification(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, OrderType orderType = OrderType.Notification, string mobileNumber = "+4799999999")
+    {
+        var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
+        var smsRepo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).OfType<SmsNotificationRepository>().First();
+
+        NotificationOrder order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        order.RequestedSendTime = requestedSendTime;
+        order.Type = orderType;
+
+        await orderRepo.Create(order);
+
+        await smsRepo.AddNotification(
+                new SmsNotification
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    RequestedSendTime = requestedSendTime,
+                    Recipient = new() { MobileNumber = mobileNumber, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
+                },
+                requestedSendTime.AddDays(1));
+
+        _orderIdsToDelete.Add(order.Id);
+        return order.Id;
+    }
+
+    private async Task<Guid> SeedOrderWithEmailAndSmsNotifications(DateTime requestedSendTime, string? recipientNin = null, string? recipientOrgNumber = null, string mobileNumber = "+4799999999")
+    {
+        var orderRepo = ServiceUtil.GetServices([typeof(IOrderRepository)]).OfType<OrderRepository>().First();
+        var emailRepo = ServiceUtil.GetServices([typeof(IEmailNotificationRepository)]).OfType<EmailNotificationRepository>().First();
+        var smsRepo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).OfType<SmsNotificationRepository>().First();
+
+        NotificationOrder order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        order.RequestedSendTime = requestedSendTime;
+
+        await orderRepo.Create(order);
+
+        await emailRepo.AddNotification(
+                new EmailNotification
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    RequestedSendTime = requestedSendTime,
+                    Recipient = new() { ToAddress = "recipient@example.com", NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    SendResult = new(EmailNotificationResultType.Succeeded, requestedSendTime)
+                },
+                requestedSendTime.AddDays(1));
+
+        await smsRepo.AddNotification(
+                new SmsNotification
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    RequestedSendTime = requestedSendTime,
+                    Recipient = new() { MobileNumber = mobileNumber, NationalIdentityNumber = recipientNin, OrganizationNumber = recipientOrgNumber },
+                    SendResult = new(SmsNotificationResultType.Accepted, requestedSendTime)
+                },
+                requestedSendTime.AddDays(1));
+
+        _orderIdsToDelete.Add(order.Id);
+        return order.Id;
+    }
+}

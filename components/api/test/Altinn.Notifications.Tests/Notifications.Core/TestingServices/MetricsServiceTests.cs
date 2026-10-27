@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            DailyMetrics<DailySmsMetricsRecord> actual = await service.GetDailySmsMetrics(CancellationToken.None);
+            DailyMetrics<DailySmsMetricsRecord> actual = await service.GetDailySmsMetrics(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Same(expected, actual);
@@ -73,7 +73,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            DailyMetrics<DailyEmailMetricsRecord> actual = await service.GetDailyEmailMetrics(CancellationToken.None);
+            DailyMetrics<DailyEmailMetricsRecord> actual = await service.GetDailyEmailMetrics(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Same(expected, actual);
@@ -95,7 +95,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
+            MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
 
             // Assert - basic invariants
             Assert.NotNull(summary);
@@ -136,7 +136,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
+            MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
 
             // Assert - basic invariants
             Assert.NotNull(summary);
@@ -179,7 +179,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new MetricsService(_metricsRepositoryMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
             // Act
-            MetricsSummary summary = await service.GetParquetFile(metrics, CancellationToken.None);
+            MetricsSummary summary = await service.GetParquetFile(metrics, TestContext.Current.CancellationToken);
 
             // Assert - basic invariants
             Assert.NotNull(summary);

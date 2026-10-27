@@ -23,6 +23,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     private IHost _host = null!;
     private readonly List<Action<IServiceCollection>> _configureTestServices = [];
     private readonly Dictionary<string, string?> _configOverrides = [];
+    private readonly DelegatedServiceOverrideRegistry _delegatedOverrides = new();
 
     /// <summary>
     /// Gets the fixture providing container connection strings.
@@ -35,12 +36,42 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     public IHost Host => _host ?? throw new InvalidOperationException("Host not created yet. Call Initialize() first.");
 
     /// <summary>
-    /// Initializes the factory by creating the test client, triggering host startup.
+    /// Initializes the factory by creating the test client and triggering host startup.
     /// </summary>
     public TSelf Initialize()
     {
         _ = CreateClient();
         return (TSelf)this;
+    }
+
+    /// <summary>
+    /// Installs a service override that will be used by delegated test service resolution.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="service">Service instance to install.</param>
+    public void InstallService<TService>(TService service)
+        where TService : class
+    {
+        _delegatedOverrides.InstallService(service);
+    }
+
+    /// <summary>
+    /// Clears all runtime-installed service overrides.
+    /// </summary>
+    public void ResetInstalledMocks()
+    {
+        _delegatedOverrides.ResetInstalledMocks();
+    }
+
+    /// <summary>
+    /// Registers an interface as a delegated service that can be overridden at runtime per test.
+    /// </summary>
+    /// <typeparam name="TService">Service contract type.</typeparam>
+    /// <param name="services">Service collection to mutate.</param>
+    protected void RegisterDelegatedService<TService>(IServiceCollection services)
+        where TService : class
+    {
+        _delegatedOverrides.RegisterDelegatedService<TService>(services);
     }
 
     /// <summary>
@@ -118,7 +149,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     protected abstract Dictionary<string, string?> GetFixtureConfigOverrides();
 
     /// <summary>
-    /// Configures component-specific services: removes Kafka consumers, replaces producers, etc.
+    /// Configures component-specific services: replaces or removes services as needed for test isolation.
     /// </summary>
     protected abstract void ConfigureComponentServices(IConfiguration configuration, IServiceCollection services);
 
@@ -178,6 +209,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
         }
         catch (AggregateException ex) when (ex.Flatten().InnerExceptions.All(e =>
             e is ObjectDisposedException { ObjectName: "EventLogInternal" } ||
+            e is ObjectDisposedException { ObjectName: "System.Threading.SemaphoreSlim" } ||
             e is TimeoutException))
         {
             // Suppress errors that occur during Wolverine shutdown on the inline ASB listener:
@@ -188,8 +220,12 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
             // 2. ObjectDisposedException(EventLogInternal) — Wolverine tries to log the timeout
             //    error but the Windows EventLog provider has already been torn down.
             //
+            // 3. ObjectDisposedException(SemaphoreSlim) — ServiceBusProcessor.StopProcessingAsync
+            //    releases a SemaphoreSlim after the ASB client has already been disposed; this is
+            //    a race condition in the Azure.Messaging.ServiceBus SDK during inline listener teardown.
+            //
             // Wolverine may nest these inside multiple layers of AggregateException, so we call
-            // Flatten() before checking so every leaf exception is covered.
+            // Flatten() before checking to ensure every leaf exception is covered.
         }
         finally
         {
@@ -201,7 +237,7 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
 
     /// <summary>
     /// Removes all registered services whose implementation type is assignable to <paramref name="baseType"/>.
-    /// Use this to strip component-specific consumers (e.g. Kafka) before tests run.
+    /// Use this to strip component-specific background services before tests run.
     /// </summary>
     protected static void RemoveServicesAssignableTo(IServiceCollection services, Type baseType)
     {
@@ -223,11 +259,11 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
     {
         queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
 
-        try
-        {
-            await using var client = new ServiceBusClient(connectionString);
+        await using var client = new ServiceBusClient(connectionString);
 
-            foreach (var queueName in queueNames)
+        foreach (var queueName in queueNames)
+        {
+            try
             {
                 await using var receiver = client.CreateReceiver($"{queueName}/$deadletterqueue");
 
@@ -242,10 +278,45 @@ public abstract class IntegrationTestWebApplicationFactoryBase<TProgram, TSelf>(
                     await receiver.CompleteMessageAsync(message);
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Factory] DLQ drain of '{queueName}' failed (non-fatal): {ex.Message}");
+            }
         }
-        catch (Exception ex)
+    }
+
+    /// <summary>
+    /// Drains all messages from the main queues for each of the given <paramref name="queueNames"/>.
+    /// Use this to remove leftover messages from previous test runs that could pollute subsequent tests.
+    /// Silently skips blank names. Exceptions are logged but not rethrown.
+    /// </summary>
+    protected static async Task DrainMainQueuesAsync(string connectionString, params string[] queueNames)
+    {
+        queueNames = Array.FindAll(queueNames, n => !string.IsNullOrWhiteSpace(n));
+
+        await using var client = new ServiceBusClient(connectionString);
+
+        foreach (var queueName in queueNames)
         {
-            Console.WriteLine($"[Factory] DLQ drain failed (non-fatal): {ex.Message}");
+            try
+            {
+                await using var receiver = client.CreateReceiver(queueName);
+
+                while (true)
+                {
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMilliseconds(500));
+                    if (message == null)
+                    {
+                        break;
+                    }
+
+                    await receiver.CompleteMessageAsync(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Factory] Main queue drain of '{queueName}' failed (non-fatal): {ex.Message}");
+            }
         }
     }
 

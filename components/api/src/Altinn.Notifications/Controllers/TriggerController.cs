@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.BackgroundQueue;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
@@ -9,66 +8,92 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all trigger operations
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="TriggerController"/> class.
+/// </remarks>
 [ApiController]
 [Route("notifications/api/v1/trigger")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class TriggerController : ControllerBase
+public class TriggerController(
+    ILogger<TriggerController> logger,
+    IStatusFeedService statusFeedService,
+    ISmsNotificationService smsNotificationService,
+    INotificationScheduleService scheduleService,
+    IOrderProcessingService orderProcessingService,
+    IEmailNotificationService emailNotificationService,
+    ITerminateExpiredNotificationsService terminateExpiredService) : ControllerBase
 {
-    private readonly ILogger<TriggerController> _logger;
-    private readonly IStatusFeedService _statusFeedService;
-    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
-    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
-    private readonly INotificationScheduleService _scheduleService;
-    private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ITerminateExpiredNotificationsService _terminateExpiredService;
+    private readonly ILogger<TriggerController> _logger = logger;
+    private readonly IStatusFeedService _statusFeedService = statusFeedService;
+    private readonly ISmsNotificationService _smsNotificationService = smsNotificationService;
+    private readonly IEmailNotificationService _emailNotificationService = emailNotificationService;
+    private readonly INotificationScheduleService _scheduleService = scheduleService;
+    private readonly IOrderProcessingService _orderProcessingService = orderProcessingService;
+    private readonly ITerminateExpiredNotificationsService _terminateExpiredService = terminateExpiredService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TriggerController"/> class.
-    /// </summary>
-    public TriggerController(
-        ILogger<TriggerController> logger,
-        IStatusFeedService statusFeedService,
-        ISmsPublishTaskQueue smsPublishTaskQueue,
-        IEmailPublishTaskQueue emailPublishingTaskQueue,
-        INotificationScheduleService scheduleService,
-        IOrderProcessingService orderProcessingService,
-        ITerminateExpiredNotificationsService terminateExpiredService)
-    {
-        _logger = logger;
-        _scheduleService = scheduleService;
-        _statusFeedService = statusFeedService;
-        _smsPublishTaskQueue = smsPublishTaskQueue;
-        _emailPublishTaskQueue = emailPublishingTaskQueue;
-        _orderProcessingService = orderProcessingService;
-        _terminateExpiredService = terminateExpiredService;
-    }
-
-    /// <summary>
-    /// Endpoint for starting the processing of past due orders
+    /// Endpoint to trigger processing of one past due order. This is intended for testing and debugging purposes, and should not be used in production.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
-    [Route("pastdueorders")]
+    [Route("pastdueoneorder")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
+    public async Task<ActionResult> Trigger_PastDueOrder(CancellationToken cancellationToken = default)
     {
-        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
+        await _orderProcessingService.TryProcessOrder(false, cancellationToken);
+
         return Ok();
     }
 
     /// <summary>
-    /// Signals background processing of email notifications.
+    /// Endpoint to trigger processing for one retry order. This is intended for testing and debugging purposes, and should not be used in production
     /// </summary>
-    /// <returns>
-    /// Always returns 200 OK, regardless of whether a new task was enqueued.
-    /// </returns>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
+    [HttpPost]
+    [Route("retryoneorder")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_RetryOrder(CancellationToken cancellationToken = default)
+    {
+        await _orderProcessingService.TryProcessOrder(true, cancellationToken);
+
+        return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint to trigger processing for one pair of email notifications (normal using the <see cref="SendingTimePolicy.Anytime"/> policy, and composed). This is intended for testing and debugging purposes, and should not be used in production
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
     [Route("sendemail")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendEmailNotifications()
+    public async Task<ActionResult> Trigger_SendEmailNotifications(CancellationToken cancellationToken = default)
     {
-        _emailPublishTaskQueue.TryEnqueue();
+        await _emailNotificationService.SendNotification(SendingTimePolicy.Anytime, cancellationToken);
+        await _emailNotificationService.SendComposedNotification(cancellationToken);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Triggers email notification processing restricted to the <see cref="SendingTimePolicy.Daytime"/> window. This is intended for testing and debugging purposes, and should not be used in production
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window).
+    /// </returns>
+    [HttpPost]
+    [Route("sendemaildaytime")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_SendEmailNotificationsDaytime(CancellationToken cancellationToken = default)
+    {
+        if (!_scheduleService.CanSendEmailNow())
+        {
+            return Ok();
+        }
+
+        await _emailNotificationService.SendNotification(SendingTimePolicy.Daytime, cancellationToken);
         return Ok();
     }
 
@@ -104,7 +129,8 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
+            var deletedCount = await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
+            _logger.LogInformation("Deleted {DeletedCount} old status feed records", deletedCount);
             return Ok();
         }
         catch (Exception ex)
@@ -115,38 +141,38 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Signals background processing of SMS notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
+    /// Triggers SMS notification processing using the <see cref="SendingTimePolicy.Anytime"/> policy.
     /// </summary>
     /// <returns>
-    /// Always returns 200 OK. The response does not indicate whether a new task was actually queued.
+    /// Always returns 200 OK.
     /// </returns>
     [HttpPost]
     [Route("sendsmsanytime")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendSmsNotificationsAnytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
     {
-        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
+        await _smsNotificationService.SendNotification(SendingTimePolicy.Anytime, cancellationToken);
         return Ok();
     }
 
     /// <summary>
-    /// Signals background processing of SMS notifications restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
+    /// Triggers SMS notification processing restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
     /// </summary>
     /// <returns>
-    /// Always returns 200 OK, regardless of whether processing was skipped (outside window) or a new task was enqueued.
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window).
     /// </returns>
     [HttpPost]
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
     [Consumes("application/json")]
-    public ActionResult Trigger_SendSmsNotificationsDaytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime(CancellationToken cancellationToken = default)
     {
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }
 
-        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Daytime);
+        await _smsNotificationService.SendNotification(SendingTimePolicy.Daytime, cancellationToken);
         return Ok();
     }
 }

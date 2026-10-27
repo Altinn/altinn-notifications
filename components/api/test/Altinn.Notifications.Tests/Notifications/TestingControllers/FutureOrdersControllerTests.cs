@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -72,6 +72,7 @@ public class FutureOrdersControllerTests
         _orderRequestService.Setup(x => x.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NotificationOrderChainResponse()
             {
+                IsNewlyCreated = true,
                 OrderChainId = Guid.NewGuid(),
                 OrderChainReceipt = new NotificationOrderChainReceipt
                 {
@@ -80,7 +81,7 @@ public class FutureOrdersControllerTests
             });
 
         // Act
-        var result = await _controller.Post(notificationOrderChainRequest, CancellationToken.None);
+        var result = await _controller.Post(notificationOrderChainRequest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -100,7 +101,7 @@ public class FutureOrdersControllerTests
         };
 
         // Act
-        var result = await _controller.Post(invalidRequest, CancellationToken.None);
+        var result = await _controller.Post(invalidRequest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -133,7 +134,7 @@ public class FutureOrdersControllerTests
             .ReturnsAsync(Problems.MissingContactInformation);
 
         // Act
-        var result = await _controller.Post(request, CancellationToken.None);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

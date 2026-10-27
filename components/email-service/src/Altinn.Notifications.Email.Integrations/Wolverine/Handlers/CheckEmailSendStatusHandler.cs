@@ -18,7 +18,7 @@ public static class CheckEmailSendStatusHandler
 
     /// <summary>
     /// Polls ACS for delivery status. If the result is terminal, dispatches the result
-    /// via <see cref="IEmailSendResultDispatcher"/> (Kafka or ASB depending on configuration)
+    /// via <see cref="IEmailSendResultDispatcher"/> 
     /// so the API can update the notification status. If still sending, re-schedules the command
     /// on ASB with an 8-second delay so the polling loop continues.
     /// </summary>
@@ -47,7 +47,8 @@ public static class CheckEmailSendStatusHandler
             {
                 SendResult = sendResult,
                 OperationId = checkEmailSendStatusCommand.SendOperationId,
-                NotificationId = checkEmailSendStatusCommand.NotificationId
+                NotificationId = checkEmailSendStatusCommand.NotificationId,
+                TotalAttachmentSizeBytes = checkEmailSendStatusCommand.TotalAttachmentSizeBytes
             };
 
             await sendResultDispatcher.DispatchAsync(operationResult);
@@ -58,7 +59,8 @@ public static class CheckEmailSendStatusHandler
             {
                 LastCheckedAtUtc = dateTime.UtcNow(),
                 NotificationId = checkEmailSendStatusCommand.NotificationId,
-                SendOperationId = checkEmailSendStatusCommand.SendOperationId
+                SendOperationId = checkEmailSendStatusCommand.SendOperationId,
+                TotalAttachmentSizeBytes = checkEmailSendStatusCommand.TotalAttachmentSizeBytes
             };
 
             await messageContext.ScheduleAsync(recheckEmailSendStatusCommand, TimeSpan.FromMilliseconds(_statusPollDelayMs));

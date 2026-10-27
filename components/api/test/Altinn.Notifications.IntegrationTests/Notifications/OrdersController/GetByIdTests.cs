@@ -1,36 +1,27 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
-using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
+public sealed class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
-    private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
-    public GetByIdTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
+    public GetByIdTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -57,6 +48,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetEmailOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -84,7 +76,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -103,6 +94,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetSmsOrderById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
+        HttpClient client = GetTestClient();
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithSmsOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
@@ -125,12 +117,11 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
             NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             Recipients = mappedExtOrder.Recipients,
-            SmsTemplate = mappedExtOrder.SmsTemplate            
+            SmsTemplate = mappedExtOrder.SmsTemplate
         };
 
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
-        HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -145,32 +136,16 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         Assert.Equivalent(expected, actual);
     }
 
-    public async void Dispose()
-    {
-        await Dispose(true);
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
+    public async ValueTask DisposeAsync()
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
     private HttpClient GetTestClient()
     {
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                // Set up mock authentication and authorization
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        return _factory.SharedClient;
     }
 }

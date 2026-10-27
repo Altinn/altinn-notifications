@@ -72,6 +72,16 @@ public enum ProcessingLifecycle
     Order_Processed,
 
     /// <summary>
+    /// The order is being retried after a previous failure or inconclusive processing attempt.
+    /// </summary>
+    Order_Retrying,
+
+    /// <summary>
+    /// The order has failed and will not be retried.
+    /// </summary>
+    Order_Failed,
+
+    /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
@@ -181,6 +191,11 @@ public enum ProcessingLifecycle
     SMS_Failed_Rejected,
 
     /// <summary>
+    /// The SMS notification was not sent because the message was too large to be queued for sending.
+    /// </summary>
+    SMS_Failed_ContentTooLarge,
+
+    /// <summary>
     /// The email notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
@@ -287,5 +302,20 @@ public enum ProcessingLifecycle
     /// <summary>
     /// The email notification failed to reach the delivered state during the time-to-live (TTL) timeframe.
     /// </summary>
-    Email_Failed_TTL
+    Email_Failed_TTL,
+
+    /// <summary>
+    /// The email notification was not sent because one or more attachment SAS URLs were invalid, expired, or inaccessible.
+    /// </summary>
+    Email_Failed_InvalidSasUrl,
+
+    /// <summary>
+    /// The email notification was not sent because the total size of the attachments exceeded the allowed limit.
+    /// </summary>
+    Email_Failed_PayloadTooLarge,
+
+    /// <summary>
+    /// The email notification was not sent because the message was too large to be queued for sending.
+    /// </summary>
+    Email_Failed_ContentTooLarge
 }

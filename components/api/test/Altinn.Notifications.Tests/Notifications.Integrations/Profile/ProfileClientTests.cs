@@ -67,7 +67,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["empty-list"]);
+        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["empty-list"], false);
 
         // Assert
         Assert.Empty(actual);
@@ -77,7 +77,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_SuccessResponse_TwoElementsInResponse()
     {
         // Act
-        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["populated-list"]);
+        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["populated-list"], false);
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -88,7 +88,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_FailureResponse_ExceptionIsThrown()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetUserContactPoints(["unavailable"]));
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetUserContactPoints(["unavailable"], false));
 
         Assert.StartsWith("ProfileClient.GetUserContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);

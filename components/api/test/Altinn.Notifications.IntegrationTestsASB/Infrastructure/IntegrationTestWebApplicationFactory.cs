@@ -1,15 +1,10 @@
-using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
-
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTestsASB.Infrastructure;
@@ -43,8 +38,7 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         WolverineSettings = configuration.GetSection(nameof(WolverineSettings)).Get<WolverineSettings>()
             ?? throw new InvalidOperationException("WolverineSettings not found in configuration");
 
-        Console.WriteLine($"[Factory] Loaded WolverineSettings - EnableWolverine: {WolverineSettings.EnableWolverine}");
-        Console.WriteLine($"[Factory] ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
+        Console.WriteLine($"[Factory] Loaded WolverineSettings - ServiceBus connection: {Truncate(WolverineSettings.ServiceBusConnectionString, 50)}...");
         Console.WriteLine($"[Factory] Postgres connection: {Truncate(Fixture.PostgresConnectionString, 50)}...");
 
         string? uri = configuration["GeneralSettings:BaseUri"];
@@ -61,27 +55,34 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
             return dataSourceBuilder.Build();
         }));
 
-        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<IKafkaProducer>()));
+        RegisterDelegatedService<IEmailNotificationService>(services);
+        RegisterDelegatedService<ISmsNotificationService>(services);
+        RegisterDelegatedService<IAltinnServiceUpdateService>(services);
     }
 
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        if (WolverineSettings == null)
         {
             return;
         }
 
-        await DrainDeadLetterQueuesAsync(
-            Fixture.ServiceBusConnectionString,
+        string[] allQueues =
+        [
             WolverineSettings.SendSmsQueueName,
             WolverineSettings.EmailSendQueueName,
+            WolverineSettings.PastDueOrdersQueueName,
+            WolverineSettings.SmsSendResultQueueName,
             WolverineSettings.EmailSendResultQueueName,
+            WolverineSettings.ComposedEmailSendQueueName,
             WolverineSettings.SmsDeliveryReportQueueName,
             WolverineSettings.EmailDeliveryReportQueueName,
-            WolverineSettings.EmailServiceRateLimitQueueName);
+            WolverineSettings.EmailServiceRateLimitQueueName
+        ];
+
+        await DrainMainQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
+        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
     }
 
     /// <inheritdoc/>
@@ -91,11 +92,9 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
         {
             await using var dataSource = NpgsqlDataSource.Create(Fixture.PostgresConnectionString);
             await using var cmd = dataSource.CreateCommand(
-                "DELETE FROM notifications.emailnotifications; " +
-                "DELETE FROM notifications.smsnotifications; " +
-                "DELETE FROM notifications.orders; " +
-                "DELETE FROM notifications.statusfeed; " +
-                "DELETE FROM notifications.deaddeliveryreports;");
+                "TRUNCATE notifications.orderschain, notifications.orders, " +
+                "notifications.statusfeed, notifications.resourcelimitlog, " +
+                "notifications.deaddeliveryreports CASCADE;");
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex)

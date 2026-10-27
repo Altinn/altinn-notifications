@@ -1,11 +1,10 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
-using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
@@ -14,17 +13,10 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTests;
 using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Models.Status;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Moq;
 
@@ -32,15 +24,15 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 
-public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<ShipmentController>>
+public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>
 {
     private readonly JsonSerializerOptions _options;
     private readonly Guid _shipmentId = Guid.NewGuid();
     private readonly Mock<INotificationDeliveryManifestService> _serviceMock;
     private const string _basePath = "/notifications/api/v1/future/shipment";
-    private readonly IntegrationTestWebApplicationFactory<ShipmentController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Program> _factory;
 
-    public ShipmentControllerTests(IntegrationTestWebApplicationFactory<ShipmentController> factory)
+    public ShipmentControllerTests(IntegrationTestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
 
@@ -326,14 +318,50 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        
+
         string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
-        
+
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
         Assert.Equal("Shipment not found", problemDetails.Title);
+    }
+
+    [Theory]
+    [InlineData(ProcessingLifecycle.Order_Retrying, ProcessingLifecycleExt.Order_Retrying)]
+    [InlineData(ProcessingLifecycle.Order_Failed, ProcessingLifecycleExt.Order_Failed)]
+    public async Task GetById_OrderInGivenStatus_ReturnsOkWithMatchingStatus(ProcessingLifecycle orderStatus, ProcessingLifecycleExt expectedStatus)
+    {
+        // Arrange
+        var shipmentId = Guid.NewGuid();
+        var serviceMock = new Mock<INotificationDeliveryManifestService>();
+        serviceMock
+            .Setup(s => s.GetDeliveryManifestAsync(
+                It.Is<Guid>(g => g.Equals(shipmentId)),
+                It.Is<string>(s => s.Equals("ttd")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDeliveryManifest(shipmentId, orderStatus));
+
+        HttpClient client = GetTestClient(serviceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        string url = _basePath + "/" + shipmentId;
+        HttpRequestMessage request = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        string responseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        NotificationDeliveryManifestExt? manifest = JsonSerializer.Deserialize<NotificationDeliveryManifestExt>(responseString, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        Assert.NotNull(manifest);
+        Assert.Equal(shipmentId, manifest.ShipmentId);
+        Assert.Equal(expectedStatus, manifest.Status);
     }
 
     [Fact]
@@ -361,10 +389,10 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode); // 499 Client Closed Request
-        
+
         string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
-        
+
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
@@ -375,19 +403,9 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
     {
         service ??= _serviceMock.Object;
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            IdentityModelEventSource.ShowPII = true;
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton(service);
-                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-            });
-        }).CreateClient();
-
-        return client;
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(service);
+        return _factory.SharedClient;
     }
 
     private static Result<INotificationDeliveryManifest> CreateDeliveryManifest(Guid shipmentId)
@@ -427,6 +445,25 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
             Status = status,
             LastUpdate = lastUpdate,
             Destination = emailAddress
+        };
+    }
+
+    private static Result<INotificationDeliveryManifest> CreateDeliveryManifest(Guid shipmentId, ProcessingLifecycle status)
+    {
+        var recipients = new List<IDeliveryManifest>
+        {
+            CreateSmsDeliveryManifest("+4799999999", ProcessingLifecycle.SMS_Sending, DateTime.Now.AddHours(-1))
+        };
+
+        return new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = shipmentId,
+            Status = status,
+
+            LastUpdate = DateTime.UtcNow.AddHours(-1),
+            Recipients = recipients.ToImmutableList(),
+            SendersReference = "ORDER-REF-A1B2C3"
         };
     }
 }

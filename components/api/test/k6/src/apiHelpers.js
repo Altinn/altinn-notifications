@@ -2,16 +2,16 @@
  * Converts a JSON object into a query parameter string for an API endpoint.
  * Handles both single values and arrays as query values.
  *
- * @param {Object} queryparams - A JSON object representing query parameters, where the key is the parameter name, and the value is the parameter value. 
+ * @param {Object} queryparams - A JSON object representing query parameters, where the key is the parameter name, and the value is the parameter value.
  *                                If the value is an array, multiple key-value pairs are generated.
- * @example 
+ * @example
  * // Input
  * const queryparams = {
  *   key1: "value1",
  *   key2: "value2",
  *   key3: ["value3", "value4"]
  * };
- * 
+ *
  * // Output
  * // "?key1=value1&key2=value2&key3=value3&key3=value4"
  *
@@ -44,8 +44,8 @@ export function buildQueryParametersForEndpoint(queryparams) {
 export function buildHeaderWithBearer(token) {
     return {
         headers: {
-            Authorization: `Bearer ${token}`
-        }
+            Authorization: `Bearer ${token}`,
+        },
     };
 }
 
@@ -57,8 +57,8 @@ export function buildHeaderWithBearer(token) {
 export function buildHeaderWithBasic(token) {
     return {
         headers: {
-            Authorization: `Basic ${token}`
-        }
+            Authorization: `Basic ${token}`,
+        },
     };
 }
 
@@ -71,8 +71,8 @@ export function buildHeaderWithBearerAndContentType(token) {
     return {
         headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+        },
     };
 }
 
@@ -84,7 +84,7 @@ export function buildHeaderWithBearerAndContentType(token) {
 export function buildHeaderWithContentType(contentType) {
     return {
         headers: {
-            "Content-Type": contentType
-        }
+            "Content-Type": contentType,
+        },
     };
 }

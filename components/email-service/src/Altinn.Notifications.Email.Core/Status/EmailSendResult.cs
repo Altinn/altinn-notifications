@@ -53,5 +53,15 @@ public enum EmailSendResult
     /// <summary>
     /// Failed, quarantined
     /// </summary>
-    Failed_Quarantined
+    Failed_Quarantined,
+
+    /// <summary>
+    /// Failed, SAS URL is invalid, expired, or inaccessible
+    /// </summary>
+    Failed_InvalidSasUrl,
+
+    /// <summary>
+    /// Failed, total attachment payload exceeds the allowed size limit
+    /// </summary>
+    Failed_PayloadTooLarge
 }   

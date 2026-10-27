@@ -12,10 +12,14 @@ export function exchangeToAltinnToken(token, test) {
     const res = http.get(endpoint, params);
 
     const success = check(res, {
-        "// Setup // Authentication towards Altinn 3 Success": (r) => r.status === 200,
+        "// Setup // Authentication towards Altinn 3 Success": (r) =>
+            r.status === 200,
     });
 
-    stopIterationOnFail("// Setup // Authentication towards Altinn 3 Failed", success);
+    stopIterationOnFail(
+        "// Setup // Authentication towards Altinn 3 Failed",
+        success
+    );
 
     return res.body;
 }

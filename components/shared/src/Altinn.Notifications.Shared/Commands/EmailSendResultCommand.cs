@@ -10,7 +10,6 @@ public sealed record EmailSendResultCommand
 {
     /// <summary>
     /// The unique identifier of the email notification this result belongs to.
-    /// A <see langword="null"/> value indicates the notification could not be correlated.
     /// </summary>
     [JsonPropertyName("notificationId")]
     public Guid NotificationId { get; init; } = Guid.Empty;
@@ -23,8 +22,15 @@ public sealed record EmailSendResultCommand
     public string? OperationId { get; init; }
 
     /// <summary>
-    /// The terminal send result (e.g. "Delivered", "Failed", "Failed_Bounced").
+    /// The transient send result (e.g. "Sending", "Succeeded", "Failed").
     /// </summary>
     [JsonPropertyName("sendResult")]
     public string SendResult { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Total raw attachment size in bytes. Null for standard email notifications.
+    /// </summary>
+    [JsonPropertyName("totalAttachmentSizeBytes")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? TotalAttachmentSizeBytes { get; init; }
 }

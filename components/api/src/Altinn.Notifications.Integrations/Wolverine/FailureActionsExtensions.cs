@@ -1,10 +1,9 @@
 using System.Text.Json;
-
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Shared.Commands;
-
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,11 +45,22 @@ public static class FailureActionsExtensions
 
                 var deadDeliveryReportService = runtime.Services.GetRequiredService<IDeadDeliveryReportService>();
 
+                var lastAttempt = DateTime.UtcNow;
+
+                // EnqueuedAt reflects the Service Bus send time and may be marginally ahead of
+                // the processing host clock due to clock skew, causing FirstSeen > LastAttempt
+                // on no-retry paths such as NOTIFICATION_EXPIRED. Clamp to preserve the invariant.
+                var firstSeen = innerEnvelope.EnqueuedAt().UtcDateTime;
+                if (firstSeen > lastAttempt)
+                {
+                    firstSeen = lastAttempt;
+                }
+
                 var deadDeliveryReport = new DeadDeliveryReport
                 {
                     Channel = channel,
-                    FirstSeen = innerEnvelope.SentAt.UtcDateTime,
-                    LastAttempt = DateTime.UtcNow,
+                    FirstSeen = firstSeen,
+                    LastAttempt = lastAttempt,
                     AttemptCount = Math.Max(1, innerEnvelope.Attempts),
                     Resolved = false,
                     DeliveryReport = payload,
@@ -59,6 +69,10 @@ public static class FailureActionsExtensions
                 };
 
                 await deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+
+                // A custom action does not settle the message on its own. Without this the Service Bus lock
+                // expires and the message is redelivered and processed again.
+                await envelope.CompleteAsync();
             },
             "Save Dead Delivery Report");
     }
@@ -78,9 +92,9 @@ public static class FailureActionsExtensions
             var eventGridEvent = EventGridEvent.Parse(reportCommand.Message.Body);
 
             if (eventGridEvent.TryGetSystemEventData(out object systemEvent)
-                && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
+               && systemEvent is AcsEmailDeliveryReportReceivedEventData deliveryReport)
             {
-                return JsonSerializer.Serialize(deliveryReport);
+                return JsonSerializer.Serialize(deliveryReport, JsonSerializerOptionsProvider.Options);
             }
 
             throw new InvalidDataException($"Failed to extract email delivery report payload; unrecognized event type '{eventGridEvent.EventType}'.");
@@ -88,24 +102,32 @@ public static class FailureActionsExtensions
 
         if (message is EmailSendResultCommand sendResultCommand)
         {
-            return JsonSerializer.Serialize(sendResultCommand);
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
         }
 
         throw new InvalidDataException($"Expected {nameof(EmailDeliveryReportCommand)} or {nameof(EmailSendResultCommand)}, got {message.GetType().Name}.");
     }
 
     /// <summary>
-    /// Serializes the SMS delivery report payload from a Wolverine message.
+    /// Extracts and serializes the SMS payload from a Wolverine message.
+    /// Supports both <see cref="SmsDeliveryReportCommand"/> (LinkMobility delivery reports) and
+    /// <see cref="SmsSendResultCommand"/> (SMS service send results).
     /// </summary>
-    /// <param name="message">The raw Wolverine message object, expected to be an <see cref="SmsDeliveryReportCommand"/>.</param>
-    /// <returns>A JSON-serialized string of the <see cref="SmsDeliveryReportCommand"/>.</returns>
+    /// <param name="message">The raw Wolverine message object.</param>
+    /// <returns>A JSON-serialized string of the underlying payload.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the message type is unrecognized.</exception>
     private static string ExtractSmsPayload(object message)
     {
-        if (message is not SmsDeliveryReportCommand command)
+        if (message is SmsDeliveryReportCommand deliveryReportCommand)
         {
-            throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)}, got {message.GetType().Name}.");
+            return JsonSerializer.Serialize(deliveryReportCommand, JsonSerializerOptionsProvider.Options);
         }
 
-        return JsonSerializer.Serialize(command);
+        if (message is SmsSendResultCommand sendResultCommand)
+        {
+            return JsonSerializer.Serialize(sendResultCommand, JsonSerializerOptionsProvider.Options);
+        }
+
+        throw new InvalidDataException($"Expected {nameof(SmsDeliveryReportCommand)} or {nameof(SmsSendResultCommand)}, got {message.GetType().Name}.");
     }
 }

@@ -14,11 +14,7 @@
 
     Command:    
     podman compose run k6 run /src/tests/order-with-reminders-for-email-address.js \
-    -e tokenGeneratorUserName={the user name to access the token generator} \
-    -e tokenGeneratorUserPwd={the password to access the token generator} \
-    -e mpClientId={the identifier of an integration defined in maskinporten} \
-    -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    --secret-source=file=/.secrets \
     -e altinn_env={the environment to run this script within: at22, at23, yt01, tt02, prod} \
     -e emailRecipient={Email address to include as notification recipient} \
     -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \
@@ -45,13 +41,20 @@ import {
     generateOrderChainPayloads,
 } from "./order-with-reminders-functions.js";
 
-import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
+import {
+    post_valid_order,
+    post_invalid_order,
+    post_duplicate_order,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
 
 // Define the order types to be tested based on environment variables or defaults
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order];
 
 // Test order chain loaded from a JSON file.
-const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-email-address.json"));
+const orderChainJsonPayload = JSON.parse(
+    open("../data/orders/order-with-reminders-for-email-address.json")
+);
 
 // Export shared options
 export const options = buildOptions();
@@ -61,14 +64,17 @@ setEmptyThresholds(labels, options);
 
 /**
  * Prepares test data by creating a notification order chain with unique identifiers.
- * 
+ *
  * @returns {Object} Test context containing the order chain payload that will be
  *                   used by the default function for each virtual user iteration
  */
 export function setup() {
     const emailRecipient = getEmailRecipient();
     if (!emailRecipient) {
-        stopIterationOnFail("Missing emailRecipient for this environment", false);
+        stopIterationOnFail(
+            "Missing emailRecipient for this environment",
+            false
+        );
     }
 
     const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
@@ -77,15 +83,16 @@ export function setup() {
                 payload.recipient.recipientEmail.emailAddress = emailRecipient;
             }
             if (Array.isArray(payload.reminders)) {
-                payload.reminders = payload.reminders.map(r => {
+                payload.reminders = payload.reminders.map((r) => {
                     if (r?.recipient?.recipientEmail) {
-                        r.recipient.recipientEmail.emailAddress = emailRecipient;
+                        r.recipient.recipientEmail.emailAddress =
+                            emailRecipient;
                     }
                     return r;
                 });
             }
         },
-        reminderSenderPrefix: 'k6-reminder'
+        reminderSenderPrefix: "k6-reminder",
     });
 
     return { orderChainPayload };
@@ -100,7 +107,7 @@ export function setup() {
 function createUniqueOrderChainPayload(baseOrderChainPayload) {
     return {
         ...baseOrderChainPayload,
-        idempotencyId: uuidv4()
+        idempotencyId: uuidv4(),
     };
 }
 
@@ -119,17 +126,17 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
         ...orderChainPayload,
         recipient: {
             ...orderChainPayload.recipient,
-            recipientEmail: undefined
+            recipientEmail: undefined,
         },
         reminders: Array.isArray(orderChainPayload.reminders)
-            ? orderChainPayload.reminders.map(reminder => ({
-                ...reminder,
-                recipient: {
-                    ...reminder.recipient,
-                    recipientEmail: undefined
-                }
-            }))
-            : orderChainPayload.reminders
+            ? orderChainPayload.reminders.map((reminder) => ({
+                  ...reminder,
+                  recipient: {
+                      ...reminder.recipient,
+                      recipientEmail: undefined,
+                  },
+              }))
+            : orderChainPayload.reminders,
     };
 }
 
@@ -138,23 +145,27 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Test context from setup phase
  */
-export default function runTests(data) {
-    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
-        uniqueFactory: createUniqueOrderChainPayload,
-        invalidTransform: stripRecipientEmailFromOrderChainPayload
-    });
+export default async function runTests(data) {
+    const variants = generateOrderChainPayloads(
+        orderTypes,
+        data.orderChainPayload,
+        {
+            uniqueFactory: createUniqueOrderChainPayload,
+            invalidTransform: stripRecipientEmailFromOrderChainPayload,
+        }
+    );
 
-    const processingResults = processVariants(variants, {
+    const processingResults = await processVariants(variants, {
         labelMap: {
             valid: post_valid_order,
             invalid: post_invalid_order,
-            duplicate: post_duplicate_order
+            duplicate: post_duplicate_order,
         },
         durationMetrics: {
             valid: validOrderDuration,
             invalid: invalidOrderDuration,
-            duplicate: duplicateOrderDuration
-        }
+            duplicate: duplicateOrderDuration,
+        },
     });
 
     const validators = buildStandardValidators();

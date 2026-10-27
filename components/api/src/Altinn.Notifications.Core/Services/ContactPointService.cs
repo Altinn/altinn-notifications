@@ -26,7 +26,7 @@ public class ContactPointService(
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
-    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, bool useStaleContactInfo, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -35,11 +35,12 @@ public class ContactPointService(
             ApplyEmailForOrganization,
             ApplyEmailForExternalIdentity,
             orderLifecycleStage,
+            useStaleContactInfo,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, bool useStaleContactInfo, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -48,11 +49,12 @@ public class ContactPointService(
             ApplySmsForOrganization,
             ApplySmsForExternalIdentity,
             orderLifecycleStage,
+            useStaleContactInfo,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, bool useStaleContactInfo, string? resourceAction = null)
     {
         await AugmentRecipients(
             recipients,
@@ -61,11 +63,12 @@ public class ContactPointService(
             ApplyEmailAndSmsForOrganization,
             ApplyEmailAndSmsForExternalIdentity,
             orderLifecycleStage,
+            useStaleContactInfo,
             resourceAction);
     }
 
     /// <inheritdoc/>
-    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
+    public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, bool useStaleContactInfo, string? resourceAction = null)
     {
         switch (channel)
         {
@@ -77,6 +80,7 @@ public class ContactPointService(
                     ApplyEmailPreferredForOrganization,
                     ApplyEmailPreferredForExternalIdentity,
                     orderLifecycleStage,
+                    useStaleContactInfo,
                     resourceAction);
                 break;
             case NotificationChannel.SmsPreferred:
@@ -87,6 +91,7 @@ public class ContactPointService(
                     ApplySmsPreferredForOrganization,
                     ApplySmsPreferredForExternalIdentity,
                     orderLifecycleStage,
+                    useStaleContactInfo,
                     resourceAction);
                 break;
             default:
@@ -356,6 +361,7 @@ public class ContactPointService(
     /// <param name="orderLifecycleStage">
     /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
     /// </param>
+    /// <param name="useStaleContactInfo">Indicates whether to use stale contact information.</param>
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
     /// </param>
@@ -369,9 +375,10 @@ public class ContactPointService(
         Action<Recipient, OrganizationContactPoints> applyOrganizationContactPoints,
         Action<Recipient, ExternalIdentityContactPoints> applyExternalIdentityContactPoints,
         OrderLifecycleStage orderLifecycleStage,
+        bool useStaleContactInfo = false,
         string? resourceAction = null)
     {
-        var personLookupTask = LookupPersonContactPoints(recipients);
+        var personLookupTask = LookupPersonContactPoints(recipients, useStaleContactInfo);
         var externalIdentityLookupTask = LookupExternalIdentityContactPoints(recipients);
         var organizationLookupTask = LookupOrganizationContactPoints(recipients, resourceId, orderLifecycleStage, resourceAction);
 
@@ -449,11 +456,12 @@ public class ContactPointService(
     /// <param name="recipients">
     /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
     /// </param>
+    /// <param name="useStaleContactInfo">Indicates whether to use stale contact information.</param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result contains a list of <see cref="UserContactPoints"/> 
     /// corresponding to the provided national identity numbers. If no valid national identity numbers are found, an empty list is returned.
     /// </returns>
-    private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
+    private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients, bool useStaleContactInfo)
     {
         List<string> nationalIdentityNumbers = [.. recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
@@ -466,7 +474,7 @@ public class ContactPointService(
 
         try
         {
-            List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
+            List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers, useStaleContactInfo);
 
             contactPoints.ForEach(contactPoint =>
             {

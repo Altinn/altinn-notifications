@@ -1,0 +1,12 @@
+{
+  "idempotencyId": "string",
+  "sendersReference": "string",
+  "recipientEmail": {
+    "emailAddress": "string",
+    "emailSettings": {
+      "subject": "Automated instant email test from Altinn",
+      "body": "This is a plain test body for testing Email instant services",
+      "contentType": "Plain"
+    }
+  }
+}

@@ -9,11 +9,6 @@ namespace Altinn.Notifications.Email.Integrations.Configuration;
 public class WolverineSettings : WolverineSettingsBase
 {
     /// <summary>
-    /// Determines whether to accept Email notifications via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableSendEmailListener { get; set; } = false;
-
-    /// <summary>
     /// ASB queue name for receiving email send commands.
     /// Produced by the API and consumed by this email service.
     /// </summary>
@@ -25,15 +20,25 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailSendQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether to consume email status check commands via Wolverine and Azure Service Bus or via Kafka.
+    /// Number of concurrent listeners for the email send queue per pod.
     /// </summary>
-    public bool EnableEmailStatusCheckListener { get; set; } = false;
+    public int EmailSendListenerCount { get; set; } = 10;
 
     /// <summary>
-    /// Enables or disables the publisher responsible for sending <c>CheckEmailSendStatusCommand</c> messages independently of the listener activation, allowing
-    /// the listener to be enabled without the publisher and vice versa. This is useful for testing and allows for flexibility in how the polling loop is triggered.
+    /// ASB queue name for receiving composed email send commands.
+    /// Produced by the API and consumed by this email service on a dedicated listener.
     /// </summary>
-    public bool EnableEmailStatusCheckPublisher { get; set; } = false;
+    public string ComposedEmailSendQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Retry policy for the composed email send queue.
+    /// </summary>
+    public QueueRetryPolicy ComposedEmailSendQueuePolicy { get; set; } = new();
+
+    /// <summary>
+    /// Number of concurrent listeners for the composed email send queue per pod.
+    /// </summary>
+    public int ComposedEmailSendListenerCount { get; set; } = 5;
 
     /// <summary>
     /// ASB queue name for email status check operations (polling loop).
@@ -46,9 +51,9 @@ public class WolverineSettings : WolverineSettingsBase
     public QueueRetryPolicy EmailStatusCheckQueuePolicy { get; set; } = new();
 
     /// <summary>
-    /// Determines whether to publish email send results via Wolverine and Azure Service Bus or via Kafka.
+    /// Number of concurrent listeners for the email status check queue per pod.
     /// </summary>
-    public bool EnableEmailSendResultPublisher { get; set; } = false;
+    public int EmailStatusCheckListenerCount { get; set; } = 10;
 
     /// <summary>
     /// ASB queue name for publishing email send results.
@@ -57,12 +62,14 @@ public class WolverineSettings : WolverineSettingsBase
     public string EmailSendResultQueueName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Determines whether to publish Altinn service update messages via Wolverine and Azure Service Bus or via Kafka.
-    /// </summary>
-    public bool EnableEmailServiceRateLimitPublisher { get; set; } = false;
-
-    /// <summary>
-    /// ASB queue name for publishing Altinn service update notifications.
+    /// ASB queue name for publishing email service rate limit notifications.
+    /// Produced by this email service and consumed by the Notifications API.
     /// </summary>
     public string EmailServiceRateLimitQueueName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ASB queue name for receiving email delivery reports.
+    /// The mock email client publishes delivery reports to this queue, which are consumed by the Notifications API.
+    /// </summary>
+    public string EmailDeliveryReportQueueName { get; set; } = string.Empty;
 }

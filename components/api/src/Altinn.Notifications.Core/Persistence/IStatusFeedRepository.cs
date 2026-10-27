@@ -26,8 +26,9 @@ public interface IStatusFeedRepository
     /// </summary>
     /// <param name="seq">Start sequence id for getting array of status feed entries</param>
     /// <param name="creatorName">Name of service owner</param>
+    /// <param name="orderBy">Parameter for setting the order by direction</param>
     /// <param name="pageSize">Parameter for setting the total number of entries returned</param>
     /// <param name="cancellationToken">Token for cancelling the current asynchronous request</param>
     /// <returns>List of status feed entries</returns>
-    public Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken);
+    public Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, string orderBy, int pageSize, CancellationToken cancellationToken);
 }

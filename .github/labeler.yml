@@ -19,6 +19,11 @@ review/component/sms-service:
       - any-glob-to-any-file:
           - components/sms-service/**
 
+review/tools:
+  - changed-files:
+      - any-glob-to-any-file:
+          - tools/**
+
 review/domain-model-changes:
   - changed-files:
       - any-glob-to-any-file:

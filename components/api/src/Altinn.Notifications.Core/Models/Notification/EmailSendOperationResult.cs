@@ -25,6 +25,16 @@ public class EmailSendOperationResult
     public EmailNotificationResultType? SendResult { get; set; }
 
     /// <summary>
+    /// The raw delivery report payload received from the mail service provider.
+    /// </summary>
+    public string? DeliveryReport { get; set; }
+
+    /// <summary>
+    /// The total number of raw attachment bytes, populated for composed email results.
+    /// </summary>
+    public long? TotalAttachmentSizeBytes { get; set; }
+
+    /// <summary>
     /// Json serializes the <see cref="EmailSendOperationResult"/>
     /// </summary>
     public string Serialize()

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.Configuration;
+using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,54 +9,58 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations;
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddIntegrationServices_MissingSmsGatewayConfig_ThrowsException()
+    public void AddSmsGatewayServices_SmsGatewaySettingsMissing_ThrowsArgumentNullException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
-        string expectedExceptionMessage = "Required SmsGatewayConfiguration settings is missing from application configuration. (Parameter 'config')";
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection([])
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddSmsGatewayServices(config));
 
         // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
-    public void AddIntegrationServices_MissingKafkaConfig_ThrowsException()
+    public void AddSmsGatewayServices_TimeoutInSecondsZero_ThrowsInvalidOperationException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", null, EnvironmentVariableTarget.Process);
-        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
-        string expectedExceptionMessage = "Required Kafka settings is missing from application configuration (Parameter 'config')";
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SmsGatewaySettings:Endpoint"] = "https://xml-test.pswin.com",
+                ["SmsGatewaySettings:TimeoutInSeconds"] = "0",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+        var exception = Assert.Throws<InvalidOperationException>(() => services.AddSmsGatewayServices(config));
 
         // Assert
-        Assert.Equal(expectedExceptionMessage, exception.Message);
+        Assert.Contains(nameof(SmsGatewaySettings.TimeoutInSeconds), exception.Message);
     }
 
     [Fact]
-    public void AddIntegrationServices_SmsGatewayConfigIncluded_NoException()
+    public void AddSmsGatewayServices_ValidConfig_NoException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
-        Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SmsGatewaySettings:Endpoint"] = "https://xml-test.pswin.com",
+            })
+            .Build();
 
         IServiceCollection services = new ServiceCollection();
 
         // Act
-        var exception = Record.Exception(() => services.AddIntegrationServices(config));
+        var exception = Record.Exception(() => services.AddSmsGatewayServices(config));
 
         // Assert
         Assert.Null(exception);

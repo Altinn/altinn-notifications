@@ -8,17 +8,18 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IEmailAndSmsOrderProcessingService
 {
     /// <summary>
-    /// Processes a notification order by preparing and dispatching it through the email and SMS delivery channels.
+    /// Processes a notification order through the email and SMS delivery channels.
+    /// Returns an in-memory result containing all materialized notifications; does not persist.
     /// </summary>
     /// <param name="order">The notification order containing recipients, content templates, and delivery preferences.</param>
-    /// <returns>A task representing the asynchronous processing operation.</returns>
-    public Task ProcessOrderAsync(NotificationOrder order);
+    /// <returns>The materialized <see cref="OrderProcessingResult"/>, not yet persisted.</returns>
+    Task<OrderProcessingResult> ProcessOrderAsync(NotificationOrder order);
 
     /// <summary>
-    /// Attempts to reprocess a previously failed notification order.
-    /// This method implements retry logic for orders that couldn't be successfully delivered in previous attempts.
+    /// Retries processing a previously failed notification order.
+    /// Returns an in-memory result containing all materialized notifications; does not persist.
     /// </summary>
     /// <param name="order">The notification order to retry processing.</param>
-    /// <returns>A task representing the asynchronous retry operation.</returns>
-    public Task ProcessOrderRetryAsync(NotificationOrder order);
+    /// <returns>The materialized <see cref="OrderProcessingResult"/>, not yet persisted.</returns>
+    Task<OrderProcessingResult> ProcessOrderRetryAsync(NotificationOrder order);
 }

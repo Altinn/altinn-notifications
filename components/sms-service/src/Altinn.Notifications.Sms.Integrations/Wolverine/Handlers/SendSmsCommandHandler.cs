@@ -25,7 +25,7 @@ public static class SendSmsCommandHandler
         if (command.NotificationId == Guid.Empty)
         {
             logger.LogError("Received SendSmsCommand with missing NotificationId.");
-            throw new InvalidOperationException("Received SendSmsCommand with missing NotificationId.");
+            return;
         }
 
         logger.LogInformation(
@@ -48,22 +48,22 @@ public static class SendSmsCommandHandler
                 "Successfully dispatched SMS for NotificationId: {NotificationId}",
                 command.NotificationId);
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogOnSendSmsFailed(logger, ex, command.NotificationId);
+            LogOnSendSmsFailed(logger, command.NotificationId);
 
             throw;
         }
     }
 
-    private static void LogOnSendSmsFailed(ILogger logger, Exception exception, Guid notificationId)
+    /// <summary>
+    /// Logs a send-sms failure at warning level.
+    /// </summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="notificationId">The notification ID associated with the failed send attempt.</param>
+    private static void LogOnSendSmsFailed(ILogger logger, Guid notificationId)
     {
-        logger.LogError(
-            exception,
+        logger.LogWarning(
             "SendSmsCommandHandler failed to send SMS for NotificationId: {NotificationId}.",
             notificationId);
     }

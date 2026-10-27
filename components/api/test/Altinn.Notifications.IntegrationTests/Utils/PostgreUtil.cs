@@ -1,5 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -11,6 +13,34 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class PostgreUtil
 {
+    // Cached dependencies — resolved once, reused for the entire test run.
+    private static readonly Lazy<NpgsqlDataSource> _dataSource = new(() => ServiceUtil.GetSharedDataSource());
+
+    private static readonly Lazy<NpgsqlDataSource> _adminDataSource = new(() => ServiceUtil.GetSharedAdminDataSource());
+
+    private static readonly Lazy<OrderRepository> _orderRepo = new(() =>
+        (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(s => s is OrderRepository));
+
+    private static readonly Lazy<EmailNotificationRepository> _emailNotificationRepo = new(() =>
+        (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)]).First(s => s is EmailNotificationRepository));
+
+    private static readonly Lazy<SmsNotificationRepository> _smsNotificationRepo = new(() =>
+        (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)]).First(s => s is SmsNotificationRepository));
+
+    private static readonly Lazy<UnitOfWorkRepository> _unitOfWorkRepo = new(() => new UnitOfWorkRepository(_dataSource.Value));
+
+    private static NpgsqlDataSource DataSource => _dataSource.Value;
+
+    private static NpgsqlDataSource AdminDataSource => _adminDataSource.Value;
+
+    private static OrderRepository OrderRepo => _orderRepo.Value;
+
+    private static EmailNotificationRepository EmailNotificationRepo => _emailNotificationRepo.Value;
+
+    private static SmsNotificationRepository SmsNotificationRepo => _smsNotificationRepo.Value;
+
+    private static UnitOfWorkRepository UnitOfWorkRepo => _unitOfWorkRepo.Value;
+
     public static async Task<Guid> PopulateDBWithEmailOrderAndReturnId(string? sendersReference = null)
     {
         var order = await PopulateDBWithEmailOrder(sendersReference);
@@ -25,8 +55,6 @@ public static class PostgreUtil
 
     public static async Task<NotificationOrder> PopulateDBWithEmailOrder(string? sendersReference = null)
     {
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
-        OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
 
@@ -35,14 +63,24 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
-        var persistedOrder = await repository.Create(order);
+        var persistedOrder = await OrderRepo.Create(order);
         return persistedOrder;
+    }
+
+    public static async Task DeleteOrdersByRefPrefix(string sendersRefPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(sendersRefPrefix))
+        {
+            throw new ArgumentException("sendersRefPrefix must be non-empty.", nameof(sendersRefPrefix));
+        }
+
+        string sql = "DELETE FROM notifications.orders WHERE sendersreference LIKE @prefix;";
+
+        await RunSql(sql, new NpgsqlParameter("@prefix", $"{sendersRefPrefix}%"));
     }
 
     public static async Task<NotificationOrder> PopulateDBWithSmsOrder(string? sendersReference = null)
     {
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
-        OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         var order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
 
@@ -51,7 +89,7 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
-        var persistedOrder = await repository.Create(order);
+        var persistedOrder = await OrderRepo.Create(order);
         return persistedOrder;
     }
 
@@ -60,19 +98,23 @@ public static class PostgreUtil
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         e.Recipient.ToAddress = toAddress;
 
-        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
-
-        await orderRepo.Create(o);
-        await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
-        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
-        await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
+        await OrderRepo.Create(o);
+        await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+        await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
         return (o, e);
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(
+        string? sendersReference = null, 
+        bool simulateCronJob = false, 
+        bool simulateConsumers = false,
+        bool forceSendersReferenceToBeNull = false,
+        SendingTimePolicy? emailSendingTimePolicy = null,
+        SendingTimePolicy? smsSendingTimePolicy = null,
+        EmailNotificationResultType? resultType = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
-        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(emailSendingTimePolicy, smsSendingTimePolicy);
 
         if (sendersReference != null)
         {
@@ -80,9 +122,14 @@ public static class PostgreUtil
         }
 
         if (forceSendersReferenceToBeNull)
-        {             
+        {
             // Force the senders reference to be null, even if a value is provided
             o.SendersReference = null;
+        }
+
+        if (resultType.HasValue)
+        {
+            e.SendResult = new NotificationResult<EmailNotificationResultType>(resultType.Value, DateTime.UtcNow);
         }
 
         /*
@@ -93,21 +140,21 @@ public static class PostgreUtil
          */
         if (simulateCronJob && simulateConsumers)
         {
-            await orderRepo.Create(o);
-            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
-            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
-            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
+            await OrderRepo.Create(o);
+            await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+            await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+            await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
         }
         else if (simulateCronJob && !simulateConsumers)
         {
-            await orderRepo.Create(o);
-            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
-            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+            await OrderRepo.Create(o);
+            await OrderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+            await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         }
         else
         {
-            await orderRepo.Create(o);
-            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+            await OrderRepo.Create(o);
+            await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         }
 
         return (o, e);
@@ -116,15 +163,14 @@ public static class PostgreUtil
     public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationReturnOrder(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
-        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
 
         if (sendersReference != null)
         {
             o.SendersReference = sendersReference;
         }
 
-        await orderRepo.Create(o);
-        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        await OrderRepo.Create(o);
+        await EmailNotificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
 
         return o;
     }
@@ -132,10 +178,6 @@ public static class PostgreUtil
     public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SmsNotificationResultType? resultType = null)
     {
         (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
-
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        SmsNotificationRepository notificationRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         if (sendersReference != null)
         {
@@ -161,23 +203,24 @@ public static class PostgreUtil
         */
         if (simulateCronJob && simulateConsumers)
         {
-            await orderRepo.Create(order);
-            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
-            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+            await OrderRepo.Create(order);
+            await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
+            await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
         }
         else if (simulateCronJob && !simulateConsumers)
         {
-            await orderRepo.Create(order);
-            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await OrderRepo.Create(order);
+            await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
         else
         {
-            await orderRepo.Create(order);
-            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await OrderRepo.Create(order);
+            await SmsNotificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
         }
 
+        await RefreshMaterializedViews();
         return (order, smsNotification);
     }
 
@@ -227,39 +270,52 @@ public static class PostgreUtil
             },
             SendResult = new(EmailNotificationResultType.Sending, timeStamp),
         };
-        
-        // Set up repositories
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        SmsNotificationRepository smsRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
-        EmailNotificationRepository emailRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        await orderRepo.Create(order);
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await smsRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1), 1);
-        await smsRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1), 1);
-        await emailRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
-        await emailRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
+        await OrderRepo.Create(order);
+        await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await SmsNotificationRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1));
+        await SmsNotificationRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1));
+        await EmailNotificationRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
+        await EmailNotificationRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
 
-        await emailRepo.UpdateSendStatus(emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
-        await emailRepo.UpdateSendStatus(emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
+        UnitOfWork unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await EmailNotificationRepo.UpdateSendStatusAsync(unitOfWork, emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
 
-        await smsRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Delivered);
-        await smsRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Delivered);
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await EmailNotificationRepo.UpdateSendStatusAsync(unitOfWork, emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
 
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await SmsNotificationRepo.UpdateSendStatusAsync(unitOfWork, smsNotificationFirst.Id, SmsNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
 
+        unitOfWork = await UnitOfWorkRepo.StartUnitOfWork();
+        await SmsNotificationRepo.UpdateSendStatusAsync(unitOfWork, smsNotificationSecond.Id, SmsNotificationResultType.Delivered);
+        await UnitOfWorkRepo.CommitUnitOfWork(unitOfWork);
+
+        await OrderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        await RefreshMaterializedViews();
         return order;
+    }
+
+    public static async Task RefreshMaterializedViews()
+    {
+        string sql = @"
+            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
+            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;";
+        await using NpgsqlCommand pgcom = AdminDataSource.CreateCommand(sql);
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = "DELETE FROM notifications.orders WHERE sendersreference = @sendersRef";
 
         await ExecuteWithDeadlockRetryAsync(async () =>
         {
-            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
             pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
             await pgcom.ExecuteNonQueryAsync();
         });
@@ -267,12 +323,11 @@ public static class PostgreUtil
 
     public static async Task DeleteOrderFromDb(Guid id)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = "DELETE FROM notifications.orders WHERE alternateid = @id";
 
         await ExecuteWithDeadlockRetryAsync(async () =>
         {
-            await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+            await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
             pgcom.Parameters.AddWithValue("id", id);
             await pgcom.ExecuteNonQueryAsync();
         });
@@ -310,22 +365,20 @@ public static class PostgreUtil
 
     public static async Task DeleteStatusFeedFromDb(string sendersRef)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = @"DELETE FROM notifications.statusfeed s
                        USING notifications.orders o
                        WHERE s.orderid = o._id AND o.sendersreference = @sendersRef;";
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
         pgcom.Parameters.AddWithValue("sendersRef", sendersRef);
         await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task DeleteStatusFeedFromDb(Guid id)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
         string sql = @"DELETE FROM notifications.statusfeed s
                        USING notifications.orders o
                        WHERE s.orderid = o._id AND o.alternateid = @id";
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
         pgcom.Parameters.AddWithValue("id", id);
         await pgcom.ExecuteNonQueryAsync();
     }
@@ -368,9 +421,23 @@ public static class PostgreUtil
 
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
 
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        T result = reader.GetValue<T>(0);
+        return result;
+    }
+
+    public static async Task<T> RunSqlReturnOutput<T>(string query, params NpgsqlParameter[] parameters)
+    {
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
+
+        if (parameters.Length > 0)
+        {
+            pgcom.Parameters.AddRange(parameters);
+        }
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
@@ -387,8 +454,7 @@ public static class PostgreUtil
                     WHERE o.alternateid = @orderId
                     LIMIT 1";
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(sql);
         pgcom.Parameters.AddWithValue("orderId", orderId);
 
         var result = await pgcom.ExecuteScalarAsync();
@@ -397,23 +463,19 @@ public static class PostgreUtil
 
     public static async Task RunSql(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
         await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task RunSql(string query, params NpgsqlParameter[] parameters)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
 
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        
         if (parameters.Length > 0)
         {
             pgcom.Parameters.AddRange(parameters);
         }
-        
+
         await pgcom.ExecuteNonQueryAsync();
     }
 
@@ -422,7 +484,7 @@ public static class PostgreUtil
 
     public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
         => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
-    
+
     public static async Task UpdateNotificationCustomizedContent<T>(Guid notificationId, string? customizedSubject, string customizedBody)
         where T : class
     {
@@ -502,9 +564,7 @@ public static class PostgreUtil
 
         var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
         pgcom.Parameters.AddWithValue("@fieldValue", fieldValue);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
@@ -531,12 +591,459 @@ public static class PostgreUtil
         await RunSql(deleteSql, new NpgsqlParameter("orderIds", orderIds.ToArray()));
     }
 
-    // Helper to retrieve OrderRepository and EmailNotificationRepository together
-    private static (OrderRepository OrderRepo, EmailNotificationRepository EmailNotificationRepo) GetOrderAndEmailNotificationRepositories()
+    /// <summary>
+    /// Deletes order chain entries from the database by their order chain IDs.
+    /// </summary>
+    /// <param name="orderChainIds">Collection of order chain IDs to delete.</param>
+    public static async Task DeleteOrdersChainByOrderIds(IEnumerable<Guid> orderChainIds)
     {
-        var services = ServiceUtil.GetServices(new List<Type> { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
-        var orderRepo = (OrderRepository)services.First(s => s is OrderRepository);
-        var emailRepo = (EmailNotificationRepository)services.First(s => s is EmailNotificationRepository);
-        return (orderRepo, emailRepo);
+        if (orderChainIds is null || !orderChainIds.Any())
+        {
+            return;
+        }
+
+        string deleteSql = @"DELETE FROM notifications.orderschain WHERE orderid = ANY(@orderChainIds)";
+        await RunSql(deleteSql, new NpgsqlParameter("orderChainIds", orderChainIds.ToArray()));
+    }
+
+    /// <summary>
+    /// Deletes notification log entries from the database for the given shipment ID.
+    /// </summary>
+    public static async Task DeleteNotificationLogFromDb(Guid shipmentId)
+    {
+        string sql = @"DELETE FROM notifications.notificationlog WHERE shipmentid = @shipmentId";
+        await RunSql(sql, new NpgsqlParameter("shipmentId", shipmentId));
+    }
+
+    /// <summary>
+    /// Returns the number of notification log rows for the given shipment ID.
+    /// </summary>
+    public static async Task<int> SelectNotificationLogEntryCount(Guid shipmentId)
+    {
+        var sql = @$"SELECT COUNT(*) FROM notifications.notificationlog WHERE shipmentid = '{shipmentId}'";
+        return await RunSqlReturnOutput<int>(sql);
+    }
+
+    /// <summary>
+    /// Inserts an orderschain row with Dialogporten identifiers and an email order linked to it,
+    /// then inserts a delivered email notification. Intended for NotificationLogRepository tests.
+    /// </summary>
+    /// <returns>The order alternate ID (shipment ID) and the order chain ID.</returns>
+    public static async Task<(Guid OrderId, Guid OrderChainId)> PopulateDBWithChainedOrderAndEmailNotification(
+        Guid dialogId,
+        string transmissionId,
+        string toAddress = "log-test@example.com",
+        string operationId = "op-id-test-abc123",
+        string creatorName = "ttd",
+        string resourceId = "ttd-resource")
+    {
+        var orderId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+        var notificationId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var orderChainJson = $$"""
+            {
+                "orderId": "{{orderId}}",
+                "idempotencyId": "test-{{orderChainId}}",
+                "DialogportenAssociation": {
+                    "DialogId": "{{dialogId}}",
+                    "TransmissionId": "{{transmissionId}}"
+                }
+            }
+            """;
+
+        const string insertChainSql = """
+        SELECT notifications.insertorderchain_v2(
+            @orderChainId,
+            @idempotencyId,
+            @creatorName,
+            @created,
+            @orderChain::jsonb
+        )
+        """;
+
+        const string insertOrderSql = """
+        SELECT notifications.insertorder_v3(
+            @alternateid,
+            @creatorname,
+            @sendersreference,
+            @created,
+            @requestedsendtime,
+            @notificationorder::jsonb,
+            @smssendingtimepolicy,
+            @type,
+            @processingstatus,
+            @orderchainid,
+            @emailsendingtimepolicy
+        )
+        """;
+
+        const string insertEmailSql = """
+        CALL notifications.insertemailnotification_v2(
+            @orderid,
+            @alternateid,
+            @recipientorgno,
+            @recipientnin,
+            @toaddress,
+            @customizedbody,
+            @customizedsubject,
+            @result,
+            @resulttime,
+            @expirytime,
+            @totalattachmentsizebytes
+        )
+        """;
+
+        const string updateEmailSql = """
+        SELECT notifications.updateemailnotification_v4(
+            @result,
+            @operationid,
+            @alternateid,
+            NULL::jsonb,
+            @totalattachmentsizebytes
+        )
+        """;
+
+        var notificationOrderJson = $$"""
+            {
+                "Id": "{{orderId}}",
+                "ResourceId": "{{resourceId}}",
+                "Creator": {"ShortName": "{{creatorName}}"},
+                "Created": "{{now:O}}",
+                "RequestedSendTime": "{{now:O}}",
+                "NotificationChannel": "email",
+                "Type": 0,
+                "Templates": [],
+                "Recipients": []
+            }
+            """;
+
+        long chainDbId;
+        await using NpgsqlConnection connection = await DataSource.OpenConnectionAsync();
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await using (NpgsqlCommand cmd = new(insertChainSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@orderChainId", orderChainId);
+                cmd.Parameters.AddWithValue("@idempotencyId", $"test-{orderChainId}");
+                cmd.Parameters.AddWithValue("@creatorName", creatorName);
+                cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@orderChain", orderChainJson);
+                chainDbId = (long)(await cmd.ExecuteScalarAsync())!;
+            }
+
+            await using (NpgsqlCommand cmd = new(insertOrderSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, orderId);
+                cmd.Parameters.AddWithValue("@creatorname", NpgsqlTypes.NpgsqlDbType.Text, creatorName);
+                cmd.Parameters.AddWithValue("@sendersreference", DBNull.Value);
+                cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
+                cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
+                cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (NpgsqlCommand cmd = new(insertEmailSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@orderid", NpgsqlTypes.NpgsqlDbType.Uuid, orderId);
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
+                cmd.Parameters.AddWithValue("@recipientorgno", DBNull.Value);
+                cmd.Parameters.AddWithValue("@recipientnin", DBNull.Value);
+                cmd.Parameters.AddWithValue("@toaddress", NpgsqlTypes.NpgsqlDbType.Text, toAddress);
+                cmd.Parameters.AddWithValue("@customizedbody", DBNull.Value);
+                cmd.Parameters.AddWithValue("@customizedsubject", DBNull.Value);
+                cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "New");
+                cmd.Parameters.AddWithValue("@resulttime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@expirytime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now.AddDays(1));
+                cmd.Parameters.AddWithValue("@totalattachmentsizebytes", NpgsqlTypes.NpgsqlDbType.Bigint, 0L);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (NpgsqlCommand cmd = new(updateEmailSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
+                cmd.Parameters.AddWithValue("@operationid", NpgsqlTypes.NpgsqlDbType.Text, operationId);
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
+                cmd.Parameters.AddWithValue("@totalattachmentsizebytes", NpgsqlTypes.NpgsqlDbType.Bigint, 0L);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return (orderId, orderChainId);
+    }
+
+    /// <summary>
+    /// Inserts an orderschain row with Dialogporten identifiers and an SMS order linked to it,
+    /// then inserts a delivered SMS notification. Intended for NotificationLogRepository tests.
+    /// </summary>
+    /// <returns>
+    /// A tuple containing:
+    /// <list type="bullet">
+    /// <item><description><c>OrderId</c>: The alternate ID of the SMS order (shipment ID).</description></item>
+    /// <item><description><c>OrderChainId</c>: The alternate ID (UUID) of the inserted order chain.</description></item>
+    /// </list>
+    /// </returns>
+    public static async Task<(Guid OrderId, Guid OrderChainId)> PopulateDBWithChainedOrderAndSmsNotification(
+        Guid dialogId,
+        string transmissionId,
+        string mobileNumber = "+4799999999",
+        string gatewayReference = "gw-ref-test-123",
+        string creatorName = "ttd",
+        string resourceId = "ttd-resource")
+    {
+        var orderId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+        var notificationId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var orderChainJson = $$"""
+            {
+                "orderId": "{{orderId}}",
+                "idempotencyId": "test-{{orderChainId}}",
+                "DialogportenAssociation": {
+                    "DialogId": "{{dialogId}}",
+                    "TransmissionId": "{{transmissionId}}"
+                }
+            }
+            """;
+
+        const string insertChainSql = """
+        SELECT notifications.insertorderchain_v2(
+            @orderChainId,
+            @idempotencyId,
+            @creatorName,
+            @created,
+            @orderChain::jsonb
+        )
+        """;
+
+        const string insertOrderSql = """
+        SELECT notifications.insertorder_v3(
+            @alternateid,
+            @creatorname,
+            @sendersreference,
+            @created,
+            @requestedsendtime,
+            @notificationorder::jsonb,
+            @smssendingtimepolicy,
+            @type,
+            @processingstatus,
+            @orderchainid,
+            @emailsendingtimepolicy
+        )
+        """;
+
+        const string insertSmsSql = """
+        CALL notifications.insertsmsnotification_v2(
+            @orderid,
+            @alternateid,
+            @recipientorgno,
+            @recipientnin,
+            @mobilenumber,
+            @customizedbody,
+            @result,
+            @resulttime,
+            @expirytime
+        )
+        """;
+
+        const string updateSmsSql = """
+        SELECT notifications.updatesmsnotification_v3(
+            @result,
+            @gatewayreference,
+            @alternateid,
+            NULL::jsonb
+        )
+        """;
+
+        var notificationOrderJson = $$"""
+            {
+                "Id": "{{orderId}}",
+                "ResourceId": "{{resourceId}}",
+                "Creator": {"ShortName": "{{creatorName}}"},
+                "Created": "{{now:O}}",
+                "RequestedSendTime": "{{now:O}}",
+                "NotificationChannel": "sms",
+                "Type": 0,
+                "Templates": [],
+                "Recipients": []
+            }
+            """;
+
+        long chainDbId;
+        await using NpgsqlConnection connection = await DataSource.OpenConnectionAsync();
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await using (NpgsqlCommand cmd = new(insertChainSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@orderChainId", orderChainId);
+                cmd.Parameters.AddWithValue("@idempotencyId", $"test-{orderChainId}");
+                cmd.Parameters.AddWithValue("@creatorName", creatorName);
+                cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@orderChain", orderChainJson);
+                chainDbId = (long)(await cmd.ExecuteScalarAsync())!;
+            }
+
+            await using (NpgsqlCommand cmd = new(insertOrderSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, orderId);
+                cmd.Parameters.AddWithValue("@creatorname", NpgsqlTypes.NpgsqlDbType.Text, creatorName);
+                cmd.Parameters.AddWithValue("@sendersreference", DBNull.Value);
+                cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
+                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
+                cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
+                cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
+                cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
+                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (NpgsqlCommand cmd = new(insertSmsSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@orderid", NpgsqlTypes.NpgsqlDbType.Uuid, orderId);
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
+                cmd.Parameters.AddWithValue("@recipientorgno", DBNull.Value);
+                cmd.Parameters.AddWithValue("@recipientnin", DBNull.Value);
+                cmd.Parameters.AddWithValue("@mobilenumber", NpgsqlTypes.NpgsqlDbType.Text, mobileNumber);
+                cmd.Parameters.AddWithValue("@customizedbody", DBNull.Value);
+                cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "New");
+                cmd.Parameters.AddWithValue("@resulttime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
+                cmd.Parameters.AddWithValue("@expirytime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now.AddDays(1));
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (NpgsqlCommand cmd = new(updateSmsSql, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
+                cmd.Parameters.AddWithValue("@gatewayreference", NpgsqlTypes.NpgsqlDbType.Text, gatewayReference);
+                cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return (orderId, orderChainId);
+    }
+
+    /// <summary>
+    /// Reads the labels of a PostgreSQL enum type.
+    /// </summary>
+    public static async Task<HashSet<string>> GetEnumLabels(string typeName)
+    {
+        const string sql = "SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = @typeName";
+
+        await using NpgsqlCommand cmd = DataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("@typeName", typeName);
+
+        var labels = new HashSet<string>();
+        await using NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            labels.Add(reader.GetString(0));
+        }
+
+        return labels;
+    }
+
+    /// <summary>
+    /// Reads a single notificationlog entry for the given shipment ID.
+    /// Returns null if no row exists.
+    /// </summary>
+    public static async Task<NotificationLogEntry?> GetNotificationLogEntry(Guid shipmentId)
+    {
+        return (await GetNotificationLogEntries(shipmentId)).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Reads all notificationlog entries for the given shipment ID.
+    /// </summary>
+    public static async Task<List<NotificationLogEntry>> GetNotificationLogEntries(Guid shipmentId)
+    {
+        const string sql = """
+            SELECT
+                orderchainid,
+                shipmentid,
+                notificationid,
+                creatorname,
+                sendersreference,
+                dialogid,
+                transmissionid,
+                deliveryreference,
+                recipient,
+                type,
+                channel,
+                destination,
+                resource,
+                status,
+                requestedsendtime,
+                lastupdatetime
+            FROM notifications.notificationlog
+            WHERE shipmentid = @shipmentId
+            """;
+
+        await using NpgsqlCommand cmd = DataSource.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("@shipmentId", shipmentId);
+
+        await using NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
+
+        int orderChainIdOrdinal = reader.GetOrdinal("orderchainid");
+        int creatorNameOrdinal = reader.GetOrdinal("creatorname");
+        int sendersReferenceOrdinal = reader.GetOrdinal("sendersreference");
+        int dialogIdOrdinal = reader.GetOrdinal("dialogid");
+        int transmissionIdOrdinal = reader.GetOrdinal("transmissionid");
+        int deliveryReferenceOrdinal = reader.GetOrdinal("deliveryreference");
+        int recipientOrdinal = reader.GetOrdinal("recipient");
+        int destinationOrdinal = reader.GetOrdinal("destination");
+        int resourceOrdinal = reader.GetOrdinal("resource");
+        int statusOrdinal = reader.GetOrdinal("status");
+        int requestedSendTimeOrdinal = reader.GetOrdinal("requestedsendtime");
+        int lastUpdateTimeOrdinal = reader.GetOrdinal("lastupdatetime");
+
+        var entries = new List<NotificationLogEntry>();
+        while (await reader.ReadAsync())
+        {
+            entries.Add(new NotificationLogEntry(
+                OrderChainId: await reader.IsDBNullAsync(orderChainIdOrdinal) ? null : await reader.GetFieldValueAsync<Guid?>(orderChainIdOrdinal),
+                ShipmentId: await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipmentid")),
+                NotificationId: await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("notificationid")),
+                CreatorName: await reader.GetFieldValueAsync<string>(creatorNameOrdinal),
+                SendersReference: await reader.IsDBNullAsync(sendersReferenceOrdinal) ? null : await reader.GetFieldValueAsync<string>(sendersReferenceOrdinal),
+                DialogId: await reader.IsDBNullAsync(dialogIdOrdinal) ? null : await reader.GetFieldValueAsync<string>(dialogIdOrdinal),
+                TransmissionId: await reader.IsDBNullAsync(transmissionIdOrdinal) ? null : await reader.GetFieldValueAsync<string>(transmissionIdOrdinal),
+                DeliveryReference: await reader.IsDBNullAsync(deliveryReferenceOrdinal) ? null : await reader.GetFieldValueAsync<string>(deliveryReferenceOrdinal),
+                Recipient: await reader.IsDBNullAsync(recipientOrdinal) ? null : await reader.GetFieldValueAsync<string>(recipientOrdinal),
+                Type: await reader.GetFieldValueAsync<string>(reader.GetOrdinal("type")),
+                Channel: await reader.GetFieldValueAsync<string>(reader.GetOrdinal("channel")),
+                Destination: await reader.GetFieldValueAsync<string>(destinationOrdinal),
+                Resource: await reader.IsDBNullAsync(resourceOrdinal) ? null : await reader.GetFieldValueAsync<string>(resourceOrdinal),
+                Status: await reader.GetFieldValueAsync<string>(statusOrdinal),
+                RequestedSendTime: await reader.GetFieldValueAsync<DateTime>(requestedSendTimeOrdinal),
+                LastUpdateTime: await reader.GetFieldValueAsync<DateTime>(lastUpdateTimeOrdinal)));
+        }
+
+        return entries;
     }
 }

@@ -68,6 +68,7 @@ public class NotificationOrderTests
             { "requestedSendTime", "2023-02-14T08:15:00Z" },
             { "notificationChannel", "Email" },
             { "ignoreReservation", false },
+            { "useStaleContactInformation", false },
             {
                 "creator", new JsonObject()
                 {
@@ -142,6 +143,68 @@ public class NotificationOrderTests
 
         // Assert
         Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public void SerializeAndDeserialize_EmailSendingTimePolicy_IsPreserved(SendingTimePolicy emailSendingTimePolicy)
+    {
+        // Arrange
+        _order.SmsSendingTimePolicy = SendingTimePolicy.Anytime;
+        _order.EmailSendingTimePolicy = emailSendingTimePolicy;
+
+        // Act
+        var actual = NotificationOrder.Deserialize(_order.Serialize());
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal(emailSendingTimePolicy, actual.EmailSendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Anytime, actual.SmsSendingTimePolicy);
+    }
+
+    [Fact]
+    public void SerializeAndDeserialize_SmsSendingTimePolicy_UsesLegacyJsonName()
+    {
+        // Arrange
+        _order.SmsSendingTimePolicy = SendingTimePolicy.Daytime;
+
+        // Act
+        var json = JsonNode.Parse(_order.Serialize())!.AsObject();
+        var actual = NotificationOrder.Deserialize(json.ToJsonString());
+
+        // Assert
+        Assert.True(json.ContainsKey("sendingTimePolicy"));
+        Assert.False(json.ContainsKey("smsSendingTimePolicy"));
+        Assert.NotNull(actual);
+        Assert.Equal(SendingTimePolicy.Daytime, actual.SmsSendingTimePolicy);
+    }
+
+    [Fact]
+    public void Deserialize_OrderPersistedBeforeRename_MapsSendingTimePolicyToSmsSendingTimePolicy()
+    {
+        // Arrange - an order persisted by a version where the SMS policy was named sendingTimePolicy and no email policy existed
+        var json = JsonNode.Parse(_serializedOrder)!.AsObject();
+        json["sendingTimePolicy"] = (int)SendingTimePolicy.Daytime;
+
+        // Act
+        var actual = NotificationOrder.Deserialize(json.ToJsonString());
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal(SendingTimePolicy.Daytime, actual.SmsSendingTimePolicy);
+        Assert.Null(actual.EmailSendingTimePolicy);
+    }
+
+    [Fact]
+    public void Deserialize_OrderWithoutEmailSendingTimePolicy_HasNullEmailSendingTimePolicy()
+    {
+        // Act
+        var actual = NotificationOrder.Deserialize(_serializedOrder);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Null(actual.EmailSendingTimePolicy);
     }
 
     [Fact]

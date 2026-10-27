@@ -1,0 +1,6 @@
+# Generated DLQ list files may contain sensitive data (phone numbers, message bodies)
+sms-send-dlq-*.json
+
+# Build artefacts
+bin/
+obj/

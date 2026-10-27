@@ -1,4 +1,4 @@
-﻿{
-  "parallelizeAssembly": false,
-  "parallelizeTestCollections": false
+{
+  "culture": "invariant",
+  "parallelizeTestCollections": true
 }

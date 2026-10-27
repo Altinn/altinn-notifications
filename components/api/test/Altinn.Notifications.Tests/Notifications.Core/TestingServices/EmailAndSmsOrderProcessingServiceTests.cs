@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,23 +35,38 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderAsync(order);
+        var result = await service.ProcessOrderAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -59,6 +74,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -99,28 +115,44 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderAsync(order);
+        var result = await service.ProcessOrderAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -160,23 +192,38 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].OrganizationNumber == organizationNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderAsync(order);
+        var result = await service.ProcessOrderAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -184,6 +231,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].OrganizationNumber == organizationNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -228,6 +276,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -256,23 +305,38 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -280,6 +344,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -319,23 +384,38 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].OrganizationNumber == organizationNumber),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -343,6 +423,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].OrganizationNumber == organizationNumber),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -383,28 +464,44 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 It.Is<string>(resourceId => resourceId == order.ResourceId),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
-            .Callback<List<Recipient>, string?, OrderLifecycleStage, string?>((recipients, _, _, _) =>
+            .Callback<List<Recipient>, string?, OrderLifecycleStage, bool, string?>((recipients, _, _, _, _) =>
             {
                 recipients[0].AddressInfo.Add(new SmsAddressPoint(mobileNumber));
                 recipients[0].AddressInfo.Add(new EmailAddressPoint(emailAddress));
             })
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 order.ResourceId,
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
 
@@ -456,18 +553,33 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -475,6 +587,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].NationalIdentityNumber == nationalIdentityNumber),
                 order.ResourceId,
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Never);
 
@@ -526,18 +639,33 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
                 It.Is<List<Recipient>>(recipients =>
@@ -545,6 +673,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                     recipients[0].OrganizationNumber == organizationNumber),
                 order.ResourceId,
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Never);
 
@@ -596,25 +725,39 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
+        var expectedEmailResult = new EmailOrderProcessingResult([], null);
+        var expectedSmsResult = new SmsOrderProcessingResult([], null);
+
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        smsProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedSmsResult));
+
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+        emailProcessingServiceMock
+            .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Returns(Task.FromResult(expectedEmailResult));
 
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryAsync(order);
+        var result = await service.ProcessOrderRetryAsync(order);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Same(expectedEmailResult, result.EmailOrderProcessingResult);
+        Assert.Same(expectedSmsResult, result.SmsOrderProcessingResult);
+
         contactPointServiceMock.Verify(
             e => e.AddEmailAndSmsContactPointsAsync(
-                It.Is<List<Recipient>>(recipients =>
-                    recipients.Count == 1 &&
-                    recipients[0].ExternalIdentity == externalIdentifier),
+                It.Is<List<Recipient>>(recipients => recipients.Count == 1 && recipients[0].ExternalIdentity == externalIdentifier),
                 order.ResourceId,
-                It.IsAny<OrderLifecycleStage>(),
+                OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Never);
 
@@ -663,6 +806,7 @@ public class EmailAndSmsOrderProcessingServiceTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -703,7 +847,7 @@ public class EmailAndSmsOrderProcessingServiceTests
             RequestedSendTime = DateTime.UtcNow,
             Created = DateTime.UtcNow.AddDays(-1),
             SendersReference = "senders-reference",
-            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SmsSendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.EmailAndSms,
             ResourceId = "urn:altinn:resource:ssb-correspondence-dev",
         };

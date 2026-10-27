@@ -1,10 +1,10 @@
-using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Extensions;
 
@@ -20,13 +20,23 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection("KafkaSettings")
-            .Get<KafkaSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-
         _ = config.GetSection("NotificationConfig")
             .Get<NotificationConfig>()
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
+
+        services
+            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+
+        services
+            .AddOptions<SmsSenderSubstitutionConfig>()
+            .Bind(config.GetSection("SmsSenderSubstitution"))
+            .ValidateOnStart();
+
+        services
+            .AddSingleton<IValidateOptions<SmsSenderSubstitutionConfig>, SmsSenderSubstitutionConfigValidator>();
+
+        services
+            .AddHostedService<ProcessItemsBackgroundService>();
 
         services
             .AddSingleton<IGuidService, GuidService>()
@@ -34,12 +44,12 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IKeywordsService, KeywordsService>()
             .AddSingleton<IDateTimeService, DateTimeService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
+            .AddSingleton<IDashboardService, DashboardService>()
             .AddSingleton<IStatusFeedService, StatusFeedService>()
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
-            .AddSingleton<ISmsPublishTaskQueue, SmsPublishTaskQueue>()
-            .AddSingleton<IEmailPublishTaskQueue, EmailPublishTaskQueue>()
+            .AddSingleton<INotificationLogService, NotificationLogService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
@@ -49,14 +59,14 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
+            .AddSingleton<ISmsSenderSubstitutionService, SmsSenderSubstitutionService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
             .AddSingleton<ITerminateExpiredNotificationsService, TerminateExpiredService>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
+            .AddSingleton<IComposedEmailOrderRequestService, ComposedEmailOrderRequestService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
-            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
-            .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>();
     }
 }

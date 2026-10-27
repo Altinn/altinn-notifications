@@ -8,7 +8,7 @@ services:
       - "${CONFIG_PATH}:/ServiceBus_Emulator/ConfigFiles/Config.json"
     ports:
       - "5672:5672"
-      - "5300:${EMULATOR_HTTP_PORT:-5300}"
+      - "${EMULATOR_HOST_HTTP_PORT:-5300}:${EMULATOR_HTTP_PORT:-5300}"
     environment:
       SQL_SERVER: mssql
       MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"

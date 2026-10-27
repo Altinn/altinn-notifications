@@ -1,0 +1,61 @@
+using Altinn.Notifications.Core.Models.Dashboard;
+
+namespace Altinn.Notifications.Core.Persistence;
+
+/// <summary>
+/// Interface for repository operations related to the dashboard
+/// </summary>
+public interface IDashboardRepository
+{
+    /// <summary>
+    /// Retrieves all notifications (email and SMS) for a recipient identified by their national identity number within a given date range.
+    /// If no date range is provided, defaults to the last 7 days.
+    /// </summary>
+    /// <param name="recipientNin">The national identity number of the recipient.</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByNinAsync(string recipientNin, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves all notifications (email and SMS) for a recipient identified by their organization number within a given date range.
+    /// If no date range is provided, defaults to the last 7 days.
+    /// </summary>
+    /// <param name="recipientOrgNo">The organization number of the recipient.</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByOrgNumberAsync(string recipientOrgNo, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves all email notifications for a recipient identified by their email address within a given date range.
+    /// If no date range is provided, defaults to the last 7 days.
+    /// </summary>
+    /// <param name="email">The email address of the recipient. Matched case-insensitively.</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByEmailAsync(string email, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves all SMS notifications for a recipient identified by their phone number within a given date range.
+    /// If no date range is provided, defaults to the last 7 days.
+    /// </summary>
+    /// <param name="phoneNumber">The phone number of the recipient.</param>
+    /// <param name="dateTimeFrom">Start of the date range (inclusive). Defaults to 7 days ago if null.</param>
+    /// <param name="dateTimeTo">End of the date range (exclusive). Defaults to now if null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByPhoneNumberAsync(string phoneNumber, DateTime? dateTimeFrom, DateTime? dateTimeTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves all notifications (email and SMS) belonging to a shipment identified by its shipment id.
+    /// </summary>
+    /// <param name="shipmentId">The shipment id (orders.alternateid) to look up.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
+    /// <returns>A list of <see cref="DashboardNotification"/> matching the search criteria.</returns>
+    Task<List<DashboardNotification>> GetDashboardNotificationsByShipmentIdAsync(Guid shipmentId, CancellationToken cancellationToken);
+}

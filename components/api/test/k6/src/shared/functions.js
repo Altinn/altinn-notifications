@@ -9,8 +9,7 @@ import { nationalIdentityNumbers } from "../data/national-identity-numbers.js";
 export function getOrgNoRecipient() {
     if (!__ENV.orgNoRecipient && environment === yt01Environment) {
         return randomItem(orgNosYt01);
-    }
-    else {
+    } else {
         return __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
     }
 }

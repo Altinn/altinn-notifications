@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Tools.RetryDeadDeliveryReports.EventGrid;
 
 using Microsoft.Extensions.Options;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.RetryDeadDeliveryReports;
@@ -25,7 +26,7 @@ public class EventGridClientTests
 
         var client = new EventGridClient(http, settings);
 
-        var (success, body) = await client.PostEventsAsync(new[] { new { id = "1" } });
+        var (success, body) = await client.PostEventsAsync(new[] { new { id = "1" } }, TestContext.Current.CancellationToken);
 
         Assert.True(success);
         Assert.Equal("ok", body);
@@ -44,7 +45,7 @@ public class EventGridClientTests
 
         var client = new EventGridClient(http, settings);
 
-        var (success, body) = await client.PostEventsAsync([new { id = "1" }]);
+        var (success, body) = await client.PostEventsAsync([new { id = "1" }], TestContext.Current.CancellationToken);
 
         Assert.False(success);
         Assert.Equal("bad", body);

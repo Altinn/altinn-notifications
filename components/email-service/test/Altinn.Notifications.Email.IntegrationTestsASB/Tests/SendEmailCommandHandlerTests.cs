@@ -11,15 +11,23 @@ using Xunit;
 namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 
 [Collection(nameof(IntegrationTestContainersCollection))]
-public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixture)
+public class SendEmailCommandHandlerTests(IntegrationTestEmailContainersFixture fixture)
 {
-    private readonly IntegrationTestContainersFixture _fixture = fixture;
+    private readonly IntegrationTestEmailContainersFixture _fixture = fixture;
+
+    private AlwaysSucceedSendingService UseSendingService()
+    {
+        _fixture.ResetInstalledMocks();
+        var sendingService = new AlwaysSucceedSendingService();
+        _fixture.InstallService<ISendingService>(sendingService);
+        return sendingService;
+    }
 
     [Fact]
     public async Task HandleAsync_ValidHtmlCommand_SendingServiceReceivesMappedEmail()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var command = new SendEmailCommand
         {
             Body = "Body",
@@ -30,34 +38,29 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
             ToAddress = "recipient@example.com"
         };
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
+        string queueName = webHost.WolverineSettings!.EmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-        await using (factory)
-        {
-            string queueName = factory.WolverineSettings!.EmailSendQueueName;
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
-
-            // Assert
-            Assert.NotNull(capturedEmail);
-            Assert.Equal(command.Body, capturedEmail.Body);
-            Assert.Equal(command.Subject, capturedEmail.Subject);
-            Assert.Equal(command.ToAddress, capturedEmail.ToAddress);
-            Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
-            Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
-            Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
-        }
+        // Assert
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(command.Body, capturedEmail.Body);
+        Assert.Equal(command.Subject, capturedEmail.Subject);
+        Assert.Equal(command.ToAddress, capturedEmail.ToAddress);
+        Assert.Equal(command.FromAddress, capturedEmail.FromAddress);
+        Assert.Equal(EmailContentType.Html, capturedEmail.ContentType);
+        Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
     }
 
     [Fact]
     public async Task HandleAsync_PlainContentType_MapsCorrectly()
     {
         // Arrange
-        var sendingService = new AlwaysSucceedSendingService();
+        var sendingService = UseSendingService();
         var command = new SendEmailCommand
         {
             Body = "Body",
@@ -68,22 +71,50 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
             ToAddress = "recipient@example.com"
         };
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService<ISendingService>(_ => sendingService)
-            .Initialize();
+        var webHost = _fixture.WebHost;
+        string queueName = webHost.WolverineSettings!.EmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
 
-        await using (factory)
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnknownContentType_DefaultsToPlainAndSendsSuccessfully()
+    {
+        // Arrange - ContentType that cannot be parsed as EmailContentType; the handler
+        // logs a warning and falls back to EmailContentType.Plain before delegating to the sending service.
+        var sendingService = UseSendingService();
+        var command = new SendEmailCommand
         {
-            string queueName = factory.WolverineSettings!.EmailSendQueueName;
+            Body = "Body",
+            ContentType = "UnknownContentTypeXYZ",
+            Subject = "Fallback test",
+            NotificationId = Guid.NewGuid(),
+            FromAddress = "sender@example.com",
+            ToAddress = "recipient@example.com"
+        };
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, command);
-            var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+        var webHost = _fixture.WebHost;
 
-            // Assert
-            Assert.NotNull(capturedEmail);
-            Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
-        }
+        string queueName = webHost.WolverineSettings!.EmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
+
+        // Act
+        await webHost.SendToEndpointAsync(queueName, command);
+        var capturedEmail = await sendingService.WaitForEmailAsync(TimeSpan.FromSeconds(10));
+
+        // Assert - email is sent successfully with Plain as the fallback content type
+        Assert.NotNull(capturedEmail);
+        Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
+        Assert.Equal(command.NotificationId, capturedEmail.NotificationId);
+        Assert.Equal(command.Body, capturedEmail.Body);
+        Assert.Equal(command.Subject, capturedEmail.Subject);
     }
 
     [Fact]
@@ -93,42 +124,40 @@ public class SendEmailCommandHandlerTests(IntegrationTestContainersFixture fixtu
         int attemptCount = 0;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>()))
+            .Setup(s => s.SendAsync(It.IsAny<Core.Sending.Email>(), It.IsAny<CancellationToken>()))
             .Callback(() => Interlocked.Increment(ref attemptCount))
             .ThrowsAsync(new InvalidOperationException("Simulated sending failure"));
 
-        var factory = new IntegrationTestWebApplicationFactory(_fixture)
-            .ReplaceService(_ => sendingServiceMock.Object)
-            .Initialize();
+        _fixture.ResetInstalledMocks();
+        _fixture.InstallService<ISendingService>(sendingServiceMock.Object);
 
-        await using (factory)
+        var webHost = _fixture.WebHost;
+
+        var policy = webHost.WolverineSettings!.EmailSendQueuePolicy;
+        int expectedAttempts = 1 + policy.CooldownDelaysMs.Length + policy.ScheduleDelaysMs.Length;
+        string queueName = webHost.WolverineSettings!.EmailSendQueueName;
+        await _fixture.DrainQueueAsync(queueName);
+
+        // Act
+        await webHost.SendToEndpointAsync(queueName, new SendEmailCommand
         {
-            string queueName = factory.WolverineSettings!.EmailSendQueueName;
+            Body = "Body",
+            ContentType = "Plain",
+            Subject = "Subject",
+            NotificationId = Guid.NewGuid(),
+            FromAddress = "sender@example.com",
+            ToAddress = "recipient@example.com"
+        });
 
-            // Act
-            await factory.SendToEndpointAsync(queueName, new SendEmailCommand
-            {
-                Body = "Body",
-                ContentType = "Plain",
-                Subject = "Subject",
-                NotificationId = Guid.NewGuid(),
-                FromAddress = "sender@example.com",
-                ToAddress = "recipient@example.com"
-            });
+        // Assert - Wait for message to appear in dead letter queue after retries exhaust
+        var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
+            _fixture.ServiceBusConnectionString,
+            queueName,
+            TimeSpan.FromSeconds(30));
+        Assert.NotNull(deadLetterMessage);
 
-            // Assert - Wait for message to appear in dead letter queue after retries exhaust
-            var deadLetterMessage = await ServiceBusTestUtils.WaitForDeadLetterMessageAsync(
-                _fixture.ServiceBusConnectionString,
-                queueName,
-                TimeSpan.FromSeconds(30));
-            Assert.NotNull(deadLetterMessage);
-
-            // Assert - Verify the handler was called the expected number of times
-            // RetryWithCooldown(100ms, 100ms, 100ms) = 3 retries within same lock
-            // ScheduleRetry(500ms, 500ms, 500ms) = 3 more retries with new locks
-            // Total: 1 initial + 3 cooldown retries + 3 scheduled retries = 7 attempts
-            Console.WriteLine($"[Test] Handler was called {attemptCount} times");
-            Assert.Equal(7, attemptCount);
-        }
+        // Assert - Verify the handler was called exactly as many times as the policy dictates
+        Console.WriteLine($"[Test] Handler was called {attemptCount} times (expected {expectedAttempts})");
+        Assert.Equal(expectedAttempts, attemptCount);
     }
 }

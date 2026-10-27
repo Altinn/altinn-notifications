@@ -1,13 +1,10 @@
 using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Integrations.Consumers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Moq;
 
 namespace Altinn.Notifications.Sms.IntegrationTestsASB.Infrastructure;
 
@@ -38,22 +35,26 @@ public class IntegrationTestWebApplicationFactory(IntegrationTestContainersFixtu
 
         Console.WriteLine($"[SmsFactory] ServiceBus connection: {Truncate(Fixture.ServiceBusConnectionString, 50)}...");
 
-        RemoveServicesAssignableTo(services, typeof(KafkaConsumerBase));
-
-        services.Replace(ServiceDescriptor.Singleton(Mock.Of<ICommonProducer>()));
+        RegisterDelegatedService<ISendingService>(services);
+        RegisterDelegatedService<ISmsClient>(services);
     }
 
     /// <inheritdoc/>
     protected override async Task DrainQueuesAsync()
     {
-        if (WolverineSettings == null || !WolverineSettings.EnableWolverine)
+        if (WolverineSettings == null)
         {
             return;
         }
 
-        await DrainDeadLetterQueuesAsync(
-            Fixture.ServiceBusConnectionString, 
+        string[] allQueues =
+        [
             WolverineSettings.SmsDeliveryReportQueueName,
-            WolverineSettings.SendSmsQueueName);
+            WolverineSettings.SmsSendResultQueueName,
+            WolverineSettings.SendSmsQueueName
+        ];
+
+        await DrainMainQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
+        await DrainDeadLetterQueuesAsync(Fixture.ServiceBusConnectionString, allQueues);
     }
 }

@@ -1,0 +1,1 @@
+CREATE INDEX idx_notificationlog_dialogid_transmissionid ON notifications.notificationlog (dialogid, transmissionid);

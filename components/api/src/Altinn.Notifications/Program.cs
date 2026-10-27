@@ -1,43 +1,37 @@
 #nullable disable
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
-
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-
 using AltinnCore.Authentication.JwtCookie;
-
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
-
-using Confluent.Kafka.Extensions.OpenTelemetry;
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-
 using Npgsql;
-
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -151,6 +145,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
+    services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
+
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
         .WithMetrics(metrics =>
@@ -160,8 +156,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                "Altinn.Notifications.KafkaProducer",
-                "Altinn.Notifications.KafkaConsumer");
+                DeliveryReportMetrics.MeterName);
         })
         .WithTracing(tracing =>
         {
@@ -176,11 +171,13 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddProcessor<RequestFilterProcessor>();
 
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
+
             tracing.AddNpgsql();
 
-            tracing.AddConfluentKafkaInstrumentation();
-
             tracing.AddSource("Wolverine");
+
+            tracing.AddSource(BackgroundActivitySource.Name);
         });
 
     AddAzureMonitorTelemetryExporters(services, config);
@@ -227,7 +224,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     AddInputModelValidators(services);
     services.AddCoreServices(config);
     services.AddAuthorizationService(config);
-    services.AddKafkaServices(config);
     services.AddWolverineServices(config, builder.Environment);
 
     services.AddAltinnClients(config);
@@ -265,26 +261,43 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
 
 void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
-    var instrumentationKey = config.GetValue<string>("ApplicationInsights:InstrumentationKey");
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
+        }));
+    }
+    else if (!string.IsNullOrEmpty(config["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    {
+        // UseOtlpExporter throws if combined with the signal-specific exporter above.
+        services.AddOpenTelemetry().UseOtlpExporter();
+    }
 
-    if (string.IsNullOrEmpty(instrumentationKey))
+    var applicationInsightsConnectionString = config.GetValue<string>("ApplicationInsights:ConnectionString");
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
     {
         return;
     }
 
-    var applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", instrumentationKey);
-
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
 }
 
@@ -294,6 +307,18 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
         .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
         {
             policy.Requirements.Add(new CreateScopeOrAccessTokenRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_CREATE));
+        }).
+        AddPolicy(AuthorizationConstants.POLICY_SUPPORT_DASHBOARD_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_SUPPORT_DASHBOARD_ACCESS));
+        })
+        .AddPolicy(AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_COMPOSED_EMAIL_CREATE));
+        })
+        .AddPolicy(AuthorizationConstants.POLICY_END_USER_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new ScopeAccessRequirement("altinn:portal/enduser"));
         });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
@@ -305,6 +330,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProvider>();
     services.Configure<Altinn.Common.AccessToken.Configuration.KeyVaultSettings>(config.GetSection("kvSetting"));
     services.AddSingleton<IAuthorizationHandler, AccessTokenHandler>();
+    services.AddSingleton<IAuthenticationContext, AuthenticationContext>();
 }
 
 void AddInputModelValidators(IServiceCollection services)

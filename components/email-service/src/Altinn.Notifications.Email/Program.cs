@@ -7,12 +7,14 @@ using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Extensions;
 using Altinn.Notifications.Email.Telemetry;
+using Altinn.Notifications.Shared.Telemetry;
 
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
 using Microsoft.Extensions.FileProviders;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -21,7 +23,7 @@ using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 ILogger logger;
-const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
+const string AppInsightsKeyName = "ApplicationInsights--ConnectionString";
 string applicationInsightsConnectionString = string.Empty;
 
 WebApplicationBuilder appBuilder = WebApplication.CreateBuilder(args);
@@ -43,13 +45,6 @@ appBuilder.Services.AddSwaggerGen(c =>
 });
 
 var app = appBuilder.Build();
-
-EmailDeliveryReportSettings emailDeliveryReportSettings = new();
-app.Configuration.GetSection("EmailDeliveryReportSettings").Bind(emailDeliveryReportSettings);
-if (emailDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
-{
-    app.UseRequestBodyTelemetry();
-}
 
 if (app.Environment.IsDevelopment())
 {
@@ -109,7 +104,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         SecretClient client = new(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
         KeyVaultSecret keyVaultSecret = await client.GetSecretAsync(AppInsightsKeyName);
-        applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", keyVaultSecret.Value);
+        applicationInsightsConnectionString = keyVaultSecret.Value;
     }
 }
 
@@ -139,8 +134,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             metrics.AddMeter(
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
-                "System.Net.Http",
-                "Altinn.Notifications.KafkaConsumer");
+                "System.Net.Http");
         })
         .WithTracing(tracing => 
         {
@@ -151,14 +145,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
             tracing.AddHttpClientInstrumentation();
             tracing.AddSource("Wolverine");
         });
 
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
-    }
+    AddAzureMonitorTelemetryExporters(configuration, services, applicationInsightsConnectionString);
 
     services.AddControllers()
         .AddJsonOptions(options =>
@@ -166,25 +158,49 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
-
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 }
 
-static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
+static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServiceCollection services, string applicationInsightsConnectionString)
 {
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
+        }));
+    }
+    else if (!string.IsNullOrEmpty(config["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    {
+        // UseOtlpExporter throws if combined with the signal-specific exporter above.
+        services.AddOpenTelemetry().UseOtlpExporter();
+    }
+
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
+    {
+        return;
+    }
+
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
 }
 

@@ -2,10 +2,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 
-using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Status;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
 
 using Moq;
 
@@ -31,11 +28,13 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_MissingBearerToken_Unauthorized()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(Mock.Of<IStatusService>());
+        HttpClient client = _factory.CreateClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -45,13 +44,15 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_ValidBearerToken_InvalidAuthorizationHeader_ReturnsBadRequest()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(Mock.Of<IStatusService>());
+        HttpClient client = _factory.CreateClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"invalid")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -61,13 +62,15 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_ValidBearerToken_InvalidUserName_ReturnsBadRequest()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(Mock.Of<IStatusService>());
+        HttpClient client = _factory.CreateClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"invalidusername:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -77,13 +80,15 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_ValidBearerToken_InvalidDeliveryReport_ReturnsBadRequest()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(Mock.Of<IStatusService>());
+        HttpClient client = _factory.CreateClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_username}:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -93,7 +98,9 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
     public async Task Post_ValidBearerToken_ValidDeliveryReport_ReturnsOK()
     {
         // Arrange
-        HttpClient client = GetTestClient();
+        _factory.ResetInstalledMocks();
+        _factory.InstallService(Mock.Of<IStatusService>());
+        HttpClient client = _factory.CreateClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
             Content = new StringContent(_drMessageString, Encoding.UTF8, "application/xml")
@@ -103,41 +110,9 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
             "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_username}:{_password}")));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    private HttpClient GetTestClient()
-    {
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
-        {
-            var statusServiceMock = new Mock<IStatusService>();
-
-            builder.ConfigureTestServices(services =>
-            {
-                // Remove the existing SmsDeliveryReportSettings singleton
-                var existingSettings = services.SingleOrDefault(d => d.ServiceType == typeof(SmsDeliveryReportSettings));
-                if (existingSettings != null)
-                {
-                    services.Remove(existingSettings);
-                }
-
-                // Register with test credentials
-                services.AddSingleton(new SmsDeliveryReportSettings
-                {
-                    UserSettings = new UserSettings
-                    {
-                        Username = _username,
-                        Password = _password
-                    }
-                });
-
-                services.AddSingleton(statusServiceMock.Object);
-            });
-        }).CreateClient();
-
-        return client;
     }
 }

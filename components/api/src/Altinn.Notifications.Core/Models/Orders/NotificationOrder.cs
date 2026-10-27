@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -22,8 +24,11 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>
     public NotificationChannel NotificationChannel { get; internal set; }
 
-    /// <inheritdoc/>>    
+    /// <inheritdoc/>>
     public bool? IgnoreReservation { get; internal set; }
+
+    /// <inheritdoc/>>
+    public bool UseStaleContactInformation { get; internal set; }
 
     /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
@@ -41,20 +46,40 @@ public class NotificationOrder : IBaseNotificationOrder
     public DateTime Created { get; internal set; }
 
     /// <inheritdoc/>
-    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+    /// <remarks>
+    /// Legacy JSON name: this property was originally called <c>SendingTimePolicy</c> (SMS was the only channel with a policy),
+    /// and was renamed to <c>SmsSendingTimePolicy</c> when email got its own policy. Orders are persisted as JSON, so the
+    /// original <c>sendingTimePolicy</c> name is kept to keep reading orders stored under it. It can only be changed together
+    /// with a migration of the stored orders.
+    /// </remarks>
+    [JsonPropertyName("sendingTimePolicy")]
+    public SendingTimePolicy? SmsSendingTimePolicy { get; internal set; }
+
+    /// <inheritdoc/>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; internal set; }
 
     /// <inheritdoc/>
     public OrderType Type { get; internal set; }
 
     /// <summary>
+    /// Gets or sets the status of the notification order
+    /// </summary>
+    public OrderProcessingStatus? OrderProcessingStatus { get; set; } = null;
+
+    /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
+    public List<INotificationTemplate> Templates { get; internal set; } = [];
 
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
+    public List<Recipient> Recipients { get; internal set; } = [];
+
+    /// <summary>
+    /// The file attachments to include in the email, populated for orders of type <see cref="OrderType.Composed"/>.
+    /// </summary>
+    public List<SasFileReference>? EmailAttachments { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
@@ -67,13 +92,16 @@ public class NotificationOrder : IBaseNotificationOrder
         string? resourceId,
         Uri? conditionEndpoint,
         bool? ignoreReservation,
+        bool useStaleContactInformation,
         string? sendersReference,
         DateTime requestedSendTime,
         List<Recipient> recipients,
-        SendingTimePolicy? sendingTimePolicy,
+        SendingTimePolicy? smsSendingTimePolicy,
         List<INotificationTemplate> templates,
         NotificationChannel notificationChannel,
-        string? resourceAction)
+        string? resourceAction,
+        List<SasFileReference>? emailAttachments,
+        SendingTimePolicy? emailSendingTimePolicy = null)
     {
         Id = id;
         Type = type;
@@ -83,12 +111,15 @@ public class NotificationOrder : IBaseNotificationOrder
         Recipients = recipients;
         ResourceId = resourceId;
         ResourceAction = resourceAction;
+        EmailAttachments = emailAttachments;
         SendersReference = sendersReference;
         RequestedSendTime = requestedSendTime;
         IgnoreReservation = ignoreReservation;
         ConditionEndpoint = conditionEndpoint;
-        SendingTimePolicy = sendingTimePolicy;
+        SmsSendingTimePolicy = smsSendingTimePolicy;
+        EmailSendingTimePolicy = emailSendingTimePolicy;
         NotificationChannel = notificationChannel;
+        UseStaleContactInformation = useStaleContactInformation;
     }
 
     /// <summary>

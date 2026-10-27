@@ -31,7 +31,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
     /// <summary>
     /// Gets the Azure Service Bus connection string for the emulator.
     /// </summary>
-    public string ServiceBusConnectionString { get; private set; } = string.Empty;
+    public string ServiceBusConnectionString { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the PostgreSQL connection string (admin user).
@@ -50,14 +50,24 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 
     #endregion
 
+    private static bool UseExternalASB()
+    {
+        return false;
+    }
+
     #region Lifecycle Methods
 
     /// <summary>
     /// Initializes the fixture by starting MSSQL, Azure Service Bus Emulator, and optionally PostgreSQL containers.
     /// PostgreSQL is only started if the consuming project's appsettings.integrationtest.json contains a PostgreSQLSettings section.
     /// </summary>
-    public async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
+        if (UseExternalASB())
+        {
+            return;
+        }
+
         try
         {
             _network = new NetworkBuilder()
@@ -159,7 +169,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
     /// <summary>
     /// Disposes the fixture by stopping and removing all containers.
     /// </summary>
-    public async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         static async Task SafeDisposeContainerAsync(IContainer? container)
         {
@@ -181,6 +191,11 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 
         try
         {
+            if (UseExternalASB())
+            {
+                return;
+            }
+
             await SafeDisposeContainerAsync(_serviceBusEmulatorContainer);
             await SafeDisposeContainerAsync(_mssqlContainer);
             await SafeDisposeContainerAsync(_postgresContainer);
@@ -199,6 +214,7 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
         finally
         {
             IsRunning = false;
+            GC.SuppressFinalize(this);
         }
     }
 

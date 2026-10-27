@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core
 {
-    public class SmsNotificationSummaryTests : IAsyncLifetime
+    public sealed class SmsNotificationSummaryTests : IAsyncLifetime
     {
         private readonly List<Guid> _orderIdsToDelete;
 
@@ -19,9 +19,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async ValueTask InitializeAsync()
+        public ValueTask InitializeAsync()
         {
-            await Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()
@@ -31,8 +31,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
                 string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
             }
-
-            GC.SuppressFinalize(this);
         }
 
         [Fact]

@@ -3,11 +3,7 @@
 
     Command:
     podman compose run k6 run /src/tests/orders-org-no-v2.js \
-        -e tokenGeneratorUserName={the user name to access the token generator} \
-        -e tokenGeneratorUserPwd={the password to access the token generator} \
-        -e mpClientId={the id of an integration defined in maskinporten} \
-        -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
-        -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+        --secret-source=file=/.secrets \
         -e altinn_env={environment: at22, at23, tt02, prod} \
         -e orgNoRecipient={an organization number to include as a notification recipient} \
         -e resourceId={the resource ID associated with the notification order} \
@@ -29,24 +25,43 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/v2.js";
-import { post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment, setEmptyThresholds } from "./threshold-labels.js";
+import {
+    post_email_order_v2,
+    get_email_shipment,
+    post_sms_order_v2,
+    get_sms_shipment,
+    setEmptyThresholds,
+} from "./threshold-labels.js";
 import { getShipmentStatus } from "./orders-v2.js";
 import { scopes, resourceId } from "../shared/variables.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
 
-const orderRequestJson = JSON.parse(
-    open("../data/orders/order-v2-org.json")
-);
+const orderRequestJson = JSON.parse(open("../data/orders/order-v2-org.json"));
 
 export const options = {
-    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
+    summaryTrendStats: [
+        "avg",
+        "min",
+        "med",
+        "max",
+        "p(95)",
+        "p(99)",
+        "p(99.5)",
+        "p(99.9)",
+        "count",
+    ],
     thresholds: {
         // Checks rate should be 100%. Raise error if any check has failed.
-        checks: ['rate>=1']
-    }
+        checks: ["rate>=1"],
+    },
 };
 
-const labels = [post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment];
+const labels = [
+    post_email_order_v2,
+    get_email_shipment,
+    post_sms_order_v2,
+    get_sms_shipment,
+];
 
 setEmptyThresholds(labels, options);
 
@@ -54,11 +69,11 @@ setEmptyThresholds(labels, options);
  * Initialize test data.
  * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
  */
-export function setup() {
+export async function setup() {
     const sendersReference = uuidv4();
     const idempotencyIdEmail = uuidv4();
     const idempotencyIdSms = uuidv4();
-    const token = setupToken.getAltinnTokenForOrg(scopes);
+    const token = await setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();
 
@@ -72,9 +87,9 @@ export function setup() {
                 ...orderRequestJson.recipient.recipientOrganization,
                 orgNumber: orgNoRecipient,
                 resourceId: resourceId,
-                channelSchema: "Email"
-            }
-        }
+                channelSchema: "Email",
+            },
+        },
     };
 
     const smsOrderRequest = {
@@ -87,16 +102,16 @@ export function setup() {
                 ...orderRequestJson.recipient.recipientOrganization,
                 orgNumber: orgNoRecipient,
                 resourceId: undefined,
-                channelSchema: "SMS"
-            }
-        }
+                channelSchema: "SMS",
+            },
+        },
     };
 
     return {
         token,
         sendersReference,
         emailOrderRequest,
-        smsOrderRequest
+        smsOrderRequest,
     };
 }
 
@@ -113,16 +128,23 @@ function postEmailNotificationOrderRequest(data) {
     );
 
     const success = check(response, {
-        "POST email notification order request. Status is 201 Created": (r) => r.status === 201,
+        "POST email notification order request. Status is 201 Created": (r) =>
+            r.status === 201,
     });
 
-    stopIterationOnFail("POST email notification order request failed", success);
+    stopIterationOnFail(
+        "POST email notification order request failed",
+        success
+    );
 
     const selfLink = response.headers["Location"];
 
     check(response, {
-        "POST email notification order request. Location header provided": (_) => selfLink,
-        "POST email notification order request. Response body is not an empty string": (r) => r.body
+        "POST email notification order request. Location header provided": (
+            _
+        ) => selfLink,
+        "POST email notification order request. Response body is not an empty string":
+            (r) => r.body,
     });
 
     return response.body;
@@ -141,7 +163,8 @@ function postSmsNotificationOrderRequest(data) {
     );
 
     const success = check(response, {
-        "POST SMS notification order request. Status is 201 Created": (r) => r.status === 201
+        "POST SMS notification order request. Status is 201 Created": (r) =>
+            r.status === 201,
     });
 
     stopIterationOnFail("POST SMS notification order request failed", success);
@@ -149,8 +172,10 @@ function postSmsNotificationOrderRequest(data) {
     const selfLink = response.headers["Location"];
 
     check(response, {
-        "POST SMS notification order request. Location header provided": (_) => selfLink,
-        "POST SMS notification order request. Response body is not an empty string": (r) => r.body
+        "POST SMS notification order request. Location header provided": (_) =>
+            selfLink,
+        "POST SMS notification order request. Response body is not an empty string":
+            (r) => r.body,
     });
 
     return response.body;
@@ -162,7 +187,12 @@ function postSmsNotificationOrderRequest(data) {
  */
 export default function runTests(data) {
     let response = postEmailNotificationOrderRequest(data);
-    getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_email_shipment, "Email");
+    getShipmentStatus(
+        data,
+        JSON.parse(response).notification.shipmentId,
+        get_email_shipment,
+        "Email"
+    );
 
     // Disable Sms notifications order request until missing contact information in test data is resolved.
     // response = postSmsNotificationOrderRequest(data);

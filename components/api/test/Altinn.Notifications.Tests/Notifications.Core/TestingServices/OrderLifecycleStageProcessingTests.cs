@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -39,6 +40,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -53,6 +55,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -70,6 +73,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -84,6 +88,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -105,6 +110,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -119,6 +125,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -141,6 +148,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -156,6 +164,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -178,6 +187,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 It.IsAny<OrderLifecycleStage>(),
+                It.IsAny<bool>(),
                 It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
@@ -193,6 +203,7 @@ public class OrderLifecycleStageProcessingTests
                 It.IsAny<List<Recipient>>(),
                 It.IsAny<string?>(),
                 OrderLifecycleStage.Processing,
+                It.IsAny<bool>(),
                 It.IsAny<string?>()),
             Times.Once);
     }
@@ -226,11 +237,14 @@ public class OrderLifecycleStageProcessingTests
             .Setup(e => e.ReplaceKeywordsAsync(It.IsAny<IEnumerable<EmailRecipient>>()))
             .ReturnsAsync((IEnumerable<EmailRecipient> r) => r);
 
+        var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+        emailNotificationServiceMock.Setup(x => x.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<EmailAddressPoint>>(), It.IsAny<EmailRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
+
         return new EmailOrderProcessingService(
-            new Mock<IEmailNotificationRepository>().Object,
-            new Mock<IEmailNotificationService>().Object,
+            emailNotificationServiceMock.Object,
             contactPointService,
-            keywordsServiceMock.Object);
+            keywordsServiceMock.Object,
+            new Mock<INotificationScheduleService>().Object);
     }
 
     private static SmsOrderProcessingService CreateSmsProcessingService(IContactPointService contactPointService)
@@ -245,11 +259,13 @@ public class OrderLifecycleStageProcessingTests
             .Setup(e => e.GetSmsExpirationDateTime(It.IsAny<DateTime>()))
             .Returns((DateTime dt) => dt.AddHours(48));
 
+        var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
+        smsNotificationServiceMock.Setup(x => x.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<bool>())).ReturnsAsync([]);
+
         return new SmsOrderProcessingService(
             keywordsServiceMock.Object,
-            new Mock<ISmsNotificationService>().Object,
+            smsNotificationServiceMock.Object,
             contactPointService,
-            new Mock<ISmsNotificationRepository>().Object,
             scheduleMock.Object);
     }
 

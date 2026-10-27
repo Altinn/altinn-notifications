@@ -4,8 +4,7 @@ namespace Altinn.Notifications.Sms.Core.Dependencies;
 
 /// <summary>
 /// Describes the required public method of the SMS delivery report publisher.
-/// Implementations publish <see cref="SendOperationResult"/> payloads
-/// either to Kafka (default) or to Azure Service Bus when the ASB flag is enabled.
+/// Implementations publish <see cref="SendOperationResult"/> payloads to Azure Service Bus via Wolverine.
 /// </summary>
 public interface ISmsDeliveryReportPublisher
 {

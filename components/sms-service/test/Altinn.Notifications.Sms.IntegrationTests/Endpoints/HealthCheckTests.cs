@@ -15,10 +15,11 @@ public class HealthCheckTests : IClassFixture<IntegrationTestWebApplicationFacto
     public async Task Health_Test()
     {
         // Arrange
+        _factory.ResetInstalledMocks();
         HttpClient httpClient = _factory.CreateClient();
 
         // Act
-        HttpResponseMessage actual = await httpClient.GetAsync("/health");
+        HttpResponseMessage actual = await httpClient.GetAsync("/health", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(200, (int)actual.StatusCode);

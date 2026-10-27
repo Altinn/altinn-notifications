@@ -1,88 +1,39 @@
-using System.Collections.Concurrent;
-
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Shared.Commands;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using Wolverine;
+using Altinn.Notifications.Shared.Exceptions;
+using Altinn.Notifications.Shared.Publishers;
 
 namespace Altinn.Notifications.Integrations.Wolverine.Publishers;
 
 /// <summary>
 /// Wolverine-based implementation of <see cref="IEmailCommandPublisher"/> that publishes
-/// email notifications to an Azure Service Bus queue via <see cref="IMessageBus"/>.
+/// email notifications to an Azure Service Bus queue via <see cref="IWolverinePublisher"/>.
 /// </summary>
-public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServiceProvider serviceProvider, IOptions<WolverineSettings> options) : IEmailCommandPublisher
+public class EmailCommandPublisher(IWolverinePublisher wolverinePublisher) : IEmailCommandPublisher
 {
-    private readonly ILogger<EmailCommandPublisher> _logger = logger;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
-    private readonly int _publishConcurrency = options.Value.EmailPublishConcurrency <= 0 ? 10 : options.Value.EmailPublishConcurrency;
-
     /// <inheritdoc/>
-    public async Task<Email?> PublishAsync(Email email, CancellationToken cancellationToken)
+    public async Task PublishAsync(Email email, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-
-        return await SendAsync(email, messageBus);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<Email>> PublishAsync(IReadOnlyList<Email> emails, CancellationToken cancellationToken)
-    {
-        if (emails.Count == 0)
+        try
         {
-            return [];
+            await wolverinePublisher.PublishCommandAsync(CreateCommand(email), cancellationToken);
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-
-        var failedEmails = new ConcurrentBag<Email>();
-        using var semaphore = new SemaphoreSlim(_publishConcurrency);
-
-        await Task.WhenAll(emails.Select(async email =>
+        catch (ContentTooLargeException ex)
         {
-            await semaphore.WaitAsync(cancellationToken);
-
-            try
-            {
-                var failedEmail = await SendAsync(email, messageBus);
-                if (failedEmail is not null)
-                {
-                    failedEmails.Add(failedEmail);
-                }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }));
-
-        return [.. failedEmails];
+            throw new NotificationSizeLimitExceededException($"Email {email.NotificationId} exceeds the message queue size limit.", ex);
+        }
     }
 
     /// <summary>
-    /// Sends a single email notification command to the Azure Service Bus queue via <see cref="IMessageBus"/>.
+    /// Creates a <see cref="SendEmailCommand"/> from an <see cref="Email"/>.
     /// </summary>
-    /// <param name="email">The email notification to send.</param>
-    /// <param name="messageBus">The Wolverine message bus used to dispatch the command.</param>
-    /// <returns>
-    /// <see langword="null"/> if the command was dispatched successfully;
-    /// otherwise the original <paramref name="email"/> if an error occurred.
-    /// </returns>
-    private async Task<Email?> SendAsync(Email email, IMessageBus messageBus)
+    /// <param name="email">The email to convert.</param>
+    /// <returns>The command to publish to the message bus.</returns>
+    private static SendEmailCommand CreateCommand(Email email)
     {
-        var sendEmailCommand = new SendEmailCommand
+        return new SendEmailCommand
         {
             Body = email.Body,
             Subject = email.Subject,
@@ -91,25 +42,5 @@ public class EmailCommandPublisher(ILogger<EmailCommandPublisher> logger, IServi
             NotificationId = email.NotificationId,
             ContentType = email.ContentType.ToString()
         };
-
-        try
-        {
-            await messageBus.SendAsync(sendEmailCommand);
-
-            return null;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "EmailCommandPublisher failed to publish email notification {NotificationId} to ASB queue.",
-                email.NotificationId);
-
-            return email;
-        }
     }
 }

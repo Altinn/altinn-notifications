@@ -1,0 +1,40 @@
+meta {
+  name: Get notifications by NIN
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/dashboard/recipients/notifications/nin
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~from: {{dateFrom}}
+  ~to: {{dateTo}}
+}
+
+headers {
+  NationalIdentityNumber: {{nin}}
+}
+
+vars:pre-request {
+  nin: 16035001577
+}
+
+script:pre-request {
+  const from = bru.getEnvVar("dateFrom");
+  const to = bru.getEnvVar("dateTo");
+  
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  bru.setVar("dateFrom", from || sevenDaysAgo.toISOString());
+  bru.setVar("dateTo", to || new Date().toISOString());
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

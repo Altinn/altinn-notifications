@@ -1,6 +1,6 @@
-CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
+CREATE OR REPLACE FUNCTION notifications.claim_email_batch_v2(
     _batchsize integer DEFAULT NULL::integer)
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text) 
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
@@ -18,13 +18,13 @@ BEGIN
 
     -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
-        RETURN QUERY 
-        SELECT NULL::uuid AS alternateid, 
-               NULL::text AS subject, 
-               NULL::text AS body, 
-               NULL::text AS fromaddress, 
-               NULL::text AS toaddress, 
-               NULL::text AS contenttype 
+        RETURN QUERY
+        SELECT NULL::uuid AS alternateid,
+               NULL::text AS subject,
+               NULL::text AS body,
+               NULL::text AS fromaddress,
+               NULL::text AS toaddress,
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     ELSE
@@ -35,7 +35,7 @@ BEGIN
 
     RETURN QUERY
     WITH claimed_new_rows AS (
-        SELECT 
+        SELECT
             email._id,
             email.alternateid,
             email.customizedsubject,
@@ -43,8 +43,10 @@ BEGIN
             email.toaddress,
             email._orderid
         FROM notifications.emailnotifications email
+        JOIN notifications.orders o ON o._id = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
+            AND o.type <> 'Composed'::notificationordertype
         ORDER BY email._id
         FOR UPDATE OF email SKIP LOCKED
         LIMIT v_batchsize
@@ -63,9 +65,9 @@ BEGIN
             claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
-    SELECT 
+    SELECT
         updated.alternateid,
-        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
@@ -75,9 +77,11 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_email_batch(integer)
+ALTER FUNCTION notifications.claim_email_batch_v2(integer)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_email_batch(integer)
-    IS 'Claims and returns batches of email notifications.
+COMMENT ON FUNCTION notifications.claim_email_batch_v2(integer)
+    IS 'Claims and returns batches of email notifications, excluding Composed orders (OrderType = 3).
+Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
+

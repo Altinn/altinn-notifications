@@ -20,7 +20,7 @@ public class StatusFeedMapperTests
     public void MapToOrderStatusExtList_MapsCorrectly()
     {
         var mockShipmentIdNotification = Guid.NewGuid();
-        var mockShipmentIdReminder = Guid.NewGuid();   
+        var mockShipmentIdReminder = Guid.NewGuid();
         var sendersReferenceMock = "ref123";
 
         // Arrange  

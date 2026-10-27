@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
@@ -31,7 +31,7 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new StatusFeed()
             {
                 SequenceNumber = 1,
@@ -42,7 +42,7 @@ public class StatusFeedServiceTests
                     ShipmentId = Guid.NewGuid(),
                     Recipients = new List<Recipient>
                     {
-                        new() 
+                        new()
                         {
                             Destination = "noreply@altinn.no",
                             Status = ProcessingLifecycle.Order_Completed,
@@ -57,11 +57,11 @@ public class StatusFeedServiceTests
         long seq = 1;
 
         // Act
-        var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
-        
+        var result = await sut.GetStatusFeed(seq, null, _creatorName, "asc", TestContext.Current.CancellationToken);
+
         // Assert
         statusFeedRepository.Verify(
-        x => x.GetStatusFeed(seq, _creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
+        x => x.GetStatusFeed(seq, _creatorName, "asc", _maxPageSize, It.IsAny<CancellationToken>()),
         Times.Once);
 
         Assert.NotNull(result);
@@ -86,6 +86,7 @@ public class StatusFeedServiceTests
         mockRepository.Setup(x => x.GetStatusFeed(
                 It.IsAny<long>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
@@ -95,7 +96,7 @@ public class StatusFeedServiceTests
         int expected = CalculateExpectedPageSize(pageSize);
 
         // Act
-        var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, "asc", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -105,6 +106,7 @@ public class StatusFeedServiceTests
             x => x.GetStatusFeed(
             seq,
             _creatorName,
+            "asc",
             expected,
             It.IsAny<CancellationToken>()),
             Times.Once);
@@ -134,33 +136,35 @@ public class StatusFeedServiceTests
         // Arrange
         const int requestedPageSize = 100; // Smaller than max of 500
         const long seq = 0;
-        
+
         var mockRepository = new Mock<IStatusFeedRepository>();
         var expectedStatusFeedEntries = new List<StatusFeed>();
-        
+
         // Setup repository to capture the actual pageSize used
         mockRepository.Setup(x => x.GetStatusFeed(
                 It.IsAny<long>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
-        
+
         var sut = new StatusFeedService(mockRepository.Object, _options);
-        
+
         // Act
-        var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, CancellationToken.None);
-        
+        var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, "asc", TestContext.Current.CancellationToken);
+
         // Assert
         Assert.NotNull(result);
-        
+
         // Verify that the repository was called with the requested page size (not the max)
         mockRepository.Verify(
             x => x.GetStatusFeed(
             seq,
             _creatorName,
+            "asc",
             requestedPageSize, // Should use the requested value of 100, not the max of 500
-            It.IsAny<CancellationToken>()), 
+            It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

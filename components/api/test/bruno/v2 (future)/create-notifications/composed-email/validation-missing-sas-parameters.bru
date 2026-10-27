@@ -1,0 +1,49 @@
+meta {
+  name: Validation - missing SAS parameters
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/composed-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "requestedSendTime": "{{process.env.TESTDATA_REQUESTED_SEND_TIME}}",
+    "recipient": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(TEST) Should fail - missing SAS parameters",
+        "body": "(TEST) This should be rejected",
+        "contentType": "Plain",
+        "sendingTimePolicy": "Anytime",
+        "attachments": [
+          {
+            "filename": "document.pdf",
+            "mimeType": "application/pdf",
+            "sasUrl": "https://testaccount.blob.core.windows.net/container/document.pdf"
+          }
+        ]
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  Validation: the sasUrl is a valid absolute HTTPS Azure Blob Storage URI but is missing
+  all required SAS query parameters (se, sig, sp, sr).
+  The request must be rejected with 400 Bad Request.
+
+  Expected: 400 Bad Request with a validation error referencing the missing SAS parameters (se, sig, sp, sr).
+}

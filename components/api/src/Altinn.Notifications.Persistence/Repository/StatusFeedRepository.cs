@@ -2,9 +2,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 
+using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -16,15 +18,22 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <remarks>
 /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
 /// </remarks>
-/// <param name="dataSource">the npgsql data source</param>
-public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepository
+/// <param name="dataSource">The npgsql data source</param>
+/// <param name="config">The notification configuration</param>
+public class StatusFeedRepository(NpgsqlDataSource dataSource, IOptions<NotificationConfig> config) : IStatusFeedRepository
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly int _statusFeedCleanupBatchSize =
+        config.Value.StatusFeedCleanupBatchSize > 0
+            ? config.Value.StatusFeedCleanupBatchSize
+            : throw new InvalidOperationException("NotificationConfig:StatusFeedCleanupBatchSize must be greater than 0.");
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
-    private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
-    private const string _deleteOldStatusFeedRecordsSql = "SELECT notifications.delete_old_status_feed_records()";
-    private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
+    private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed_v2(@seq, @creatorname, @order, @limit)";
+    private const string _deleteOldStatusFeedRecordsSql =
+        "SELECT notifications.deleteoldstatusfeedrecords_v2(@batch_size)";
+    
+    private static readonly string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed_v2(o._id, o.creatorname, @orderstatus)
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
 
@@ -35,11 +44,12 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     };
 
     /// <inheritdoc/>
-    public async Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken)
+    public async Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, string orderBy, int pageSize, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
         command.Parameters.AddWithValue("seq", NpgsqlDbType.Bigint, seq);
         command.Parameters.AddWithValue("creatorName", NpgsqlDbType.Varchar, creatorName);
+        command.Parameters.AddWithValue("order", NpgsqlDbType.Varchar, orderBy);
         command.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, pageSize);
 
         List<StatusFeed> statusFeedEntries = [];
@@ -72,9 +82,9 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     public async Task<int> DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_deleteOldStatusFeedRecordsSql);
+        command.Parameters.AddWithValue("batch_size", NpgsqlDbType.Integer, _statusFeedCleanupBatchSize);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
-
         return (int)Convert.ToInt64(result);
     }
 
@@ -84,12 +94,15 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     /// <param name="orderStatus">The order status object to be serialized as JSONB</param>
     /// <param name="connection">The database connection to use</param>
     /// <param name="transaction">The database transaction to use</param>
-    /// <returns>A task representing the asynchronous operation</returns>
+    /// <returns>
+    /// <see langword="true"/> if a new status feed entry was inserted; <see langword="false"/> if the insert
+    /// was skipped because this order already had a status feed entry (idempotent no-op).
+    /// </returns>
     /// <remarks>
     /// This is a shared helper method that can be called from both NotificationRepositoryBase
     /// and OrderRepository to insert status feed entries consistently.
     /// </remarks>
-    public static async Task InsertStatusFeedEntry(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    public static async Task<bool> InsertStatusFeedEntry(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         ArgumentNullException.ThrowIfNull(orderStatus);
         ArgumentNullException.ThrowIfNull(connection);
@@ -106,5 +119,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
         {
             throw new InvalidOperationException($"Failed to insert status feed entry. No order found with alternateid {orderStatus.ShipmentId}.");
         }
+
+        return await reader.GetFieldValueAsync<bool>(0);
     }
 }

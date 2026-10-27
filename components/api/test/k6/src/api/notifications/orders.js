@@ -3,46 +3,47 @@ import * as config from "../../config.js";
 import * as apiHelpers from "../../apiHelpers.js";
 
 export function postEmailNotificationOrder(serializedOrder, token, label) {
-  const endpoint = config.notifications.orders_email;
+    const endpoint = config.notifications.orders_email;
 
-  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
-  params.tags = { name: label };
+    const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+    params.tags = { name: label };
 
-  return http.post(endpoint, serializedOrder, params);
+    return http.post(endpoint, serializedOrder, params);
 }
 
 export function postSmsNotificationOrder(serializedOrder, token, label) {
-  const endpoint = config.notifications.orders_sms;
+    const endpoint = config.notifications.orders_sms;
 
-  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
-  params.tags = { name: label };
-  return http.post(endpoint, serializedOrder, params);
+    const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+    params.tags = { name: label };
+    return http.post(endpoint, serializedOrder, params);
 }
 
 export function getById(id, token) {
-  const endpoint = config.notifications.orders_fromId(id);
+    const endpoint = config.notifications.orders_fromId(id);
 
-  return getByUrl(endpoint, token);
+    return getByUrl(endpoint, token);
 }
 
 export function getByUrl(url, token) {
-  const params = apiHelpers.buildHeaderWithBearer(token);
+    const params = apiHelpers.buildHeaderWithBearer(token);
 
-  return http.get(url, params);
+    return http.get(url, params);
 }
 
 export function getBySendersReference(sendersReference, token) {
-  const endpoint = config.notifications.orders_fromSendersRef(sendersReference);
+    const endpoint =
+        config.notifications.orders_fromSendersRef(sendersReference);
 
-  const params = apiHelpers.buildHeaderWithBearer(token);
+    const params = apiHelpers.buildHeaderWithBearer(token);
 
-  return http.get(endpoint, params);
+    return http.get(endpoint, params);
 }
 
 export function getWithStatus(orderId, token) {
-  const endpoint = config.notifications.orders_status(orderId);
+    const endpoint = config.notifications.orders_status(orderId);
 
-  const params = apiHelpers.buildHeaderWithBearer(token);
+    const params = apiHelpers.buildHeaderWithBearer(token);
 
-  return http.get(endpoint, params);
+    return http.get(endpoint, params);
 }

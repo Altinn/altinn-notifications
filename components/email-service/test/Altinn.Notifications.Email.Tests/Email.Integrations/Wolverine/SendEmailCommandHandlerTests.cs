@@ -22,19 +22,15 @@ public class SendEmailCommandHandlerTests
         ToAddress = "recipient@example.com"
     };
 
-    /// <summary>
-    /// Verifies that a general <see cref="Exception"/> thrown by
-    /// <see cref="ISendingService.SendAsync"/> is logged at error level and then rethrown.
-    /// </summary>
     [Fact]
-    public async Task HandleAsync_GeneralException_LogsErrorAndRethrows()
+    public async Task HandleAsync_GeneralException_LogsWarningAndRethrows()
     {
         // Arrange
         var exception = new InvalidOperationException("SMTP connection failed");
 
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
             .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
@@ -42,24 +38,20 @@ public class SendEmailCommandHandlerTests
 
         // Act & Assert
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         Assert.Same(exception, thrown);
 
         loggerMock.Verify(
             l => l.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email") && v.ToString()!.Contains(_validSendEmailCommand.NotificationId.ToString())),
-                exception,
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("failed to send email") && $"{v}".Contains(_validSendEmailCommand.NotificationId.ToString())),
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 
-    /// <summary>
-    /// Verifies that an unknown <see cref="SendEmailCommand.ContentType"/> value is
-    /// logged at error level and the email is sent with <see cref="EmailContentType.Plain"/> as the fallback.
-    /// </summary>
     [Fact]
     public async Task HandleAsync_UnknownContentType_LogsErrorAndDefaultsToPlain()
     {
@@ -69,57 +61,56 @@ public class SendEmailCommandHandlerTests
         Notifications.Email.Core.Sending.Email? capturedEmail = null;
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-            .Callback<Notifications.Email.Core.Sending.Email>(e => capturedEmail = e)
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
+            .Callback<Notifications.Email.Core.Sending.Email, CancellationToken>((e, ct) => capturedEmail = e)
             .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger>();
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         // Act
-        await SendEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object);
+        await SendEmailCommandHandler.HandleAsync(command, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken);
 
         // Assert
         loggerMock.Verify(
             l => l.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("unknown ContentType") && v.ToString()!.Contains(command.NotificationId.ToString())),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("unknown ContentType") && $"{v}".Contains(command.NotificationId.ToString())),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
             "An unknown ContentType must be logged at error level.");
 
         Assert.NotNull(capturedEmail);
-        Assert.Equal(EmailContentType.Plain, capturedEmail!.ContentType);
+        Assert.Equal(EmailContentType.Plain, capturedEmail.ContentType);
     }
 
-    /// <summary>
-    /// Verifies that an <see cref="OperationCanceledException"/> thrown by <see cref="ISendingService.SendAsync"/> is rethrown directly without invoking the send-failure error logger.
-    /// </summary>
     [Fact]
-    public async Task HandleAsync_OperationCanceledException_RethrowsWithoutLoggingException()
+    public async Task HandleAsync_OperationCanceledException_LogsWarningAndRethrows()
     {
         // Arrange
+        var exception = new OperationCanceledException();
+
         var sendingServiceMock = new Mock<ISendingService>();
         sendingServiceMock
-            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>()))
-            .ThrowsAsync(new OperationCanceledException());
+            .Setup(s => s.SendAsync(It.IsAny<Notifications.Email.Core.Sending.Email>(), TestContext.Current.CancellationToken))
+            .ThrowsAsync(exception);
 
         var loggerMock = new Mock<ILogger>();
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object));
+            () => SendEmailCommandHandler.HandleAsync(_validSendEmailCommand, sendingServiceMock.Object, loggerMock.Object, TestContext.Current.CancellationToken));
 
         loggerMock.Verify(
             l => l.Log(
-                LogLevel.Error,
+                LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("failed to send email")),
-                It.IsAny<Exception>(),
+                It.Is<It.IsAnyType>((v, _) => $"{v}".Contains("failed to send email")),
+                (Exception?)null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Once);
     }
 }

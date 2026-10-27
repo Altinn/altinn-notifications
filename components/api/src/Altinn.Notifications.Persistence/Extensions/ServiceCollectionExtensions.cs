@@ -32,10 +32,13 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
+        .AddSingleton<INotificationLogRepository, NotificationLogRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
         .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
+        .AddSingleton<IDashboardRepository, DashboardRepository>()
+        .AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()

@@ -1,0 +1,1 @@
+ALTER TABLE notifications.orders SET (autovacuum_vacuum_scale_factor = 0, autovacuum_vacuum_threshold = 1000);

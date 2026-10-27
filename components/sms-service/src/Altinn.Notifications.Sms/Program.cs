@@ -1,26 +1,31 @@
 using System.Reflection;
 
+using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
 using Altinn.Notifications.Sms.Integrations.Extensions;
 using Altinn.Notifications.Sms.Telemetry;
+
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
+
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 ILogger logger;
-const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
+const string AppInsightsKeyName = "ApplicationInsights--ConnectionString";
 string applicationInsightsConnectionString = string.Empty;
 
 WebApplicationBuilder appBuilder = WebApplication.CreateBuilder(args);
@@ -42,12 +47,6 @@ appBuilder.Services.AddSwaggerGen(c =>
 });
 
 var app = appBuilder.Build();
-
-var smsDeliveryReportSettings = app.Services.GetRequiredService<SmsDeliveryReportSettings>();
-if (smsDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
-{
-    app.UseMiddleware<RequestBodyTelemetryMiddleware>();
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -113,7 +112,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         SecretClient client = new(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
         KeyVaultSecret keyVaultSecret = await client.GetSecretAsync(AppInsightsKeyName);
-        applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", keyVaultSecret.Value);
+        applicationInsightsConnectionString = keyVaultSecret.Value;
     }
 }
 
@@ -128,7 +127,7 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
-    SmsDeliveryReportSettings smsDeliveryReportSettings = configuration!.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>()!;
+    SmsDeliveryReportSettings? smsDeliveryReportSettings = configuration.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>();
 
     if (smsDeliveryReportSettings == null)
     {
@@ -162,37 +161,61 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddHttpClientInstrumentation();
             tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor<WolverineActivityNameProcessor>();
+            tracing.AddSource("Wolverine");
         });
 
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
-    }
+    AddAzureMonitorTelemetryExporters(configuration, services, applicationInsightsConnectionString);
 
     services.AddSingleton(smsDeliveryReportSettings);
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 
-    services.AddCoreServices(configuration);
-    services.AddIntegrationServices(configuration);
+    services.AddCoreServices();
+    services.AddSmsGatewayServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
 
     services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 }
 
-static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
+static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServiceCollection services, string applicationInsightsConnectionString)
 {
+    var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
+    if (!string.IsNullOrEmpty(otelEndpoint))
+    {
+        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter(otlpOptions =>
+        {
+            otlpOptions.Endpoint = new Uri(otelEndpoint); // e.g. http://jaeger:4317
+        }));
+    }
+    else if (!string.IsNullOrEmpty(config["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    {
+        // UseOtlpExporter throws if combined with the signal-specific exporter above.
+        services.AddOpenTelemetry().UseOtlpExporter();
+    }
+
+    if (string.IsNullOrEmpty(applicationInsightsConnectionString) || config.GetValue<bool>("ApplicationInsights:Disable"))
+    {
+        return;
+    }
+
     services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
     services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
     {
         o.ConnectionString = applicationInsightsConnectionString;
+        o.SamplingRatio = 1.0f;
+        o.TracesPerSecond = null;
     }));
 }
 

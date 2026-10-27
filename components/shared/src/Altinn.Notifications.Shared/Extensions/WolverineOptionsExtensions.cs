@@ -1,10 +1,19 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
 
+using Altinn.Notifications.Shared.Exceptions;
+using Altinn.Notifications.Shared.Publishers;
+using Altinn.Notifications.Shared.Wolverine;
+using Altinn.Notifications.Shared.Wolverine.Policies;
+
+using Azure.Messaging.ServiceBus;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
 using Wolverine.AzureServiceBus;
+using Wolverine.ErrorHandling;
 
 namespace Altinn.Notifications.Shared.Extensions;
 
@@ -34,6 +43,7 @@ public static class WolverineOptionsExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(azureServiceBusConnectionString);
 
         opts.Policies.DisableConventionalLocalRouting();
+        opts.Policies.Add(new WolverineHandlerTimingPolicy());
         opts.EnableAutomaticFailureAcks = false;
         opts.EnableRemoteInvocation = false;
         opts.MultipleHandlerBehavior = MultipleHandlerBehavior.Separated;
@@ -68,6 +78,39 @@ public static class WolverineOptionsExtensions
             // automatically, including Wolverine's internal system queues.
             azureBusConfig.AutoProvision();
         }
+
+        return opts;
+    }
+
+    /// <summary>
+    /// Records messages that Azure Service Bus rejects as too large in <see cref="OversizedMessageRegistry"/>.
+    /// </summary>
+    /// <param name="opts">The <see cref="WolverineOptions"/> to configure.</param>
+    /// <returns>The configured <see cref="WolverineOptions"/> instance.</returns>
+    /// <remarks>
+    /// Wolverine swallows a failed inline send, so a permanent size rejection is signalled
+    /// back to <see cref="WolverinePublisher"/>, which raises <see cref="ContentTooLargeException"/>.
+    /// Opt-in: only hosts whose callers handle <see cref="ContentTooLargeException"/> should enable it.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="opts"/> is null.</exception>
+    public static WolverineOptions UseOversizedMessageSignal(this WolverineOptions opts)
+    {
+        ArgumentNullException.ThrowIfNull(opts);
+
+        opts.Services.TryAddSingleton<OversizedMessageRegistry>();
+        opts.SendingFailure
+            .OnException<ServiceBusException>(e => e.Reason == ServiceBusFailureReason.MessageSizeExceeded, "Azure Service Bus message size exceeded")
+            .CustomAction(
+                (runtime, lifecycle, exception) =>
+                {
+                    if (lifecycle.Envelope?.Message is { } message && exception is ServiceBusException serviceBusException)
+                    {
+                        runtime.Services.GetRequiredService<OversizedMessageRegistry>().Record(message, serviceBusException);
+                    }
+
+                    return ValueTask.CompletedTask;
+                },
+                "Signal oversized message to the publisher");
 
         return opts;
     }

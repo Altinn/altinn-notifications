@@ -1,0 +1,87 @@
+CREATE OR REPLACE FUNCTION notifications.get_notifications_by_phone_number_v2
+(
+    _phonenumber text,
+    _from_date timestamptz,
+    _to_date timestamptz
+)
+RETURNS TABLE (
+    shipmentid uuid,
+    sendersreference text,
+    creatorname text,
+    notificationtype text,
+    resourceid text,
+    notificationchannel text,
+    requestedsendtime timestamptz,
+    recipientnin text,
+    recipientorgno text,
+    address text,
+    channel text,
+    result text,
+    resulttime timestamptz,
+    dialogid text,
+    transmissionid text,
+    senderaddress text
+)
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+AS $$
+    WITH normalized AS (
+        SELECT
+            CASE
+                WHEN _phonenumber LIKE '+47%' THEN substring(_phonenumber FROM 4)
+                WHEN _phonenumber LIKE '0047%' THEN substring(_phonenumber FROM 5)
+                ELSE _phonenumber
+            END AS bare_number
+    )
+    SELECT
+        o.alternateid AS shipmentid,
+        o.sendersreference,
+        o.creatorname,
+        o.type::text AS notificationtype,
+        o.notificationorder->>'ResourceId' AS resourceid,
+        o.notificationorder->>'NotificationChannel' AS notificationchannel,
+        o.requestedsendtime,
+        s.recipientnin,
+        s.recipientorgno,
+        s.mobilenumber AS address,
+        'sms'::text AS channel,
+        s.result::text AS result,
+        s.resulttime,
+        c.orderchain->'DialogportenAssociation'->>'DialogId' AS dialogid,
+        c.orderchain->'DialogportenAssociation'->>'TransmissionId' AS transmissionid,
+        NULL::text AS senderaddress
+    FROM notifications.smsnotifications s
+    JOIN notifications.orders o ON o._id = s._orderid
+    LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
+    CROSS JOIN normalized n
+    WHERE s.mobilenumber IN ('+47' || n.bare_number, '0047' || n.bare_number)
+      AND o.requestedsendtime >= _from_date
+      AND o.requestedsendtime <  _to_date
+    ORDER BY o.requestedsendtime DESC
+$$;
+
+COMMENT ON FUNCTION notifications.get_notifications_by_phone_number_v2 IS
+'Retrieves all SMS notifications sent to a recipient identified by their phone number within a given date range.
+Matches the recipient regardless of whether the stored mobile number uses the "+47" or "0047" country code prefix.
+Parameters:
+- _phonenumber: The phone number of the recipient, with or without a "+47"/"0047" prefix (e.g. +4799999999, 004799999999, or 99999999)
+- _from_date: Start of the date range (inclusive) based on requestedsendtime
+- _to_date: End of the date range (exclusive) based on requestedsendtime
+Returns a table with the following columns:
+- shipmentid: The unique identifier for the shipment order
+- sendersreference: The sender''s reference for the order
+- creatorname: The short name of the organisation that created the order
+- notificationtype: The type of notification that was created (e.g ''Notification'',''Reminder'')
+- resourceid: The Altinn resource the notification is related to (may be null)
+- notificationchannel: The requested notification channel from the order (e.g. ''EmailPreferred'', ''SmsPreferred'')
+- requestedsendtime: When the notification was requested to be sent
+- recipientnin: The recipient''s national identity number, if the recipient was identified by NIN (may be null)
+- recipientorgno: The recipient''s organization number, if the recipient was identified by organization number (may be null)
+- address: The address the notification was sent to (the recipient''s phone number)
+- channel: The delivery channel (always ''sms'' for this function)
+- result: The delivery result status
+- resulttime: When the result was recorded
+- dialogid: The Dialogporten dialog id the order is associated with (may be null)
+- transmissionid: The Dialogporten transmission id the order is associated with (may be null)
+- senderaddress: The email address the notification was sent from (always null for this function)';

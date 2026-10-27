@@ -12,15 +12,19 @@ namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingExtensions
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddPostgresRepositories_PostgreSettingsMissing_ThrowsException()
+    public void AddPostgresRepositories_PostgreSQLSettingsMissing_ThrowsArgumentNullException()
     {
-        Environment.SetEnvironmentVariable("PostgreSettings", null);
-
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        // Arrange
+        var config = new ConfigurationBuilder().Build();
 
         IServiceCollection services = new ServiceCollection()
            .AddLogging();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddPostgresRepositories(config));
+        // Act
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddPostgresRepositories(config));
+
+        // Assert
+        Assert.Equal("config", exception.ParamName);
+        Assert.StartsWith("Required PostgreSQLSettings is missing from application configuration", exception.Message);
     }
 }

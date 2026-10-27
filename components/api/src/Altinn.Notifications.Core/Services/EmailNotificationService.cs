@@ -1,5 +1,7 @@
-using Altinn.Notifications.Core.Configuration;
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -7,142 +9,232 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Implementation of <see cref="IEmailNotificationService"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
-/// </remarks>
 public class EmailNotificationService(
     IGuidService guidService,
     IDateTimeService dateTimeService,
     IEmailCommandPublisher emailCommandPublisher,
-    IOptions<NotificationConfig> notificationConfig,
-    IEmailNotificationRepository emailNotificationRepository) : IEmailNotificationService
+    IEmailNotificationRepository emailNotificationRepository,
+    IComposedEmailCommandPublisher composedEmailCommandPublisher,
+    IUnitOfWorkRepository unitOfWorkRepository,
+    ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
+    private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IGuidService _guidService = guidService;
-    private readonly int _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
+    private readonly ILogger<EmailNotificationService> _logger = logger;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
+    private readonly IUnitOfWorkRepository _unitOfWorkRepository = unitOfWorkRepository;
     private readonly IEmailCommandPublisher _emailCommandPublisher = emailCommandPublisher;
     private readonly IEmailNotificationRepository _emailNotificationRepository = emailNotificationRepository;
+    private readonly IComposedEmailCommandPublisher _composedEmailCommandPublisher = composedEmailCommandPublisher;
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
+    public Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
+        var notifications = new List<EmailNotification>();
+
         if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
-            emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
-            return;
+            emailRecipient.ToAddress = string.Empty;
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         if (emailAddresses.Count == 0)
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
-            return;
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified));
+            return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
         }
 
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
-            emailRecipient.ToAddress = addressPoint.EmailAddress;
-
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+            var recipientForAddress = new EmailRecipient
+            {
+                IsReserved = emailRecipient.IsReserved,
+                OrganizationNumber = emailRecipient.OrganizationNumber,
+                NationalIdentityNumber = emailRecipient.NationalIdentityNumber,
+                CustomizedBody = emailRecipient.CustomizedBody,
+                CustomizedSubject = emailRecipient.CustomizedSubject,
+                ToAddress = addressPoint.EmailAddress
+            };
+            notifications.Add(CreateNotificationForRecipient(orderId, requestedSendTime, recipientForAddress, EmailNotificationResultType.New));
         }
+
+        return Task.FromResult<IReadOnlyList<EmailNotification>>(notifications);
     }
 
     /// <inheritdoc/>
-    public async Task TerminateExpiredNotifications()
+    public Task TerminateExpiredNotifications()
     {
-        // process hanging notifications that have been set to succeeded, but never reached a final stage
-        await _emailNotificationRepository.TerminateExpiredNotifications();
+        return _emailNotificationRepository.TerminateExpiredNotifications();
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(CancellationToken cancellationToken)
+    public Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default)
     {
-        List<Email> newEmailNotifications;
+        return SendClaimedNotification(
+            (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token, sendingTimePolicy),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendNotification),
+            cancellationToken,
+            sendingTimePolicy);
+    }
 
-        do
-        {
-            newEmailNotifications = [];
-
-            try
-            {
-                newEmailNotifications = await _emailNotificationRepository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications.Count == 0)
-                {
-                    break;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var unpublishedEmails = await _emailCommandPublisher.PublishAsync(newEmailNotifications, cancellationToken);
-                foreach (var email in unpublishedEmails)
-                {
-                    await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
-
-                throw;
-            }
-            catch (InvalidOperationException)
-            {
-                await ResetSendStatusToNewAsync(newEmailNotifications);
-
-                throw;
-            }
-        }
-        while (newEmailNotifications.Count > 0);
+    /// <inheritdoc/>
+    public Task<bool> SendComposedNotification(CancellationToken cancellationToken)
+    {
+        return SendClaimedNotification(
+            _emailNotificationRepository.GetNewComposedNotificationAsync,
+            _composedEmailCommandPublisher.PublishAsync,
+            nameof(SendComposedNotification),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task UpdateSendStatus(EmailSendOperationResult sendOperationResult)
     {
-        // set to new to allow new iteration of regular processing if transient error
         if (sendOperationResult.SendResult == EmailNotificationResultType.Failed_TransientError)
         {
             sendOperationResult.SendResult = EmailNotificationResultType.New;
         }
 
-        await _emailNotificationRepository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        try
+        {
+            await _emailNotificationRepository.UpdateSendStatusAsync(
+                unitOfWork,
+                sendOperationResult.NotificationId,
+                (EmailNotificationResultType)sendOperationResult.SendResult!,
+                sendOperationResult.OperationId,
+                sendOperationResult.DeliveryReport,
+                sendOperationResult.TotalAttachmentSizeBytes);
+        }
+        catch (Exception)
+        {
+            try
+            {
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            }
+            catch (Exception rollbackException)
+            {
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", nameof(UpdateSendStatus));
+            }
+
+            throw;
+        }
+
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
     }
 
     /// <summary>
-    /// Resets the send status to <see cref="EmailNotificationResultType.New"/> for the given emails.
+    /// Claims, publishes and commits the next pending notification within a single unit of work.
     /// </summary>
-    /// <param name="emails">The collection of emails to reset the send status for.</param>
-    private async Task ResetSendStatusToNewAsync(IEnumerable<Email> emails)
+    /// <typeparam name="TNotification">The type of email notification to send.</typeparam>
+    /// <param name="getNewNotification">Claims the next pending notification on the given unit of work, or returns <see langword="null"/> if none is pending.</param>
+    /// <param name="publishNotification">Publishes the claimed notification.</param>
+    /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    private async Task<bool> SendClaimedNotification<TNotification>(
+        Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
+        Func<TNotification, CancellationToken, Task> publishNotification,
+        string operationName,
+        CancellationToken cancellationToken,
+        SendingTimePolicy? sendingTimePolicy = null)
+        where TNotification : Email
     {
-        if (emails is null)
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
+        UnitOfWork unitOfWork;
+        try
         {
-            return;
+            unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", operationName);
+            }
+
+            return false;
         }
 
-        foreach (var email in emails)
+        try
         {
-            await _emailNotificationRepository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+            TNotification? claimedNotification = await getNewNotification(unitOfWork, cancellationToken);
+            activity?.SetTag("Count", claimedNotification == null ? 0 : 1);
+            if (claimedNotification is null)
+            {
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await PublishClaimedNotification(unitOfWork, claimedNotification, publishNotification, operationName, cancellationToken);
+
+            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(e, "An error occurred while processing {OperationName}.", operationName);
+            }
+
+            try
+            {
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            }
+            catch (Exception rollbackException)
+            {
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", operationName);
+            }
+
+            return false;
         }
     }
 
     /// <summary>
-    /// Creates a notification for a recipient.
+    /// Publishes a claimed notification. If it exceeds the size limit, records <see cref="EmailNotificationResultType.Failed_ContentTooLarge"/> on the claiming unit of work.
     /// </summary>
-    /// <param name="orderId">The order identifier.</param>
-    /// <param name="requestedSendTime">The requested send time.</param>
-    /// <param name="recipient">The email recipient.</param>
-    /// <param name="result">The result of the notification.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
+    private async Task PublishClaimedNotification<TNotification>(
+        UnitOfWork unitOfWork,
+        TNotification claimedNotification,
+        Func<TNotification, CancellationToken, Task> publishNotification,
+        string operationName,
+        CancellationToken cancellationToken)
+        where TNotification : Email
     {
-        var emailNotification = new EmailNotification()
+        try
+        {
+            await publishNotification(claimedNotification, cancellationToken);
+        }
+        catch (NotificationSizeLimitExceededException sizeLimitExceeded)
+        {
+            _logger.LogWarning(sizeLimitExceeded, "Notification {NotificationId} is too large to publish for {OperationName}.", claimedNotification.NotificationId, operationName);
+
+            await _emailNotificationRepository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, EmailNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Builds an in-memory email notification for a single recipient. Does not persist.
+    /// </summary>
+    private EmailNotification CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
+    {
+        return new EmailNotification()
         {
             OrderId = orderId,
             Id = _guidService.NewGuid(),
@@ -150,18 +242,5 @@ public class EmailNotificationService(
             RequestedSendTime = requestedSendTime,
             SendResult = new(result, _dateTimeService.UtcNow())
         };
-
-        DateTime expiry;
-
-        if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
-        {
-            expiry = _dateTimeService.UtcNow();
-        }
-        else
-        {
-            expiry = requestedSendTime.AddHours(48);
-        }
-
-        await _emailNotificationRepository.AddNotification(emailNotification, expiry);
     }
 }

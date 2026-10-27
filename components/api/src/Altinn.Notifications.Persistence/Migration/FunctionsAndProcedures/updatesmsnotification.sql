@@ -1,13 +1,13 @@
--- v2 introduces expiry time validation and conditional updates
-CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
-    _result text,
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v3(
+    _result           text,
     _gatewayreference text,
-    _alternateid uuid
+    _alternateid      uuid,
+    _deliveryreport   jsonb
 )
 RETURNS TABLE (
     alternateid uuid,
     was_updated boolean,
-    is_expired boolean
+    is_expired  boolean
 )
 LANGUAGE plpgsql
 AS $$
@@ -30,14 +30,16 @@ BEGIN
         -- Update resulttime only if not expired, otherwise keep existing value
         resulttime = CASE
             WHEN expirytime > now() THEN now()
-            ELSE resulttime 
+            ELSE resulttime
         END,
         -- Update gatewayreference only if not expired and alternateid was provided
         gatewayreference = CASE
             WHEN expirytime > now() AND _alternateid IS NOT NULL
             THEN COALESCE(_gatewayreference, gatewayreference)
-            ELSE gatewayreference 
-        END
+            ELSE gatewayreference
+        END,
+        -- Always overwritten, including with NULL: observational gateway data, not subject to expiry
+        deliveryreport = _deliveryreport
     WHERE
         -- Match by alternateid (takes priority) OR by gatewayreference (fallback)
         -- Strict precedence: if alternateid is provided, only use that
@@ -45,7 +47,7 @@ BEGIN
         (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
     RETURNING
         smsnotifications.alternateid,
-        -- was_updated is true only if the notification was not expired at UPDATE time
+        -- was_updated reflects whether status fields were modified; deliveryreport writes do not affect this flag
         (expirytime > now()) AS was_updated,
         -- is_expired is true if the notification was expired at UPDATE time
         (expirytime <= now()) AS is_expired;
@@ -57,22 +59,29 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updatesmsnotification_v2 IS
-'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
+COMMENT ON FUNCTION notifications.updatesmsnotification_v3 IS
+'Updates an SMS notification''s result, resulttime, gatewayreference, and deliveryreport
+by alternateid or by gatewayreference, with expiry time validation.
 
-Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid
+is used for lookup; _gatewayreference may still populate the row via COALESCE.
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if values were modified (notification not expired), false otherwise
+- was_updated: true if status fields (result, resulttime, gatewayreference) were modified (notification not expired), false otherwise
+             NOTE: deliveryreport is always written and does not affect this flag
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
 - Single UPDATE operation with implicit row-level locking
-- CASE expressions conditionally modify fields only when expirytime > now()
-- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
-- If not found: returns (NULL, false, false)
-- If found and not expired: modifies values and returns (alternateid, true, false)
+- CASE expressions conditionally modify status fields only when expirytime > now()
+- deliveryreport is always overwritten unconditionally, including with NULL (observational data, not subject to expiry)
+- If expired:   UPDATE executes, status fields unchanged, deliveryreport written; returns (alternateid, false, true)
+- If not found: returns (NULL, false, false); deliveryreport is not written
+- If found and not expired: all fields modified; returns (alternateid, true, false)
 
-Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely
+identifies at most one row when non-null.
+Overwrite policy: result, resulttime, and gatewayreference are conditionally overwritten when not expired;
+gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired;
+deliveryreport is always overwritten regardless of expiry.';

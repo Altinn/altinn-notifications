@@ -1,32 +1,41 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the email notification service.
+/// Creates, sends and tracks the status of email notifications.
 /// </summary>
 public interface IEmailNotificationService : INotificationService
 {
     /// <summary>
-    /// Creates a new email notification.
+    /// Builds in-memory email notifications for the given recipient and address points.
+    /// Does not persist.
     /// </summary>
     /// <param name="orderId">The unique identifier for the order associated with the notification.</param>
     /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
     /// <param name="emailAddresses">The list of email addresses to send the notification to.</param>
     /// <param name="emailRecipient">The email recipient to send the notification to.</param>
     /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
+    /// <returns>A read-only list of the materialized <see cref="EmailNotification"/> instances, not yet persisted.</returns>
+    Task<IReadOnlyList<EmailNotification>> CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Sends pending email notifications.
+    /// Sends the next pending email notification that is eligible under the specified sending time policy, if any.
+    /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when email notifications should be sent.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends the next pending composed email notification, if any.
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
-    Task SendNotifications(CancellationToken cancellationToken);
+    /// <returns><see langword="true"/> if a composed notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.

@@ -137,13 +137,13 @@ public class MetricsApiKeyFilterTests
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["MetricsApiKey"] = "expected" }).Build();
         var logger = Mock.Of<ILogger<MetricsApiKeyFilter>>();
         var filter = new MetricsApiKeyFilter(config, logger);
-    
+
         var headers = new HeaderDictionary { ["X-API-Key"] = "expected" };
         var context = CreateAuthorizationContext(path, headers);
-    
+
         // Act
         await filter.OnAuthorizationAsync(context);
-    
+
         // Assert
         Assert.Null(context.Result);
     }

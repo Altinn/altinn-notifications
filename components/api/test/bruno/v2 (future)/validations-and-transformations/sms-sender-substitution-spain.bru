@@ -1,0 +1,61 @@
+meta {
+  name: transformation - sms sender substitution (Spain)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientSms": {
+        "phoneNumber": "+34600000000",
+        "smsSettings": {
+          "sender": "TestSender",
+          "body": "(TEST) Sender substitution test for Spain (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Verifies that ISmsSenderSubstitutionService replaces an alphanumeric sender ID with a
+  numeric sender for recipients in countries (e.g. Spain, +34) where alphanumeric SenderIDs
+  are not supported.
+
+  The recipient phone number "+34600000000" is a placeholder Spanish number used only to
+  match the "34" country code prefix rule; it does not need to be a real, deliverable number
+  for the substitution logic (applied when the SMS is picked up for publishing) to run.
+
+  The sender "TestSender" is alphanumeric (not a valid mobile number), so it is a candidate
+  for substitution.
+
+  Required local configuration for the substitution to actually occur:
+  Add a rule to SmsSenderSubstitution:Rules (e.g. in appsettings.Development.json) mapping
+  the "34" country code prefix to a numeric sender for the service owner (creator short name)
+  your token authenticates as, for example:
+
+  ```
+  "SmsSenderSubstitution": {
+    "Rules": [
+      {
+        "CountryCodePrefix": "34",
+        "NumericSenderByServiceOwner": {
+          "ttd": "+4791234567"
+        }
+      }
+    ]
+  }
+  ```
+
+  Without this configuration (the default is an empty Rules list), HasRules is false and the
+  sender is sent unchanged, i.e. no substitution takes place.
+}

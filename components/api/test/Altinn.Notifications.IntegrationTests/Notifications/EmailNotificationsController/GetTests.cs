@@ -1,41 +1,32 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
-using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
-
-using AltinnCore.Authentication.JwtCookie;
-
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsController
 {
-    public class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController>>, IAsyncLifetime
+    public sealed class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Program>>, IAsyncLifetime
     {
         private readonly string _basePath;
-        private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
+        private readonly IntegrationTestWebApplicationFactory<Program> _factory;
         private readonly List<Guid> _orderIdsToDelete;
 
-        public GetTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> factory)
+        public GetTests(IntegrationTestWebApplicationFactory<Program> factory)
         {
             _basePath = $"/notifications/api/v1/orders";
             _factory = factory;
             _orderIdsToDelete = new List<Guid>();
         }
 
-        public async ValueTask InitializeAsync()
+        public ValueTask InitializeAsync()
         {
-            await Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         async ValueTask IAsyncDisposable.DisposeAsync()
@@ -45,8 +36,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
                 string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
             }
-            
-            GC.SuppressFinalize(this);
         }
 
         [Fact]
@@ -117,19 +106,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
 
         private HttpClient GetTestClient()
         {
-            HttpClient client = _factory.WithWebHostBuilder(builder =>
-            {
-                IdentityModelEventSource.ShowPII = true;
-
-                builder.ConfigureTestServices(services =>
-                {
-                    // Set up mock authentication and authorization
-                    services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                    services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
-                });
-            }).CreateClient();
-
-            return client;
+            _factory.ResetInstalledMocks();
+            return _factory.SharedClient;
         }
     }
 }

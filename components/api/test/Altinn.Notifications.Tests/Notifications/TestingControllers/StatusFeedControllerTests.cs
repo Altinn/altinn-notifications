@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
@@ -29,7 +29,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            
+
             _sut = new StatusFeedController(_statusFeedService.Object, _validator)
             {
                 ControllerContext = new ControllerContext
@@ -91,7 +91,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                     }
                 }
             };
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), expectedCreatorName, CancellationToken.None))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), expectedCreatorName, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(statusFeedList);
 
             // Act
@@ -100,7 +100,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             // Assert
             Assert.NotNull(result);
             Assert.IsType<ActionResult<List<StatusFeedExt>>>(result);
-            _statusFeedService.Verify(x => x.GetStatusFeed(expectedSequenceNumber, It.IsAny<int?>(), expectedCreatorName, CancellationToken.None), Times.Once);
+            _statusFeedService.Verify(x => x.GetStatusFeed(expectedSequenceNumber, It.IsAny<int?>(), expectedCreatorName, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             var ojectResult = Assert.IsType<OkObjectResult>(result.Result);
             var returnedItems = Assert.IsType<List<StatusFeedExt>>(ojectResult.Value);
             Assert.Equal(statusFeedList.Count, returnedItems.Count);
@@ -111,7 +111,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WhenServiceThrowsOperationCanceledException_IsCaughtWithCorrectStatusCodeReturned()
         {
             // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new OperationCanceledException());
 
             // Act

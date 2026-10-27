@@ -1,30 +1,28 @@
-import http from "k6/http";
 import encoding from "k6/encoding";
+import http from "k6/http";
 import * as config from "../config.js";
 import * as apiHelpers from "../apiHelpers.js";
 import { stopIterationOnFail } from "../errorhandler.js";
-
-const tokenGeneratorUserPwd = __ENV.tokenGeneratorUserPwd;
-const tokenGeneratorUserName = __ENV.tokenGeneratorUserName;
+import { getFromSecretSource } from "../secret-reader.js";
 
 // Storage to hold the cached token and its expiration time
 let authenticationStorage = {
     expiresAt: 0,
-    cachedToken: null
+    cachedToken: null,
 };
 
 /*
  * Generate enterprise token for test environment.
- * 
+ *
  * @param {Object} queryParams - The query parameters to be included in the token generation request.
- * @returns {string} The generated enterprise token.
+ * @returns {Promise<string>} The generated enterprise token.
  */
-export function generateEnterpriseToken(queryParams) {
+export async function generateEnterpriseToken(queryParams) {
     const endpoint =
         config.tokenGenerator.getEnterpriseToken +
         apiHelpers.buildQueryParametersForEndpoint(queryParams);
 
-    return generateToken(endpoint);
+    return await generateToken(endpoint);
 }
 
 /**
@@ -32,27 +30,27 @@ export function generateEnterpriseToken(queryParams) {
  * Returns a cached token if one exists and hasn't expired.
  *
  * @param {string} endpoint - The endpoint URL to which the token generation request is sent.
- * @returns {string} The generated or cached token.
+ * @returns {Promise<string>} The generated or cached token.
  */
-function generateToken(endpoint) {
+async function generateToken(endpoint) {
     const currentTime = Math.floor(Date.now() / 1000);
     const skewSeconds = 30;
 
     // Return cached token if it exists and is not expired
-    if (authenticationStorage.cachedToken &&(authenticationStorage.expiresAt - skewSeconds) > currentTime) {
+    if (
+        authenticationStorage.cachedToken &&
+        authenticationStorage.expiresAt - skewSeconds > currentTime
+    ) {
         return authenticationStorage.cachedToken;
     }
-    
-    if (!tokenGeneratorUserName) {
-        stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`, false);
-    }
 
-    if (!tokenGeneratorUserPwd) {
-        stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserPwd': '${tokenGeneratorUserPwd}'.`, false);
-    }
-
+    const tokenGeneratorUserName = await getFromSecretSource(
+        "tokenGeneratorUserName"
+    );
+    const tokenGeneratorUserPwd = await getFromSecretSource(
+        "tokenGeneratorUserPwd"
+    );
     const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
-
     const encodedCredentials = encoding.b64encode(credentials);
 
     const params = apiHelpers.buildHeaderWithBasic(encodedCredentials);
@@ -64,7 +62,9 @@ function generateToken(endpoint) {
     }
 
     authenticationStorage.cachedToken = response.body;
-    authenticationStorage.expiresAt = getTokenExpiration(authenticationStorage.cachedToken);
+    authenticationStorage.expiresAt = getTokenExpiration(
+        authenticationStorage.cachedToken
+    );
 
     return authenticationStorage.cachedToken;
 }
@@ -72,24 +72,26 @@ function generateToken(endpoint) {
 /**
  * Decodes a JWT token payload and extracts the expiration time (exp).
  * Uses base64url -> text decoding; supports optional "Bearer " prefix.
- * 
+ *
  * @param {string} token - The JWT token to decode
  * @returns {number} The expiration timestamp in seconds since epoch
  */
 function getTokenExpiration(token) {
     // Remove 'Bearer ' prefix if present
-    const tokenValue = token.trim().replace(/^Bearer\s+/i, '');
+    const tokenValue = token.trim().replace(/^Bearer\s+/i, "");
 
-    const parts = tokenValue.split('.');
+    const parts = tokenValue.split(".");
     if (parts.length !== 3) {
         throw new Error("Invalid JWT token format");
     }
 
-    const payloadJson = encoding.b64decode(parts[1], 'rawurl', 's');
+    const payloadJson = encoding.b64decode(parts[1], "rawurl", "s");
     const payload = JSON.parse(payloadJson);
     const exp = Number(payload.exp);
     if (!Number.isFinite(exp)) {
-        throw new TypeError("Token does not contain numeric expiration (exp) claim");
+        throw new TypeError(
+            "Token does not contain numeric expiration (exp) claim"
+        );
     }
 
     return exp;

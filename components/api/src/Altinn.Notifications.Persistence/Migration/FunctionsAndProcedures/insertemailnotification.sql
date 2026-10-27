@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
+CREATE OR REPLACE PROCEDURE notifications.insertemailnotification_v2(
     _orderid uuid,
     _alternateid uuid,
     _recipientorgno TEXT,
@@ -8,14 +8,21 @@ CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
     _customizedsubject TEXT,
     _result TEXT,
     _resulttime timestamptz,
-    _expirytime timestamptz
+    _expirytime timestamptz,
+    _total_attachment_size_bytes BIGINT
 )
 LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
     __orderid BIGINT;
+	__iscomposed BOOLEAN;
+    __sendingtimepolicy SMALLINT;
 BEGIN
-    SELECT _id INTO __orderid 
+    SELECT
+        _id,
+        CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
+        CASE WHEN emailsendingtimepolicy = 1 OR emailsendingtimepolicy IS NULL THEN 1 ELSE 2 END
+        INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
 
@@ -29,7 +36,10 @@ BEGIN
         customizedsubject,
         result,
         resulttime,
-        expirytime
+        expirytime,
+        total_attachment_size_bytes,
+		iscomposed,
+        sendingtimepolicy
     )
     VALUES (
         __orderid,
@@ -41,7 +51,19 @@ BEGIN
         _customizedsubject,
         _result::emailnotificationresulttype,
         _resulttime,
-        _expirytime
+        _expirytime,
+        _total_attachment_size_bytes,
+		__iscomposed,
+        __sendingtimepolicy
     );
 END;
 $BODY$;
+
+ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
+    IS 'Inserts a new email notification linked to the given order.
+Raises an exception if no order with the specified alternateid exists.
+The notification inherits iscomposed and the email sending time policy (emailsendingtimepolicy, NULL = Anytime) from the order.
+_total_attachment_size_bytes: total raw attachment size in bytes (0 for standard emails with no attachments).';

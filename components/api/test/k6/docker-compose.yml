@@ -5,10 +5,11 @@ networks:
 
 services:
   k6:
-    image: grafana/k6:1.7.1
+    image: grafana/k6:2.3.0
     networks:
       - k6
     ports:
-      - "6565:6565"
+      - '6565:6565'
     volumes:
       - ./src:/src
+      - ./.secrets:/.secrets:ro

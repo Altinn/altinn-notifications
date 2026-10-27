@@ -29,6 +29,11 @@ internal sealed record RecipientDeliveryDetails
     public bool? IgnoreReservation { get; init; }
 
     /// <summary>
+    /// Gets a flag indicating whether to use stale contact information.
+    /// </summary>
+    public bool UseStaleContactInformation { get; init; }
+
+    /// <summary>
     /// Gets an optional resource ID for authorization and tracking.
     /// </summary>
     public string? ResourceId { get; init; }
@@ -42,6 +47,11 @@ internal sealed record RecipientDeliveryDetails
     /// Gets the sending time policy associated with the SMS configuration.
     /// </summary>
     public SendingTimePolicy? SmsSendingTimePolicy { get; init; }
+
+    /// <summary>
+    /// Gets the sending time policy associated with the email configuration.
+    /// </summary>
+    public SendingTimePolicy? EmailSendingTimePolicy { get; init; }
 
     /// <summary>
     /// Gets an empty <see cref="RecipientDeliveryDetails"/> instance with default values.
