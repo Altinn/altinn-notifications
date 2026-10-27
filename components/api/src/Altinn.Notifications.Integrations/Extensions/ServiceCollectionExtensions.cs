@@ -37,6 +37,10 @@ public static class ServiceCollectionExtensions
             .Get<PlatformSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required PlatformSettings is missing from application configuration");
 
+        _ = config.GetSection(nameof(RegisterSettings))
+            .Get<RegisterSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required RegisterSettings is missing from application configuration");
+
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
         services.Configure<RegisterSettings>(config.GetSection(nameof(RegisterSettings)));
         services.Configure<DialogportenSettings>(config.GetSection("DialogportenSettings"));
