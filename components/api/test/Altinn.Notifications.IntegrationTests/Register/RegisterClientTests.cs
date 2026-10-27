@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -9,7 +9,6 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.Register.Models;
-using Altinn.Register.Contracts;
 
 using Microsoft.Extensions.Options;
 
@@ -36,18 +35,8 @@ public class RegisterClientTests
     [Theory]
     [InlineData(HttpStatusCode.OK)]
     [InlineData(HttpStatusCode.PartialContent)]
-    public async Task GetParties_WithMatchingParties_ReturnsRegisterContracts(HttpStatusCode statusCode)
+    public async Task QueryPartyDetails_WithMatchingParties_ReturnsPartyDetails(HttpStatusCode statusCode)
     {
-        var identifiers = new List<PartyUrn>
-        {
-            PartyUrn.Parse("urn:altinn:person:identifier-no:25871999336"),
-            PartyUrn.Parse("urn:altinn:organization:identifier-no:123456785")
-        };
-        if (statusCode == HttpStatusCode.PartialContent)
-        {
-            identifiers.Add(PartyUrn.PartyUuid.Create(Guid.NewGuid()));
-        }
-
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
         {
             Assert.Equal(HttpMethod.Post, request!.Method);
@@ -56,11 +45,9 @@ public class RegisterClientTests
 
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
             var data = body.RootElement.GetProperty("data");
-            Assert.Equal(identifiers.Count, data.GetArrayLength());
-            for (var i = 0; i < identifiers.Count; i++)
-            {
-                Assert.Equal(identifiers[i].ToString(), data[i].GetString());
-            }
+            Assert.Equal(2, data.GetArrayLength());
+            Assert.Equal("urn:altinn:organization:identifier-no:123456785", data[0].GetString());
+            Assert.Equal("urn:altinn:person:identifier-no:25871999336", data[1].GetString());
 
             return new HttpResponseMessage(statusCode)
             {
@@ -90,19 +77,19 @@ public class RegisterClientTests
             };
         }));
 
-        var actual = await registerClient.GetParties(identifiers, TestContext.Current.CancellationToken);
+        var actual = await registerClient.QueryPartyDetails(["123456785", "123456785"], ["25871999336"], TestContext.Current.CancellationToken);
 
         Assert.Equal(2, actual.Count);
-        var person = Assert.IsType<Person>(actual[0]);
-        Assert.Equal("25871999336", person.PersonIdentifier.ToString());
-        Assert.Equal("Test Person", person.DisplayName.Value);
-        var organization = Assert.IsType<Organization>(actual[1]);
-        Assert.Equal("123456785", organization.OrganizationIdentifier.ToString());
-        Assert.Equal("Test Organization", organization.DisplayName.Value);
+        var person = Assert.Single(actual, e => e.NationalIdentityNumber == "25871999336");
+        Assert.Equal("Test Person", person.Name);
+        Assert.Null(person.OrganizationNumber);
+        var organization = Assert.Single(actual, e => e.OrganizationNumber == "123456785");
+        Assert.Equal("Test Organization", organization.Name);
+        Assert.Null(organization.NationalIdentityNumber);
     }
 
     [Fact]
-    public async Task GetParties_WithEmptyIdentifiers_DoesNotSendRequest()
+    public async Task QueryPartyDetails_WithOnlyInvalidIdentifiers_DoesNotSendRequest()
     {
         var requestSent = false;
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
@@ -111,17 +98,58 @@ public class RegisterClientTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
         }));
 
-        var actual = await registerClient.GetParties([], TestContext.Current.CancellationToken);
+        var actual = await registerClient.QueryPartyDetails(["123"], ["456"], TestContext.Current.CancellationToken);
 
         Assert.Empty(actual);
         Assert.False(requestSent);
+    }
+
+    [Fact]
+    public async Task QueryPartyDetails_WithMoreThan100Identifiers_SendsBatchesOfAtMost100()
+    {
+        var batchSizes = new List<int>();
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
+        {
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
+            batchSizes.Add(body.RootElement.GetProperty("data").GetArrayLength());
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
+            };
+        }));
+
+        var organizationNumbers = Enumerable.Range(10000000, 400)
+            .Select(prefix => (Prefix: prefix.ToString(), Digit: OrganizationChecksumDigit(prefix.ToString())))
+            .Where(e => e.Digit.HasValue)
+            .Select(e => e.Prefix + e.Digit)
+            .Take(150)
+            .ToList();
+
+        await registerClient.QueryPartyDetails(organizationNumbers, [], TestContext.Current.CancellationToken);
+
+        Assert.Equal([100, 50], batchSizes);
+    }
+
+    private static int? OrganizationChecksumDigit(string prefix)
+    {
+        int[] weights = [3, 2, 7, 6, 5, 4, 3, 2];
+        var sum = prefix.Select((c, i) => (c - '0') * weights[i]).Sum();
+        var digit = 11 - (sum % 11);
+
+        return digit switch
+        {
+            11 => 0,
+            10 => null,
+            _ => digit
+        };
     }
 
     [Theory]
     [InlineData(HttpStatusCode.OK)]
     [InlineData(HttpStatusCode.PartialContent)]
     [InlineData(HttpStatusCode.NoContent)]
-    public async Task GetParties_WithNoMatches_ReturnsEmpty(HttpStatusCode statusCode)
+    public async Task QueryPartyDetails_WithNoMatches_ReturnsEmpty(HttpStatusCode statusCode)
     {
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
             Task.FromResult(new HttpResponseMessage(statusCode)
@@ -131,7 +159,7 @@ public class RegisterClientTests
                     : new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
             })));
 
-        var actual = await registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken);
+        var actual = await registerClient.QueryPartyDetails(["123456785"], [], TestContext.Current.CancellationToken);
 
         Assert.Empty(actual);
     }
@@ -139,13 +167,13 @@ public class RegisterClientTests
     [Theory]
     [InlineData(HttpStatusCode.BadRequest)]
     [InlineData(HttpStatusCode.ServiceUnavailable)]
-    public async Task GetParties_WithUnsuccessfulResponse_ThrowsPlatformDependencyException(HttpStatusCode statusCode)
+    public async Task QueryPartyDetails_WithUnsuccessfulResponse_ThrowsPlatformDependencyException(HttpStatusCode statusCode)
     {
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
             Task.FromResult(new HttpResponseMessage(statusCode))));
 
         var exception = await Assert.ThrowsAsync<PlatformDependencyException>(() =>
-            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken));
+            registerClient.QueryPartyDetails(["123456785"], [], TestContext.Current.CancellationToken));
 
         var innerException = Assert.IsType<PlatformHttpException>(exception.InnerException);
         Assert.Equal(statusCode, innerException.Response?.StatusCode);
@@ -156,7 +184,7 @@ public class RegisterClientTests
     [InlineData("{}")]
     [InlineData("""{"data":null}""")]
     [InlineData("""{"data":{}}""")]
-    public async Task GetParties_WithInvalidResponse_ThrowsPlatformDependencyException(string responseBody)
+    public async Task QueryPartyDetails_WithInvalidResponse_ThrowsPlatformDependencyException(string responseBody)
     {
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -165,13 +193,13 @@ public class RegisterClientTests
             })));
 
         var exception = await Assert.ThrowsAsync<PlatformDependencyException>(() =>
-            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], TestContext.Current.CancellationToken));
+            registerClient.QueryPartyDetails(["123456785"], [], TestContext.Current.CancellationToken));
 
         Assert.IsType<JsonException>(exception.InnerException);
     }
 
     [Fact]
-    public async Task GetParties_WithCanceledToken_PropagatesCancellation()
+    public async Task QueryPartyDetails_WithCanceledToken_PropagatesCancellation()
     {
         using var cancellationTokenSource = new CancellationTokenSource();
         var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
@@ -182,7 +210,7 @@ public class RegisterClientTests
         }));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            registerClient.GetParties([PartyUrn.PartyUuid.Create(Guid.NewGuid())], cancellationTokenSource.Token));
+            registerClient.QueryPartyDetails(["123456785"], [], cancellationTokenSource.Token));
     }
 
     [Fact]

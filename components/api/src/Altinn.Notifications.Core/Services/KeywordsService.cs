@@ -2,7 +2,6 @@
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Register.Contracts;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -15,7 +14,6 @@ public class KeywordsService : IKeywordsService
 
     private const string _recipientNamePlaceholder = "$recipientName$";
     private const string _recipientNumberPlaceholder = "$recipientNumber$";
-    private const int _partyQueryMaxItems = 100;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KeywordsService"/> class.
@@ -104,14 +102,14 @@ public class KeywordsService : IKeywordsService
         List<string> organizationNumbers,
         List<string> nationalIdentityNumbers)
     {
-        var partyUrns = CreatePartyUrns(organizationNumbers, nationalIdentityNumbers);
-        var partyDetails = new List<PartyDetails>();
-
-        foreach (var batch in partyUrns.Chunk(_partyQueryMaxItems))
+        if (organizationNumbers.Count == 0 && nationalIdentityNumbers.Count == 0)
         {
-            var parties = await _registerClient.GetParties(batch);
-            partyDetails.AddRange(parties.Select(ToPartyDetails).OfType<PartyDetails>());
+            return ([], []);
         }
+
+        var partyDetails = await _registerClient.QueryPartyDetails(
+            organizationNumbers.Distinct().ToList(),
+            nationalIdentityNumbers.Distinct().ToList());
 
         var organizationDetails = partyDetails
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber) && organizationNumbers.Contains(e.OrganizationNumber))
@@ -122,44 +120,6 @@ public class KeywordsService : IKeywordsService
             .ToList();
 
         return (personDetails, organizationDetails);
-    }
-
-    /// <summary>
-    /// Creates distinct party URNs from the given identifiers. Invalid identifiers are skipped since they cannot match a party.
-    /// </summary>
-    private static List<PartyUrn> CreatePartyUrns(List<string> organizationNumbers, List<string> nationalIdentityNumbers)
-    {
-        var urns = new List<PartyUrn>();
-
-        foreach (var organizationNumber in organizationNumbers.Distinct())
-        {
-            if (OrganizationIdentifier.TryParse(organizationNumber, null, out var identifier))
-            {
-                urns.Add(PartyUrn.OrganizationId.Create(identifier));
-            }
-        }
-
-        foreach (var nationalIdentityNumber in nationalIdentityNumbers.Distinct())
-        {
-            if (PersonIdentifier.TryParse(nationalIdentityNumber, null, out var identifier))
-            {
-                urns.Add(PartyUrn.PersonId.Create(identifier));
-            }
-        }
-
-        return urns;
-    }
-
-    private static PartyDetails? ToPartyDetails(Party party)
-    {
-        var name = party.DisplayName.HasValue ? party.DisplayName.Value : null;
-
-        return party switch
-        {
-            Person person => new PartyDetails { Name = name, NationalIdentityNumber = person.PersonIdentifier.ToString() },
-            Organization organization => new PartyDetails { Name = name, OrganizationNumber = organization.OrganizationIdentifier.ToString() },
-            _ => null
-        };
     }
 
     /// <summary>

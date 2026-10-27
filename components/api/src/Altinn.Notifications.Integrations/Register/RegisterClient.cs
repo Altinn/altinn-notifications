@@ -18,6 +18,7 @@ namespace Altinn.Notifications.Integrations.Register;
 /// </summary>
 public class RegisterClient : IRegisterClient
 {
+    private const int _partyQueryMaxItems = 100;
     private readonly HttpClient _client;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
@@ -41,7 +42,27 @@ public class RegisterClient : IRegisterClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken = default)
+    public async Task<List<PartyDetails>> QueryPartyDetails(
+        IReadOnlyCollection<string> organizationNumbers,
+        IReadOnlyCollection<string> nationalIdentityNumbers,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(organizationNumbers);
+        ArgumentNullException.ThrowIfNull(nationalIdentityNumbers);
+
+        var partyUrns = CreatePartyUrns(organizationNumbers, nationalIdentityNumbers);
+        var partyDetails = new List<PartyDetails>();
+
+        foreach (var batch in partyUrns.Chunk(_partyQueryMaxItems))
+        {
+            var parties = await GetParties(batch, cancellationToken);
+            partyDetails.AddRange(parties.Select(ToPartyDetails).OfType<PartyDetails>());
+        }
+
+        return partyDetails;
+    }
+
+    private async Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parties);
 
@@ -84,6 +105,7 @@ public class RegisterClient : IRegisterClient
     }
 
     /// <inheritdoc/>
+    /// <remarks>This method should be deprecated. Use <see cref="QueryPartyDetails"/> instead.</remarks>
     public async Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers, List<string>? socialSecurityNumbers)
     {
         try
@@ -118,5 +140,43 @@ public class RegisterClient : IRegisterClient
         {
             throw new PlatformDependencyException("RegisterClient", "GetPartyDetails", ex);
         }
+    }
+
+    /// <summary>
+    /// Creates distinct party URNs from the given identifiers. Invalid identifiers are skipped since they cannot match a party.
+    /// </summary>
+    private static List<PartyUrn> CreatePartyUrns(IEnumerable<string> organizationNumbers, IEnumerable<string> nationalIdentityNumbers)
+    {
+        var urns = new List<PartyUrn>();
+
+        foreach (var organizationNumber in organizationNumbers.Distinct())
+        {
+            if (OrganizationIdentifier.TryParse(organizationNumber, null, out var identifier))
+            {
+                urns.Add(PartyUrn.OrganizationId.Create(identifier));
+            }
+        }
+
+        foreach (var nationalIdentityNumber in nationalIdentityNumbers.Distinct())
+        {
+            if (PersonIdentifier.TryParse(nationalIdentityNumber, null, out var identifier))
+            {
+                urns.Add(PartyUrn.PersonId.Create(identifier));
+            }
+        }
+
+        return urns;
+    }
+
+    private static PartyDetails? ToPartyDetails(Party party)
+    {
+        var name = party.DisplayName.HasValue ? party.DisplayName.Value : null;
+
+        return party switch
+        {
+            Person person => new PartyDetails { Name = name, NationalIdentityNumber = person.PersonIdentifier.ToString() },
+            Organization organization => new PartyDetails { Name = name, OrganizationNumber = organization.OrganizationIdentifier.ToString() },
+            _ => null
+        };
     }
 }

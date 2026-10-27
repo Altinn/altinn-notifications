@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Models.Parties;
-using Altinn.Register.Contracts;
 
 namespace Altinn.Notifications.Core.Integrations;
 
@@ -9,17 +8,27 @@ namespace Altinn.Notifications.Core.Integrations;
 public interface IRegisterClient
 {
     /// <summary>
-    /// Retrieves parties using the notifications query endpoint.
+    /// Retrieves party details using the notifications query endpoint.
     /// </summary>
-    /// <param name="parties">Up to 100 party identifiers to look up.</param>
+    /// <param name="organizationNumbers">The organization numbers to look up.</param>
+    /// <param name="nationalIdentityNumbers">The national identity numbers to look up.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The matching parties, including identifiers and display names. Missing parties are omitted.</returns>
+    /// <returns>
+    /// The details of the matching parties. Missing parties and identifiers that are not valid are omitted.
+    /// </returns>
     /// <exception cref="Shared.PlatformDependencyException">Thrown when the register service is unavailable or returns an invalid response.</exception>
-    Task<List<Party>> GetParties(IReadOnlyCollection<PartyUrn> parties, CancellationToken cancellationToken = default);
+    Task<List<PartyDetails>> QueryPartyDetails(
+        IReadOnlyCollection<string> organizationNumbers,
+        IReadOnlyCollection<string> nationalIdentityNumbers,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously retrieves party details for the specified persons and/or organizations.
     /// </summary>
+    /// <remarks>
+    /// This method should be deprecated. Use <see cref="QueryPartyDetails"/> instead.
+    /// It is kept for backwards compatibility.
+    /// </remarks>
     /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
     /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
     /// <returns>

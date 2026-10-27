@@ -1,9 +1,7 @@
-using System.Text.Json;
-
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services;
-using Altinn.Register.Contracts;
 
 using Moq;
 
@@ -91,7 +89,7 @@ public class KeywordsServiceTests
             }
         };
 
-        SetupParties(CreateParty("person", "personIdentifier", _personNumber, "Person name"));
+        SetupParties(new PartyDetails { NationalIdentityNumber = _personNumber, Name = "Person name" });
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -116,7 +114,7 @@ public class KeywordsServiceTests
             }
         };
 
-        SetupParties(CreateParty("organization", "organizationIdentifier", _organizationNumber, "Organization name"));
+        SetupParties(new PartyDetails { OrganizationNumber = _organizationNumber, Name = "Organization name" });
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -140,7 +138,7 @@ public class KeywordsServiceTests
             }
         };
 
-        SetupParties(CreateParty("person", "personIdentifier", _personNumber, "Person name"));
+        SetupParties(new PartyDetails { NationalIdentityNumber = _personNumber, Name = "Person name" });
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
@@ -163,7 +161,7 @@ public class KeywordsServiceTests
             }
         };
 
-        SetupParties(CreateParty("organization", "organizationIdentifier", _organizationNumber, "Organization name"));
+        SetupParties(new PartyDetails { OrganizationNumber = _organizationNumber, Name = "Organization name" });
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
@@ -182,8 +180,8 @@ public class KeywordsServiceTests
             .ToList();
 
         var batchSizes = new List<int>();
-        _registerClientMock.Setup(client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()))
-            .Callback<IReadOnlyCollection<PartyUrn>, CancellationToken>((urns, _) => batchSizes.Add(urns.Count))
+        _registerClientMock.Setup(client => client.QueryPartyDetails(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<string>, IReadOnlyCollection<string>, CancellationToken>((organizationNumbers, _, _) => batchSizes.Add(organizationNumbers.Count))
             .ReturnsAsync([]);
 
         // Act
@@ -194,22 +192,21 @@ public class KeywordsServiceTests
     }
 
     [Fact]
-    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldSkipInvalidIdentifiers()
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldLeaveBodyUnchanged_WhenNoPartyIsFound()
     {
         // Arrange
         var smsRecipients = new List<SmsRecipient>
         {
-            new() { OrganizationNumber = "123", NationalIdentityNumber = "456", CustomizedBody = "Hello $recipientName$" }
+            new() { NationalIdentityNumber = _personNumber, CustomizedBody = "Hello $recipientName$" }
         };
+
+        SetupParties();
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
 
         // Assert
         Assert.Equal("Hello $recipientName$", result.First().CustomizedBody);
-        _registerClientMock.Verify(
-            client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]
@@ -284,24 +281,9 @@ public class KeywordsServiceTests
         Assert.Equal("Hello $recipientName$ your number is $recipientNumber$", recipient.CustomizedBody);
     }
 
-    private void SetupParties(params Party[] parties)
+    private void SetupParties(params PartyDetails[] parties)
     {
-        _registerClientMock.Setup(client => client.GetParties(It.IsAny<IReadOnlyCollection<PartyUrn>>(), It.IsAny<CancellationToken>()))
+        _registerClientMock.Setup(client => client.QueryPartyDetails(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([.. parties]);
-    }
-
-    private static Party CreateParty(string partyType, string identifierProperty, string identifier, string displayName)
-    {
-        var json = $$"""
-            {
-                "partyType": "{{partyType}}",
-                "{{identifierProperty}}": "{{identifier}}",
-                "partyUuid": "{{Guid.NewGuid()}}",
-                "versionId": 1,
-                "displayName": "{{displayName}}"
-            }
-            """;
-
-        return JsonSerializer.Deserialize<Party>(json)!;
     }
 }
