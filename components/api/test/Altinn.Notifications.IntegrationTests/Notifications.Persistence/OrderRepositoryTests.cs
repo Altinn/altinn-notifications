@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.NotificationLog;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -3429,9 +3430,151 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(0, statusFeedCount);
 
-        // Not yet completed, so no notification log entry should have been written either.
+        // No notification has a final result yet, so nothing is logged.
         int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
         Assert.Equal(0, notificationLogCount);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_EmailRecipientReservedWhileSmsIsNew_LogsOnlyEmailAndLeavesOrderProcessed()
+    {
+        // Arrange
+        (OrderRepository repo, NotificationOrder order) = await CreateProcessingOrderAsync();
+        var smsNotification = CreateSmsNotification(order.Id, SmsNotificationResultType.New);
+        var emailNotification = CreateEmailNotification(order.Id, EmailNotificationResultType.Failed_RecipientReserved);
+
+        // Act
+        bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(
+            repo,
+            order,
+            new EmailOrderProcessingResult([emailNotification], DateTime.UtcNow.AddDays(2)),
+            new SmsOrderProcessingResult([smsNotification], DateTime.UtcNow.AddDays(2)),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(isCompleted);
+        await AssertOrderStatusAsync(order.Id, OrderProcessingStatus.Processed);
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+
+        Assert.Equal("Failed_RecipientReserved", await SelectEmailResultAsync(emailNotification.Id));
+        Assert.Equal("New", await SelectSmsResultAsync(smsNotification.Id));
+
+        var logEntries = await PostgreUtil.GetNotificationLogEntries(order.Id);
+        var logEntry = Assert.Single(logEntries);
+        AssertLogEntry(logEntry, order, emailNotification.Id, "Email", emailNotification.Recipient.ToAddress, "Failed_RecipientReserved");
+        Assert.DoesNotContain(logEntries, e => e.NotificationId == smsNotification.Id);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_SmsRecipientNotIdentifiedWhileEmailIsNew_LogsOnlySmsAndLeavesOrderProcessed()
+    {
+        // Arrange
+        (OrderRepository repo, NotificationOrder order) = await CreateProcessingOrderAsync();
+        var emailNotification = CreateEmailNotification(order.Id, EmailNotificationResultType.New);
+        var smsNotification = CreateSmsNotification(order.Id, SmsNotificationResultType.Failed_RecipientNotIdentified);
+
+        // Act
+        bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(
+            repo,
+            order,
+            new EmailOrderProcessingResult([emailNotification], DateTime.UtcNow.AddDays(2)),
+            new SmsOrderProcessingResult([smsNotification], DateTime.UtcNow.AddDays(2)),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(isCompleted);
+        await AssertOrderStatusAsync(order.Id, OrderProcessingStatus.Processed);
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+
+        Assert.Equal("New", await SelectEmailResultAsync(emailNotification.Id));
+        Assert.Equal("Failed_RecipientNotIdentified", await SelectSmsResultAsync(smsNotification.Id));
+
+        var logEntries = await PostgreUtil.GetNotificationLogEntries(order.Id);
+        var logEntry = Assert.Single(logEntries);
+        AssertLogEntry(logEntry, order, smsNotification.Id, "Sms", smsNotification.Recipient.MobileNumber, "Failed_RecipientNotIdentified");
+        Assert.DoesNotContain(logEntries, e => e.NotificationId == emailNotification.Id);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_EmailNotIdentifiedAndSmsReserved_LogsBothAndCompletesOrderOnce()
+    {
+        // Arrange
+        (OrderRepository repo, NotificationOrder order) = await CreateProcessingOrderAsync();
+        var emailNotification = CreateEmailNotification(order.Id, EmailNotificationResultType.Failed_RecipientNotIdentified);
+        var smsNotification = CreateSmsNotification(order.Id, SmsNotificationResultType.Failed_RecipientReserved);
+
+        // Act
+        bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(
+            repo,
+            order,
+            new EmailOrderProcessingResult([emailNotification], DateTime.UtcNow.AddDays(2)),
+            new SmsOrderProcessingResult([smsNotification], DateTime.UtcNow.AddDays(2)),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(isCompleted);
+        await AssertOrderStatusAsync(order.Id, OrderProcessingStatus.Completed);
+        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+
+        var logEntries = await PostgreUtil.GetNotificationLogEntries(order.Id);
+        Assert.Equal(2, logEntries.Count);
+        AssertLogEntry(logEntries.Single(e => e.NotificationId == emailNotification.Id), order, emailNotification.Id, "Email", emailNotification.Recipient.ToAddress, "Failed_RecipientNotIdentified");
+        AssertLogEntry(logEntries.Single(e => e.NotificationId == smsNotification.Id), order, smsNotification.Id, "Sms", smsNotification.Recipient.MobileNumber, "Failed_RecipientReserved");
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_MixedResultsAcrossMultipleNotifications_LogsOnlyFinalOnesAndLeavesOrderProcessed()
+    {
+        // Arrange
+        (OrderRepository repo, NotificationOrder order) = await CreateProcessingOrderAsync();
+        var pendingEmail = CreateEmailNotification(order.Id, EmailNotificationResultType.New);
+        var finalEmail = CreateEmailNotification(order.Id, EmailNotificationResultType.Failed_RecipientNotIdentified);
+        var pendingSms = CreateSmsNotification(order.Id, SmsNotificationResultType.New);
+        var finalSms = CreateSmsNotification(order.Id, SmsNotificationResultType.Failed_RecipientReserved);
+
+        // Act
+        bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(
+            repo,
+            order,
+            new EmailOrderProcessingResult([pendingEmail, finalEmail], DateTime.UtcNow.AddDays(2)),
+            new SmsOrderProcessingResult([pendingSms, finalSms], DateTime.UtcNow.AddDays(2)),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(isCompleted);
+        await AssertOrderStatusAsync(order.Id, OrderProcessingStatus.Processed);
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+
+        var logEntries = await PostgreUtil.GetNotificationLogEntries(order.Id);
+        Assert.Equal(2, logEntries.Count);
+        AssertLogEntry(logEntries.Single(e => e.NotificationId == finalEmail.Id), order, finalEmail.Id, "Email", finalEmail.Recipient.ToAddress, "Failed_RecipientNotIdentified");
+        AssertLogEntry(logEntries.Single(e => e.NotificationId == finalSms.Id), order, finalSms.Id, "Sms", finalSms.Recipient.MobileNumber, "Failed_RecipientReserved");
+        Assert.DoesNotContain(logEntries, e => e.NotificationId == pendingEmail.Id || e.NotificationId == pendingSms.Id);
+    }
+
+    [Fact]
+    public async Task PersistProcessingResultAsync_SmsOnlyRecipientReserved_LogsNotificationAndCompletesOrder()
+    {
+        // Arrange
+        (OrderRepository repo, NotificationOrder order) = await CreateProcessingOrderAsync();
+        var smsNotification = CreateSmsNotification(order.Id, SmsNotificationResultType.Failed_RecipientReserved);
+
+        // Act
+        bool isCompleted = await PersistProcessingResultAsyncWithUnitOfWork(
+            repo,
+            order,
+            new EmailOrderProcessingResult([], null),
+            new SmsOrderProcessingResult([smsNotification], DateTime.UtcNow.AddDays(1)),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(isCompleted);
+        await AssertOrderStatusAsync(order.Id, OrderProcessingStatus.Completed);
+        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+        Assert.Equal("Failed_RecipientReserved", await SelectSmsResultAsync(smsNotification.Id));
+
+        var logEntry = Assert.Single(await PostgreUtil.GetNotificationLogEntries(order.Id));
+        AssertLogEntry(logEntry, order, smsNotification.Id, "Sms", smsNotification.Recipient.MobileNumber, "Failed_RecipientReserved");
     }
 
     [Fact]
@@ -3545,6 +3688,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         using var doc = JsonDocument.Parse(statusJson);
         Assert.Equal(0, doc.RootElement.GetProperty("Recipients").GetArrayLength());
         Assert.Equal("Order_SendConditionNotMet", doc.RootElement.GetProperty("Status").GetString());
+
+        Assert.Equal(0, await PostgreUtil.SelectNotificationLogEntryCount(order.Id));
     }
 
     [Fact]
@@ -4503,6 +4648,87 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}'";
         int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
         Assert.Equal(0, orderCount);
+    }
+
+    private async Task<(OrderRepository Repo, NotificationOrder Order)> CreateProcessingOrderAsync()
+    {
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = "processing-log-test",
+            Type = OrderType.Notification,
+            Templates = [new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        return (repo, order);
+    }
+
+    private static async Task AssertOrderStatusAsync(Guid orderId, OrderProcessingStatus expected)
+    {
+        string actual = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{orderId}'");
+        Assert.Equal(expected.ToString(), actual);
+    }
+
+    private static Task<string> SelectEmailResultAsync(Guid notificationId)
+    {
+        return PostgreUtil.RunSqlReturnOutput<string>($"SELECT result::text FROM notifications.emailnotifications WHERE alternateid = '{notificationId}'");
+    }
+
+    private static Task<string> SelectSmsResultAsync(Guid notificationId)
+    {
+        return PostgreUtil.RunSqlReturnOutput<string>($"SELECT result::text FROM notifications.smsnotifications WHERE alternateid = '{notificationId}'");
+    }
+
+    private static void AssertLogEntry(
+        NotificationLogEntry entry,
+        NotificationOrder order,
+        Guid notificationId,
+        string channel,
+        string destination,
+        string status)
+    {
+        Assert.Equal(order.Id, entry.ShipmentId);
+        Assert.Equal(notificationId, entry.NotificationId);
+        Assert.Equal(order.Creator.ShortName, entry.CreatorName);
+        Assert.Equal(order.SendersReference, entry.SendersReference);
+        Assert.Equal("Notification", entry.Type);
+        Assert.Equal(channel, entry.Channel);
+        Assert.Equal(destination, entry.Destination);
+        Assert.Equal(status, entry.Status);
+    }
+
+    private static EmailNotification CreateEmailNotification(Guid orderId, EmailNotificationResultType result)
+    {
+        return new EmailNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "recipient@example.com" },
+            SendResult = new(result, DateTime.UtcNow)
+        };
+    }
+
+    private static SmsNotification CreateSmsNotification(Guid orderId, SmsNotificationResultType result)
+    {
+        return new SmsNotification
+        {
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { MobileNumber = "+4799999999" },
+            SendResult = new(result, DateTime.UtcNow)
+        };
     }
 
     private static async Task<bool> PersistProcessingResultAsyncWithUnitOfWork(

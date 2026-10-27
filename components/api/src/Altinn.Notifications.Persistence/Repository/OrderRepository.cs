@@ -2,8 +2,10 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -13,8 +15,10 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -968,24 +972,16 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             }
         }
 
-        bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
-        var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
-
-        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
-
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-
-        if (rowsAffected == 0)
+        if (emailNotifications.Any(n => n.SendResult.Result.IsFinal()) || smsNotifications.Any(n => n.SendResult.Result.IsFinal()))
         {
-            throw new InvalidOperationException(
-                $"Order {order.Id} not found when attempting to persist processing result");
+            await LogFinalNotificationResultsAsync(order.Id, connection, transaction);
         }
+
+        bool isCompleted = await AdvanceOrderStatusAsync(order.Id, emailNotifications, smsNotifications, connection, transaction, cancellationToken);
 
         if (isCompleted)
         {
-            await InsertStatusFeedForOrderAsync(order, status, emailNotifications, smsNotifications, connection, transaction);
+            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.Completed, emailNotifications, smsNotifications, connection, transaction);
         }
 
         return isCompleted;
@@ -1011,6 +1007,44 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             throw new InvalidOperationException(
                 $"Order {order.Id} not found when attempting to persist processing result");
         }
+    }
+
+    /// <summary>
+    /// Advances the order to <see cref="OrderProcessingStatus.Completed"/> when all notifications are immediately terminal,
+    /// otherwise to <see cref="OrderProcessingStatus.Processed"/>.
+    /// </summary>
+    /// <param name="orderId">The order id.</param>
+    /// <param name="emailNotifications">The email notifications persisted for the order.</param>
+    /// <param name="smsNotifications">The SMS notifications persisted for the order.</param>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="transaction">The transaction the update is part of.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><c>true</c> if the order was completed; otherwise <c>false</c>.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the order does not exist.</exception>
+    private static async Task<bool> AdvanceOrderStatusAsync(
+        Guid orderId,
+        IReadOnlyList<EmailNotification> emailNotifications,
+        IReadOnlyList<SmsNotification> smsNotifications,
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
+        var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
+
+        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+
+        if (rowsAffected == 0)
+        {
+            throw new InvalidOperationException(
+                $"Order {orderId} not found when attempting to persist processing result");
+        }
+
+        return isCompleted;
     }
 
     private static bool IsImmediatelyCompleted(
@@ -1073,11 +1107,21 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         {
             _logger.LogError("Status feed entry for order {OrderId} already existed; this order was processed more than once.", order.Id);
         }
+    }
 
-        var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(order.Id, connection, transaction);
+    /// <summary>
+    /// Writes notification log entries for all notifications of the order that have reached a final result.
+    /// Notifications that are already logged are skipped and reported as an error, since they indicate duplicate processing.
+    /// </summary>
+    /// <param name="orderId">The order (shipment) id whose final notification results should be logged.</param>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="transaction">The transaction the log entries are written in.</param>
+    private async Task LogFinalNotificationResultsAsync(Guid orderId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderId, connection, transaction);
         foreach (var skippedNotificationId in skippedNotificationIds)
         {
-            _logger.LogError("Notification log entry for notification {NotificationId} (order {OrderId}) already existed; this notification was processed more than once.", skippedNotificationId, order.Id);
+            _logger.LogError("Notification log entry for notification {NotificationId} (order {OrderId}) already existed; this notification was processed more than once.", skippedNotificationId, orderId);
         }
     }
 }
