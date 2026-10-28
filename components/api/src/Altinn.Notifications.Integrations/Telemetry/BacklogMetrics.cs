@@ -60,6 +60,11 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
     /// </summary>
     public const string OrdersFailedGaugeName = "altinn.notifications.orders.failed";
 
+    /// <summary>
+    /// Key for metrics tag
+    /// </summary>
+    public const string TagKey = "channel";
+
     private readonly Meter _meter;
     private readonly Gauge<long> _emailNotificationsAnytimeGauge;
     private readonly Gauge<long> _emailNotificationsDaytimeGauge;
@@ -77,15 +82,15 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
     public BacklogMetrics()
     {
         _meter = new Meter(MeterName);
-        _emailNotificationsAnytimeGauge = _meter.CreateGauge<long>(EmailNotificationsAnytimeGaugeName, unit: "{notifications}", description: "Current number of pending anytime email notifications.");
-        _emailNotificationsDaytimeGauge = _meter.CreateGauge<long>(EmailNotificationsDaytimeGaugeName, unit: "{notifications}", description: "Current number of pending daytime email notifications.");
-        _emailNotificationsTotalGauge = _meter.CreateGauge<long>(EmailNotificationsTotalGaugeName, unit: "{notifications}", description: "Current total number of pending email notifications.");
-        _smsNotificationsAnytimeGauge = _meter.CreateGauge<long>(SmsNotificationsAnytimeGaugeName, unit: "{notifications}", description: "Current number of pending anytime SMS notifications.");
-        _smsNotificationsDaytimeGauge = _meter.CreateGauge<long>(SmsNotificationsDaytimeGaugeName, unit: "{notifications}", description: "Current number of pending daytime SMS notifications.");
-        _smsNotificationsTotalGauge = _meter.CreateGauge<long>(SmsNotificationsTotalGaugeName, unit: "{notifications}", description: "Current total number of pending SMS notifications.");
-        _ordersNotDueGauge = _meter.CreateGauge<long>(OrdersNotDueGaugeName, unit: "{orders}", description: "Current number of orders not due for processing.");
-        _ordersPastDueGauge = _meter.CreateGauge<long>(OrdersPastDueGaugeName, unit: "{orders}", description: "Current number of orders past due for processing.");
-        _ordersFailedGauge = _meter.CreateGauge<long>(OrdersFailedGaugeName, unit: "{orders}", description: "Current number of orders failed for processing.");
+        _emailNotificationsAnytimeGauge = _meter.CreateGauge<long>(EmailNotificationsAnytimeGaugeName, description: "Current number of pending anytime email notifications.");
+        _emailNotificationsDaytimeGauge = _meter.CreateGauge<long>(EmailNotificationsDaytimeGaugeName, description: "Current number of pending daytime email notifications.");
+        _emailNotificationsTotalGauge = _meter.CreateGauge<long>(EmailNotificationsTotalGaugeName, description: "Current total number of pending email notifications.");
+        _smsNotificationsAnytimeGauge = _meter.CreateGauge<long>(SmsNotificationsAnytimeGaugeName, description: "Current number of pending anytime SMS notifications.");
+        _smsNotificationsDaytimeGauge = _meter.CreateGauge<long>(SmsNotificationsDaytimeGaugeName, description: "Current number of pending daytime SMS notifications.");
+        _smsNotificationsTotalGauge = _meter.CreateGauge<long>(SmsNotificationsTotalGaugeName, description: "Current total number of pending SMS notifications.");
+        _ordersNotDueGauge = _meter.CreateGauge<long>(OrdersNotDueGaugeName, description: "Current number of orders not due for processing.");
+        _ordersPastDueGauge = _meter.CreateGauge<long>(OrdersPastDueGaugeName, description: "Current number of orders past due for processing.");
+        _ordersFailedGauge = _meter.CreateGauge<long>(OrdersFailedGaugeName, description: "Current number of orders failed for processing.");
     }
 
     /// <inheritdoc/>
@@ -102,17 +107,17 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
         long emailNotificationsTotal = emailNotificationsAnytime + emailNotificationsDaytime + emailNotificationsComposed;
         long smsNotificationsTotal = smsNotificationsAnytime + smsNotificationsDaytime;
 
-        _emailNotificationsAnytimeGauge.Record(emailNotificationsAnytime, new KeyValuePair<string, object?>("channel", "email"));
-        _emailNotificationsDaytimeGauge.Record(emailNotificationsDaytime, new KeyValuePair<string, object?>("channel", "email"));
-        _emailNotificationsTotalGauge.Record(emailNotificationsTotal, new KeyValuePair<string, object?>("channel", "email"));
+        _emailNotificationsAnytimeGauge.Record(emailNotificationsAnytime, new KeyValuePair<string, object?>(TagKey, "email"));
+        _emailNotificationsDaytimeGauge.Record(emailNotificationsDaytime, new KeyValuePair<string, object?>(TagKey, "email"));
+        _emailNotificationsTotalGauge.Record(emailNotificationsTotal, new KeyValuePair<string, object?>(TagKey, "email"));
 
-        _smsNotificationsAnytimeGauge.Record(smsNotificationsAnytime, new KeyValuePair<string, object?>("channel", "sms"));
-        _smsNotificationsDaytimeGauge.Record(smsNotificationsDaytime, new KeyValuePair<string, object?>("channel", "sms"));
-        _smsNotificationsTotalGauge.Record(smsNotificationsTotal, new KeyValuePair<string, object?>("channel", "sms"));
+        _smsNotificationsAnytimeGauge.Record(smsNotificationsAnytime, new KeyValuePair<string, object?>(TagKey, "sms"));
+        _smsNotificationsDaytimeGauge.Record(smsNotificationsDaytime, new KeyValuePair<string, object?>(TagKey, "sms"));
+        _smsNotificationsTotalGauge.Record(smsNotificationsTotal, new KeyValuePair<string, object?>(TagKey, "sms"));
 
-        _ordersNotDueGauge.Record(ordersNotDue, new KeyValuePair<string, object?>("channel", "order"));
-        _ordersPastDueGauge.Record(ordersPastDue, new KeyValuePair<string, object?>("channel", "order"));
-        _ordersFailedGauge.Record(ordersFailed, new KeyValuePair<string, object?>("channel", "order"));
+        _ordersNotDueGauge.Record(ordersNotDue, new KeyValuePair<string, object?>(TagKey, "order"));
+        _ordersPastDueGauge.Record(ordersPastDue, new KeyValuePair<string, object?>(TagKey, "order"));
+        _ordersFailedGauge.Record(ordersFailed, new KeyValuePair<string, object?>(TagKey, "order"));
     }
 
     /// <inheritdoc/>

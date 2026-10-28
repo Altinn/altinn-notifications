@@ -281,6 +281,25 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.DoesNotContain(result, r => r.IntervalLabel == $"{today.AddDays(38):yyyy-MM-dd} - {today.AddDays(67):yyyy-MM-dd}");
         }
 
+        [Fact]
+        public void GenerateOrderDistributionTable_AllZeroRows_ReturnsEmptyTable()
+        {
+            // Arrange
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var input = new List<(DateOnly Day, long Count)>
+            {
+                (today, 0),
+                (today.AddDays(1), 0),
+                (today.AddDays(50), 0),
+            };
+
+            // Act
+            List<(string IntervalLabel, long Count)> result = InvokeGenerateOrderDistributionTable(input);
+
+            // Assert
+            Assert.Empty(result);
+        }
+
         private static List<(string IntervalLabel, long Count)> InvokeGenerateOrderDistributionTable(List<(DateOnly Day, long Count)> orderDistribution)
         {
             MethodInfo method = typeof(MetricsService).GetMethod("GenerateOrderDistributionTable", BindingFlags.NonPublic | BindingFlags.Static)!;
