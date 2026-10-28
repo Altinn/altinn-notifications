@@ -55,6 +55,11 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
     /// </summary>
     public const string OrdersPastDueGaugeName = "altinn.notifications.orders.past.due";
 
+    /// <summary>
+    /// Name of the gauge metric that reports the number of failed notification orders.
+    /// </summary>
+    public const string OrdersFailedGaugeName = "altinn.notifications.orders.failed";
+
     private readonly Meter _meter;
     private readonly Gauge<long> _emailNotificationsAnytimeGauge;
     private readonly Gauge<long> _emailNotificationsDaytimeGauge;
@@ -64,6 +69,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
     private readonly Gauge<long> _smsNotificationsTotalGauge;
     private readonly Gauge<long> _ordersNotDueGauge;
     private readonly Gauge<long> _ordersPastDueGauge;
+    private readonly Gauge<long> _ordersFailedGauge;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BacklogMetrics"/> class.
@@ -79,6 +85,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
         _smsNotificationsTotalGauge = _meter.CreateGauge<long>(SmsNotificationsTotalGaugeName, unit: "{notifications}", description: "Current total number of pending SMS notifications.");
         _ordersNotDueGauge = _meter.CreateGauge<long>(OrdersNotDueGaugeName, unit: "{orders}", description: "Current number of orders not due for processing.");
         _ordersPastDueGauge = _meter.CreateGauge<long>(OrdersPastDueGaugeName, unit: "{orders}", description: "Current number of orders past due for processing.");
+        _ordersFailedGauge = _meter.CreateGauge<long>(OrdersFailedGaugeName, unit: "{orders}", description: "Current number of orders failed for processing.");
     }
 
     /// <inheritdoc/>
@@ -89,7 +96,8 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
         long smsNotificationsAnytime,
         long smsNotificationsDaytime,
         long ordersNotDue,
-        long ordersPastDue)
+        long ordersPastDue,
+        long ordersFailed)
     {
         long emailNotificationsTotal = emailNotificationsAnytime + emailNotificationsDaytime + emailNotificationsComposed;
         long smsNotificationsTotal = smsNotificationsAnytime + smsNotificationsDaytime;
@@ -104,6 +112,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
 
         _ordersNotDueGauge.Record(ordersNotDue, new KeyValuePair<string, object?>("channel", "order"));
         _ordersPastDueGauge.Record(ordersPastDue, new KeyValuePair<string, object?>("channel", "order"));
+        _ordersFailedGauge.Record(ordersFailed, new KeyValuePair<string, object?>("channel", "order"));
     }
 
     /// <inheritdoc/>

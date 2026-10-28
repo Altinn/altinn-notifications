@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Persistence.Repository
         private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics($1, $2, $3);";  // day, month, year
         private const string _getEmailNotificationsMetricsSql = "SELECT anytimecount, daytimecount, composedcount FROM notifications.get_email_notifications_metrics()";
         private const string _getSmsNotificationsMetricsSql = "SELECT anytimecount, daytimecount FROM notifications.get_sms_notifications_metrics()";
-        private const string _getOrderMetricsSql = "SELECT ordersnotduecount, orderspastduecount FROM notifications.get_order_metrics()";
+        private const string _getOrderMetricsSql = "SELECT ordersnotduecount, orderspastduecount, ordersfailedcount FROM notifications.get_order_metrics()";
         private const string _getOrderNotDueDistributionMetricsSql = "SELECT day, count FROM notifications.get_orders_notdue_distribution_metrics()";
 
         /// <summary>
@@ -181,18 +181,19 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
-        public async Task<(long OrdersNotDueCount, long OrdersPastDueCount)> GetOrderMetrics(CancellationToken cancellationToken)
+        public async Task<(long OrdersNotDueCount, long OrdersPastDueCount, long OrdersFailedCount)> GetOrderMetrics(CancellationToken cancellationToken)
         {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderMetricsSql);
             await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
             {
-                return (0, 0);
+                return (0, 0, 0);
             }
 
             long ordersNotDueCount = reader.GetValue<long?>("ordersnotduecount") ?? 0;
             long ordersPastDueCount = reader.GetValue<long?>("orderspastduecount") ?? 0;
-            return (ordersNotDueCount, ordersPastDueCount);
+            long ordersFailedCount = reader.GetValue<long?>("ordersfailedcount") ?? 0;
+            return (ordersNotDueCount, ordersPastDueCount, ordersFailedCount);
         }
 
         /// <inheritdoc/>
