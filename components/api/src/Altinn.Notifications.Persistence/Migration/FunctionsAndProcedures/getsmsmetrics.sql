@@ -1,5 +1,6 @@
--- FUNCTION: notifications.get_sms_metrics(integer, integer, integer)
-CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
+-- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1880
+-- FUNCTION: notifications.get_sms_metrics_v2(integer, integer, integer)
+CREATE OR REPLACE FUNCTION notifications.get_sms_metrics_v2(
     day_input integer,
 	month_input integer,
 	year_input integer)
@@ -17,12 +18,12 @@ BEGIN
 
   RETURN QUERY
    SELECT s.sms_id, s.sms_shipmentid, s.order_shipmentid, s.senders_reference, s.requestedsendtime, s.resulttime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.rate, s.mobilenumber_prefix
-     FROM notifications.sms_metrics_recent s
+     FROM notifications.sms_metrics_recent_v2 s
      WHERE s.resulttime >= start_date
        AND s.resulttime < start_date + INTERVAL '1 day';
    
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.get_sms_metrics(integer, integer, integer)
+ALTER FUNCTION notifications.get_sms_metrics_v2(integer, integer, integer)
     OWNER TO platform_notifications_admin;

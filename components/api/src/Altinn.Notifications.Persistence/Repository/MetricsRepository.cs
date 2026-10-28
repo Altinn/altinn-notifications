@@ -16,8 +16,8 @@ namespace Altinn.Notifications.Persistence.Repository
         private readonly NpgsqlDataSource _dataSource;
 
         private const string _getMonthlytMetric = "SELECT * FROM notifications.get_metrics_v2($1, $2);";  // month, year
-        private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics($1, $2, $3);";  // day, month, year
-        private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics($1, $2, $3);";  // day, month, year
+        private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics_v2($1, $2, $3);";  // day, month, year
+        private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics_v2($1, $2, $3);";  // day, month, year
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsRepository"/> class.

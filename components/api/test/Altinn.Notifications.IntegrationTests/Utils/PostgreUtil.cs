@@ -303,8 +303,8 @@ public static class PostgreUtil
     public static async Task RefreshMaterializedViews()
     {
         string sql = @"
-            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
-            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;";
+            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent_v2;
+            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent_v2;";
         await using NpgsqlCommand pgcom = AdminDataSource.CreateCommand(sql);
         await pgcom.ExecuteNonQueryAsync();
     }
