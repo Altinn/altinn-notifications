@@ -56,6 +56,34 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
+        public async Task<MetricsSummary> GetParquetFile<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken)
+        {
+            var (parquetStream, fileHash, fileSize) = await GenerateParquetFileStream(metrics, cancellationToken);
+
+            var env = string.IsNullOrEmpty(_hostEnvironment.EnvironmentName) ? "Unknown" : _hostEnvironment.EnvironmentName;
+            var type = typeof(T).Name switch
+            {
+                nameof(DailySmsMetricsRecord) => "sms",
+                nameof(DailyEmailMetricsRecord) => "email",
+                _ => throw new InvalidOperationException($"Unsupported metrics type: {typeof(T).Name}")
+            };
+
+            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_{type}_notifications_{env}.parquet";
+
+            var response = new MetricsSummary
+            {
+                FileStream = parquetStream,
+                FileName = fileName,
+                FileHash = fileHash,
+                FileSizeBytes = fileSize,
+                TotalFileTransferCount = metrics.Metrics.Count,
+                GeneratedAt = DateTimeOffset.UtcNow,
+                Environment = env,
+            };
+            return response;
+        }
+
+        /// <inheritdoc/>
         public async Task TriggerGetMetrics(CancellationToken cancellationToken)
         {
             var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
@@ -79,11 +107,15 @@ namespace Altinn.Notifications.Core.Services
             var distributionTable = GenerateOrderDistributionTable(orderDistribution);
 
             DateTime timestamp = DateTime.Now;
+            int i = 0;
             foreach (var row in distributionTable)
             {
                 // Warning level is used to avoid global filtering
                 // The log message will be picked up by a Grafana table
-                _logger.LogWarning("Orders not due distribution for {Timestamp} {IntervalLabel}: {Count}", timestamp, row.IntervalLabel, row.Count);
+                if (row.Count > 0)
+                {
+                    _logger.LogWarning("Orders not due distribution for {Timestamp} {IntervalLabel}: {Count} {Index}", timestamp, row.IntervalLabel, row.Count, i++);
+                }
             }
         }
 
@@ -98,8 +130,8 @@ namespace Altinn.Notifications.Core.Services
                 return table;
             }
 
-            AddTodayRows(table, countsByOffset, maxRelevantOffset);
-            AddFutureRows(table, countsByOffset, maxRelevantOffset);
+            AddTodayRows(table, countsByOffset, maxRelevantOffset, today);
+            AddFutureRows(table, countsByOffset, maxRelevantOffset, today);
 
             return table;
         }
@@ -143,16 +175,17 @@ namespace Altinn.Notifications.Core.Services
             return maxRelevantOffset;
         }
 
-        private static void AddTodayRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxRelevantOffset)
+        private static void AddTodayRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxRelevantOffset, DateOnly today)
         {
             for (var i = 0; i <= 7 && i <= maxRelevantOffset; i++)
             {
                 countsByOffset.TryGetValue(i, out long count);
-                table.Add((i == 0 ? "today" : $"today+{i}", count));
+                DateOnly day = today.AddDays(i);
+                table.Add((day.ToString("yyyy-MM-dd"), count));
             }
         }
 
-        private static void AddFutureRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxOffset)
+        private static void AddFutureRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxOffset, DateOnly today)
         {
             var startOffset = 8;
             var next30BucketCount = 0;
@@ -172,41 +205,15 @@ namespace Altinn.Notifications.Core.Services
                     }
                 }
 
-                table.Add((label, bucketCount));
+                DateOnly startDate = today.AddDays(startOffset);
+                DateOnly endDate = today.AddDays(endOffset);
+                table.Add(($"({startDate:yyyy-MM-dd} - {endDate:yyyy-MM-dd})", bucketCount));
                 startOffset = endOffset + 1;
                 if (isNext30Bucket)
                 {
                     next30BucketCount++;
                 }
             }
-        }
-
-        /// <inheritdoc/>
-        public async Task<MetricsSummary> GetParquetFile<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken)
-        {
-            var (parquetStream, fileHash, fileSize) = await GenerateParquetFileStream(metrics, cancellationToken);
-
-            var env = string.IsNullOrEmpty(_hostEnvironment.EnvironmentName) ? "Unknown" : _hostEnvironment.EnvironmentName;
-            var type = typeof(T).Name switch
-            {
-                nameof(DailySmsMetricsRecord) => "sms",
-                nameof(DailyEmailMetricsRecord) => "email",
-                _ => throw new InvalidOperationException($"Unsupported metrics type: {typeof(T).Name}")
-            };
-
-            var fileName = $"{metrics.Year}{metrics.Month:00}{metrics.Day:00}_{type}_notifications_{env}.parquet";
-
-            var response = new MetricsSummary
-            {
-                FileStream = parquetStream,
-                FileName = fileName,
-                FileHash = fileHash,
-                FileSizeBytes = fileSize,
-                TotalFileTransferCount = metrics.Metrics.Count,
-                GeneratedAt = DateTimeOffset.UtcNow,
-                Environment = env,
-            };
-            return response;
         }
 
         private async Task<(Stream ParquetStream, string FileHash, long FileSize)> GenerateParquetFileStream<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken)
