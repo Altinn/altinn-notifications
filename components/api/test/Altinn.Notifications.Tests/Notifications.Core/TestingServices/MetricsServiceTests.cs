@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,6 +97,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _metricsRepositoryMock
                 .Setup(r => r.GetOrderMetrics(It.IsAny<CancellationToken>()))
                 .ReturnsAsync((13, 17, 19));
+            _metricsRepositoryMock
+                .Setup(r => r.GetOrderNotDueDistributionMetrics(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([]);
 
             var service = new MetricsService(_metricsRepositoryMock.Object, _backlogMetricsMock.Object, _loggerMock.Object, _hostEnvironmentMock.Object);
 
@@ -231,6 +235,58 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 Assert.Equal(expectedSize, summary.FileSizeBytes);
                 Assert.Equal(expectedHash, summary.FileHash);
             }
+        }
+
+        [Fact]
+        public void GenerateOrderDistributionTable_FormatsDateAndRangeLabels()
+        {
+            // Arrange
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var input = new List<(DateOnly Day, long Count)>
+            {
+                (today, 1),
+                (today.AddDays(1), 2),
+                (today.AddDays(8), 3),
+                (today.AddDays(40), 4),
+                (today.AddDays(90), 5),
+            };
+
+            // Act
+            List<(string IntervalLabel, long Count)> result = InvokeGenerateOrderDistributionTable(input);
+
+            // Assert
+            Assert.Contains(result, r => r.IntervalLabel == today.ToString("yyyy-MM-dd") && r.Count == 1);
+            Assert.Contains(result, r => r.IntervalLabel == today.AddDays(1).ToString("yyyy-MM-dd") && r.Count == 2);
+            Assert.Contains(result, r => r.IntervalLabel == $"{today.AddDays(8):yyyy-MM-dd} - {today.AddDays(37):yyyy-MM-dd}" && r.Count == 3);
+            Assert.Contains(result, r => r.IntervalLabel == $"{today.AddDays(38):yyyy-MM-dd} - {today.AddDays(67):yyyy-MM-dd}" && r.Count == 4);
+            Assert.Contains(result, r => r.IntervalLabel == $"{today.AddDays(68):yyyy-MM-dd} - {today.AddDays(167):yyyy-MM-dd}" && r.Count == 5);
+        }
+
+        [Fact]
+        public void GenerateOrderDistributionTable_StopsWhenRemainingIntervalsAreZero()
+        {
+            // Arrange
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var input = new List<(DateOnly Day, long Count)>
+            {
+                (today.AddDays(8), 10),
+                (today.AddDays(90), 0),
+            };
+
+            // Act
+            List<(string IntervalLabel, long Count)> result = InvokeGenerateOrderDistributionTable(input);
+
+            // Assert
+            Assert.Contains(result, r => r.IntervalLabel == $"{today.AddDays(8):yyyy-MM-dd} - {today.AddDays(37):yyyy-MM-dd}" && r.Count == 10);
+            Assert.DoesNotContain(result, r => r.IntervalLabel == $"{today.AddDays(38):yyyy-MM-dd} - {today.AddDays(67):yyyy-MM-dd}");
+        }
+
+        private static List<(string IntervalLabel, long Count)> InvokeGenerateOrderDistributionTable(List<(DateOnly Day, long Count)> orderDistribution)
+        {
+            MethodInfo method = typeof(MetricsService).GetMethod("GenerateOrderDistributionTable", BindingFlags.NonPublic | BindingFlags.Static)!;
+            object? rawResult = method.Invoke(null, [orderDistribution]);
+            Assert.NotNull(rawResult);
+            return Assert.IsType<List<(string IntervalLabel, long Count)>>(rawResult);
         }
     }
 }
