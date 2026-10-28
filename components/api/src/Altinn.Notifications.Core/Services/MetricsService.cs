@@ -61,6 +61,7 @@ namespace Altinn.Notifications.Core.Services
             var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
             var (smsNotificationsAnytime, smsNotificationsDaytime) = await _metricsRepository.GetSmsNotificationsMetrics(cancellationToken);
             var (ordersNotDue, ordersPastDue) = await _metricsRepository.GetOrderMetrics(cancellationToken);
+            await TraceOrderDistribution(cancellationToken);
 
             _backlogMetrics.RecordBacklogMetrics(
                 emailNotificationsAnytime,
@@ -70,6 +71,18 @@ namespace Altinn.Notifications.Core.Services
                 smsNotificationsDaytime,
                 ordersNotDue,
                 ordersPastDue);
+        }
+
+        private async Task TraceOrderDistribution(CancellationToken cancellationToken)
+        {
+            var orderDistribution = await _metricsRepository.GetOrderNotDueDistributionMetrics(cancellationToken);
+            DateTime timestamp = DateTime.Now;
+            foreach (var row in orderDistribution)
+            {
+                // Warning level is used to avoid global filtering
+                // The log message will be picked up by a Grafana table
+                _logger.LogWarning("Orders not due distribution for {Timestamp} {Day}: {Count}", timestamp, row.Day, row.Count);
+            }
         }
 
         /// <inheritdoc/>

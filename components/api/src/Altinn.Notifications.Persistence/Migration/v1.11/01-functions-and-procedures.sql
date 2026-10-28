@@ -1796,8 +1796,8 @@ END;
 $BODY$;
 
 
--- getordernotificationsmetrics.sql:
-create or replace function notifications.get_order_notifications_metrics()
+-- getordermetrics.sql:
+create or replace function notifications.get_order_metrics()
 returns table
 (
 	ordersnotduecount bigint,
@@ -1929,6 +1929,19 @@ Returns a table with the following columns:
 The reminders JSON array contains objects with the following structure:
 - ShipmentId: The unique identifier for the reminder notification order
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
+
+
+-- getordersnotduedistributionmetrics.sql:
+create or replace function notifications.get_orders_notdue_distribution_metrics()
+returns table
+(
+	day date,
+	count bigint
+)
+language sql
+as $$
+	select o.requestedsendtime::date as day, count(*) from notifications.orders o where o.processedstatus = 'Registered' group by o.requestedsendtime::date order by day;
+$$;
 
 
 -- getorderspastsendtimeupdatestatus.sql:

@@ -1,4 +1,4 @@
-create or replace function notifications.get_order_notifications_metrics()
+create or replace function notifications.get_order_metrics()
 returns table
 (
 	ordersnotduecount bigint,
